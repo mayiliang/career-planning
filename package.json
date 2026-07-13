@@ -1,0 +1,29 @@
+{
+  "name": "career-atlas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Career Atlas - 本地优先的个人前端成长与求职工作台",
+  "scripts": {
+    "dev": "pnpm run --parallel dev:web dev:server",
+    "dev:web": "pnpm --filter @career-atlas/web dev",
+    "dev:server": "pnpm --filter @career-atlas/server dev",
+    "build": "pnpm run --parallel build:web build:server",
+    "build:web": "pnpm --filter @career-atlas/web build",
+    "build:server": "pnpm --filter @career-atlas/server build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:e2e": "pnpm --filter @career-atlas/web test:e2e",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean",
+    "db:migrate": "pnpm --filter @career-atlas/server db:migrate",
+    "db:generate": "pnpm --filter @career-atlas/server db:generate",
+    "content:check": "pnpm --filter @career-atlas/content-parser content:check",
+    "backup:create": "pnpm --filter @career-atlas/server backup:create",
+    "start": "pnpm --filter @career-atlas/server start"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

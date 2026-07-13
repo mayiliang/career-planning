@@ -1,0 +1,44 @@
+# Data and sensitive files - 用户数据和配置不提交
+data/
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+*.local
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Backup files
+*.zip
+backups/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Drizzle
+drizzle/meta/

@@ -1,0 +1,162 @@
+/**
+ * App 组件样式
+ * 
+ * Phase 0 实现：
+ * - 基础布局：左侧导航 + 主内容区
+ * - 视觉 Token 定义
+ * - 响应式基础
+ */
+
+/* 视觉 Token - 与设计规范一致 */
+:root {
+  --color-draft-ink: #172033;
+  --color-blueprint: #315C87;
+  --color-cool-sheet: #EEF3F7;
+  --color-moss-proof: #4E7C65;
+  --color-amber-review: #D89A3A;
+  --color-redline: #B94A48;
+  
+  --space-base: 8px;
+  --radius-base: 8px;
+  
+  --font-display: 'LXGW WenKai', serif;
+  --font-body: 'Noto Sans SC', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+/* 根布局 */
+.app-root {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-cool-sheet);
+  font-family: var(--font-body);
+  color: var(--color-draft-ink);
+  line-height: 1.65;
+}
+
+/* 左侧导航 */
+.side-nav {
+  width: 224px;
+  background-color: #fff;
+  border-right: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.nav-header {
+  padding: calc(var(--space-base) * 2);
+  border-bottom: 1px solid #eee;
+}
+
+.app-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-base) 0;
+  color: var(--color-draft-ink);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: calc(var(--space-base) / 2) var(--space-base);
+  border-radius: var(--radius-base);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.nav-list li {
+  margin: 0;
+}
+
+.nav-link {
+  display: block;
+  padding: calc(var(--space-base) * 1.5) calc(var(--space-base) * 2);
+  color: var(--color-draft-ink);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.nav-link:hover {
+  background-color: var(--color-cool-sheet);
+}
+
+.nav-link.active {
+  background-color: var(--color-cool-sheet);
+  border-left-color: var(--color-blueprint);
+  color: var(--color-blueprint);
+  font-weight: 500;
+}
+
+.nav-footer {
+  padding: var(--space-base);
+  border-top: 1px solid #eee;
+}
+
+/* 主内容区 */
+.main-content {
+  flex: 1;
+  padding: calc(var(--space-base) * 3);
+  overflow-y: auto;
+}
+
+/* 响应式：小于 1024px 折叠导航 */
+@media (max-width: 1024px) {
+  .side-nav {
+    width: 72px;
+  }
+  
+  .app-title {
+    font-size: 0;
+  }
+  
+  .nav-link {
+    padding: var(--space-base);
+    text-align: center;
+  }
+}
+
+/* 响应式：小于 768px 移动端 */
+@media (max-width: 768px) {
+  .app-root {
+    flex-direction: column;
+  }
+  
+  .side-nav {
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    border-right: none;
+    border-top: 1px solid #ddd;
+    flex-direction: row;
+    z-index: 100;
+  }
+  
+  .nav-header,
+  .nav-footer {
+    display: none;
+  }
+  
+  .nav-list {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+  }
+  
+  .nav-link {
+    padding: var(--space-base);
+  }
+  
+  .main-content {
+    padding-bottom: 72px;
+  }
+}
