@@ -3,7 +3,6 @@
  * 
  * Phase 0 实现：
  * - 初始化 Vue 应用
- * - 注册 Element Plus
  * - 配置 Vue Router
  * - 配置 Pinia 状态管理
  * - 配置 Vue Query 服务端状态管理
@@ -11,8 +10,6 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { VueQueryPlugin } from '@tanstack/vue-query';
-import ElementPlus from 'element-plus';
-import 'element-plus/dist/index.css';
 
 import App from './app/App.vue';
 import router from './router';
@@ -41,9 +38,6 @@ app.use(VueQueryPlugin, {
     },
   },
 });
-
-// 注册 Element Plus UI 库
-app.use(ElementPlus);
 
 // 挂载应用
 app.mount('#app');

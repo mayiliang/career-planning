@@ -8,6 +8,41 @@
       "when": 1783934667228,
       "tag": "0000_dapper_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783992100000,
+      "tag": "0001_phase3_plan_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783994000000,
+      "tag": "0002_phase4_knowledge_edges",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783995000000,
+      "tag": "0003_phase5_assessment_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783996000000,
+      "tag": "0004_phase6_job_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784009000000,
+      "tag": "0005_phase9_leave_days",
+      "breakpoints": true
     }
   ]
 }

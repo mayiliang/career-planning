@@ -30,7 +30,9 @@ const ImportPreviewResponseSchema = z.object({
 
 const ImportExecuteResponseSchema = z.object({
   importedDomains: z.number(),
+  updatedDomains: z.number(),
   importedPoints: z.number(),
+  updatedPoints: z.number(),
   skippedPoints: z.number(),
   totalPoints: z.number(),
 });
@@ -43,20 +45,20 @@ export async function registerImportRoutes(app: FastifyInstance) {
   app.get('/api/v1/import/status', async (request, reply) => {
     const status = await checkImportStatus();
     
-    return reply.success(ImportStatusResponseSchema.parse(status));
+    return reply.ok(ImportStatusResponseSchema.parse(status));
   });
   
   // 预览导入内容
   app.get('/api/v1/import/preview', async (request, reply) => {
     const preview = previewImport();
     
-    return reply.success(ImportPreviewResponseSchema.parse(preview));
+    return reply.ok(ImportPreviewResponseSchema.parse(preview));
   });
   
   // 执行导入
   app.post('/api/v1/import/execute', async (request, reply) => {
     const result = await executeImport();
     
-    return reply.success(ImportExecuteResponseSchema.parse(result));
+    return reply.ok(ImportExecuteResponseSchema.parse(result));
   });
 }

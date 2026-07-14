@@ -1,0 +1,113 @@
+{
+  "id": "e8f2a1b3-c4d5-6789-abcd-ef0123456789",
+  "prevId": "0000_dapper_multiple_man",
+  "version": "7",
+  "dialect": "sqlite",
+  "tables": {
+    "plan_events": {
+      "name": "plan_events",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "event_type": { "name": "event_type", "type": "text", "primaryKey": false, "notNull": true },
+        "title": { "name": "title", "type": "text", "primaryKey": false, "notNull": true },
+        "description": { "name": "description", "type": "text", "primaryKey": false, "notNull": false },
+        "start_at": { "name": "start_at", "type": "text", "primaryKey": false, "notNull": true },
+        "end_at": { "name": "end_at", "type": "text", "primaryKey": false, "notNull": true },
+        "all_day": { "name": "all_day", "type": "integer", "primaryKey": false, "notNull": true, "default": false },
+        "status": { "name": "status", "type": "text", "primaryKey": false, "notNull": true, "default": "'PLANNED'" },
+        "priority": { "name": "priority", "type": "integer", "primaryKey": false, "notNull": true, "default": 3 },
+        "knowledge_point_id": { "name": "knowledge_point_id", "type": "text", "primaryKey": false, "notNull": false },
+        "job_id": { "name": "job_id", "type": "text", "primaryKey": false, "notNull": false },
+        "assessment_session_id": { "name": "assessment_session_id", "type": "text", "primaryKey": false, "notNull": false },
+        "recurrence_rule": { "name": "recurrence_rule", "type": "text", "primaryKey": false, "notNull": false },
+        "recurrence_parent_id": { "name": "recurrence_parent_id", "type": "text", "primaryKey": false, "notNull": false },
+        "rescheduled_to_id": { "name": "rescheduled_to_id", "type": "text", "primaryKey": false, "notNull": false },
+        "rescheduled_from_id": { "name": "rescheduled_from_id", "type": "text", "primaryKey": false, "notNull": false },
+        "source_type": { "name": "source_type", "type": "text", "primaryKey": false, "notNull": true, "default": "'USER'" },
+        "template_week": { "name": "template_week", "type": "integer", "primaryKey": false, "notNull": false },
+        "template_day": { "name": "template_day", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "text", "primaryKey": false, "notNull": true },
+        "updated_at": { "name": "updated_at", "type": "text", "primaryKey": false, "notNull": true }
+      },
+      "indexes": {
+        "pe_start_at_event_type_idx": { "name": "pe_start_at_event_type_idx", "columns": ["start_at", "event_type"], "isUnique": false },
+        "pe_status_idx": { "name": "pe_status_idx", "columns": ["status"], "isUnique": false },
+        "pe_knowledge_point_idx": { "name": "pe_knowledge_point_idx", "columns": ["knowledge_point_id"], "isUnique": false }
+      },
+      "foreignKeys": {
+        "knowledge_point_id_fk": { "name": "knowledge_point_id_fk", "tableFrom": "plan_events", "tableTo": "knowledge_points", "columnsFrom": ["knowledge_point_id"], "columnsTo": ["id"], "onDelete": "SET NULL", "onUpdate": "NO ACTION" }
+      }
+    },
+    "checkins": {
+      "name": "checkins",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "plan_event_id": { "name": "plan_event_id", "type": "text", "primaryKey": false, "notNull": true },
+        "result": { "name": "result", "type": "text", "primaryKey": false, "notNull": true },
+        "actual_minutes": { "name": "actual_minutes", "type": "integer", "primaryKey": false, "notNull": false },
+        "note_md": { "name": "note_md", "type": "text", "primaryKey": false, "notNull": false },
+        "energy_level": { "name": "energy_level", "type": "integer", "primaryKey": false, "notNull": false },
+        "difficulty_level": { "name": "difficulty_level", "type": "integer", "primaryKey": false, "notNull": false },
+        "evidence_path": { "name": "evidence_path", "type": "text", "primaryKey": false, "notNull": false },
+        "checked_at": { "name": "checked_at", "type": "text", "primaryKey": false, "notNull": true },
+        "created_at": { "name": "created_at", "type": "text", "primaryKey": false, "notNull": true }
+      },
+      "indexes": {
+        "checkins_plan_event_idx": { "name": "checkins_plan_event_idx", "columns": ["plan_event_id"], "isUnique": false },
+        "checkins_checked_at_idx": { "name": "checkins_checked_at_idx", "columns": ["checked_at"], "isUnique": false }
+      },
+      "foreignKeys": {
+        "plan_event_id_fk": { "name": "plan_event_id_fk", "tableFrom": "checkins", "tableTo": "plan_events", "columnsFrom": ["plan_event_id"], "columnsTo": ["id"], "onDelete": "CASCADE", "onUpdate": "NO ACTION" }
+      }
+    },
+    "daily_reviews": {
+      "name": "daily_reviews",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "review_date": { "name": "review_date", "type": "text", "primaryKey": false, "notNull": true },
+        "planned_count": { "name": "planned_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "completed_count": { "name": "completed_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "partial_count": { "name": "partial_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "skipped_count": { "name": "skipped_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "summary_md": { "name": "summary_md", "type": "text", "primaryKey": false, "notNull": false },
+        "challenges_md": { "name": "challenges_md", "type": "text", "primaryKey": false, "notNull": false },
+        "adjustments_md": { "name": "adjustments_md", "type": "text", "primaryKey": false, "notNull": false },
+        "next_day_focus": { "name": "next_day_focus", "type": "text", "primaryKey": false, "notNull": false },
+        "total_minutes": { "name": "total_minutes", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "created_at": { "name": "created_at", "type": "text", "primaryKey": false, "notNull": true },
+        "updated_at": { "name": "updated_at", "type": "text", "primaryKey": false, "notNull": true }
+      },
+      "indexes": {
+        "daily_reviews_review_date_unique": { "name": "daily_reviews_review_date_unique", "columns": ["review_date"], "isUnique": true },
+        "dr_review_date_idx": { "name": "dr_review_date_idx", "columns": ["review_date"], "isUnique": false }
+      }
+    },
+    "weekly_reviews": {
+      "name": "weekly_reviews",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true },
+        "week_start_date": { "name": "week_start_date", "type": "text", "primaryKey": false, "notNull": true },
+        "week_end_date": { "name": "week_end_date", "type": "text", "primaryKey": false, "notNull": true },
+        "week_number": { "name": "week_number", "type": "integer", "primaryKey": false, "notNull": true },
+        "planned_count": { "name": "planned_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "completed_count": { "name": "completed_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "partial_count": { "name": "partial_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "skipped_count": { "name": "skipped_count", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "completion_rate": { "name": "completion_rate", "type": "integer", "primaryKey": false, "notNull": false },
+        "summary_md": { "name": "summary_md", "type": "text", "primaryKey": false, "notNull": false },
+        "challenges_md": { "name": "challenges_md", "type": "text", "primaryKey": false, "notNull": false },
+        "adjustments_md": { "name": "adjustments_md", "type": "text", "primaryKey": false, "notNull": false },
+        "next_week_focus": { "name": "next_week_focus", "type": "text", "primaryKey": false, "notNull": false },
+        "plan_week_number": { "name": "plan_week_number", "type": "integer", "primaryKey": false, "notNull": false },
+        "theme_completed": { "name": "theme_completed", "type": "integer", "primaryKey": false, "notNull": false },
+        "total_minutes": { "name": "total_minutes", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "created_at": { "name": "created_at", "type": "text", "primaryKey": false, "notNull": true },
+        "updated_at": { "name": "updated_at", "type": "text", "primaryKey": false, "notNull": true }
+      },
+      "indexes": {
+        "wr_week_start_idx": { "name": "wr_week_start_idx", "columns": ["week_start_date"], "isUnique": false },
+        "wr_plan_week_idx": { "name": "wr_plan_week_idx", "columns": ["plan_week_number"], "isUnique": false }
+      }
+    }
+  }
+}

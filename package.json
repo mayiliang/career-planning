@@ -2,12 +2,15 @@
   "name": "career-atlas",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Career Atlas - 本地优先的个人前端成长与求职工作台",
   "scripts": {
-    "dev": "pnpm run --parallel dev:web dev:server",
+    "predev": "pnpm build:packages",
+    "dev": "pnpm -r --parallel --filter @career-atlas/web --filter @career-atlas/server dev",
     "dev:web": "pnpm --filter @career-atlas/web dev",
     "dev:server": "pnpm --filter @career-atlas/server dev",
-    "build": "pnpm run --parallel build:web build:server",
+    "build": "pnpm build:packages && pnpm build:web && pnpm build:server",
+    "build:packages": "pnpm --filter @career-atlas/shared build && pnpm --filter @career-atlas/content-parser build",
     "build:web": "pnpm --filter @career-atlas/web build",
     "build:server": "pnpm --filter @career-atlas/server build",
     "test": "pnpm -r test",
@@ -19,11 +22,22 @@
     "db:generate": "pnpm --filter @career-atlas/server db:generate",
     "content:check": "pnpm --filter @career-atlas/content-parser content:check",
     "backup:create": "pnpm --filter @career-atlas/server backup:create",
-    "start": "pnpm --filter @career-atlas/server start"
+    "start": "pnpm --filter @career-atlas/server start",
+    "start:prod": "./start.sh",
+    "start:dev": "./dev.sh"
   },
   "engines": {
     "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
+    "pnpm": ">=11.0.0"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@11.13.0",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "typescript": "~5.7.2",
+    "vitest": "^2.1.8",
+    "vue-eslint-parser": "^9.4.3"
+  }
 }

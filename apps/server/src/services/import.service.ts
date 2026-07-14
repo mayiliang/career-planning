@@ -87,7 +87,9 @@ export function previewImport(): {
  */
 export async function executeImport(): Promise<{
   importedDomains: number;
+  updatedDomains: number;
   importedPoints: number;
+  updatedPoints: number;
   skippedPoints: number;
   totalPoints: number;
 }> {
@@ -101,57 +103,97 @@ export async function executeImport(): Promise<{
   const domains = parseAllKnowledgeFiles(fileContents);
   
   let importedDomains = 0;
+  let updatedDomains = 0;
   let importedPoints = 0;
+  let updatedPoints = 0;
   let skippedPoints = 0;
   
   // 使用事务
   const transaction = rawDb.transaction(() => {
     for (const domain of domains) {
       // 检查领域是否已存在
-      const existingDomains = db.select()
+      const existingDomain = db.select()
         .from(knowledgeDomains)
         .where(eq(knowledgeDomains.code, domain.code))
-        .all();
-      
-      if (existingDomains.length > 0) {
-        continue;
-      }
-      
-      const domainId = uuidv4();
+        .get();
+
       const domainHash = calculateHash(domain.title + (domain.description || ''));
-      
-      const newDomain: NewKnowledgeDomain = {
-        id: domainId,
-        code: domain.code,
-        title: domain.title,
-        description: domain.description,
-        orderIndex: parseInt(domain.code, 10),
-        sourcePath: KNOWLEDGE_BASE_DIR,
-        sourceHash: domainHash,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      db.insert(knowledgeDomains).values(newDomain).run();
-      importedDomains++;
+      const sourceFile = files.find((file) => path.basename(file).startsWith(`${domain.code}-`));
+      const sourcePath = sourceFile ? path.relative(PROJECT_ROOT, sourceFile) : KNOWLEDGE_BASE_DIR;
+      const now = new Date().toISOString();
+      let domainId: string;
+
+      if (existingDomain) {
+        domainId = existingDomain.id;
+        if (existingDomain.sourceHash !== domainHash) {
+          db.update(knowledgeDomains)
+            .set({
+              title: domain.title,
+              description: domain.description,
+              orderIndex: parseInt(domain.code, 10),
+              sourcePath,
+              sourceHash: domainHash,
+              updatedAt: now,
+            })
+            .where(eq(knowledgeDomains.id, domainId))
+            .run();
+          updatedDomains++;
+        }
+      } else {
+        domainId = uuidv4();
+        const newDomain: NewKnowledgeDomain = {
+          id: domainId,
+          code: domain.code,
+          title: domain.title,
+          description: domain.description,
+          orderIndex: parseInt(domain.code, 10),
+          sourcePath,
+          sourceHash: domainHash,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        db.insert(knowledgeDomains).values(newDomain).run();
+        importedDomains++;
+      }
       
       // 导入知识点
       for (const point of domain.points) {
-        const existingPoints = db.select()
+        const existingPoint = db.select()
           .from(knowledgePoints)
           .where(eq(knowledgePoints.code, point.code))
-          .all();
-        
-        if (existingPoints.length > 0) {
-          skippedPoints++;
-          continue;
-        }
-        
-        const pointId = uuidv4();
+          .get();
+
         const pointHash = calculateHash(
           point.title + point.studyMaterial + point.assessmentSpec + point.passCriteria
         );
-        
+
+        if (existingPoint) {
+          if (existingPoint.sourceHash === pointHash && existingPoint.domainId === domainId) {
+            skippedPoints++;
+            continue;
+          }
+
+          // 只更新来源内容，保留摘要、学习状态和所有历史时间。
+          db.update(knowledgePoints)
+            .set({
+              domainId,
+              title: point.title,
+              studyMaterialMd: point.studyMaterial,
+              assessmentSpecMd: point.assessmentSpec,
+              passCriteriaMd: point.passCriteria,
+              difficulty: point.difficulty,
+              sourcePath,
+              sourceHash: pointHash,
+              updatedAt: now,
+            })
+            .where(eq(knowledgePoints.id, existingPoint.id))
+            .run();
+          updatedPoints++;
+          continue;
+        }
+
+        const pointId = uuidv4();
         const newPoint: NewKnowledgePoint = {
           id: pointId,
           code: point.code,
@@ -168,10 +210,10 @@ export async function executeImport(): Promise<{
           firstPassedAt: null,
           masteredAt: null,
           nextReviewAt: null,
-          sourcePath: KNOWLEDGE_BASE_DIR,
+          sourcePath,
           sourceHash: pointHash,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: now,
+          updatedAt: now,
         };
         
         db.insert(knowledgePoints).values(newPoint).run();
@@ -181,7 +223,9 @@ export async function executeImport(): Promise<{
     
     return {
       importedDomains,
+      updatedDomains,
       importedPoints,
+      updatedPoints,
       skippedPoints,
       totalPoints: domains.reduce((sum, d) => sum + d.points.length, 0),
     };

@@ -1,6 +1,6 @@
 # 前端知识掌握清单
 
-更新时间：2026-07-13
+更新时间：2026-07-14
 
 这里是整个职业成长计划的执行核心。每个知识点都有稳定编号、学习资料、考核任务、通过标准和两个可勾选状态。
 
@@ -24,6 +24,10 @@
 - [ ] [09 Node.js、OpenAPI、MCP 与 AI 工具化](09-node-api-ai.md)
 - [ ] [10 项目表达、技术方案与职业影响力](10-career-expression.md)
 - [ ] [11 Vue 3 项目开发](11-vue-development.md)
+- [ ] [12 AI 原生前端与模型应用工程](12-ai-native-frontend.md)
+- [ ] [13 Agent、MCP 与 AI 工具协议](13-agents-mcp.md)
+- [ ] [14 浏览器 AI、本地推理与新 Web 平台](14-browser-ai-local-inference.md)
+- [ ] [15 AI 辅助研发、评审与工程治理](15-ai-assisted-engineering.md)
 
 领域勾选条件：该文件内所有知识点的“已通过严格考核”均已勾选，且完成一次领域综合考核。
 
@@ -57,6 +61,8 @@
 `JS-*`、`WEB-*`、`BROWSER-*`、`NET-*`、`SEC-*` 是贯穿 16 周的基础线：每周至少选 1 个，不能全部推迟到最后。
 
 `VUE-01` 至 `VUE-10` 是 Career Atlas 开发实践线，从网站 Phase 0 开始随真实功能逐步学习和考核，不强行塞入原 16 周 React 主线。
+
+`AIAPP-*`、`AGENT-*`、`WEBAI-*`、`AIDEV-*` 是 AI 时代前端扩展线：覆盖流式模型 UI、结构化输出与评测、MCP/Agent 协议、浏览器本地推理、WebGPU，以及 AI 辅助研发治理。建议从第 9 周开始每天替换一个复盘或项目挑战任务，而不是一次性突击。
 
 ## 向 Codex 发起考核
 

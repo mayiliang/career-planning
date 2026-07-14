@@ -7,7 +7,8 @@
  * - 左侧导航布局基础结构
  */
 import { useQuery } from '@tanstack/vue-query';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { apiClient } from '@/api/client';
 
 // 查询服务健康状态
@@ -35,14 +36,18 @@ const statusColor = computed(() => {
 
 // 导航菜单项
 const navItems = [
-  { path: '/', label: '今日', icon: 'Calendar' },
-  { path: '/knowledge', label: '知识', icon: 'Collection' },
-  { path: '/plan', label: '计划', icon: 'Schedule' },
-  { path: '/jobs', label: '求职', icon: 'Briefcase' },
+  { path: '/', label: '今日', hint: 'TODAY', glyph: '今' },
+  { path: '/knowledge/map', label: '知识体系', hint: 'ATLAS', glyph: '知' },
+  { path: '/plan', label: '学习计划', hint: 'PLAN', glyph: '程' },
+  { path: '/jobs', label: '求职支线', hint: 'JOBS', glyph: '职' },
 ];
 
-// 当前路径
-const currentPath = ref('/');
+const route = useRoute();
+const isActive = (path: string) => {
+  if (path === '/') return route.path === '/';
+  if (path === '/knowledge/map') return route.path.startsWith('/knowledge');
+  return route.path === path || route.path.startsWith(`${path}/`);
+};
 </script>
 
 <template>
@@ -50,14 +55,8 @@ const currentPath = ref('/');
     <!-- 左侧导航 -->
     <nav class="side-nav">
       <div class="nav-header">
-        <h1 class="app-title">Career Atlas</h1>
-        <div 
-          class="status-badge" 
-          :style="{ backgroundColor: statusColor }"
-          :title="statusText"
-        >
-          {{ statusText }}
-        </div>
+        <div class="brand-mark">CA</div>
+        <div class="brand-copy"><h1 class="app-title">Career Atlas</h1><p>AI 时代前端能力地图</p></div>
       </div>
       
       <ul class="nav-list">
@@ -65,24 +64,25 @@ const currentPath = ref('/');
           <RouterLink 
             :to="item.path" 
             class="nav-link"
-            :class="{ active: currentPath === item.path }"
-            @click="currentPath = item.path"
+            :class="{ active: isActive(item.path) }"
           >
-            {{ item.label }}
+            <span class="nav-glyph">{{ item.glyph }}</span>
+            <span class="nav-copy"><strong>{{ item.label }}</strong><small>{{ item.hint }}</small></span>
           </RouterLink>
         </li>
       </ul>
       
       <div class="nav-footer">
-        <RouterLink to="/settings" class="nav-link">
-          设置
+        <div class="service-state" :title="statusText"><span :style="{ backgroundColor: statusColor }"></span><div><strong>{{ statusText }}</strong><small>本地数据服务</small></div></div>
+        <RouterLink to="/settings" class="nav-link settings-link" :class="{ active: isActive('/settings') }">
+          <span class="nav-glyph">设</span><span class="nav-copy"><strong>设置与数据</strong><small>LOCAL</small></span>
         </RouterLink>
       </div>
     </nav>
 
     <!-- 主内容区 -->
     <main class="main-content">
-      <RouterView />
+      <div class="content-frame"><RouterView /></div>
     </main>
   </div>
 </template>

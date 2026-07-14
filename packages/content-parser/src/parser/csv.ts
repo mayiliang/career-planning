@@ -8,7 +8,6 @@
  */
 import { parse } from 'csv-parse/sync';
 import type { ParsedPlanItem, ParsedJob } from '../types/index.js';
-import { z } from 'zod';
 
 // 学习计划 CSV 列名映射
 const PLAN_CSV_COLUMNS = [
@@ -34,14 +33,14 @@ export function parsePlanCsv(content: string): ParsedPlanItem[] {
   
   // 类型转换
   return records.map((row: Record<string, string>) => ({
-    week: parseInt(row.week, 10),
-    theme: row.theme,
-    day: row.day,
-    learningTopic: row.learning_topic,
-    practiceTask: row.practice_task,
-    output: row.output,
-    reviewQuestion: row.review_question,
-    status: row.status,
+    week: parseInt(row.week ?? '', 10),
+    theme: row.theme ?? '',
+    day: row.day ?? '',
+    learningTopic: row.learning_topic ?? '',
+    practiceTask: row.practice_task ?? '',
+    output: row.output ?? '',
+    reviewQuestion: row.review_question ?? '',
+    status: row.status ?? '',
   }));
 }
 
@@ -54,23 +53,23 @@ export function parseJobsCsv(content: string): ParsedJob[] {
   });
   
   return records.map((row: Record<string, string>) => ({
-    date: row.date,
-    platform: row.platform,
-    company: row.company,
-    jobTitle: row.job_title,
-    salary: row.salary,
-    experience: row.experience,
-    location: row.location,
-    sourceUrl: row.source_url,
-    jobDirection: row.job_direction,
-    techStack: row.tech_stack,
-    jdKeywords: row.jd_keywords,
-    matchedProject: row.matched_project,
-    matchLevel: row.match_level,
-    skillGap: row.skill_gap,
-    nextLearningAction: row.next_learning_action,
-    status: row.status,
-    notes: row.notes,
+    date: row.date ?? '',
+    platform: row.platform ?? '',
+    company: row.company ?? '',
+    jobTitle: row.job_title ?? '',
+    salary: row.salary ?? '',
+    experience: row.experience ?? '',
+    location: row.location ?? '',
+    sourceUrl: row.source_url ?? '',
+    jobDirection: row.job_direction ?? '',
+    techStack: row.tech_stack ?? '',
+    jdKeywords: row.jd_keywords ?? '',
+    matchedProject: row.matched_project ?? '',
+    matchLevel: row.match_level ?? '',
+    skillGap: row.skill_gap ?? '',
+    nextLearningAction: row.next_learning_action ?? '',
+    status: row.status ?? '',
+    notes: row.notes ?? '',
   }));
 }
 
@@ -85,14 +84,13 @@ export function parseDailyScheduleCsv(content: string): Array<{
   const records = parse(content, {
     columns: true,
     skip_empty_lines: true,
-    from_line: 2,
   });
   
   return records.map((row: Record<string, string>) => ({
-    time: row.time,
-    block: row.block,
-    task: row.task,
-    output: row.output,
-    notes: row.notes,
+    time: row.time ?? '',
+    block: row.block ?? '',
+    task: row.task ?? '',
+    output: row.output ?? '',
+    notes: row.notes ?? '',
   }));
 }

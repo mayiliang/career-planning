@@ -1,0 +1,374 @@
+/**
+ * 岗位详情页面样式
+ * 
+ * Phase 6 实现：信息布局、时间线、技能缺口列表
+ */
+
+.job-detail-page {
+  min-height: 100%;
+  padding: var(--space-lg);
+  max-width: 900px;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+/* 页面头部 */
+.page-header {
+  margin-bottom: var(--space-xl);
+}
+
+.back-btn {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background: var(--surface-secondary);
+}
+
+.job-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.job-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.job-header .company {
+  color: var(--text-secondary);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+/* 信息网格 */
+.info-section {
+  margin-bottom: var(--space-xl);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item .label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.info-item .value {
+  font-weight: 500;
+}
+
+.info-item .value.salary {
+  color: var(--color-success);
+}
+
+/* 技术栈和关键词 */
+.tech-stack,
+.jd-keywords {
+  margin-bottom: var(--space-md);
+}
+
+.tech-stack .label,
+.jd-keywords .label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.tag {
+  padding: 0.25rem 0.5rem;
+  background: var(--surface-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.tag.secondary {
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+/* 下一步动作 */
+.next-action-section {
+  margin-bottom: var(--space-xl);
+}
+
+.next-action-section h3 {
+  font-size: 1rem;
+  margin-bottom: var(--space-sm);
+}
+
+.next-action-card {
+  padding: var(--space-md);
+  background: var(--color-warning-bg, #FFF8E1);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.next-action-card .due {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* 技能缺口 */
+.skill-gaps-section,
+.activities-section {
+  margin-bottom: var(--space-xl);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.section-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.add-btn {
+  padding: 0.25rem 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.empty-hint {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+}
+
+/* 技能缺口列表 */
+.gap-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.gap-item {
+  padding: var(--space-md);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+}
+
+.gap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.gap-code {
+  font-weight: 500;
+}
+
+.gap-level {
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+}
+
+.gap-level.high {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--color-error);
+}
+
+.gap-level.medium {
+  background: rgba(255, 149, 0, 0.15);
+  color: var(--color-warning);
+}
+
+.gap-level.low {
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--color-success);
+}
+
+.gap-status select {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.gap-action {
+  margin-top: var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* 时间线 */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.timeline-item {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.timeline-marker {
+  flex-shrink: 0;
+  width: 60px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+}
+
+.timeline-marker.application { background: #007AFF; }
+.timeline-marker.message { background: #8E8E93; }
+.timeline-marker.written_test { background: #FF9500; }
+.timeline-marker.interview { background: #34C759; }
+.timeline-marker.follow_up { background: #5856D6; }
+.timeline-marker.offer { background: #00C7BE; }
+.timeline-marker.rejection { background: #FF3B30; }
+
+.timeline-content {
+  flex: 1;
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.activity-title {
+  font-weight: 500;
+}
+
+.activity-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+}
+
+.activity-feedback {
+  margin-top: var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* 模态框 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--surface-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-lg);
+}
+
+.form-group {
+  margin-bottom: var(--space-md);
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.form-actions button {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.form-actions button.primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}

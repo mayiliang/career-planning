@@ -5,7 +5,8 @@ import type { ParsedDomain, ParsedKnowledgePoint } from '../types/index.js';
 
 // 正则表达式
 const DOMAIN_TITLE_REGEX = /^#\s+(\d{2})\s+(.+)$/m;
-const KNOWLEDGE_CODE_REGEX = /^##\s+([A-Z]+-[0-9]+)\s+(.+)$/;
+// 前缀允许包含数字，例如 H5-01；编号仍必须以大写字母开头。
+const KNOWLEDGE_CODE_REGEX = /^##\s+([A-Z][A-Z0-9]*-[0-9]+)\s+(.+)$/;
 
 // 状态勾选
 const SELF_MASTERED_REGEX = /^-\s+\[([ x])\]\s+自评已掌握/;
@@ -22,10 +23,10 @@ const DOMAIN_COMPREHENSIVE_REGEX = /^##\s+领域综合考核/;
 /**
  * 解析单个知识文件
  */
-export function parseKnowledgeMarkdown(content: string, filePath: string): ParsedDomain {
+export function parseKnowledgeMarkdown(content: string, _filePath: string): ParsedDomain {
   const domainMatch = content.match(DOMAIN_TITLE_REGEX);
-  const domainCode = domainMatch ? domainMatch[1] : '00';
-  const domainTitle = domainMatch ? domainMatch[2] : '未知领域';
+  const domainCode = domainMatch?.[1] ?? '00';
+  const domainTitle = domainMatch?.[2] ?? '未知领域';
   
   const domainDescription = extractDomainDescription(content);
   const points = extractKnowledgePoints(content);
@@ -77,7 +78,7 @@ function extractKnowledgePoints(content: string): ParsedKnowledgePoint[] {
   let stopped = false;
   
   for (let i = 0; i < lines.length && !stopped; i++) {
-    const line = lines[i];
+    const line = lines[i] ?? '';
     
     // 领域综合考核，停止解析
     if (DOMAIN_COMPREHENSIVE_REGEX.test(line)) {
@@ -96,8 +97,8 @@ function extractKnowledgePoints(content: string): ParsedKnowledgePoint[] {
       }
       
       currentPoint = {
-        code: codeMatch[1],
-        title: codeMatch[2],
+        code: codeMatch[1] ?? '',
+        title: codeMatch[2] ?? '',
       };
       currentField = null;
       continue;
@@ -123,21 +124,21 @@ function extractKnowledgePoints(content: string): ParsedKnowledgePoint[] {
     // 字段开始
     const studyMatch = line.match(STUDY_MATERIAL_REGEX);
     if (studyMatch) {
-      currentPoint.studyMaterial = studyMatch[1];
+      currentPoint.studyMaterial = studyMatch[1] ?? '';
       currentField = 'studyMaterial';
       continue;
     }
     
     const assessmentMatch = line.match(ASSESSMENT_SPEC_REGEX);
     if (assessmentMatch) {
-      currentPoint.assessmentSpec = assessmentMatch[1];
+      currentPoint.assessmentSpec = assessmentMatch[1] ?? '';
       currentField = 'assessmentSpec';
       continue;
     }
     
     const passMatch = line.match(PASS_CRITERIA_REGEX);
     if (passMatch) {
-      currentPoint.passCriteria = passMatch[1];
+      currentPoint.passCriteria = passMatch[1] ?? '';
       currentField = 'passCriteria';
       continue;
     }

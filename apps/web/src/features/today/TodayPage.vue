@@ -1,41 +1,254 @@
 <script setup lang="ts">
-/**
- * 今日页面
- * 
- * Phase 0 实现：基础壳
- */
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { apiClient, type KnowledgePointListItem, type PlanEvent, type TodayPlan } from '@/api/client';
+
+const router = useRouter();
+const loading = ref(true);
+const error = ref<string | null>(null);
+const todayPlan = ref<TodayPlan | null>(null);
+const upcomingEvents = ref<PlanEvent[]>([]);
+const learningPoints = ref<KnowledgePointListItem[]>([]);
+const reviewSummary = ref('');
+const reviewSaving = ref(false);
+const reviewMessage = ref<string | null>(null);
+const showCheckinDialog = ref(false);
+const selectedEvent = ref<PlanEvent | null>(null);
+const checkinSaving = ref(false);
+const checkinForm = ref({
+  result: 'COMPLETED' as 'COMPLETED' | 'PARTIAL' | 'SKIPPED',
+  actualMinutes: 60,
+  noteMd: '',
+  energyLevel: 3,
+  difficultyLevel: 3,
+});
+
+const now = new Date();
+const todayDate = computed(() => now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }));
+const todayCode = computed(() => `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`);
+const actionableEvents = computed(() => todayPlan.value?.events.filter((event) => ['PLANNED', 'IN_PROGRESS'].includes(event.status)) ?? []);
+const currentMission = computed(() => actionableEvents.value[0] ?? todayPlan.value?.events[0] ?? null);
+const completionPercent = computed(() => {
+  const stats = todayPlan.value?.stats;
+  if (!stats?.total) return 0;
+  return Math.round((stats.completed / stats.total) * 100);
+});
+const plannedMinutes = computed(() => (todayPlan.value?.events ?? []).reduce((sum, event) => sum + eventMinutes(event), 0));
+const completedMinutes = computed(() => (todayPlan.value?.events ?? []).filter((event) => event.status === 'COMPLETED').reduce((sum, event) => sum + eventMinutes(event), 0));
+
+const learningQueue = computed(() => learningPoints.value
+  .filter((point) => ['LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'NEEDS_RELEARNING'].includes(point.status))
+  .sort((a, b) => statusPriority(a.status) - statusPriority(b.status))
+  .slice(0, 5));
+
+const upcomingDays = computed(() => {
+  const groups = new Map<string, PlanEvent[]>();
+  for (const event of upcomingEvents.value.filter((item) => !['RESCHEDULED', 'SKIPPED'].includes(item.status))) {
+    const key = localDateKey(new Date(event.startAt));
+    groups.set(key, [...(groups.get(key) ?? []), event]);
+  }
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index + 1);
+    const key = localDateKey(date);
+    return { key, date, events: groups.get(key) ?? [] };
+  });
+});
+
+function localDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function dayLabel(date: Date) {
+  return date.toLocaleDateString('zh-CN', { weekday: 'short' }).replace('周', '');
+}
+
+function eventMinutes(event: PlanEvent) {
+  return Math.max(0, Math.round((new Date(event.endAt).getTime() - new Date(event.startAt).getTime()) / 60000));
+}
+
+function statusPriority(status: string) {
+  return ({ NEEDS_RELEARNING: 0, FIRST_PASS_PENDING_RETEST: 1, LEARNING: 2, SELF_MASTERED: 3 } as Record<string, number>)[status] ?? 9;
+}
+
+async function loadDashboard() {
+  loading.value = true;
+  error.value = null;
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setDate(to.getDate() + 8);
+  to.setMilliseconds(-1);
+  try {
+    const [plan, events, points] = await Promise.all([
+      apiClient.getTodayPlan(),
+      apiClient.getCalendarEvents({ from: from.toISOString(), to: to.toISOString() }),
+      apiClient.getKnowledgePoints(),
+    ]);
+    todayPlan.value = plan;
+    upcomingEvents.value = events.filter((event) => new Date(event.startAt).getTime() >= new Date().setHours(24, 0, 0, 0));
+    learningPoints.value = points.items;
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '今日学习驾驶舱加载失败';
+  } finally {
+    loading.value = false;
+  }
+}
+
+function formatTime(isoString: string) {
+  return new Date(isoString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function getStatusLabel(status: string) {
+  return ({ PLANNED: '待开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', PARTIAL: '部分完成', SKIPPED: '已跳过', RESCHEDULED: '已顺延' } as Record<string, string>)[status] ?? status;
+}
+
+function getEventTypeLabel(type: string) {
+  return ({ LEARNING: '学习', ASSESSMENT: '考核', RETEST: '复测', PROJECT_OUTPUT: '项目产出', JOB_APPLICATION: '求职', INTERVIEW: '面试', REVIEW: '复盘' } as Record<string, string>)[type] ?? type;
+}
+
+function pointStatusLabel(status: string) {
+  return ({ LEARNING: '学习中', SELF_MASTERED: '待首次考核', FIRST_PASS_PENDING_RETEST: '待复测', NEEDS_RELEARNING: '需要重学', MASTERED: '已掌握', NOT_STARTED: '未开始' } as Record<string, string>)[status] ?? status;
+}
+
+function openCheckinDialog(event: PlanEvent) {
+  selectedEvent.value = event;
+  checkinForm.value = { result: 'COMPLETED', actualMinutes: eventMinutes(event) || 60, noteMd: '', energyLevel: 3, difficultyLevel: 3 };
+  showCheckinDialog.value = true;
+}
+
+async function submitCheckin() {
+  if (!selectedEvent.value || checkinSaving.value) return;
+  checkinSaving.value = true;
+  try {
+    await apiClient.checkinEvent(selectedEvent.value.id, checkinForm.value);
+    showCheckinDialog.value = false;
+    await loadDashboard();
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '打卡失败';
+  } finally {
+    checkinSaving.value = false;
+  }
+}
+
+function appendReviewPrompt(prompt: string) {
+  reviewSummary.value = `${reviewSummary.value}${reviewSummary.value.trim() ? '\n' : ''}${prompt} `;
+}
+
+async function saveReview() {
+  if (!reviewSummary.value.trim()) return;
+  reviewSaving.value = true;
+  reviewMessage.value = null;
+  try {
+    await apiClient.saveDailyReview(localDateKey(new Date()), reviewSummary.value.trim());
+    reviewMessage.value = '已保存到本地复盘档案';
+  } catch (reason) {
+    reviewMessage.value = reason instanceof Error ? reason.message : '复盘保存失败';
+  } finally {
+    reviewSaving.value = false;
+  }
+}
+
+function eventDescription(event: PlanEvent) {
+  if (event.learningBrief) {
+    return `需要掌握：${event.learningBrief.masteryGoals.map((goal) => goal.text).join('；')}`;
+  }
+  return event.description?.trim() || `${getEventTypeLabel(event.eventType)}任务 · 建议投入 ${eventMinutes(event)} 分钟`;
+}
+
+function eventTitle(event: PlanEvent) {
+  return event.learningBrief?.displayTitle ?? event.title;
+}
+
+onMounted(loadDashboard);
 </script>
 
 <template>
   <div class="today-page">
-    <h2>今日</h2>
-    <p class="placeholder-text">
-      内容导入完成后，这里将显示今天的计划任务。
-    </p>
-    <p class="hint-text">
-      请先完成 Phase 1 的内容导入，生成学习计划。
-    </p>
+    <header class="today-header">
+      <div><p class="eyebrow">TODAY LOG · {{ todayCode }}</p><h1>今天的学习航线</h1><p>{{ todayDate }} · 聚焦一个可验证的进步，不追求填满时间。</p></div>
+      <div class="header-actions"><button @click="router.push('/knowledge/map')">打开知识脑图</button><button class="primary" @click="router.push('/plan')">查看 7 天计划</button></div>
+    </header>
+
+    <div v-if="loading" class="today-skeleton" aria-label="正在加载"><div class="skeleton-hero"></div><div></div><div></div></div>
+    <div v-else-if="error && !todayPlan" class="error-state">{{ error }}<button class="retry-button" @click="loadDashboard">重新加载</button></div>
+
+    <template v-else-if="todayPlan">
+      <p v-if="error" class="inline-error">{{ error }}</p>
+      <section class="mission-deck">
+        <article class="current-mission" :class="{ empty: !currentMission }">
+          <div class="mission-index"><span>CURRENT<br />MISSION</span><strong>{{ currentMission ? '01' : '00' }}</strong></div>
+          <div class="mission-copy">
+            <div class="mission-kicker"><span class="live-dot"></span>{{ currentMission ? `${formatTime(currentMission.startAt)} — ${formatTime(currentMission.endAt)}` : '等待安排' }}<i></i><b>{{ currentMission ? getEventTypeLabel(currentMission.eventType) : 'FREE SLOT' }}</b></div>
+            <h2>{{ currentMission ? eventTitle(currentMission) : '为今天选择一个明确的学习成果' }}</h2>
+            <p>{{ currentMission ? eventDescription(currentMission) : '计划不是为了把日历填满，而是决定今天要留下什么证据。可以从知识脑图选择一个知识点，或前往计划页安排任务。' }}</p>
+            <div class="mission-actions">
+              <button v-if="currentMission && ['PLANNED', 'IN_PROGRESS'].includes(currentMission.status)" class="mission-primary" @click="openCheckinDialog(currentMission)">完成后记录证据 →</button>
+              <button v-else class="mission-primary" @click="router.push('/plan')">安排今日任务 →</button>
+              <button v-if="currentMission?.knowledgePointId" @click="router.push('/knowledge')">查看相关知识</button>
+              <button v-else @click="router.push('/knowledge/map')">从知识体系选择</button>
+            </div>
+          </div>
+          <div class="mission-seal"><span>{{ currentMission ? getStatusLabel(currentMission.status) : '待规划' }}</span><small>{{ currentMission ? `${eventMinutes(currentMission)} MIN` : 'OPEN' }}</small></div>
+        </article>
+
+        <aside class="readiness-card">
+          <header><span>今日完成度</span><code>{{ String(todayPlan.stats.completed).padStart(2, '0') }}/{{ String(todayPlan.stats.total).padStart(2, '0') }}</code></header>
+          <div class="completion-orbit" :style="{ '--progress': `${completionPercent * 3.6}deg` }"><div><strong>{{ completionPercent }}%</strong><span>{{ completionPercent === 100 ? '航线完成' : '继续推进' }}</span></div></div>
+          <div class="metric-grid"><div><strong>{{ completedMinutes }}</strong><span>完成分钟</span></div><div><strong>{{ plannedMinutes }}</strong><span>计划分钟</span></div><div><strong>{{ todayPlan.retests.length }}</strong><span>待复测</span></div><div><strong>{{ learningQueue.length }}</strong><span>推进中</span></div></div>
+        </aside>
+      </section>
+
+      <div class="today-grid">
+        <section class="route-panel">
+          <header class="section-heading"><div><p class="eyebrow">ACTION ROUTE</p><h2>今日行动时间线</h2></div><span>{{ todayPlan.events.length }} 个节点</span></header>
+          <div v-if="todayPlan.events.length" class="event-route">
+            <article v-for="(event, index) in todayPlan.events" :key="event.id" :class="[`status-${event.status.toLowerCase()}`, { current: currentMission?.id === event.id }]">
+              <time>{{ formatTime(event.startAt) }}</time><div class="route-marker"><i></i><span>{{ String(index + 1).padStart(2, '0') }}</span></div>
+              <div class="route-copy"><div><span>{{ getEventTypeLabel(event.eventType) }}</span><small>{{ eventMinutes(event) }} MIN</small></div><h3>{{ eventTitle(event) }}</h3><p>{{ eventDescription(event) }}</p></div>
+              <button v-if="['PLANNED', 'IN_PROGRESS'].includes(event.status)" @click="openCheckinDialog(event)">{{ event.status === 'IN_PROGRESS' ? '继续并打卡' : '开始 / 打卡' }}</button><span v-else class="event-state">{{ getStatusLabel(event.status) }}</span>
+            </article>
+          </div>
+          <div v-else class="actionable-empty"><span>＋</span><div><strong>今日还没有行动节点</strong><p>从周计划中选择任务，或创建一条 30–90 分钟的学习事件。</p></div><button @click="router.push('/plan')">去安排</button></div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="queue-panel">
+            <header class="section-heading"><div><p class="eyebrow">LEARNING QUEUE</p><h2>需要继续推进</h2></div><button @click="router.push('/knowledge')">全部 →</button></header>
+            <div v-if="learningQueue.length" class="point-queue">
+              <button v-for="point in learningQueue" :key="point.id" @click="router.push(`/knowledge/${point.code}`)"><span class="point-orbit" :data-status="point.status"><i></i></span><span><code>{{ point.code }}</code><strong>{{ point.title }}</strong><small>{{ point.domainTitle }}</small></span><b>{{ pointStatusLabel(point.status) }}</b></button>
+            </div>
+            <div v-else class="compact-empty"><strong>暂无推进中的知识点</strong><button @click="router.push('/knowledge/map')">从脑图选择一个</button></div>
+          </section>
+
+          <section v-if="todayPlan.retests.length" class="retest-panel"><header><span>严格复测提醒</span><strong>{{ todayPlan.retests.length }}</strong></header><button v-for="event in todayPlan.retests.slice(0, 3)" :key="event.id"><time>{{ new Date(event.startAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) }}</time><span>{{ eventTitle(event) }}</span></button></section>
+        </aside>
+      </div>
+
+      <section class="week-strip">
+        <header class="section-heading"><div><p class="eyebrow">NEXT 7 DAYS</p><h2>未来一周雷达</h2></div><button @click="router.push('/plan')">打开完整日历 →</button></header>
+        <div class="week-days">
+          <button v-for="day in upcomingDays" :key="day.key" :class="{ busy: day.events.length }" @click="router.push('/plan')"><span>{{ dayLabel(day.date) }}</span><strong>{{ day.date.getDate() }}</strong><i><b v-for="event in day.events.slice(0, 3)" :key="event.id" :title="event.title"></b></i><small>{{ day.events.length ? `${day.events.length} 项 · ${day.events.reduce((sum, event) => sum + eventMinutes(event), 0)}m` : '留白' }}</small></button>
+        </div>
+      </section>
+
+      <section class="review-station">
+        <div class="review-intro"><p class="eyebrow">EVIDENCE LOG</p><h2>把“学过”变成可追溯的证据</h2><p>一句结论、一段代码、一个失败原因，都比模糊的完成感更有价值。</p><div class="prompt-chips"><button v-for="prompt in ['今天学会了：','证据是：','仍然卡在：','明天先做：']" :key="prompt" @click="appendReviewPrompt(prompt)">{{ prompt }}</button></div></div>
+        <div class="review-editor"><textarea v-model="reviewSummary" placeholder="示例：今天能脱离文档解释 Vue 响应式依赖收集，并完成了一个最小实现。证据位于……"></textarea><footer><span :class="{ success: reviewMessage?.includes('已保存') }">{{ reviewMessage ?? `${reviewSummary.trim().length} 字 · 数据仅保存在本地` }}</span><button :disabled="reviewSaving || !reviewSummary.trim()" @click="saveReview">{{ reviewSaving ? '正在归档…' : '归档今日复盘' }}</button></footer></div>
+      </section>
+    </template>
+  </div>
+
+  <div v-if="showCheckinDialog" class="dialog-overlay" @click.self="showCheckinDialog = false">
+    <form class="dialog-content" @submit.prevent="submitCheckin">
+      <header><div><p class="eyebrow">CHECK-IN · 学习证据</p><h2>{{ selectedEvent ? eventTitle(selectedEvent) : '' }}</h2></div><button type="button" aria-label="关闭" @click="showCheckinDialog = false">×</button></header>
+      <fieldset><legend>这次推进的结果</legend><div class="result-options"><label v-for="option in [{ value: 'COMPLETED', label: '完成', hint: '目标与证据都达成' }, { value: 'PARTIAL', label: '部分完成', hint: '留下明确后续动作' }, { value: 'SKIPPED', label: '未执行', hint: '诚实记录阻塞原因' }]" :key="option.value" :class="{ selected: checkinForm.result === option.value }"><input v-model="checkinForm.result" type="radio" :value="option.value" /><span><strong>{{ option.label }}</strong><small>{{ option.hint }}</small></span></label></div></fieldset>
+      <div class="duration-field"><label for="duration">实际投入</label><div><button type="button" @click="checkinForm.actualMinutes = Math.max(0, checkinForm.actualMinutes - 15)">−</button><input id="duration" v-model.number="checkinForm.actualMinutes" type="number" min="0" max="480" /><span>分钟</span><button type="button" @click="checkinForm.actualMinutes = Math.min(480, checkinForm.actualMinutes + 15)">＋</button></div></div>
+      <label class="note-field">学习证据或阻塞原因<textarea v-model="checkinForm.noteMd" placeholder="写下能证明进展的产出、关键结论，或者下一步要解决的问题"></textarea></label>
+      <div class="range-row"><label>精力状态 <strong>{{ checkinForm.energyLevel }}/5</strong><input v-model.number="checkinForm.energyLevel" type="range" min="1" max="5" /></label><label>感知难度 <strong>{{ checkinForm.difficultyLevel }}/5</strong><input v-model.number="checkinForm.difficultyLevel" type="range" min="1" max="5" /></label></div>
+      <footer><button type="button" @click="showCheckinDialog = false">暂不记录</button><button class="submit-button" type="submit" :disabled="checkinSaving">{{ checkinSaving ? '正在保存…' : '记录本次学习' }}</button></footer>
+    </form>
   </div>
 </template>
 
-<style scoped>
-.today-page {
-  max-width: 800px;
-}
-
-h2 {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  margin-bottom: var(--space-base);
-}
-
-.placeholder-text {
-  color: var(--color-draft-ink);
-}
-
-.hint-text {
-  color: var(--color-amber-review);
-  font-size: 0.875rem;
-  margin-top: var(--space-base);
-}
-</style>
+<style scoped src="./TodayPage.styles.css"></style>

@@ -1,6 +1,6 @@
 # 前端职业成长工作台
 
-更新时间：2026-07-13
+更新时间：2026-07-14
 
 这套文档用于管理职业定位、学习计划、项目复盘和求职进度。当前主线是：先把已有项目经验整理成可表达的职业资产，再系统补强 TypeScript、React、中后台、H5、工程化和质量能力。
 
@@ -12,7 +12,17 @@
 4. 把项目复盘、技术难点和成果补进[项目经验资产库](docs/knowledge/project-assets.md)。
 5. 开始投递后，用[杭州前端岗位追踪表](templates/hangzhou-frontend-jobs-template.csv)记录 JD、差距和后续动作。
 
-准备把文档开发成网站时，从[Career Atlas 开发文档](docs/development/README.md)开始；其中包含产品需求、技术架构、本地数据模型、AI 考核协议、实施路线以及可直接交给 GLM-5 的系统提示词。
+文档已经实现为本地优先的 Career Atlas 网站。它提供知识体系与图谱、学习资料、严格考核、日历打卡、每日复盘、求职看板和本地备份；从[Career Atlas 开发文档](docs/development/README.md)了解架构，从[实施与验收状态](docs/development/implementation-status.md)查看已完成能力和环境依赖。
+
+## 启动网站
+
+```bash
+cp .env.example .env.local
+pnpm install
+pnpm dev
+```
+
+前端地址为 `http://127.0.0.1:41731`，本地 API 为 `http://127.0.0.1:41730`。首次启动会自动迁移数据库、导入 132 个知识点、生成每周 7 天的 16 周计划，并创建当天备份，无需手动初始化。DeepSeek 自动评分需要在 `.env.local` 中配置 `DEEPSEEK_API_KEY`；未配置时仍可学习和答题，但不能完成 AI 自动判卷。
 
 ## 文档地图
 
@@ -22,7 +32,7 @@
 | 长期方向 | [前端长期成长路线图](docs/plans/frontend-growth-roadmap.md) | 1-3 年职业方向和能力阶段 | 每月复盘 |
 | 求职执行 | [前端求职执行计划](docs/plans/frontend-career-plan.md) | 岗位定位、简历、面试和投递节奏 | 求职期每周查看 |
 | 知识管理 | [前端知识体系](docs/knowledge/frontend-knowledge-system.md) | 知识树、记录模板、复习闭环 | 每天使用 |
-| 掌握与考核 | [可勾选知识掌握清单](docs/knowledge/knowledge-base/README.md) | 92 个知识点、学习资料、严格考核和通过状态 | 每天更新 |
+| 掌握与考核 | [可勾选知识掌握清单](docs/knowledge/knowledge-base/README.md) | 132 个知识点、学习资料、严格考核和通过状态 | 每天更新 |
 | 项目资产 | [项目经验资产库](docs/knowledge/project-assets.md) | 项目复盘、简历素材和面试案例 | 每周维护 |
 | 执行模板 | [16 周学习追踪表](templates/learning-tracker-template.csv) | 逐日任务、产出和状态 | 每天更新 |
 | 时间模板 | [每日 8 小时安排](templates/daily-8h-learning-schedule.csv) | 分配学习、实战、输出与复盘时间 | 每天参考 |
@@ -36,7 +46,7 @@ career-planning/
 ├── README.md                 # 唯一入口
 ├── docs/
 │   ├── plans/                # 短期执行与长期发展规划
-│   ├── knowledge/            # 知识体系、92 项掌握清单与项目资产
+│   ├── knowledge/            # 知识体系、132 项掌握清单与项目资产
 │   └── topics/               # 学习过程中逐步完成的专题产出
 └── templates/                # 日程、学习和岗位追踪表
 ```

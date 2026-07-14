@@ -60,4 +60,21 @@ describe('Markdown Parser', () => {
     
     expect(result.description).toBe('这是领域描述。');
   });
+
+  it('应该解析包含数字的知识点前缀', () => {
+    const content = `# 07 Web 性能、H5 与 Hybrid
+
+## H5-01 viewport 与响应式
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：MDN。
+- 严格考核：完成移动端页面。
+- 通过标准：通过所有检查。`;
+
+    const result = parseKnowledgeMarkdown(content, '07-performance-h5.md');
+
+    expect(result.points).toHaveLength(1);
+    expect(result.points[0]?.code).toBe('H5-01');
+  });
 });

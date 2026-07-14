@@ -10,12 +10,12 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { getConfig } from '../config/index.js';
+import { getConfig, projectRoot } from '../config/index.js';
 
 const config = getConfig();
 const dataDir = config.dataDir;
 const dbPath = path.join(dataDir, 'career-atlas.db');
-const migrationsFolder = path.join(process.cwd(), 'drizzle');
+const migrationsFolder = path.join(projectRoot, 'apps/server/drizzle');
 
 // 确保 data 目录存在
 if (!fs.existsSync(dataDir)) {
