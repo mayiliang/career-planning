@@ -68,6 +68,27 @@ const KnowledgePointListItemSchema = z.object({
   selfMasteredAt: z.string().nullable(),
   firstPassedAt: z.string().nullable(),
   masteredAt: z.string().nullable(),
+  routeOrder: z.number(),
+  studyMinutes: z.number(),
+  practiceMinutes: z.number(),
+  projectMinutes: z.number(),
+  assessmentMinutes: z.number(),
+  retestMinutes: z.number(),
+  estimatedTotalMinutes: z.number(),
+});
+
+const KnowledgeRecommendationSchema = z.object({
+  action: z.enum(['LEARN', 'CONTINUE', 'ASSESS', 'RETEST', 'RELEARN', 'COMPLETE']),
+  readiness: z.enum(['READY', 'BLOCKED', 'COMPLETE']),
+  reason: z.string(),
+  point: KnowledgePointListItemSchema.nullable(),
+  blockers: z.array(z.object({
+    code: z.string(),
+    title: z.string(),
+    status: z.enum(['NOT_STARTED', 'LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'MASTERED', 'NEEDS_RELEARNING']),
+  })),
+  prerequisiteProgress: z.object({ mastered: z.number(), total: z.number() }),
+  routePosition: z.object({ week: z.number(), index: z.number(), total: z.number() }).nullable(),
 });
 
 // 知识点详情 Schema
@@ -119,7 +140,13 @@ const LearningBriefPointSchema = z.object({
 
 const PlanLearningBriefSchema = z.object({
   displayTitle: z.string(),
+  phase: z.string(),
   weekTheme: z.string(),
+  weekOutcome: z.string(),
+  projectAnchor: z.string(),
+  dailyFocus: z.string(),
+  assessmentMode: z.string(),
+  reviewCadence: z.array(z.string()),
   learningContent: z.array(z.string()),
   masteryGoals: z.array(z.object({ code: z.string(), text: z.string() })),
   tasks: z.array(z.object({ code: z.string(), text: z.string() })),
@@ -128,6 +155,17 @@ const PlanLearningBriefSchema = z.object({
   prerequisitesReady: z.boolean(),
   pendingPrerequisiteCount: z.number(),
   knowledgePoints: z.array(LearningBriefPointSchema),
+  effort: z.object({
+    studyMinutes: z.number(),
+    practiceMinutes: z.number(),
+    projectMinutes: z.number(),
+    assessmentMinutes: z.number(),
+    retestMinutes: z.number(),
+    estimatedTotalMinutes: z.number(),
+    capacityMinutes: z.number(),
+    utilizationPercent: z.number(),
+    overloaded: z.boolean(),
+  }),
 });
 
 // 计划事件 Schema
@@ -580,6 +618,10 @@ export const apiClient = {
     return request(path, KnowledgeListResponseSchema);
   },
 
+  async getKnowledgeRecommendation() {
+    return request('/knowledge/recommendation', KnowledgeRecommendationSchema);
+  },
+
   /**
    * 获取知识点详情
    */
@@ -844,6 +886,7 @@ export const apiClient = {
       result: AssessmentResultSchema,
       knowledgePointUpdated: z.boolean(),
       retestEventCreated: z.boolean(),
+      reviewEventCreated: z.boolean(),
     }), {
       method: 'POST',
       body: JSON.stringify({ provider: 'deepseek' }),
@@ -855,6 +898,7 @@ export const apiClient = {
       result: AssessmentResultSchema,
       knowledgePointUpdated: z.boolean(),
       retestEventCreated: z.boolean(),
+      reviewEventCreated: z.boolean(),
     }), { method: 'POST' });
   },
 
@@ -1075,6 +1119,7 @@ export const apiClient = {
 
 // 导出类型
 export type KnowledgePointListItem = z.infer<typeof KnowledgePointListItemSchema>;
+export type KnowledgeRecommendation = z.infer<typeof KnowledgeRecommendationSchema>;
 export type KnowledgePointDetail = z.infer<typeof KnowledgePointDetailSchema>;
 export type PlanEvent = z.infer<typeof PlanEventSchema>;
 export type Checkin = z.infer<typeof CheckinSchema>;

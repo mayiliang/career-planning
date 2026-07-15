@@ -65,6 +65,8 @@
 
 禁止提供通用 `PATCH /knowledge/points/:code { status }`。状态必须通过明确命令或考核结果改变。
 
+知识点列表与详情响应必须包含 `studyMinutes`、`practiceMinutes`、`projectMinutes`、`assessmentMinutes`、`retestMinutes` 和 `estimatedTotalMinutes`。其中 `estimatedTotalMinutes` 由服务端用前四项重算，客户端不得自行持久化总数。
+
 ## 4. 考核 API
 
 | 方法 | 路径 | 说明 |
@@ -122,6 +124,8 @@ grading.failed
 | GET | `/statistics/learning` | 完成率、时长和复测数据 |
 
 日历查询必须使用范围参数：`from`、`to`，禁止无范围读取全部历史。
+
+模板学习事件返回可选的 `learningBrief`，其中 `effort` 包含五阶段分钟、`estimatedTotalMinutes`、`capacityMinutes`、`utilizationPercent` 和 `overloaded`。该对象表达该事件当天实际承接的阶段负载，不代表关联知识点完整生命周期的总耗时。
 
 ## 6. 求职 API
 

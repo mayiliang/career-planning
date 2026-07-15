@@ -46,6 +46,13 @@ export const knowledgePoints = sqliteTable('knowledge_points', {
   difficulty: text('difficulty', { enum: ['intermediate', 'senior', 'advanced'] }).notNull(),
   planWeek: integer('plan_week'), // 推荐周次
 
+  // 首次掌握按阶段拆分，复测单列；均以分钟计，便于计划负载计算。
+  studyMinutes: integer('study_minutes').notNull().default(45),
+  practiceMinutes: integer('practice_minutes').notNull().default(75),
+  projectMinutes: integer('project_minutes').notNull().default(60),
+  assessmentMinutes: integer('assessment_minutes').notNull().default(45),
+  retestMinutes: integer('retest_minutes').notNull().default(30),
+
   // 状态（由状态机管理）
   status: text('status', {
     enum: ['NOT_STARTED', 'LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'MASTERED', 'NEEDS_RELEARNING']

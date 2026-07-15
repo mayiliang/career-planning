@@ -58,6 +58,11 @@ erDiagram
 | pass_criteria_md | text | 通过标准 Markdown |
 | difficulty | text | intermediate/senior/advanced |
 | plan_week | integer nullable | 推荐周次 |
+| study_minutes | integer | 资料精读预计分钟 |
+| practice_minutes | integer | 刻意练习预计分钟 |
+| project_minutes | integer | 项目产出预计分钟 |
+| assessment_minutes | integer | 首次严格考核预计分钟 |
+| retest_minutes | integer | 7 天复测预计分钟 |
 | status | text | 状态枚举 |
 | self_mastered_at | text nullable | 自评时间 |
 | first_passed_at | text nullable | 初试通过时间 |
@@ -193,7 +198,9 @@ NEEDS_RELEARNING
 2. `## <ID> <标题>` 开始一个知识点，ID 匹配 `[A-Z]+-[0-9]+`。
 3. `- [ ] 自评已掌握` 和 `- [ ] 已通过严格考核` 只作为初始状态提示；已有数据库时不得覆盖。
 4. `- 学习资料：`、`- 严格考核：`、`- 通过标准：` 分别解析成字段。
-5. `## 领域综合考核` 解析成领域级考核定义，不作为普通知识点。
+5. 可选的 `- 预计耗时：资料 45 分钟；练习 90 分钟；项目 60 分钟；考核 45 分钟；复测 30 分钟` 解析成五个分钟字段；缺失时按知识编号前缀使用默认估算，任一显式值缺失、非整数或小于等于 0 都视为无效并回退默认值。
+6. `estimatedTotalMinutes = study_minutes + practice_minutes + project_minutes + assessment_minutes`，复测单独统计，不能重复计入首次掌握总时长。
+7. `## 领域综合考核` 解析成领域级考核定义，不作为普通知识点。
 
 ### CSV 映射
 
@@ -218,6 +225,7 @@ NEEDS_RELEARNING
 - `jobs(status, next_action_at)` index。
 - 所有外键开启 `PRAGMA foreign_keys = ON`。
 - 关键枚举使用数据库 check constraint 与 Zod 双重校验。
+- 五个耗时字段使用非空正整数约束；迁移 `0006_knowledge_effort.sql` 为既有数据库补齐默认值，增量导入再按当前内容刷新估算。
 
 ## 9. 备份格式
 

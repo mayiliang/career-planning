@@ -166,6 +166,8 @@ export async function executeImport(): Promise<{
 
         const pointHash = calculateHash(
           point.title + point.studyMaterial + point.assessmentSpec + point.passCriteria
+          + point.studyMinutes + point.practiceMinutes + point.projectMinutes
+          + point.assessmentMinutes + point.retestMinutes
         );
 
         if (existingPoint) {
@@ -183,6 +185,11 @@ export async function executeImport(): Promise<{
               assessmentSpecMd: point.assessmentSpec,
               passCriteriaMd: point.passCriteria,
               difficulty: point.difficulty,
+              studyMinutes: point.studyMinutes,
+              practiceMinutes: point.practiceMinutes,
+              projectMinutes: point.projectMinutes,
+              assessmentMinutes: point.assessmentMinutes,
+              retestMinutes: point.retestMinutes,
               sourcePath,
               sourceHash: pointHash,
               updatedAt: now,
@@ -205,6 +212,11 @@ export async function executeImport(): Promise<{
           passCriteriaMd: point.passCriteria,
           difficulty: point.difficulty,
           planWeek: null,
+          studyMinutes: point.studyMinutes,
+          practiceMinutes: point.practiceMinutes,
+          projectMinutes: point.projectMinutes,
+          assessmentMinutes: point.assessmentMinutes,
+          retestMinutes: point.retestMinutes,
           status: 'NOT_STARTED',
           selfMasteredAt: null,
           firstPassedAt: null,

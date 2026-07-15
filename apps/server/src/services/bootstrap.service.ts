@@ -14,10 +14,10 @@ export interface BootstrapResult {
   normalizedPlanTimes: number;
 }
 
-function nextMonday(): string {
+function currentMonday(): string {
   const date = new Date();
-  const daysUntilMonday = (8 - date.getDay()) % 7 || 7;
-  date.setDate(date.getDate() + daysUntilMonday);
+  const daysSinceMonday = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - daysSinceMonday);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -30,10 +30,11 @@ export async function bootstrapLocalData(): Promise<BootstrapResult> {
   const templatePath = join(projectRoot, 'templates', 'learning-tracker-template.csv');
 
   if (row.count === 0) {
-    const result = await planService.importFromTemplate(templatePath, { startDate: nextMonday() });
+    const result = await planService.importFromTemplate(templatePath, { startDate: currentMonday() });
     planItems = result.imported;
   } else {
-    planItems = await planService.ensureSevenDayTemplate(templatePath);
+    const result = await planService.syncTemplatePlan(templatePath);
+    planItems = result.created + result.updated;
   }
   const normalizedPlanTimes = planService.normalizeTemplateSchedule();
 

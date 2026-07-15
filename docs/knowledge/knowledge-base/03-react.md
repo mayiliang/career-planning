@@ -66,6 +66,14 @@
 - 严格考核：为页面设计加载、空、错误、无权限、部分失败和重试状态；实现错误边界；模拟渲染异常与接口失败并验证恢复。
 - 通过标准：错误隔离范围合理；恢复不会丢失无关用户输入；能区分渲染错误、事件错误和异步请求错误的捕获边界。
 
+## REACT-09 React 19.2、Compiler 与服务端边界安全
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[React 19.2](https://react.dev/blog/2025/10/01/react-19-2)、[React Compiler v1.0](https://react.dev/blog/2025/10/07/react-compiler-1)、[React Server Components Security](https://react.dev/blog/2025/12/03/critical-security-vulnerability-in-react-server-components)、[React Versions](https://react.dev/versions)。
+- 严格考核：在真实页面启用 React Compiler 并清理无价值手工 memo，使用 Performance Tracks 验证收益；实现 `Activity` 保活切换和 `useEffectEvent` 事件逻辑；审查 RSC/Server Function 的信任边界和安全公告响应流程。
+- 通过标准：Compiler 配置、lint 和运行版本匹配；性能结论有前后证据且行为不回归；能判断何时保留手工 memo；服务端输入重新校验并具备补丁与回滚方案；不会把 Server Component 当成天然可信边界。
+
 ## 领域综合考核
 
 - [ ] 已通过领域综合考核

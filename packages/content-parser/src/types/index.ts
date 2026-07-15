@@ -15,6 +15,14 @@ export const ParsedKnowledgePointSchema = z.object({
   studyMaterial: z.string(), // 学习资料
   assessmentSpec: z.string(), // 严格考核
   passCriteria: z.string(), // 通过标准
+
+  // 可计算学习负载（首次掌握总时长不包含复测）
+  studyMinutes: z.number().int().positive(),
+  practiceMinutes: z.number().int().positive(),
+  projectMinutes: z.number().int().positive(),
+  assessmentMinutes: z.number().int().positive(),
+  retestMinutes: z.number().int().positive(),
+  estimatedTotalMinutes: z.number().int().positive(),
   
   // 状态（仅作为导入提示，不写入数据库状态）
   selfMastered: z.boolean().default(false),
@@ -36,12 +44,11 @@ export type ParsedDomain = z.infer<typeof ParsedDomainSchema>;
 // CSV 学习计划解析结果
 export const ParsedPlanItemSchema = z.object({
   week: z.number(),
+  phase: z.string(),
   theme: z.string(),
-  day: z.string(),
-  learningTopic: z.string(),
-  practiceTask: z.string(),
-  output: z.string(),
-  reviewQuestion: z.string(),
+  projectAnchor: z.string(),
+  weeklyOutcome: z.string(),
+  weeklyAssessment: z.string(),
   status: z.string(),
 });
 

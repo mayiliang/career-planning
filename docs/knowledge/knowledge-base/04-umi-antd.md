@@ -30,7 +30,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Umi Max Access](https://umijs.org/docs/max/access)、项目真实权限与菜单配置。
+- 学习资料：[Umi Max Access](https://umijs.org/docs/max/access)、[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)、项目真实权限与菜单配置。
 - 严格考核：实现页面、按钮、字段和数据范围四层权限矩阵；构造直接访问 URL、伪造前端状态和权限刷新场景。
 - 通过标准：前端负责体验、后端负责最终授权的边界明确；权限来源单一；无权限状态不闪现敏感内容。
 

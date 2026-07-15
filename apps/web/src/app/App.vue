@@ -7,9 +7,12 @@
  * - 左侧导航布局基础结构
  */
 import { useQuery } from '@tanstack/vue-query';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { apiClient } from '@/api/client';
+import CommandPalette from './CommandPalette.vue';
+
+const commandPaletteOpen = ref(false);
 
 // 查询服务健康状态
 const { data: healthStatus, isFetching, error } = useQuery({
@@ -71,6 +74,10 @@ const isActive = (path: string) => {
           </RouterLink>
         </li>
       </ul>
+
+      <button class="command-trigger" aria-label="快速查找，快捷键 Command 或 Control 加 K" @click="commandPaletteOpen = true">
+        <span>⌕</span><span class="command-copy"><strong>快速查找</strong><small>知识点与页面</small></span><kbd>⌘ K</kbd>
+      </button>
       
       <div class="nav-footer">
         <div class="service-state" :title="statusText"><span :style="{ backgroundColor: statusColor }"></span><div><strong>{{ statusText }}</strong><small>本地数据服务</small></div></div>
@@ -84,6 +91,7 @@ const isActive = (path: string) => {
     <main class="main-content">
       <div class="content-frame"><RouterView /></div>
     </main>
+    <CommandPalette v-model="commandPaletteOpen" />
   </div>
 </template>
 

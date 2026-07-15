@@ -157,6 +157,18 @@ const studyHtml = computed(() => renderMarkdown(point.value?.studyMaterialMd ?? 
 const assessmentHtml = computed(() => renderMarkdown(point.value?.assessmentSpecMd ?? ''));
 const criteriaHtml = computed(() => renderMarkdown(point.value?.passCriteriaMd ?? ''));
 const pendingPrerequisites = computed(() => relations.value?.prerequisites.filter((item) => item.status !== 'MASTERED').length ?? 0);
+const formatMinutes = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours ? `${hours} 小时${rest ? ` ${rest} 分` : ''}` : `${rest} 分钟`;
+};
+const effortStages = computed(() => point.value ? [
+  { key: 'study', label: '资料精读', minutes: point.value.studyMinutes },
+  { key: 'practice', label: '机制练习', minutes: point.value.practiceMinutes },
+  { key: 'project', label: '项目产出', minutes: point.value.projectMinutes },
+  { key: 'assessment', label: '严格首考', minutes: point.value.assessmentMinutes },
+  { key: 'retest', label: '7 天复测', minutes: point.value.retestMinutes },
+] : []);
 </script>
 
 <template>
@@ -213,6 +225,19 @@ const pendingPrerequisites = computed(() => relations.value?.prerequisites.filte
           </div>
         </div>
       </header>
+
+      <section class="effort-panel" aria-labelledby="effort-title">
+        <div class="effort-summary">
+          <p>TIME BUDGET</p>
+          <h2 id="effort-title">预计 {{ formatMinutes(point.estimatedTotalMinutes) }} 完成首次掌握</h2>
+          <span>另预留 {{ formatMinutes(point.retestMinutes) }} 完成 7 天后严格复测；实际耗时会随基础与产出质量调整。</span>
+        </div>
+        <div class="effort-stages">
+          <div v-for="stage in effortStages" :key="stage.key" :data-stage="stage.key">
+            <i></i><span>{{ stage.label }}</span><strong>{{ stage.minutes }}m</strong>
+          </div>
+        </div>
+      </section>
 
       <section class="relation-route" aria-labelledby="relation-title">
         <header>
@@ -465,6 +490,9 @@ const pendingPrerequisites = computed(() => relations.value?.prerequisites.filte
   letter-spacing: 0.05em;
 }
 
+.effort-panel { display: grid; grid-template-columns: minmax(230px,.8fr) minmax(0,1.2fr); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; color: #eaf2ff; background: linear-gradient(130deg,#152a45,#1d3d55); border: 1px solid rgba(119,169,239,.18); border-radius: 16px; box-shadow: 0 16px 38px rgba(17,43,72,.13); }
+.effort-summary p { margin: 0; color: #77a9ef; font: 750 .58rem var(--font-mono); letter-spacing: .14em; }.effort-summary h2 { margin: .28rem 0 .35rem; color: #fff; font-size: 1rem; }.effort-summary span { display: block; color: #9fb3ca; font-size: .62rem; line-height: 1.55; }
+.effort-stages { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: .35rem; align-content: center; }.effort-stages>div { display: grid; grid-template-columns: 7px 1fr; gap: .12rem .35rem; align-items: center; min-width: 0; padding: .55rem .45rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; }.effort-stages i { grid-row: 1 / 3; width: 7px; height: 28px; background: #73a7ef; border-radius: 99px; }.effort-stages [data-stage='practice'] i { background: #69d4b0; }.effort-stages [data-stage='project'] i { background: #f0bd62; }.effort-stages [data-stage='assessment'] i { background: #eb7e78; }.effort-stages [data-stage='retest'] i { background: #b395e8; }.effort-stages span { overflow: hidden; color: #9fb3ca; font-size: .52rem; text-overflow: ellipsis; white-space: nowrap; }.effort-stages strong { color: #fff; font: 720 .62rem var(--font-mono); }
 .relation-route { margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: var(--shadow-xs); }
 .relation-route>header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-end; padding-bottom: .8rem; border-bottom: 1px solid var(--color-border-subtle); }.relation-route>header p { margin: 0; color: var(--color-primary); font: 750 .62rem var(--font-mono); letter-spacing: .14em; }.relation-route>header h2 { margin: .15rem 0 0; font-size: 1rem; }.relation-route>header button { padding: 0; color: var(--color-primary); font-size: .65rem; background: transparent; border: 0; cursor: pointer; }
 .relation-lanes { display: grid; grid-template-columns: 1fr 180px 1fr; gap: .8rem; align-items: stretch; padding-top: .9rem; }.relation-column { position: relative; display: grid; align-content: start; gap: .4rem; }.relation-label { color: var(--color-text-tertiary); font: 650 .56rem var(--font-mono); }.relation-column button { display: grid; grid-template-columns: auto 1fr auto; gap: .45rem; align-items: center; min-height: 45px; padding: .45rem .55rem; text-align: left; color: var(--color-text); background: var(--color-surface-raised); border: 1px solid var(--color-border-subtle); border-radius: 9px; cursor: pointer; }.relation-column button:hover { border-color: var(--color-primary-border); }.relation-column code { color: var(--color-primary); font: 700 .56rem var(--font-mono); }.relation-column strong { overflow: hidden; font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }.relation-column small { color: var(--color-text-tertiary); font-size: .52rem; }.relation-column small[data-status='MASTERED'] { color: var(--color-success); }.relation-column>p { margin: 0; padding: .75rem; color: var(--color-text-tertiary); font-size: .61rem; background: var(--color-surface-raised); border-radius: 9px; }
@@ -752,6 +780,8 @@ const pendingPrerequisites = computed(() => relations.value?.prerequisites.filte
 
 /* 响应式 */
 @media (max-width: 768px) {
+  .effort-panel { grid-template-columns: 1fr; }
+  .effort-stages { grid-template-columns: repeat(5,minmax(72px,1fr)); overflow-x: auto; }
   .title-row {
     flex-direction: column;
     gap: calc(var(--space-base) * 0.5);

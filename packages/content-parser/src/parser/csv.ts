@@ -11,8 +11,8 @@ import type { ParsedPlanItem, ParsedJob } from '../types/index.js';
 
 // 学习计划 CSV 列名映射
 const PLAN_CSV_COLUMNS = [
-  'week', 'theme', 'day', 'learning_topic', 'practice_task',
-  'output', 'review_question', 'status'
+  'week', 'phase', 'theme', 'project_anchor', 'weekly_outcome',
+  'weekly_assessment', 'status'
 ];
 
 // 岗位 CSV 列名映射
@@ -34,12 +34,11 @@ export function parsePlanCsv(content: string): ParsedPlanItem[] {
   // 类型转换
   return records.map((row: Record<string, string>) => ({
     week: parseInt(row.week ?? '', 10),
+    phase: row.phase ?? '',
     theme: row.theme ?? '',
-    day: row.day ?? '',
-    learningTopic: row.learning_topic ?? '',
-    practiceTask: row.practice_task ?? '',
-    output: row.output ?? '',
-    reviewQuestion: row.review_question ?? '',
+    projectAnchor: row.project_anchor ?? '',
+    weeklyOutcome: row.weekly_outcome ?? '',
+    weeklyAssessment: row.weekly_assessment ?? '',
     status: row.status ?? '',
   }));
 }

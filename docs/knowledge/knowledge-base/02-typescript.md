@@ -62,9 +62,17 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[TypeScript Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)、项目中的真实枚举、服务类型与权限函数。
+- 学习资料：[TypeScript Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)、[TypeScript `satisfies`](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html)、项目中的真实枚举、服务类型与权限函数。
 - 严格考核：选择 `gungnir-web` 一个审核流程，将业务对象、状态、允许动作、请求参数和按钮展示建模；编写类型与运行时测试阻止非法转换。
 - 通过标准：状态与动作关系有单一来源；非法动作既在类型层也在运行时失败；能回答后端新增状态时如何安全演进。
+
+## TS-09 TypeScript 5.9/6.0 迁移与模块语义
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[TypeScript 5.9 Release Notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html)、[TypeScript 6.0 Release Notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-6-0.html)、[TypeScript Modules Reference](https://www.typescriptlang.org/docs/handbook/modules/reference.html)。
+- 严格考核：把一个含浏览器应用、Node 服务和组件包的 workspace 从旧配置迁移到 5.9/6.0；验证 `import defer`、`node20`、模块解析、DOM lib 与 typed array 变化；输出 TS 7 迁移风险清单。
+- 通过标准：三类产物运行语义与类型检查一致；不以 `skipLibCheck` 或批量断言掩盖问题；每个 breaking change 有复现、归因和修复证据；能解释编译目标、模块格式、模块解析和运行时加载是四个不同维度。
 
 ## 领域综合考核
 

@@ -43,6 +43,13 @@
       "when": 1784009000000,
       "tag": "0005_phase9_leave_days",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784080000000,
+      "tag": "0006_knowledge_effort",
+      "breakpoints": true
     }
   ]
 }

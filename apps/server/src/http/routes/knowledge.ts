@@ -14,6 +14,7 @@ import {
   getKnowledgePointByCode,
   updateKnowledgePointSummary,
   selfMasterKnowledgePoint,
+  getKnowledgeRecommendation,
   KnowledgeListQuerySchema,
 } from '../../services/knowledge.service.js';
 
@@ -27,6 +28,20 @@ const SelfMasterSchema = z.object({
 });
 
 export async function knowledgeRoutes(app: FastifyInstance) {
+  // ===== GET /api/v1/knowledge/recommendation - 下一最佳行动 =====
+  app.get('/recommendation', async (request, reply) => {
+    try {
+      const recommendation = await getKnowledgeRecommendation();
+      return reply.status(200).send({ data: recommendation, meta: { requestId: request.id } });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: '无法生成学习建议', retryable: true },
+        meta: { requestId: request.id },
+      });
+    }
+  });
+
   // ===== GET /api/v1/knowledge/points - 知识点列表 =====
   app.get('/points', async (request, reply) => {
     try {

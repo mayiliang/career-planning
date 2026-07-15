@@ -18,6 +18,8 @@ import type {
   PlanEventStatus,
 } from '../db/schema.js';
 import { parsePlanCsv } from '@career-atlas/content-parser';
+import { LEARNING_WEEK_PATHS } from './knowledge-relations.service.js';
+export { LEARNING_WEEK_PATHS } from './knowledge-relations.service.js';
 
 export interface LearningBriefPoint {
   id: string;
@@ -31,7 +33,13 @@ export interface LearningBriefPoint {
 
 export interface PlanLearningBrief {
   displayTitle: string;
+  phase: string;
   weekTheme: string;
+  weekOutcome: string;
+  projectAnchor: string;
+  dailyFocus: string;
+  assessmentMode: string;
+  reviewCadence: string[];
   learningContent: string[];
   masteryGoals: Array<{ code: string; text: string }>;
   tasks: Array<{ code: string; text: string }>;
@@ -40,31 +48,47 @@ export interface PlanLearningBrief {
   prerequisitesReady: boolean;
   pendingPrerequisiteCount: number;
   knowledgePoints: LearningBriefPoint[];
+  effort: {
+    studyMinutes: number;
+    practiceMinutes: number;
+    projectMinutes: number;
+    assessmentMinutes: number;
+    retestMinutes: number;
+    estimatedTotalMinutes: number;
+    capacityMinutes: number;
+    utilizationPercent: number;
+    overloaded: boolean;
+  };
 }
 
 export type PlanEventWithLearningBrief = PlanEventRecord & { learningBrief: PlanLearningBrief | null };
 
-/**
- * 16 周知识编排。前 15 周覆盖全部 132 个知识点，第 16 周用跨领域项目完成综合验证。
- * 每周 7 天按顺序自动切分为 1-2 个明确知识点。
- */
-export const LEARNING_WEEK_PATHS: Record<number, string[]> = {
-  1: ['CAREER-01', 'CAREER-02', 'CAREER-03', 'CAREER-04', 'CAREER-05', 'CAREER-06'],
-  2: ['JS-01', 'JS-02', 'JS-03', 'JS-04', 'JS-05', 'JS-06', 'WEB-01', 'WEB-02', 'BROWSER-01', 'NET-01', 'SEC-01'],
-  3: ['TS-01', 'TS-02', 'TS-03', 'TS-04', 'TS-05', 'TS-06', 'TS-07', 'TS-08'],
-  4: ['REACT-01', 'REACT-02', 'REACT-03', 'REACT-04', 'REACT-05', 'REACT-06', 'REACT-07', 'REACT-08', 'VUE-01'],
-  5: ['VUE-02', 'VUE-03', 'VUE-04', 'VUE-05', 'VUE-06', 'VUE-07', 'VUE-08', 'VUE-09', 'VUE-10'],
-  6: ['UMI-01', 'UMI-02', 'UMI-03', 'UMI-04', 'ANTD-01', 'ANTD-02', 'ANTD-03', 'ANTD-04'],
-  7: ['BIZ-01', 'BIZ-02', 'BIZ-03', 'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08'],
-  8: ['ENG-01', 'ENG-02', 'ENG-03', 'ENG-04', 'ENG-05', 'TEST-01', 'TEST-02', 'TEST-03', 'ENG-06'],
-  9: ['PERF-01', 'PERF-02', 'PERF-03', 'PERF-04', 'H5-01', 'H5-02', 'HYBRID-01', 'H5-03', 'PERF-05'],
-  10: ['COMP-01', 'COMP-02', 'DS-01', 'COMP-03', 'PLATFORM-01', 'PLATFORM-02', 'PLATFORM-03'],
-  11: ['NODE-01', 'NODE-02', 'NODE-03', 'API-01', 'API-02', 'MCP-01', 'MCP-02', 'AI-01'],
-  12: ['AIAPP-01', 'AIAPP-02', 'AIAPP-03', 'AIAPP-04', 'AIAPP-05', 'AIAPP-06', 'AIAPP-07', 'AIAPP-08', 'AIAPP-09', 'AIAPP-10'],
-  13: ['AGENT-01', 'AGENT-02', 'AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07', 'AGENT-08', 'AGENT-09', 'AGENT-10'],
-  14: ['WEBAI-01', 'WEBAI-02', 'WEBAI-03', 'WEBAI-04', 'WEBAI-05', 'WEBAI-06', 'WEBAI-07', 'WEBAI-08', 'WEBAI-09', 'WEBAI-10'],
-  15: ['AIDEV-01', 'AIDEV-02', 'AIDEV-03', 'AIDEV-04', 'AIDEV-05', 'AIDEV-06', 'AIDEV-07', 'AIDEV-08', 'AIDEV-09', 'AIDEV-10'],
-  16: ['TS-08', 'VUE-10', 'BIZ-08', 'TEST-03', 'AIAPP-04', 'AGENT-10', 'CAREER-06'],
+export interface LearningWeekBlueprint {
+  phase: string;
+  theme: string;
+  projectAnchor: string;
+  outcome: string;
+  assessment: string;
+}
+
+/** 16 周元计划：学习成长是主线，求职表达在能力证据形成后再集中转译。 */
+export const LEARNING_WEEK_BLUEPRINTS: Record<number, LearningWeekBlueprint> = {
+  1: { phase: '基础底座', theme: 'Web 运行模型、平台能力与网络', projectAnchor: '浏览器机制实验室', outcome: '完成语言、CSS、可访问性、浏览器渲染和网络的可运行实验集', assessment: '闭卷机制问答 + DevTools 现场诊断 + 网络缓存排障' },
+  2: { phase: '基础底座', theme: '前端安全与 TypeScript 类型系统', projectAnchor: '安全边界与审核流类型模型', outcome: '完成安全攻击修复证据，并用类型系统表达业务状态和动作', assessment: '安全代码审查 + 现场类型建模 + 非法状态编译期验证' },
+  3: { phase: '框架与业务', theme: 'TypeScript 工程收口与 Vue 3 核心链路', projectAnchor: 'Career Atlas Vue 功能迭代', outcome: '完成类型工程化，并独立实现 Vue 路由、状态、请求、测试和性能链路', assessment: '类型工程题 + Vue 原理问答 + 限时功能开发' },
+  4: { phase: '框架与业务', theme: 'Vue 生产化与 React 原理、复杂状态', projectAnchor: '双框架复杂页面对照实验', outcome: '交付 Vue SSR 边界与 React 组件、Effect、并发和性能证据', assessment: '双框架机制对比 + Bug 修复 + 性能测量前后对比' },
+  5: { phase: '框架与业务', theme: 'Umi/Max、Ant Design 与业务建模', projectAnchor: 'gungnir-web 审核流页面模板', outcome: '沉淀中后台标准实现，并完成对象、状态和接口契约的前半段建模', assessment: '中后台限时实现 + 状态机推演 + 边界验收' },
+  6: { phase: '工程与平台', theme: '复杂业务闭环与工程质量底座', projectAnchor: 'CampusJob 契约与质量流水线', outcome: '补齐业务验收、错误和迁移边界，建立工作区、构建与质量门禁', assessment: '接口变更应对 + 构建故障定位 + CI 门禁答辩' },
+  7: { phase: '工程与平台', theme: '测试、发布、可观测性与性能诊断', projectAnchor: 'get_apidoc 质量与性能流水线', outcome: '建立测试金字塔、发布回滚、RUM 和 Core Web Vitals 诊断闭环', assessment: '单元/组件/E2E 实作 + 发布故障演练 + DevTools 诊断' },
+  8: { phase: '工程与平台', theme: 'H5、Hybrid 与组件设计系统', projectAnchor: '移动端组件与设计 Token 专项', outcome: '交付移动兼容修复、Bridge 边界和可复用组件 API 证据', assessment: '真机问题修复 + 组件 API 设计 + 破坏性变更评审' },
+  9: { phase: '工程与平台', theme: '平台化、Node.js、OpenAPI 与 MCP 入门', projectAnchor: 'get_apidoc MCP 工具链', outcome: '完成平台边界、CLI、Schema、类型生成和首个 MCP Tool', assessment: 'CLI 现场编码 + Schema 设计 + 工具安全测试' },
+  10: { phase: 'AI 原生能力', theme: 'MCP 收口与 AI 应用工程', projectAnchor: 'Career Atlas DeepSeek 考核链路', outcome: '交付 MCP 安全边界、流式输出、Tool Calling、RAG 和基础评估', assessment: '模型应用系统设计 + 工具协议实作 + 失败注入' },
+  11: { phase: 'AI 原生能力', theme: '可信 AI 体验与 Agent Loop', projectAnchor: '可恢复的学习评测 Agent', outcome: '补齐质量、成本与可信体验，并实现带停止条件和状态的 Agent Loop', assessment: '回归集评分 + Agent 场景设计 + 异常恢复' },
+  12: { phase: 'AI 原生能力', theme: 'Agent 工具协作与浏览器 AI 基础', projectAnchor: '最小权限 Agent 与本地推理实验', outcome: '完成审批、回放、并发与安全闭环，并验证浏览器 AI 兼容和隐私边界', assessment: '工具协议实作 + 安全红队 + 端云能力检测' },
+  13: { phase: 'AI 原生能力', theme: '浏览器本地推理与 AI 辅助研发入门', projectAnchor: '本地语义搜索 PWA', outcome: '完成 Worker/WebGPU/WASM/离线链路，并建立规格驱动研发起点', assessment: '性能能耗测量 + 离线恢复 + 规格质量评审' },
+  14: { phase: 'AI 原生能力', theme: 'AI 辅助研发、评审与工程治理', projectAnchor: 'AI 研发质量门禁', outcome: '形成上下文工程、代码验证、评审、可观测性和供应链治理流程', assessment: 'Agentic Coding 实战 + 风险分级 Review + 指标答辩' },
+  15: { phase: '影响力转译', theme: 'AI 治理收口、项目表达与职业影响力', projectAnchor: '四个代表项目资产包', outcome: '完成团队治理并把前 14 周证据转成项目复盘、架构图、ADR 和面试表达', assessment: '治理方案答辩 + 项目深挖模拟面试 + 教学表达' },
+  16: { phase: '综合闸门', theme: 'Career Atlas AI 学习系统毕业项目', projectAnchor: 'Career Atlas 2.0', outcome: '交付可运行产品、测试报告、性能报告、架构文档和演示材料', assessment: '4 小时综合实作 + 90 分钟答辩 + 7 天后盲测复核' },
 };
 
 // ===== 16 周计划模板解析 =====
@@ -80,48 +104,40 @@ interface PlanTemplateItem {
   practiceTask: string;
   output: string;
   reviewQuestion: string;
+  phase: string;
+  projectAnchor: string;
+  weeklyOutcome: string;
+  weeklyAssessment: string;
 }
+
+const DAILY_RHYTHMS = [
+  { day: '周一', focus: '建立心智模型', task: '精读资料并画出概念、输入输出和前置关系', output: '概念图 + 闭卷复述录音', question: '我能否从运行机制解释现象，而不是背结论？' },
+  { day: '周二', focus: '机制实验与源码验证', task: '用最小 Demo、DevTools 或源码断点验证关键机制', output: '可运行实验 + 观察记录', question: '证据是否真的支持我的结论？' },
+  { day: '周三', focus: '边界、反例与面试追问', task: '完成反例、故障注入和高级面试连续追问', output: '错题卡 + 边界用例', question: '条件改变后，我的答案是否仍成立？' },
+  { day: '周四', focus: '真实项目迁移', task: '把知识用于本周项目锚点，记录方案、取舍和风险', output: '项目增量 + ADR', question: '这项改动解决了什么真实问题，代价是什么？' },
+  { day: '周五', focus: '严格日检与补弱', task: '闭卷作答、限时编码或方案设计，未通过项当天补学再测', output: '评分记录 + 修订证据', question: '没有资料和 AI 时，我是否仍能独立完成？' },
+  { day: '周六', focus: '知识关系整合', task: '合并本周知识图谱，完成跨知识点综合题和项目复查', output: '关系图 + 综合题解', question: '我能否讲清前置、因果、对比和应用关系？' },
+  { day: '周日', focus: '周闸门与项目答辩', task: '完成 90 分钟闭卷、120 分钟实作和项目证据答辩', output: '周考报告 + 可演示项目里程碑', question: '本周证据能否经受高级前端面试的连续追问？' },
+] as const;
 
 /**
  * 解析学习计划 CSV
  * 使用 csv-parse 库正确处理带引号和逗号的字段
  */
 export function parseLearningPlanCSV(csvContent: string): PlanTemplateItem[] {
-  const weekdays = parsePlanCsv(csvContent).map(({ status: _status, ...item }) => item);
-  const result = [...weekdays];
-  const weeks = new Map<number, PlanTemplateItem[]>();
-  for (const item of weekdays) {
-    weeks.set(item.week, [...(weeks.get(item.week) ?? []), item]);
-  }
-
-  // 旧模板按工作日编写；运行时为每周补充两天体系复盘与项目验证。
-  for (const [week, items] of weeks) {
-    const theme = items[0]?.theme ?? `第 ${week} 周`;
-    if (!items.some((item) => getDayOfWeek(item.day) === 6)) {
-      result.push({
-        week,
-        theme,
-        day: '周六',
-        learningTopic: `${theme} · 知识整合`,
-        practiceTask: '闭卷复述本周核心模型，把概念、前置关系、易错点和项目证据补进知识脑图',
-        output: '本周知识脑图与错题清单',
-        reviewQuestion: '我能否不看资料讲清本周知识之间的因果关系？',
-      });
-    }
-    if (!items.some((item) => getDayOfWeek(item.day) === 0)) {
-      result.push({
-        week,
-        theme,
-        day: '周日',
-        learningTopic: `${theme} · 项目挑战`,
-        practiceTask: '选择本周一个知识点，在真实项目或独立 Demo 中完成可运行验证，并记录取舍与结果',
-        output: '可运行代码、测试证据与一页复盘',
-        reviewQuestion: '这个产出能否经受高级前端面试中的连续追问？',
-      });
-    }
-  }
-
-  return result.sort((a, b) => a.week - b.week || ((getDayOfWeek(a.day) + 6) % 7) - ((getDayOfWeek(b.day) + 6) % 7));
+  return parsePlanCsv(csvContent).flatMap(({ status: _status, ...week }) => DAILY_RHYTHMS.map((rhythm) => ({
+    week: week.week,
+    theme: week.theme,
+    day: rhythm.day,
+    learningTopic: `${week.theme} · ${rhythm.focus}`,
+    practiceTask: `${rhythm.task}；项目锚点：${week.projectAnchor}`,
+    output: `${rhythm.output}；本周成果：${week.weeklyOutcome}`,
+    reviewQuestion: rhythm.question,
+    phase: week.phase,
+    projectAnchor: week.projectAnchor,
+    weeklyOutcome: week.weeklyOutcome,
+    weeklyAssessment: week.weeklyAssessment,
+  })));
 }
 
 /**
@@ -150,20 +166,151 @@ function calculatePlanDate(startDate: Date, weekNumber: number, dayOfWeek: numbe
   const date = new Date(startDate);
   // 计算周偏移量（weekNumber - 1）
   const weekOffset = (weekNumber - 1) * 7;
-  // 计算日偏移量
-  const dayOffset = dayOfWeek - 1; // 假设开始日期是周一
+  // 将原生周日 0 映射到一周末尾 6，确保周日位于同一周的周六之后。
+  const dayOffset = (dayOfWeek + 6) % 7;
   date.setDate(date.getDate() + weekOffset + dayOffset);
   return date;
+}
+
+function formatLocalDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+type KnowledgeEffortRow = {
+  code: string;
+  studyMinutes: number;
+  practiceMinutes: number;
+  projectMinutes: number;
+  assessmentMinutes: number;
+  retestMinutes: number;
+};
+
+function loadEffortByCode(): Map<string, KnowledgeEffortRow> {
+  const rows = rawDb.prepare(`
+    SELECT code,
+           study_minutes AS studyMinutes,
+           practice_minutes AS practiceMinutes,
+           project_minutes AS projectMinutes,
+           assessment_minutes AS assessmentMinutes,
+           retest_minutes AS retestMinutes
+    FROM knowledge_points
+  `).all() as KnowledgeEffortRow[];
+  return new Map(rows.map((row) => [row.code, row]));
+}
+
+function initialMinutes(effort: KnowledgeEffortRow | undefined): number {
+  return effort
+    ? effort.studyMinutes + effort.practiceMinutes + effort.projectMinutes + effort.assessmentMinutes
+    : 240;
+}
+
+type EffortStage = 'study' | 'practice' | 'project' | 'assessment';
+type EffortSegment = { code: string; stage: EffortStage; minutes: number };
+
+const STAGE_LABELS: Record<EffortStage, string> = {
+  study: '资料精读',
+  practice: '机制练习',
+  project: '项目产出',
+  assessment: '严格首考',
+};
+
+const STAGE_TASKS: Record<EffortStage, string> = {
+  study: '精读官方资料，写出关键机制、输入输出、前置关系和 3 个待验证问题',
+  practice: '完成最小 Demo、反例或故障注入，并保存 DevTools、类型或测试证据',
+  project: '迁移到本周项目锚点，提交可运行增量并记录方案、取舍和风险',
+  assessment: '闭卷完成知识点严格考核，达到 80 分且关键项全部通过',
+};
+
+/** 把知识点的四个首次掌握阶段按分钟连续铺到周一至周六，可在 15 分钟边界跨日。 */
+function effortSegmentsForWeek(week: number, effortByCode = loadEffortByCode()): EffortSegment[][] {
+  const stages = (LEARNING_WEEK_PATHS[week] ?? []).flatMap((code) => {
+    const effort = effortByCode.get(code);
+    return ([
+      { code, stage: 'study', minutes: effort?.studyMinutes ?? 45 },
+      { code, stage: 'practice', minutes: effort?.practiceMinutes ?? 75 },
+      { code, stage: 'project', minutes: effort?.projectMinutes ?? 60 },
+      { code, stage: 'assessment', minutes: effort?.assessmentMinutes ?? 60 },
+    ] satisfies EffortSegment[]);
+  });
+  const totalMinutes = stages.reduce((sum, stage) => sum + stage.minutes, 0);
+  const targetMinutes = Math.min(480, Math.ceil(totalMinutes / 6 / 15) * 15);
+  const days = Array.from({ length: 6 }, () => [] as EffortSegment[]);
+  let dayIndex = 0;
+  let dayMinutes = 0;
+  for (const stage of stages) {
+    let remaining = stage.minutes;
+    while (remaining > 0) {
+      const capacity = Math.max(15, targetMinutes - dayMinutes);
+      const minutes = Math.min(remaining, capacity);
+      days[Math.min(dayIndex, 5)]!.push({ ...stage, minutes });
+      remaining -= minutes;
+      dayMinutes += minutes;
+      if (dayMinutes >= targetMinutes && dayIndex < 5) {
+        dayIndex++;
+        dayMinutes = 0;
+      }
+    }
+  }
+  return days;
+}
+
+/** 把一周的知识路径切成连续且负载尽量相近的 6 组，避免按数量平均造成难度失衡。 */
+export function partitionKnowledgePathByEffort(
+  path: string[],
+  effortByCode = loadEffortByCode(),
+  dayCount = 6,
+): string[][] {
+  const groups = Array.from({ length: dayCount }, () => [] as string[]);
+  let cursor = 0;
+  for (let dayIndex = 0; dayIndex < dayCount && cursor < path.length; dayIndex++) {
+    const remainingDays = dayCount - dayIndex;
+    const remainingCodes = path.slice(cursor);
+    const remainingMinutes = remainingCodes.reduce((sum, code) => sum + initialMinutes(effortByCode.get(code)), 0);
+    const target = remainingMinutes / remainingDays;
+    const mustLeave = Math.min(remainingDays - 1, Math.max(0, remainingCodes.length - 1));
+    let groupMinutes = 0;
+
+    while (cursor < path.length - mustLeave) {
+      const code = path[cursor]!;
+      const minutes = initialMinutes(effortByCode.get(code));
+      if (groups[dayIndex]!.length > 0 && Math.abs(groupMinutes - target) < Math.abs(groupMinutes + minutes - target)) break;
+      groups[dayIndex]!.push(code);
+      groupMinutes += minutes;
+      cursor++;
+    }
+    if (groups[dayIndex]!.length === 0 && cursor < path.length) groups[dayIndex]!.push(path[cursor++]!);
+  }
+  while (cursor < path.length) groups[dayCount - 1]!.push(path[cursor++]!);
+  return groups;
 }
 
 function codesForPlanDay(week: number, day: string): string[] {
   const path = LEARNING_WEEK_PATHS[week] ?? [];
   if (path.length === 0) return [];
   const dayIndex = (getDayOfWeek(day) + 6) % 7;
-  const start = Math.floor((dayIndex * path.length) / 7);
-  const end = Math.floor(((dayIndex + 1) * path.length) / 7);
-  const result = path.slice(start, Math.max(start + 1, end));
-  return result.length ? result : [path[Math.min(start, path.length - 1)]!];
+  // 周一到周六推进新知识，周日抽取末端知识做综合闸门，不再塞入新内容。
+  if (dayIndex === 6) return path.slice(Math.max(0, path.length - 2));
+  return [...new Set((effortSegmentsForWeek(week)[dayIndex] ?? []).map((segment) => segment.code))];
+}
+
+function describeTemplateItem(item: PlanTemplateItem): string {
+  const codes = codesForPlanDay(item.week, item.day);
+  const isWeeklyGate = getDayOfWeek(item.day) === 0;
+  const segments = isWeeklyGate ? [] : effortSegmentsForWeek(item.week)[(getDayOfWeek(item.day) + 6) % 7] ?? [];
+  const estimatedMinutes = isWeeklyGate
+    ? 210
+    : segments.reduce((sum, segment) => sum + segment.minutes, 0);
+  return [
+    `阶段：${item.phase}`,
+    `知识点：${codes.join('、')}`,
+    `阶段任务：${segments.map((segment) => `${segment.code}/${segment.stage}/${segment.minutes}`).join('、')}`,
+    `预计投入：${estimatedMinutes} 分钟${estimatedMinutes > 480 ? '（超出 8 小时，建议顺延低优先级任务）' : ''}`,
+    `本周目标：${item.weeklyOutcome}`,
+    `项目锚点：${item.projectAnchor}`,
+    `今日任务：${item.practiceTask}`,
+    `验收产出：${item.output}`,
+    `周闸门：${item.weeklyAssessment}`,
+  ].join('\n');
 }
 
 function concise(text: string, maxLength = 220): string {
@@ -180,6 +327,11 @@ type KnowledgeContextRow = {
   domainTitle: string;
   assessmentSpec: string;
   passCriteria: string;
+  studyMinutes: number;
+  practiceMinutes: number;
+  projectMinutes: number;
+  assessmentMinutes: number;
+  retestMinutes: number;
 };
 
 type PrerequisiteRow = {
@@ -195,7 +347,12 @@ function loadKnowledgeContext() {
     SELECT kp.id, kp.code, kp.title, kp.status,
            kd.code AS domainCode, kd.title AS domainTitle,
            kp.assessment_spec_md AS assessmentSpec,
-           kp.pass_criteria_md AS passCriteria
+           kp.pass_criteria_md AS passCriteria,
+           kp.study_minutes AS studyMinutes,
+           kp.practice_minutes AS practiceMinutes,
+           kp.project_minutes AS projectMinutes,
+           kp.assessment_minutes AS assessmentMinutes,
+           kp.retest_minutes AS retestMinutes
     FROM knowledge_points kp
     JOIN knowledge_domains kd ON kd.id = kp.domain_id
   `).all() as KnowledgeContextRow[];
@@ -218,9 +375,25 @@ function buildLearningBrief(
   event: PlanEventRecord,
   context: ReturnType<typeof loadKnowledgeContext>,
 ): PlanLearningBrief | null {
-  const codes = event.templateWeek && event.templateDay
-    ? codesForPlanDay(event.templateWeek, event.templateDay)
-    : [];
+  const embeddedSegments = event.description?.match(/^阶段任务：(.+)$/m)?.[1]
+    ?.split('、')
+    .map((value) => {
+      const [code, stage, minutes] = value.split('/');
+      return code && ['study', 'practice', 'project', 'assessment'].includes(stage ?? '') && Number(minutes) > 0
+        ? { code, stage: stage as EffortStage, minutes: Number(minutes) }
+        : null;
+    })
+    .filter((segment): segment is EffortSegment => Boolean(segment)) ?? [];
+  const embeddedCodes = event.description?.match(/^知识点：(.+)$/m)?.[1]
+    ?.split('、')
+    .map((code) => code.trim())
+    .filter(Boolean) ?? [];
+  // 描述中的知识点快照保证已完成历史不会被后续蓝图重排成另一组知识。
+  const codes = embeddedCodes.length > 0
+    ? embeddedCodes
+    : event.status === 'PLANNED' && event.templateWeek && event.templateDay
+      ? codesForPlanDay(event.templateWeek, event.templateDay)
+      : [];
   const selected = codes.map((code) => context.byCode.get(code)).filter((point): point is KnowledgeContextRow => Boolean(point));
   if (selected.length === 0 && event.knowledgePointId) {
     const linked = context.byId.get(event.knowledgePointId);
@@ -242,25 +415,98 @@ function buildLearningBrief(
       status: item.status,
     })),
   }));
+  const scheduledCodes = new Set(knowledgePoints.map((point) => point.code));
   const pendingPrerequisiteCodes = new Set(
     knowledgePoints.flatMap((point) => point.prerequisites)
-      .filter((point) => point.status !== 'MASTERED')
+      // 同一学习合同中的前置节点已经按阶段顺序排在前面，只提示合同外的真实阻塞。
+      .filter((point) => point.status !== 'MASTERED' && !scheduledCodes.has(point.code))
       .map((point) => point.code),
   );
   const domainTitles = [...new Set(selected.map((point) => point.domainTitle))];
   const displayTitle = selected.map((point) => `${point.code} ${point.title}`).join(' + ');
+  const blueprint = event.templateWeek ? LEARNING_WEEK_BLUEPRINTS[event.templateWeek] : undefined;
+  const dayIndex = event.templateDay ? (getDayOfWeek(event.templateDay) + 6) % 7 : 0;
+  const rhythm = DAILY_RHYTHMS[dayIndex] ?? DAILY_RHYTHMS[0];
+  const isWeeklyGate = dayIndex === 6;
+  const daySegments = isWeeklyGate
+    ? []
+    : embeddedSegments.length > 0
+      ? embeddedSegments
+      : event.templateWeek
+        ? effortSegmentsForWeek(event.templateWeek)[dayIndex] ?? []
+        : [];
+  const activeStageLabels = [...new Set(daySegments.map((segment) => STAGE_LABELS[segment.stage]))];
+  const assessmentSegmentCount = daySegments.filter((segment) => segment.stage === 'assessment').length;
+  const capacityMinutes = Math.max(0, Math.round((new Date(event.endAt).getTime() - new Date(event.startAt).getTime()) / 60_000));
+  const effort = isWeeklyGate
+    ? {
+        studyMinutes: 0,
+        practiceMinutes: 0,
+        projectMinutes: 120,
+        assessmentMinutes: 90,
+        retestMinutes: 0,
+        estimatedTotalMinutes: 210,
+      }
+    : daySegments.length > 0
+      ? {
+        studyMinutes: daySegments.filter((segment) => segment.stage === 'study').reduce((sum, segment) => sum + segment.minutes, 0),
+        practiceMinutes: daySegments.filter((segment) => segment.stage === 'practice').reduce((sum, segment) => sum + segment.minutes, 0),
+        projectMinutes: daySegments.filter((segment) => segment.stage === 'project').reduce((sum, segment) => sum + segment.minutes, 0),
+        assessmentMinutes: daySegments.filter((segment) => segment.stage === 'assessment').reduce((sum, segment) => sum + segment.minutes, 0),
+        retestMinutes: 0,
+        estimatedTotalMinutes: daySegments.reduce((sum, segment) => sum + segment.minutes, 0),
+      }
+      : {
+        studyMinutes: selected.reduce((sum, point) => sum + point.studyMinutes, 0),
+        practiceMinutes: selected.reduce((sum, point) => sum + point.practiceMinutes, 0),
+        projectMinutes: selected.reduce((sum, point) => sum + point.projectMinutes, 0),
+        assessmentMinutes: selected.reduce((sum, point) => sum + point.assessmentMinutes, 0),
+        retestMinutes: selected.reduce((sum, point) => sum + point.retestMinutes, 0),
+        estimatedTotalMinutes: selected.reduce((sum, point) => sum + initialMinutes(point), 0),
+      };
 
   return {
     displayTitle,
-    weekTheme: domainTitles.join(' × '),
-    learningContent: selected.map((point) => `${point.code} · ${point.title}`),
+    phase: blueprint?.phase ?? '自主计划',
+    weekTheme: blueprint?.theme ?? domainTitles.join(' × '),
+    weekOutcome: blueprint?.outcome ?? '完成知识学习、严格考核与可追溯产出',
+    projectAnchor: blueprint?.projectAnchor ?? '独立 Demo 或真实项目',
+    dailyFocus: isWeeklyGate ? rhythm.focus : activeStageLabels.length ? activeStageLabels.join(' → ') : rhythm.focus,
+    assessmentMode: isWeeklyGate
+      ? `周闸门：${blueprint?.assessment ?? '闭卷问答 + 限时实作 + 项目答辩'}；总分至少 80，关键项必须全部通过`
+      : assessmentSegmentCount
+        ? `今日包含 ${assessmentSegmentCount} 个首考阶段：由 DeepSeek 严格评分；未通过项回到薄弱阶段补学再测`
+        : '今日先完成输入、实验或项目证据；严格首考已按分钟安排在后续负载块',
+    reviewCadence: ['当天闭卷回忆', '次日 15 分钟复述', '7 天后严格复测', '30 天后迁移题'],
+    learningContent: daySegments.length > 0
+      ? daySegments.map((segment) => `${segment.code} · ${STAGE_LABELS[segment.stage]} · ${segment.minutes} 分钟`)
+      : [
+          `${rhythm.focus}：${selected.map((point) => `${point.code} ${point.title}`).join('；')}`,
+          `项目迁移：${blueprint?.projectAnchor ?? '独立 Demo 或真实项目'}`,
+        ],
     masteryGoals: selected.map((point) => ({ code: point.code, text: concise(point.passCriteria) })),
-    tasks: selected.map((point) => ({ code: point.code, text: concise(point.assessmentSpec) })),
-    outputs: selected.map((point) => `${point.code}：闭卷回答 + 可运行代码、测试或项目证据`),
-    reviewQuestion: `我能否不看资料解释 ${selected.map((point) => point.code).join('、')}，并用今天的产出证明？`,
+    tasks: daySegments.length > 0
+      ? daySegments.map((segment) => ({
+          code: segment.code,
+          text: segment.stage === 'assessment'
+            ? concise(context.byCode.get(segment.code)?.assessmentSpec ?? STAGE_TASKS.assessment)
+            : `${STAGE_TASKS[segment.stage]}（${segment.minutes} 分钟）`,
+        }))
+      : selected.map((point) => ({ code: point.code, text: concise(point.assessmentSpec) })),
+    outputs: [
+      `${selected.map((point) => point.code).join('、')}：闭卷回答 + 可运行代码、测试或项目证据`,
+      rhythm.output,
+    ],
+    reviewQuestion: `${rhythm.question} 我能否不看资料解释 ${selected.map((point) => point.code).join('、')}？`,
     prerequisitesReady: pendingPrerequisiteCodes.size === 0,
     pendingPrerequisiteCount: pendingPrerequisiteCodes.size,
     knowledgePoints,
+    effort: {
+      ...effort,
+      capacityMinutes,
+      utilizationPercent: capacityMinutes ? Math.round(effort.estimatedTotalMinutes / capacityMinutes * 100) : 0,
+      overloaded: capacityMinutes > 0 && effort.estimatedTotalMinutes > capacityMinutes,
+    },
   };
 }
 
@@ -327,57 +573,118 @@ export class PlanService {
     return updated;
   }
 
-  /** 将旧版每周 5 天模板无损补齐为 7 天；已存在的日期不会重复插入。 */
-  async ensureSevenDayTemplate(templatePath: string): Promise<number> {
+  /**
+   * 用最新知识蓝图同步模板计划。只改尚未打卡的 PLANNED 事件，已完成、部分完成、
+   * 跳过、改期或已有打卡证据的记录全部保留；缺失日期会按原计划锚点补齐。
+   */
+  async syncTemplatePlan(templatePath: string): Promise<{ created: number; updated: number; preserved: number }> {
     const existing = rawDb.prepare(`
-      SELECT start_at AS startAt, template_week AS templateWeek, template_day AS templateDay
-      FROM plan_events
-      WHERE source_type = 'TEMPLATE' AND template_week IS NOT NULL AND template_day IS NOT NULL
-      ORDER BY start_at ASC
-    `).all() as Array<{ startAt: string; templateWeek: number; templateDay: string }>;
-    if (existing.length === 0) return 0;
-
-    const first = existing[0];
-    if (!first) return 0;
-    const firstDate = new Date(`${first.startAt.slice(0, 10)}T00:00:00.000Z`);
-    const firstOffset = (first.templateWeek - 1) * 7 + getDayOfWeek(first.templateDay) - 1;
-    firstDate.setUTCDate(firstDate.getUTCDate() - firstOffset);
+      SELECT pe.id, pe.status, pe.title, pe.description,
+             pe.knowledge_point_id AS knowledgePointId,
+             pe.start_at AS startAt, pe.end_at AS endAt,
+             pe.template_week AS templateWeek, pe.template_day AS templateDay,
+             EXISTS(SELECT 1 FROM checkins c WHERE c.plan_event_id = pe.id) AS hasCheckin
+      FROM plan_events pe
+      WHERE pe.source_type = 'TEMPLATE' AND pe.template_week IS NOT NULL AND pe.template_day IS NOT NULL
+      ORDER BY pe.template_week ASC,
+        CASE pe.template_day WHEN '周一' THEN 1 WHEN '周二' THEN 2 WHEN '周三' THEN 3
+          WHEN '周四' THEN 4 WHEN '周五' THEN 5 WHEN '周六' THEN 6 WHEN '周日' THEN 7 ELSE 8 END
+    `).all() as Array<{
+      id: string;
+      status: PlanEventStatus;
+      title: string;
+      description: string | null;
+      knowledgePointId: string | null;
+      startAt: string;
+      endAt: string;
+      templateWeek: number;
+      templateDay: string;
+      hasCheckin: number;
+    }>;
+    if (existing.length === 0) return { created: 0, updated: 0, preserved: 0 };
 
     const fs = await import('fs/promises');
     const items = parseLearningPlanCSV(await fs.readFile(templatePath, 'utf-8'));
-    const existingKeys = new Set(existing.map((event) => `${event.templateWeek}:${event.templateDay}`));
-    const missing = items.filter((item) => {
-      const weekday = getDayOfWeek(item.day);
-      return (weekday === 0 || weekday === 6) && !existingKeys.has(`${item.week}:${item.day}`);
-    });
-    if (missing.length === 0) return 0;
+    const byKey = new Map(existing.map((event) => [`${event.templateWeek}:${event.templateDay}`, event]));
+    const mondayByWeek = new Map(existing.filter((event) => getDayOfWeek(event.templateDay) === 1).map((event) => [event.templateWeek, event]));
+    const anchor = existing[0]!;
+    const startDate = new Date(anchor.startAt);
+    const anchorOffset = (anchor.templateWeek - 1) * 7 + ((getDayOfWeek(anchor.templateDay) + 6) % 7);
+    startDate.setDate(startDate.getDate() - anchorOffset);
+    startDate.setHours(9, 0, 0, 0);
 
+    const pointIds = new Map((rawDb.prepare('SELECT code, id FROM knowledge_points').all() as Array<{ code: string; id: string }>).map((point) => [point.code, point.id]));
+    const update = rawDb.prepare(`
+      UPDATE plan_events
+      SET title = ?, description = ?, knowledge_point_id = ?, updated_at = ?
+      WHERE id = ?
+    `);
+    const updateSchedule = rawDb.prepare('UPDATE plan_events SET start_at = ?, end_at = ?, updated_at = ? WHERE id = ?');
     const now = new Date().toISOString();
-    const events: NewPlanEvent[] = missing.map((item) => {
-      const planDate = calculatePlanDate(firstDate, item.week, getDayOfWeek(item.day));
-      const startAt = new Date(planDate);
-      const endAt = new Date(planDate);
-      startAt.setHours(9, 0, 0, 0);
-      endAt.setHours(17, 0, 0, 0);
-      return {
-        id: uuidv4(),
-        eventType: 'LEARNING',
-        title: item.learningTopic,
-        description: `实践任务：${item.practiceTask}\n预期产出：${item.output}`,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
-        allDay: false,
-        status: 'PLANNED',
-        priority: 3,
-        sourceType: 'TEMPLATE',
-        templateWeek: item.week,
-        templateDay: item.day,
-        createdAt: now,
-        updatedAt: now,
-      };
-    });
-    await db.insert(planEvents).values(events);
-    return events.length;
+    const inserts: NewPlanEvent[] = [];
+    let updated = 0;
+    let preserved = 0;
+
+    rawDb.transaction(() => {
+      for (const item of items) {
+        const firstCode = codesForPlanDay(item.week, item.day)[0];
+        const knowledgePointId = firstCode ? pointIds.get(firstCode) ?? null : null;
+        const description = describeTemplateItem(item);
+        const existingEvent = byKey.get(`${item.week}:${item.day}`);
+        if (existingEvent) {
+          if (existingEvent.status !== 'PLANNED' || existingEvent.hasCheckin) {
+            preserved++;
+            continue;
+          }
+          const monday = mondayByWeek.get(item.week);
+          const needsScheduleFix = getDayOfWeek(item.day) === 0 && monday && new Date(existingEvent.startAt) < new Date(monday.startAt);
+          const needsContentUpdate = existingEvent.title !== item.learningTopic
+            || existingEvent.description !== description
+            || existingEvent.knowledgePointId !== knowledgePointId;
+          if (!needsContentUpdate && !needsScheduleFix) continue;
+          if (needsContentUpdate) update.run(item.learningTopic, description, knowledgePointId, now, existingEvent.id);
+          if (needsScheduleFix) {
+            updateSchedule.run(
+              new Date(new Date(existingEvent.startAt).getTime() + 7 * 86_400_000).toISOString(),
+              new Date(new Date(existingEvent.endAt).getTime() + 7 * 86_400_000).toISOString(),
+              now,
+              existingEvent.id,
+            );
+          }
+          updated++;
+          continue;
+        }
+
+        const planDate = calculatePlanDate(startDate, item.week, getDayOfWeek(item.day));
+        planDate.setHours(9, 0, 0, 0);
+        const endAt = new Date(planDate);
+        endAt.setHours(17, 0, 0, 0);
+        inserts.push({
+          id: uuidv4(),
+          eventType: 'LEARNING',
+          title: item.learningTopic,
+          description,
+          startAt: planDate.toISOString(),
+          endAt: endAt.toISOString(),
+          allDay: false,
+          status: 'PLANNED',
+          priority: 3,
+          sourceType: 'TEMPLATE',
+          knowledgePointId: knowledgePointId ?? undefined,
+          templateWeek: item.week,
+          templateDay: item.day,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    })();
+    if (inserts.length > 0) await db.insert(planEvents).values(inserts);
+    return { created: inserts.length, updated, preserved };
+  }
+
+  /** 兼容旧调用：同步时补齐缺失的周末事件。 */
+  async ensureSevenDayTemplate(templatePath: string): Promise<number> {
+    return (await this.syncTemplatePlan(templatePath)).created;
   }
 
   /**
@@ -395,7 +702,7 @@ export class PlanService {
     const items = parseLearningPlanCSV(csvContent);
     
     // 计算开始日期
-    const startDate = new Date(options.startDate + 'T00:00:00Z');
+    const startDate = new Date(options.startDate + 'T00:00:00');
     
     // 按周分组
     const weeks: Map<number, { week: number; theme: string; itemCount: number }> = new Map();
@@ -418,7 +725,7 @@ export class PlanService {
       return {
         week: item.week,
         day: item.day,
-        date: planDate.toISOString().slice(0, 10),
+        date: formatLocalDate(planDate),
         title: item.learningTopic,
         learningTopic: item.learningTopic,
         practiceTask: item.practiceTask,
@@ -447,7 +754,8 @@ export class PlanService {
     const items = parseLearningPlanCSV(csvContent);
     
     // 计算开始日期
-    const startDate = new Date(options.startDate + 'T00:00:00Z');
+    const startDate = new Date(options.startDate + 'T00:00:00');
+    const pointIds = new Map((rawDb.prepare('SELECT code, id FROM knowledge_points').all() as Array<{ code: string; id: string }>).map((point) => [point.code, point.id]));
     
     const now = new Date().toISOString();
     const events: NewPlanEvent[] = [];
@@ -467,13 +775,14 @@ export class PlanService {
         id: uuidv4(),
         eventType: 'LEARNING',
         title: `${item.learningTopic}`,
-        description: `实践任务：${item.practiceTask}\n预期产出：${item.output}`,
+        description: describeTemplateItem(item),
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
         allDay: false,
         status: 'PLANNED',
         priority: 3,
         sourceType: 'TEMPLATE',
+        knowledgePointId: pointIds.get(codesForPlanDay(item.week, item.day)[0] ?? ''),
         templateWeek: item.week,
         templateDay: item.day,
         createdAt: now,

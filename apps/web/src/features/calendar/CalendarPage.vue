@@ -227,7 +227,7 @@ watch(currentDate, () => {
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
     <section class="plan-overview-strip" aria-label="当前计划概览">
       <div><strong>16</strong><span>周完整路径</span></div>
-      <div><strong>132</strong><span>知识点全覆盖</span></div>
+      <div><strong>143</strong><span>知识点全覆盖</span></div>
       <div><strong>{{ activeKnowledgeCodes.size }}</strong><span>本{{ viewMode === 'day' ? '日' : viewMode === 'week' ? '周' : '期' }}知识点</span></div>
       <div><strong>{{ activeTasks }}</strong><span>严格任务</span></div>
       <div class="dependency-summary" :class="{ ready: pendingPrerequisites === 0 }"><i></i><span><strong>{{ pendingPrerequisites ? `${pendingPrerequisites} 项前置待补` : '前置路径已就绪' }}</strong><small>前置状态只做学习顺序提示，不会阻止打开任务</small></span></div>
@@ -321,7 +321,7 @@ watch(currentDate, () => {
 
     <div v-else class="agenda-view" :class="`agenda-${viewMode}`">
       <article v-for="day in activePeriodDays" :key="dateKey(day.date)" class="agenda-day" :class="{ 'is-leave': leaveDates.has(dateKey(day.date)) }">
-        <header class="agenda-day-header"><div class="agenda-date"><span>{{ day.date.toLocaleDateString('zh-CN', { weekday: 'short' }) }}</span><strong>{{ day.date.getDate() }}</strong><small>{{ day.date.toLocaleDateString('zh-CN', { month: 'short' }) }}</small></div><div class="day-load"><strong>{{ day.events.reduce((sum, event) => sum + (event.learningBrief?.knowledgePoints.length ?? 0), 0) }}</strong><span>知识点</span><i></i><strong>{{ day.events.reduce((sum, event) => sum + eventMinutes(event), 0) }}</strong><span>分钟</span></div><button @click="openLeave(day.date)">{{ leaveDates.has(dateKey(day.date)) ? '已请假' : '当天请假' }}</button></header>
+        <header class="agenda-day-header"><div class="agenda-date"><span>{{ day.date.toLocaleDateString('zh-CN', { weekday: 'short' }) }}</span><strong>{{ day.date.getDate() }}</strong><small>{{ day.date.toLocaleDateString('zh-CN', { month: 'short' }) }}</small></div><div class="day-load"><strong>{{ day.events.reduce((sum, event) => sum + (event.learningBrief?.knowledgePoints.length ?? 0), 0) }}</strong><span>知识点</span><i></i><strong>{{ day.events.reduce((sum, event) => sum + (event.learningBrief?.effort.estimatedTotalMinutes ?? eventMinutes(event)), 0) }}</strong><span>预计分钟</span></div><button @click="openLeave(day.date)">{{ leaveDates.has(dateKey(day.date)) ? '已请假' : '当天请假' }}</button></header>
         <div v-if="day.events.length" class="agenda-events">
           <article v-for="event in day.events" :key="event.id" class="learning-contract" :class="getStatusClass(event.status)">
             <header class="contract-header">
@@ -331,6 +331,24 @@ watch(currentDate, () => {
             </header>
 
             <template v-if="event.learningBrief">
+              <section class="plan-context">
+                <div class="plan-context-main">
+                  <span>{{ event.learningBrief.phase }}</span>
+                  <strong>{{ event.learningBrief.dailyFocus }}</strong>
+                  <p>{{ event.learningBrief.weekOutcome }}</p>
+                </div>
+                <dl>
+                  <div><dt>PROJECT</dt><dd>{{ event.learningBrief.projectAnchor }}</dd></div>
+                  <div><dt>ASSESS</dt><dd>{{ event.learningBrief.assessmentMode }}</dd></div>
+                </dl>
+                <div class="review-cadence"><span>复测节奏</span><i v-for="item in event.learningBrief.reviewCadence" :key="item">{{ item }}</i></div>
+                <div class="effort-budget" :class="{ overloaded: event.learningBrief.effort.overloaded }">
+                  <header><span>预计投入 <strong>{{ event.learningBrief.effort.estimatedTotalMinutes }} 分钟</strong></span><em>{{ event.learningBrief.effort.utilizationPercent }}% / {{ event.learningBrief.effort.capacityMinutes }} 分钟容量</em></header>
+                  <div class="effort-track"><i :style="{ width: `${Math.min(100, event.learningBrief.effort.utilizationPercent)}%` }"></i></div>
+                  <footer><span>资料 {{ event.learningBrief.effort.studyMinutes }}m</span><span>练习 {{ event.learningBrief.effort.practiceMinutes }}m</span><span>项目 {{ event.learningBrief.effort.projectMinutes }}m</span><span>考核 {{ event.learningBrief.effort.assessmentMinutes }}m</span><b v-if="event.learningBrief.effort.overloaded">建议顺延低优先级任务</b></footer>
+                </div>
+              </section>
+
               <div class="knowledge-binding">
                 <span>今日知识</span>
                 <button v-for="point in event.learningBrief.knowledgePoints" :key="point.id" @click="router.push(`/knowledge/${point.code}`)">

@@ -6,10 +6,12 @@
  * - 工作区测试
  */
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'node:path';
 
 export default defineConfig({
   test: {
     globals: true,
+    setupFiles: [resolve(__dirname, 'test/setup.ts')],
     include: ['**/*.test.ts'],
     exclude: ['node_modules', 'dist', 'data'],
     coverage: {

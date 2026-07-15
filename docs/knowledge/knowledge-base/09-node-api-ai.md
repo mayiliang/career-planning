@@ -62,7 +62,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[项目内 AI 工作流专题](../../topics/README.md)、真实需求、接口和代码评审记录。
+- 学习资料：[项目内 AI 工作流专题](../../topics/README.md)、[Google PAIR Guidebook](https://pair.withgoogle.com/guidebook/)、[GitHub Copilot Responsible Use](https://docs.github.com/en/copilot/responsible-use/copilot-code-review)、真实需求、接口和代码评审记录。
 - 严格考核：设计“需求拆解→接口理解→实现→测试→审查”工作流；准备包含正常、边界和诱导错误的评估集；比较人工基线与 AI 流程。
 - 通过标准：输出必须经编译、测试或人工证据验证；评估至少 20 个样例；能量化节省时间与新增错误；高风险步骤保留人工审批。
 

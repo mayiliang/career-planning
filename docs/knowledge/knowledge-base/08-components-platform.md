@@ -38,7 +38,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[JSON Schema](https://json-schema.org/learn/getting-started-step-by-step)、项目中的表单/表格配置和权限模型。
+- 学习资料：[JSON Schema](https://json-schema.org/learn/getting-started-step-by-step)、[JSON Forms Documentation](https://jsonforms.io/docs/)、项目中的表单/表格配置和权限模型。
 - 严格考核：为查询表单、表格和动作定义可版本化 schema；实现渲染器、校验和自定义扩展；处理 schema 迁移与错误配置。
 - 通过标准：简单需求配置完成，复杂需求可安全逃生；schema 有版本与校验；不把所有业务逻辑塞进 JSON 表达式。
 
@@ -54,7 +54,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Google Engineering Practices](https://google.github.io/eng-practices/)、现有公共组件使用数据、Issue 和重复代码样本。
+- 学习资料：[Google Engineering Practices](https://google.github.io/eng-practices/)、[Storybook Documentation](https://storybook.js.org/docs)、现有公共组件使用数据、Issue 和重复代码样本。
 - 严格考核：为组件/物料平台制定准入、维护、废弃、指标和推广方案；用真实数据证明一个组件值得沉淀。
 - 通过标准：有 owner、SLA、版本与退出机制；指标至少包含采用率、重复减少、缺陷和升级成本；没有只建不管的目录。
 

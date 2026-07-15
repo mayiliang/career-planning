@@ -3,14 +3,14 @@ import { LEARNING_WEEK_PATHS } from './plan.service.js';
 import { KNOWLEDGE_PATHS, buildRelationDefinitions } from './knowledge-relations.service.js';
 
 describe('知识关系与 16 周计划编排', () => {
-  it('前 15 周恰好覆盖全部 132 个唯一知识点', () => {
+  it('前 15 周恰好覆盖全部 143 个唯一知识点', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
       .filter(([week]) => Number(week) <= 15)
       .flatMap(([, codes]) => codes);
 
-    expect(new Set(knowledgeCodes).size).toBe(132);
-    expect(new Set(plannedCodes).size).toBe(132);
+    expect(new Set(knowledgeCodes).size).toBe(143);
+    expect(new Set(plannedCodes).size).toBe(143);
     expect(new Set(plannedCodes)).toEqual(new Set(knowledgeCodes));
   });
 
@@ -31,5 +31,18 @@ describe('知识关系与 16 周计划编排', () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(definitions.some((relation) => relation.source === 'REACT-05' && relation.target === 'VUE-06' && relation.type === 'RELATED')).toBe(true);
     expect(definitions.some((relation) => relation.source === 'AIAPP-04' && relation.target === 'AGENT-01' && relation.type === 'PREREQUISITE')).toBe(true);
+  });
+
+  it('所有跨周前置知识都排在依赖知识之前', () => {
+    const weekByCode = new Map(Object.entries(LEARNING_WEEK_PATHS)
+      .filter(([week]) => Number(week) <= 15)
+      .flatMap(([week, codes]) => codes.map((code) => [code, Number(week)] as const)));
+    for (const relation of buildRelationDefinitions().filter((item) => item.type === 'PREREQUISITE')) {
+      const sourceWeek = weekByCode.get(relation.source);
+      const targetWeek = weekByCode.get(relation.target);
+      expect(sourceWeek).toBeDefined();
+      expect(targetWeek).toBeDefined();
+      expect(sourceWeek!).toBeLessThanOrEqual(targetWeek!);
+    }
   });
 });

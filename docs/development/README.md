@@ -1,6 +1,6 @@
 # Career Atlas 开发文档
 
-更新时间：2026-07-14
+更新时间：2026-07-15
 
 Career Atlas 是一个本地优先的个人前端成长与求职工作台。它把当前 Markdown/CSV 文档转成可视化知识体系、学习计划、严格考核、学习日历和求职管理系统。
 
@@ -17,6 +17,7 @@ Career Atlas 是一个本地优先的个人前端成长与求职工作台。它�
 | 知识图谱 | `@vue-flow/core`，节点与边来自知识点和依赖关系 |
 | 日历 | FullCalendar Vue 3 adapter，计划、考核、复测、面试共用事件模型 |
 | 内容来源 | 当前 `docs/` 与 `templates/` 作为首次导入种子 |
+| 学习投入 | 五阶段预计耗时；首次掌握 666 小时、7 天复测 93 小时，按 15 分钟粒度排期 |
 | 部署 | 本地启动，服务仅绑定 `127.0.0.1` |
 
 `DEEPSEEK_MODEL` 必须可配置，不能把模型名写死。默认使用 `deepseek-v4-pro`；旧模型名 `deepseek-chat` 和 `deepseek-reasoner` 不作为新项目默认值。
@@ -46,8 +47,28 @@ Vue 不只是实现技术，也承担学习目标。开发过程必须同步维�
 
 ## 成功标准
 
-- 15 个领域、132 个知识点全部自动导入，资料、考核和通过标准不丢失。
+- 15 个领域、143 个知识点全部自动导入，资料、考核和通过标准不丢失。
+- 143 个知识点至少各有 2 个可直达资料链接，五阶段耗时完整，计划每日预计投入不超过 480 分钟。
 - 用户可以在网站完成学习、自评掌握、参加考核、查看反馈和自动更新状态。
 - 所有计划、打卡、岗位和考核记录在断网时仍可查看和编辑。
 - 删除数据库后可以从导出文件恢复全部用户数据。
 - 不依赖云端账号系统；除主动调用模型外，不发送任何本地数据。
+
+## 变更同步矩阵
+
+代码或内容发生变化时，同一轮必须更新对应文档，不能只改 `implementation-status.md`：
+
+| 变更类型 | 必须同步的文档 |
+| --- | --- |
+| 产品规则、用户闭环 | `01-product-requirements.md`、根目录 `README.md` |
+| 页面结构、样式与交互 | `02-information-architecture-and-ux.md` |
+| 包边界、算法与运行方式 | `03-technical-architecture.md`、`docs/vue-learning-guide.md`（涉及 Vue 实现时） |
+| 表字段、迁移、导入格式 | `04-data-model-and-content-import.md` |
+| DeepSeek 评分协议 | `05-ai-assessment-system.md`、运行时评分器提示词 |
+| API DTO、状态机 | `06-local-api-and-state-machines.md` |
+| 门禁、计数与验收命令 | `07-testing-and-acceptance.md`、`implementation-status.md` |
+| 阶段范围与退出条件 | `08-implementation-roadmap.md` |
+| 知识点、资料、耗时、周计划 | `docs/knowledge/knowledge-base/README.md`、`learning-resource-guide.md`、个人 16 周计划和相关 CSV |
+| 给 GLM-5 的开发约束 | `prompts/glm-5-system-prompt.md` 与必要的 kickoff prompt |
+
+提交前用全文搜索检查旧数量、旧周计划和旧字段名；数据库字段、API DTO、前端展示、测试断言与文档示例必须使用同一口径。

@@ -82,6 +82,14 @@
 - 严格考核：为一个异步 Vue 页面写用户行为测试；使用 Vue DevTools 或性能记录定位重复更新；检查路由分包和生产产物；修复至少一个真实问题。
 - 通过标准：测试不依赖内部实现；连续运行稳定；优化有前后证据；生产构建、懒加载、source map 和本地服务静态托管均有明确配置。
 
+## VUE-11 Nuxt 4 全栈渲染、数据获取与性能剖析
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[Nuxt Documentation](https://nuxt.com/docs)、[Nuxt 4.4](https://nuxt.com/blog/v4-4)、[Nuxt Data Fetching](https://nuxt.com/docs/4.x/getting-started/data-fetching)、[Nuxt Rendering Modes](https://nuxt.com/docs/4.x/guide/concepts/rendering)。
+- 严格考核：把一个 Vue SPA 的列表/详情垂直切片迁到 Nuxt 4，分别使用 SSR、客户端导航和服务端路由；解决 hydration mismatch、重复请求与缓存键问题；使用构建性能分析定位一个慢模块或大 chunk。
+- 通过标准：首屏 HTML、客户端接管和导航数据一致；`useFetch`/`useAsyncData` 的 key、缓存和错误边界明确；敏感逻辑留在服务端；通过键盘和路由播报验证可访问性；提交构建与运行性能前后数据。
+
 ## 领域综合考核
 
 - [ ] 已通过领域综合考核

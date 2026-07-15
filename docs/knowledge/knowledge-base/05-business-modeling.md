@@ -6,7 +6,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[项目经验资产库](../project-assets.md)、目标模块的路由、service、类型、枚举和页面代码。
+- 学习资料：[项目经验资产库](../project-assets.md)、[Microsoft DDD 领域模型](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)、[OWASP Business Logic Security](https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html)、目标模块的路由、service、类型、枚举和页面代码。
 - 严格考核：从一个陌生模块在 60 分钟内抽取对象、标识、关系、不变量和术语表；与页面文件结构对照指出至少 3 个建模风险。
 - 通过标准：对象不是接口字段抄写；能区分实体、值对象、流程记录和展示模型；业务人员能读懂术语表。
 
@@ -14,7 +14,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Statecharts 指南](https://statecharts.dev/)、真实业务状态枚举与操作接口。
+- 学习资料：[Statecharts 指南](https://statecharts.dev/)、[W3C SCXML](https://www.w3.org/TR/scxml/)、真实业务状态枚举与操作接口。
 - 严格考核：把审核、申诉或结算流程画成状态机；列出每个转换的前置条件、副作用、失败与补偿；加入一个新状态做变更影响分析。
 - 通过标准：无不可达或未解释状态；非法转换被阻止；并发提交、撤回、过期和重复回调均有策略。
 
@@ -38,7 +38,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Ant Design Data Entry](https://ant.design/docs/spec/data-entry/)、现有项目中同一业务对象的新建、列表、详情、编辑页面。
+- 学习资料：[Ant Design Data Entry](https://ant.design/docs/spec/data-entry/)、[WAI Forms Tutorial](https://www.w3.org/WAI/tutorials/forms/)、现有项目中同一业务对象的新建、列表、详情、编辑页面。
 - 严格考核：审计同一字段在 4 个页面的名称、枚举、空值、精度、权限和提交格式；建立共享格式化与转换层并验证回归。
 - 通过标准：同一事实只有一个定义来源；只读和编辑展示一致；`0`、`false`、空字符串、null 与 undefined 不混淆。
 
@@ -46,7 +46,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：项目现有 `taskId -> ProgressBar -> downloadFile(token)` 流程、[MDN Polling/Fetch](https://developer.mozilla.org/zh-CN/docs/Web/API/Fetch_API)。
+- 学习资料：项目现有 `taskId -> ProgressBar -> downloadFile(token)` 流程、[MDN Fetch API](https://developer.mozilla.org/zh-CN/docs/Web/API/Fetch_API)、[HTTP 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110#name-202-accepted)。
 - 严格考核：设计大文件导入/导出任务，覆盖创建、轮询、成功、失败、取消、过期和下载 token；处理页面关闭后恢复。
 - 通过标准：不会阻塞请求等待长任务；轮询有退避与终止；重复点击幂等；失败给出可行动信息。
 
@@ -54,7 +54,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[HTTP Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2)、目标业务的错误码、日志和历史 Bug。
+- 学习资料：[HTTP Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2)、[MDN Conditional Requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Conditional_requests)、目标业务的错误码、日志和历史 Bug。
 - 严格考核：为提交、审核、支付或结算类操作做失败模式分析；注入超时、重复响应、部分成功、过期页面和并发修改。
 - 通过标准：操作可安全重试或明确不可重试；UI 不伪造成功；关键冲突可被发现并恢复；错误上下文可供排障。
 
@@ -62,7 +62,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Google Engineering Practices](https://google.github.io/eng-practices/)、真实 PRD、原型、接口文档和验收记录。
+- 学习资料：[Google Engineering Practices](https://google.github.io/eng-practices/)、[GitHub Planning and Tracking Work](https://docs.github.com/en/issues/tracking-your-work-with-issues/planning-and-tracking-work-for-your-team-or-project)、真实 PRD、原型、接口文档和验收记录。
 - 严格考核：把一个模糊需求转成业务规则、状态矩阵、接口影响、边界清单和验收用例；评审时接受随机需求变更。
 - 通过标准：每条规则可追踪到代码与测试；歧义被显式记录；验收覆盖主流程、权限、异常和兼容性。
 

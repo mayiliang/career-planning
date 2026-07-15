@@ -10,9 +10,10 @@
 import { eq, and, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { db } from '../db/index.js';
+import { db, rawDb } from '../db/index.js';
 import { knowledgePoints, knowledgeDomains, masteryEvents } from '../db/schema.js';
 import type { KnowledgeStatus } from '@career-atlas/shared';
+import { KNOWLEDGE_ROUTE_INDEX } from './knowledge-relations.service.js';
 
 // ===== 查询参数 Schema =====
 export const KnowledgeListQuerySchema = z.object({
@@ -37,6 +38,23 @@ export interface KnowledgePointListItem {
   selfMasteredAt: string | null;
   firstPassedAt: string | null;
   masteredAt: string | null;
+  routeOrder: number;
+  studyMinutes: number;
+  practiceMinutes: number;
+  projectMinutes: number;
+  assessmentMinutes: number;
+  retestMinutes: number;
+  estimatedTotalMinutes: number;
+}
+
+export interface KnowledgeRecommendation {
+  action: 'LEARN' | 'CONTINUE' | 'ASSESS' | 'RETEST' | 'RELEARN' | 'COMPLETE';
+  readiness: 'READY' | 'BLOCKED' | 'COMPLETE';
+  reason: string;
+  point: KnowledgePointListItem | null;
+  blockers: Array<{ code: string; title: string; status: KnowledgeStatus }>;
+  prerequisiteProgress: { mastered: number; total: number };
+  routePosition: { week: number; index: number; total: number } | null;
 }
 
 export interface KnowledgePointDetail extends KnowledgePointListItem {
@@ -82,7 +100,7 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
   // 查询知识点列表（关联领域）
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   
-  const items = await db
+  const rows = await db
     .select({
       id: knowledgePoints.id,
       code: knowledgePoints.code,
@@ -96,11 +114,27 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
       selfMasteredAt: knowledgePoints.selfMasteredAt,
       firstPassedAt: knowledgePoints.firstPassedAt,
       masteredAt: knowledgePoints.masteredAt,
+      studyMinutes: knowledgePoints.studyMinutes,
+      practiceMinutes: knowledgePoints.practiceMinutes,
+      projectMinutes: knowledgePoints.projectMinutes,
+      assessmentMinutes: knowledgePoints.assessmentMinutes,
+      retestMinutes: knowledgePoints.retestMinutes,
     })
     .from(knowledgePoints)
     .innerJoin(knowledgeDomains, eq(knowledgePoints.domainId, knowledgeDomains.id))
     .where(whereClause)
-    .orderBy(knowledgePoints.code);
+    .orderBy(knowledgeDomains.orderIndex, knowledgePoints.code);
+
+  // 清单默认沿推荐学习路径排列，避免字母序把 Agent 等后置能力提前展示。
+  const items = rows.map((item) => {
+    const route = KNOWLEDGE_ROUTE_INDEX.get(item.code);
+    return {
+      ...item,
+      planWeek: route?.week ?? item.planWeek,
+      routeOrder: route?.order ?? Number.MAX_SAFE_INTEGER,
+      estimatedTotalMinutes: item.studyMinutes + item.practiceMinutes + item.projectMinutes + item.assessmentMinutes,
+    };
+  }).sort((left, right) => left.routeOrder - right.routeOrder || left.code.localeCompare(right.code));
   
   // 统计总数
   const countResult = await db
@@ -137,13 +171,99 @@ export async function getKnowledgePointByCode(code: string): Promise<KnowledgePo
       masteredAt: knowledgePoints.masteredAt,
       createdAt: knowledgePoints.createdAt,
       updatedAt: knowledgePoints.updatedAt,
+      studyMinutes: knowledgePoints.studyMinutes,
+      practiceMinutes: knowledgePoints.practiceMinutes,
+      projectMinutes: knowledgePoints.projectMinutes,
+      assessmentMinutes: knowledgePoints.assessmentMinutes,
+      retestMinutes: knowledgePoints.retestMinutes,
     })
     .from(knowledgePoints)
     .innerJoin(knowledgeDomains, eq(knowledgePoints.domainId, knowledgeDomains.id))
     .where(eq(knowledgePoints.code, code))
     .limit(1);
   
-  return results[0] || null;
+  const result = results[0];
+  if (!result) return null;
+  const route = KNOWLEDGE_ROUTE_INDEX.get(result.code);
+  return {
+    ...result,
+    planWeek: route?.week ?? result.planWeek,
+    routeOrder: route?.order ?? Number.MAX_SAFE_INTEGER,
+    estimatedTotalMinutes: result.studyMinutes + result.practiceMinutes + result.projectMinutes + result.assessmentMinutes,
+  };
+}
+
+/**
+ * 给出唯一、可解释的下一最佳行动。优先处理复测和首考，再继续已开始的学习，
+ * 最后从所有前置已掌握的节点中选择路径最靠前的一项。
+ */
+export async function getKnowledgeRecommendation(): Promise<KnowledgeRecommendation> {
+  const { items } = await getKnowledgePoints({});
+  const activeItems = items.filter((item) => item.status !== 'MASTERED');
+  if (activeItems.length === 0) {
+    return {
+      action: 'COMPLETE', readiness: 'COMPLETE', reason: '全部知识点已经通过严格掌握闭环。',
+      point: null, blockers: [], prerequisiteProgress: { mastered: 0, total: 0 }, routePosition: null,
+    };
+  }
+
+  const prerequisiteRows = rawDb.prepare(`
+    SELECT target.code AS targetCode, source.code, source.title, source.status
+    FROM knowledge_edges edge
+    JOIN knowledge_points source ON source.id = edge.source_point_id
+    JOIN knowledge_points target ON target.id = edge.target_point_id
+    WHERE edge.type = 'PREREQUISITE'
+    ORDER BY edge.weight DESC, source.code ASC
+  `).all() as Array<{ targetCode: string; code: string; title: string; status: KnowledgeStatus }>;
+  const prerequisites = new Map<string, Array<{ code: string; title: string; status: KnowledgeStatus }>>();
+  for (const row of prerequisiteRows) prerequisites.set(row.targetCode, [...(prerequisites.get(row.targetCode) ?? []), row]);
+
+  const statePriority: Record<KnowledgeStatus, number> = {
+    FIRST_PASS_PENDING_RETEST: 0,
+    SELF_MASTERED: 1,
+    NEEDS_RELEARNING: 2,
+    LEARNING: 3,
+    NOT_STARTED: 4,
+    MASTERED: 9,
+  };
+  const candidates = activeItems.map((point) => {
+    const allPrerequisites = prerequisites.get(point.code) ?? [];
+    const blockers = allPrerequisites.filter((item) => item.status !== 'MASTERED');
+    // 已开始或自评掌握也不能绕过前置闸门，避免形成“孤岛式掌握”。
+    const stateReady = blockers.length === 0;
+    return { point, allPrerequisites, blockers, stateReady };
+  }).sort((left, right) => {
+    const readinessDifference = Number(right.stateReady) - Number(left.stateReady);
+    if (readinessDifference) return readinessDifference;
+    const stateDifference = statePriority[left.point.status] - statePriority[right.point.status];
+    return stateDifference || left.point.routeOrder - right.point.routeOrder;
+  });
+  const selected = candidates[0]!;
+  const actionByStatus: Record<KnowledgeStatus, KnowledgeRecommendation['action']> = {
+    NOT_STARTED: 'LEARN', LEARNING: 'CONTINUE', SELF_MASTERED: 'ASSESS',
+    FIRST_PASS_PENDING_RETEST: 'RETEST', MASTERED: 'COMPLETE', NEEDS_RELEARNING: 'RELEARN',
+  };
+  const reasonByAction: Record<KnowledgeRecommendation['action'], string> = {
+    LEARN: selected.stateReady ? '前置知识已经就绪，这是推荐路径中最靠前的未开始节点。' : '当前路径暂时被前置知识阻塞，先完成下方节点。',
+    CONTINUE: '你已经开始学习，优先完成当前上下文能降低切换成本。',
+    ASSESS: '你已完成自评，需要用严格首考把理解转成可验证证据。',
+    RETEST: '首次考核已通过，完成复测后才会正式进入已掌握状态。',
+    RELEARN: '最近一次严格考核未通过，先补齐薄弱点再重新挑战。',
+    COMPLETE: '全部知识点已经通过严格掌握闭环。',
+  };
+  const route = KNOWLEDGE_ROUTE_INDEX.get(selected.point.code);
+  return {
+    action: actionByStatus[selected.point.status],
+    readiness: selected.stateReady ? 'READY' : 'BLOCKED',
+    reason: reasonByAction[actionByStatus[selected.point.status]],
+    point: selected.point,
+    blockers: selected.blockers,
+    prerequisiteProgress: {
+      mastered: selected.allPrerequisites.length - selected.blockers.length,
+      total: selected.allPrerequisites.length,
+    },
+    routePosition: route ? { week: route.week, index: selected.point.routeOrder + 1, total: KNOWLEDGE_ROUTE_INDEX.size } : null,
+  };
 }
 
 /**

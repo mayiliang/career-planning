@@ -2,6 +2,7 @@
  * Markdown 知识解析器
  */
 import type { ParsedDomain, ParsedKnowledgePoint } from '../types/index.js';
+import { estimateKnowledgeEffort, parseKnowledgeEffort } from '../effort.js';
 
 // 正则表达式
 const DOMAIN_TITLE_REGEX = /^#\s+(\d{2})\s+(.+)$/m;
@@ -16,6 +17,7 @@ const STRICT_PASSED_REGEX = /^-\s+\[([ x])\]\s+已通过严格考核/;
 const STUDY_MATERIAL_REGEX = /^-\s+学习资料：(.+)$/;
 const ASSESSMENT_SPEC_REGEX = /^-\s+严格考核：(.+)$/;
 const PASS_CRITERIA_REGEX = /^-\s+通过标准：(.+)$/;
+const EFFORT_REGEX = /^-\s+预计耗时：(.+)$/;
 
 // 领域综合考核标识（停止解析）
 const DOMAIN_COMPREHENSIVE_REGEX = /^##\s+领域综合考核/;
@@ -142,6 +144,14 @@ function extractKnowledgePoints(content: string): ParsedKnowledgePoint[] {
       currentField = 'passCriteria';
       continue;
     }
+
+    const effortMatch = line.match(EFFORT_REGEX);
+    if (effortMatch) {
+      const effort = parseKnowledgeEffort(effortMatch[1] ?? '');
+      if (effort) Object.assign(currentPoint, effort);
+      currentField = null;
+      continue;
+    }
     
     // 多行内容追加
     if (currentField && line.trim()) {
@@ -172,6 +182,17 @@ function extractKnowledgePoints(content: string): ParsedKnowledgePoint[] {
  * 完成知识点对象
  */
 function finalizePoint(point: Partial<ParsedKnowledgePoint>): ParsedKnowledgePoint {
+  const effort = point.studyMinutes && point.practiceMinutes && point.projectMinutes
+    && point.assessmentMinutes && point.retestMinutes && point.estimatedTotalMinutes
+    ? {
+        studyMinutes: point.studyMinutes,
+        practiceMinutes: point.practiceMinutes,
+        projectMinutes: point.projectMinutes,
+        assessmentMinutes: point.assessmentMinutes,
+        retestMinutes: point.retestMinutes,
+        estimatedTotalMinutes: point.estimatedTotalMinutes,
+      }
+    : estimateKnowledgeEffort(point.code || '');
   return {
     code: point.code || '',
     title: point.title || '',
@@ -179,6 +200,7 @@ function finalizePoint(point: Partial<ParsedKnowledgePoint>): ParsedKnowledgePoi
     studyMaterial: point.studyMaterial || '',
     assessmentSpec: point.assessmentSpec || '',
     passCriteria: point.passCriteria || '',
+    ...effort,
     selfMastered: point.selfMastered || false,
     strictPassed: point.strictPassed || false,
   };

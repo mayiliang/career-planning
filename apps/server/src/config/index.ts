@@ -9,6 +9,7 @@
  */
 import dotenv from 'dotenv';
 import fs from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 
 function findProjectRoot(start = process.cwd()): string {
@@ -25,6 +26,13 @@ function findProjectRoot(start = process.cwd()): string {
 }
 
 export const projectRoot = findProjectRoot();
+
+function resolveDataDir(): string {
+  if (process.env.DATA_DIR) return resolve(projectRoot, process.env.DATA_DIR);
+  // 即使测试绕过包级 setup，也绝不允许连接正式本地数据库。
+  if (process.env.NODE_ENV === 'test') return resolve(tmpdir(), `career-atlas-tests-${process.pid}`);
+  return resolve(projectRoot, './data');
+}
 
 // 加载环境变量
 dotenv.config({ path: resolve(projectRoot, '.env.local') });
@@ -48,7 +56,7 @@ export function getConfig(): AppConfig {
     host: process.env.HOST || '127.0.0.1',
     port: parseInt(process.env.PORT || '41730', 10),
     logLevel: process.env.LOG_LEVEL || 'info',
-    dataDir: resolve(projectRoot, process.env.DATA_DIR || './data'),
+    dataDir: resolveDataDir(),
     aiProvider: process.env.AI_PROVIDER || undefined,
     aiBaseUrl: process.env.DEEPSEEK_BASE_URL || undefined,
     aiModel: process.env.DEEPSEEK_MODEL || undefined,
@@ -63,7 +71,7 @@ export const config = {
   PORT: parseInt(process.env.PORT || '41730', 10),
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   DATABASE_URL: process.env.DATABASE_URL || './data/career.db',
-  DATA_DIR: resolve(projectRoot, process.env.DATA_DIR || './data'),
+  DATA_DIR: resolveDataDir(),
   AI_PROVIDER: process.env.AI_PROVIDER || 'deepseek',
   DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || '',
   DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',

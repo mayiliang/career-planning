@@ -7,8 +7,9 @@
  * - 7 天复测事件类型已准备好
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PlanService, parseLearningPlanCSV } from '../services/plan.service.js';
+import { LEARNING_WEEK_PATHS, PlanService, parseLearningPlanCSV } from '../services/plan.service.js';
 import { rawDb } from '../db/index.js';
+import { estimateKnowledgeEffort } from '@career-atlas/content-parser';
 
 describe('Plan Service', () => {
   const planService = new PlanService();
@@ -27,14 +28,15 @@ describe('Plan Service', () => {
       // 验证第一周内容
       const firstItem = items[0];
       expect(firstItem.week).toBe(1);
-      expect(firstItem.theme).toBe('项目资产盘点');
+      expect(firstItem.theme).toBe('Web 运行模型、平台能力与网络');
       expect(firstItem.day).toBe('周一');
-      expect(firstItem.learningTopic).toContain('项目总览');
+      expect(firstItem.learningTopic).toContain('建立心智模型');
+      expect(firstItem.projectAnchor).toBe('浏览器机制实验室');
       
       // 验证最后一周内容
       const lastItem = items[items.length - 1];
       expect(lastItem.week).toBe(16);
-      expect(lastItem.theme).toBe('AI 辅助研发与整合');
+      expect(lastItem.theme).toBe('Career Atlas AI 学习系统毕业项目');
     });
     
     it('应该正确处理带引号的 CSV 字段', () => {
@@ -72,7 +74,7 @@ describe('Plan Service', () => {
   
   describe('previewFromTemplate', () => {
     it('应该能够预览计划导入', async () => {
-      const startDate = '2026-07-14'; // 周一
+      const startDate = '2026-07-20'; // 周一
       
       const preview = await planService.previewFromTemplate(templatePath, { startDate });
       
@@ -83,12 +85,12 @@ describe('Plan Service', () => {
       // 验证第一周
       const week1 = preview.weeks.find(w => w.week === 1);
       expect(week1).toBeDefined();
-      expect(week1?.theme).toBe('项目资产盘点');
+      expect(week1?.theme).toBe('Web 运行模型、平台能力与网络');
       expect(week1?.itemCount).toBe(7);
       
       // 验证日期计算
       const firstItem = preview.items[0];
-      expect(firstItem.date).toBe('2026-07-14'); // 周一
+      expect(firstItem.date).toBe('2026-07-20'); // 周一
       expect(firstItem.day).toBe('周一');
     });
   });
@@ -141,12 +143,44 @@ describe('7 天计划升级与请假顺延', () => {
 
   it('能把旧版工作日计划自动补齐周末且保持幂等', async () => {
     await service.importFromTemplate(templatePath, { startDate: '2026-07-20' });
+    expect(await service.syncTemplatePlan(templatePath)).toEqual({ created: 0, updated: 0, preserved: 0 });
     rawDb.prepare("DELETE FROM plan_events WHERE template_day IN ('周六', '周日')").run();
 
     expect((rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number }).count).toBe(80);
     expect(await service.ensureSevenDayTemplate(templatePath)).toBe(32);
     expect(await service.ensureSevenDayTemplate(templatePath)).toBe(0);
     expect((rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number }).count).toBe(112);
+  });
+
+  it('同步新蓝图时更新未开始计划并保留已有打卡证据', async () => {
+    const result = await service.importFromTemplate(templatePath, { startDate: '2026-07-20' });
+    const protectedEvent = result.events.find((event) => event.templateWeek === 1 && event.templateDay === '周一')!;
+    const plannedEvent = result.events.find((event) => event.templateWeek === 1 && event.templateDay === '周二')!;
+    await service.updateEvent(protectedEvent.id, { title: '已有学习证据，不应覆盖' });
+    await service.checkin(protectedEvent.id, { result: 'COMPLETED', actualMinutes: 480 });
+    await service.updateEvent(plannedEvent.id, { title: '旧计划标题' });
+
+    const synced = await service.syncTemplatePlan(templatePath);
+    expect(synced.preserved).toBe(1);
+    expect((await service.getEvent(protectedEvent.id))?.title).toBe('已有学习证据，不应覆盖');
+    expect((await service.getEvent(plannedEvent.id))?.title).toContain('机制实验与源码验证');
+  });
+
+  it('周计划按前置顺序覆盖全部知识且每周新知识不超过 48 小时', () => {
+    const route = Array.from({ length: 15 }, (_, index) => LEARNING_WEEK_PATHS[index + 1] ?? []).flat();
+    expect(route).toHaveLength(143);
+    expect(new Set(route).size).toBe(143);
+    for (let week = 1; week <= 15; week++) {
+      const minutes = (LEARNING_WEEK_PATHS[week] ?? []).reduce(
+        (sum, code) => sum + estimateKnowledgeEffort(code).estimatedTotalMinutes,
+        0,
+      );
+      expect(minutes, `第 ${week} 周负载超限`).toBeLessThanOrEqual(2880);
+    }
+    expect(LEARNING_WEEK_PATHS[1]?.[0]).toBe('JS-01');
+    expect(LEARNING_WEEK_PATHS[3]?.[0]).toBe('TS-09');
+    expect(LEARNING_WEEK_PATHS[10]?.[0]).toBe('MCP-02');
+    expect(LEARNING_WEEK_PATHS[15]?.[0]).toBe('AIDEV-10');
   });
 
   it('请假会将当天及未来未完成学习任务整体顺延一天', async () => {

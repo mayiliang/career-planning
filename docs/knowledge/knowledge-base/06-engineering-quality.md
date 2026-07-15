@@ -18,6 +18,14 @@
 - 严格考核：比较开发服务器、HMR、预构建和生产打包；排查一个 dev 正常、build 失败或部署后 chunk 404 的问题。
 - 通过标准：定位过程包含复现、最小化、日志与产物检查；修复兼顾 base、缓存和旧 chunk；不会用清缓存作为唯一解释。
 
+## ENG-07 Vite 8、Rolldown/Oxc 与构建迁移
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[Vite 8 Announcement](https://vite.dev/blog/announcing-vite8)、[Vite Migration Guide](https://vite.dev/guide/migration)、[Rolldown Documentation](https://rolldown.rs/)、[Oxc Documentation](https://oxc.rs/)。
+- 严格考核：把一个有自定义插件、库模式和复杂分包的 Vite 项目迁移到 Vite 8；对比构建时长、峰值内存、chunk 与运行结果；修复至少一个 Rollup/Rolldown 兼容差异并写迁移 ADR。
+- 通过标准：Node 与插件版本满足约束；冷启动、增量和生产构建均有基线；输出行为和 source map 可验证；没有以删除插件或关闭优化规避问题；能解释统一 Rust 工具链带来的收益、兼容成本和回退方案。
+
 ## ENG-03 包管理、lockfile 与 workspace
 
 - [ ] 自评已掌握
@@ -73,6 +81,22 @@
 - 学习资料：[GitHub Actions](https://docs.github.com/actions)、[web.dev Monitoring](https://web.dev/articles/vitals-field-measurement-best-practices)、现有部署与监控流程。
 - 严格考核：设计从 PR 到生产的流水线，包含缓存、检查、构建、制品、环境、灰度、告警与回滚；演练错误版本和旧 chunk 问题。
 - 通过标准：同一制品逐环境晋级；密钥不进入构建产物；回滚有时间目标与验证；发布结果可观测。
+
+## ENG-08 软件供应链、SBOM 与制品可信
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[OWASP Top 10 2025 - Software Supply Chain Failures](https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/)、[SLSA](https://slsa.dev/spec/v1.2/)、[CycloneDX](https://cyclonedx.org/docs/1.6/json/)、[Sigstore Cosign](https://docs.sigstore.dev/cosign/overview/)。
+- 严格考核：为 pnpm workspace 建立锁定安装、依赖审计、SBOM、构建来源证明、制品签名和分阶段发布；注入恶意生命周期脚本、依赖混淆和被替换制品并验证门禁。
+- 通过标准：构建可重复且依赖来源可追踪；生产只部署已验证签名的同一制品；高风险依赖有处置 SLA 和例外审计；攻击样例至少被两层控制阻止；能说明漏洞扫描不等于供应链安全。
+
+## OBS-01 前端 RUM、OpenTelemetry 与隐私边界
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/)、[OpenTelemetry Browser](https://opentelemetry.io/docs/languages/js/getting-started/browser/)、[web-vitals](https://github.com/GoogleChrome/web-vitals)、[MDN Performance APIs](https://developer.mozilla.org/en-US/docs/Web/API/Performance_API)。
+- 严格考核：为关键学习流程接入错误、Web Vitals、资源、请求和用户操作链路，建立 trace/span/metric 关联与版本维度；模拟白屏、慢接口和 chunk 加载失败；制定采样、脱敏和数据保留策略。
+- 通过标准：从告警可定位到版本、路由和失败环节；不采集答案、密钥和个人敏感数据；采样与上报开销有测量；浏览器实验性能力有隔离和回退；能用一次故障演练证明监控真正支持发现、定位、恢复和复盘。
 
 ## 领域综合考核
 

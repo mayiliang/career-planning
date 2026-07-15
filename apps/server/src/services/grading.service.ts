@@ -42,6 +42,7 @@ export interface GradeResult {
   result: AssessmentResultRecord;
   knowledgePointUpdated: boolean;
   retestEventCreated: boolean;
+  reviewEventCreated: boolean;
 }
 
 // ===== 执行评分 =====
@@ -76,6 +77,7 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
       result: existingResult,
       knowledgePointUpdated: knowledgePoint?.status !== 'SELF_MASTERED',
       retestEventCreated: false,
+      reviewEventCreated: false,
     };
   }
   
@@ -240,6 +242,7 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
     // 更新知识点状态（如果通过）
     let knowledgePointUpdated = false;
     let retestEventCreated = false;
+    let reviewEventCreated = false;
     
     if (serverCalculatedVerdict === 'PASS') {
       knowledgePointUpdated = await updateKnowledgePointStatus(
@@ -251,6 +254,11 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
       // 首次通过，创建 7 天后复测事件
       if (session.assessmentType === 'FIRST') {
         retestEventCreated = await createRetestEvent(
+          session.knowledgePointCode,
+          request.sessionId
+        );
+      } else if (session.assessmentType === 'RETEST') {
+        reviewEventCreated = await createMonthlyReviewEvent(
           session.knowledgePointCode,
           request.sessionId
         );
@@ -269,6 +277,7 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
       result: savedResult,
       knowledgePointUpdated,
       retestEventCreated,
+      reviewEventCreated,
     };
   } catch (error) {
     // 评分失败，更新状态为 ERROR
@@ -444,6 +453,7 @@ async function createRetestEvent(
   const now = new Date();
   const retestDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 天后
   
+  const point = await db.query.knowledgePoints.findFirst({ where: eq(knowledgePoints.code, knowledgePointCode) });
   const event: NewPlanEvent = {
     id: randomUUID(),
     eventType: 'RETEST',
@@ -454,7 +464,7 @@ async function createRetestEvent(
     allDay: false,
     status: 'PLANNED',
     priority: 2,
-    knowledgePointId: null,
+    knowledgePointId: point?.id ?? null,
     assessmentSessionId: sessionId,
     sourceType: 'SYSTEM',
     createdAt: now.toISOString(),
@@ -463,6 +473,33 @@ async function createRetestEvent(
   
   await db.insert(planEvents).values(event);
   
+  return true;
+}
+
+/** 复测通过后，把 30 天迁移复习真正放入日历，而不只保存一个不可见时间戳。 */
+async function createMonthlyReviewEvent(
+  knowledgePointCode: string,
+  sessionId: string
+): Promise<boolean> {
+  const point = await db.query.knowledgePoints.findFirst({ where: eq(knowledgePoints.code, knowledgePointCode) });
+  const now = new Date();
+  const reviewDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  await db.insert(planEvents).values({
+    id: randomUUID(),
+    eventType: 'REVIEW',
+    title: `月度迁移复习: ${knowledgePointCode}`,
+    description: '复测通过 30 天后的迁移题抽测；未通过将重新进入学习状态。',
+    startAt: reviewDate.toISOString(),
+    endAt: new Date(reviewDate.getTime() + 60 * 60 * 1000).toISOString(),
+    allDay: false,
+    status: 'PLANNED',
+    priority: 3,
+    knowledgePointId: point?.id ?? null,
+    assessmentSessionId: sessionId,
+    sourceType: 'SYSTEM',
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  });
   return true;
 }
 

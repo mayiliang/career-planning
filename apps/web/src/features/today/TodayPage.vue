@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiClient, type KnowledgePointListItem, type PlanEvent, type TodayPlan } from '@/api/client';
+import { apiClient, type KnowledgePointListItem, type KnowledgeRecommendation, type PlanEvent, type TodayPlan } from '@/api/client';
 
 const router = useRouter();
 const loading = ref(true);
@@ -9,9 +9,11 @@ const error = ref<string | null>(null);
 const todayPlan = ref<TodayPlan | null>(null);
 const upcomingEvents = ref<PlanEvent[]>([]);
 const learningPoints = ref<KnowledgePointListItem[]>([]);
+const recommendation = ref<KnowledgeRecommendation | null>(null);
 const reviewSummary = ref('');
 const reviewSaving = ref(false);
 const reviewMessage = ref<string | null>(null);
+const retestStartingId = ref<string | null>(null);
 const showCheckinDialog = ref(false);
 const selectedEvent = ref<PlanEvent | null>(null);
 const checkinSaving = ref(false);
@@ -33,13 +35,19 @@ const completionPercent = computed(() => {
   if (!stats?.total) return 0;
   return Math.round((stats.completed / stats.total) * 100);
 });
-const plannedMinutes = computed(() => (todayPlan.value?.events ?? []).reduce((sum, event) => sum + eventMinutes(event), 0));
+const plannedMinutes = computed(() => (todayPlan.value?.events ?? []).reduce((sum, event) => sum + estimatedEventMinutes(event), 0));
 const completedMinutes = computed(() => (todayPlan.value?.events ?? []).filter((event) => event.status === 'COMPLETED').reduce((sum, event) => sum + eventMinutes(event), 0));
 
-const learningQueue = computed(() => learningPoints.value
-  .filter((point) => ['LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'NEEDS_RELEARNING'].includes(point.status))
+const learningQueue = computed(() => {
+  const recommended = recommendation.value?.point;
+  const points = [recommended, ...learningPoints.value
+    .filter((point) => ['LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'NEEDS_RELEARNING'].includes(point.status))]
+    .filter((point): point is KnowledgePointListItem => Boolean(point));
+  return [...new Map(points.map((point) => [point.code, point])).values()]
   .sort((a, b) => statusPriority(a.status) - statusPriority(b.status))
-  .slice(0, 5));
+  .sort((a, b) => Number(b.code === recommended?.code) - Number(a.code === recommended?.code))
+  .slice(0, 5);
+});
 
 const upcomingDays = computed(() => {
   const groups = new Map<string, PlanEvent[]>();
@@ -67,6 +75,10 @@ function eventMinutes(event: PlanEvent) {
   return Math.max(0, Math.round((new Date(event.endAt).getTime() - new Date(event.startAt).getTime()) / 60000));
 }
 
+function estimatedEventMinutes(event: PlanEvent) {
+  return event.learningBrief?.effort.estimatedTotalMinutes ?? eventMinutes(event);
+}
+
 function statusPriority(status: string) {
   return ({ NEEDS_RELEARNING: 0, FIRST_PASS_PENDING_RETEST: 1, LEARNING: 2, SELF_MASTERED: 3 } as Record<string, number>)[status] ?? 9;
 }
@@ -80,14 +92,16 @@ async function loadDashboard() {
   to.setDate(to.getDate() + 8);
   to.setMilliseconds(-1);
   try {
-    const [plan, events, points] = await Promise.all([
+    const [plan, events, points, nextAction] = await Promise.all([
       apiClient.getTodayPlan(),
       apiClient.getCalendarEvents({ from: from.toISOString(), to: to.toISOString() }),
       apiClient.getKnowledgePoints(),
+      apiClient.getKnowledgeRecommendation(),
     ]);
     todayPlan.value = plan;
     upcomingEvents.value = events.filter((event) => new Date(event.startAt).getTime() >= new Date().setHours(24, 0, 0, 0));
     learningPoints.value = points.items;
+    recommendation.value = nextAction;
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '今日学习驾驶舱加载失败';
   } finally {
@@ -151,13 +165,32 @@ async function saveReview() {
 
 function eventDescription(event: PlanEvent) {
   if (event.learningBrief) {
-    return `需要掌握：${event.learningBrief.masteryGoals.map((goal) => goal.text).join('；')}`;
+    const blocker = event.learningBrief.prerequisitesReady
+      ? ''
+      : `前置未就绪（${event.learningBrief.pendingPrerequisiteCount} 项），请先沿推荐路线补齐。`;
+    return `${blocker}${blocker ? ' ' : ''}需要掌握：${event.learningBrief.masteryGoals.map((goal) => goal.text).join('；')}`;
   }
   return event.description?.trim() || `${getEventTypeLabel(event.eventType)}任务 · 建议投入 ${eventMinutes(event)} 分钟`;
 }
 
 function eventTitle(event: PlanEvent) {
   return event.learningBrief?.displayTitle ?? event.title;
+}
+
+async function beginRetest(event: PlanEvent) {
+  const code = event.learningBrief?.knowledgePoints[0]?.code
+    ?? event.title.match(/[A-Z][A-Z0-9]*-\d+/)?.[0];
+  if (!code || retestStartingId.value) return;
+  retestStartingId.value = event.id;
+  error.value = null;
+  try {
+    const session = await apiClient.createAssessment({ knowledgePointCode: code, type: 'RETEST', durationMinutes: 60 });
+    await router.push(`/assessment/${session.id}`);
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '创建复测失败';
+  } finally {
+    retestStartingId.value = null;
+  }
 }
 
 onMounted(loadDashboard);
@@ -189,7 +222,7 @@ onMounted(loadDashboard);
               <button v-else @click="router.push('/knowledge/map')">从知识体系选择</button>
             </div>
           </div>
-          <div class="mission-seal"><span>{{ currentMission ? getStatusLabel(currentMission.status) : '待规划' }}</span><small>{{ currentMission ? `${eventMinutes(currentMission)} MIN` : 'OPEN' }}</small></div>
+          <div class="mission-seal"><span>{{ currentMission ? getStatusLabel(currentMission.status) : '待规划' }}</span><small>{{ currentMission ? `预计 ${estimatedEventMinutes(currentMission)} MIN` : 'OPEN' }}</small></div>
         </article>
 
         <aside class="readiness-card">
@@ -205,7 +238,7 @@ onMounted(loadDashboard);
           <div v-if="todayPlan.events.length" class="event-route">
             <article v-for="(event, index) in todayPlan.events" :key="event.id" :class="[`status-${event.status.toLowerCase()}`, { current: currentMission?.id === event.id }]">
               <time>{{ formatTime(event.startAt) }}</time><div class="route-marker"><i></i><span>{{ String(index + 1).padStart(2, '0') }}</span></div>
-              <div class="route-copy"><div><span>{{ getEventTypeLabel(event.eventType) }}</span><small>{{ eventMinutes(event) }} MIN</small></div><h3>{{ eventTitle(event) }}</h3><p>{{ eventDescription(event) }}</p></div>
+              <div class="route-copy"><div><span>{{ getEventTypeLabel(event.eventType) }}</span><small>预计 {{ estimatedEventMinutes(event) }} MIN</small></div><h3>{{ eventTitle(event) }}</h3><p>{{ eventDescription(event) }}</p></div>
               <button v-if="['PLANNED', 'IN_PROGRESS'].includes(event.status)" @click="openCheckinDialog(event)">{{ event.status === 'IN_PROGRESS' ? '继续并打卡' : '开始 / 打卡' }}</button><span v-else class="event-state">{{ getStatusLabel(event.status) }}</span>
             </article>
           </div>
@@ -216,19 +249,19 @@ onMounted(loadDashboard);
           <section class="queue-panel">
             <header class="section-heading"><div><p class="eyebrow">LEARNING QUEUE</p><h2>需要继续推进</h2></div><button @click="router.push('/knowledge')">全部 →</button></header>
             <div v-if="learningQueue.length" class="point-queue">
-              <button v-for="point in learningQueue" :key="point.id" @click="router.push(`/knowledge/${point.code}`)"><span class="point-orbit" :data-status="point.status"><i></i></span><span><code>{{ point.code }}</code><strong>{{ point.title }}</strong><small>{{ point.domainTitle }}</small></span><b>{{ pointStatusLabel(point.status) }}</b></button>
+              <button v-for="point in learningQueue" :key="point.id" @click="router.push(`/knowledge/${point.code}`)"><span class="point-orbit" :data-status="point.status"><i></i></span><span><code>{{ point.code }}</code><strong>{{ point.title }}</strong><small>{{ point.code === recommendation?.point?.code ? '智能推荐下一站' : point.domainTitle }}</small></span><b>{{ point.code === recommendation?.point?.code ? '下一步' : pointStatusLabel(point.status) }}</b></button>
             </div>
             <div v-else class="compact-empty"><strong>暂无推进中的知识点</strong><button @click="router.push('/knowledge/map')">从脑图选择一个</button></div>
           </section>
 
-          <section v-if="todayPlan.retests.length" class="retest-panel"><header><span>严格复测提醒</span><strong>{{ todayPlan.retests.length }}</strong></header><button v-for="event in todayPlan.retests.slice(0, 3)" :key="event.id"><time>{{ new Date(event.startAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) }}</time><span>{{ eventTitle(event) }}</span></button></section>
+          <section v-if="todayPlan.retests.length" class="retest-panel"><header><span>严格复测提醒</span><strong>{{ todayPlan.retests.length }}</strong></header><button v-for="event in todayPlan.retests.slice(0, 3)" :key="event.id" :disabled="retestStartingId === event.id" @click="beginRetest(event)"><time>{{ new Date(event.startAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) }}</time><span>{{ retestStartingId === event.id ? '正在创建复测…' : eventTitle(event) }}</span></button></section>
         </aside>
       </div>
 
       <section class="week-strip">
         <header class="section-heading"><div><p class="eyebrow">NEXT 7 DAYS</p><h2>未来一周雷达</h2></div><button @click="router.push('/plan')">打开完整日历 →</button></header>
         <div class="week-days">
-          <button v-for="day in upcomingDays" :key="day.key" :class="{ busy: day.events.length }" @click="router.push('/plan')"><span>{{ dayLabel(day.date) }}</span><strong>{{ day.date.getDate() }}</strong><i><b v-for="event in day.events.slice(0, 3)" :key="event.id" :title="event.title"></b></i><small>{{ day.events.length ? `${day.events.length} 项 · ${day.events.reduce((sum, event) => sum + eventMinutes(event), 0)}m` : '留白' }}</small></button>
+          <button v-for="day in upcomingDays" :key="day.key" :class="{ busy: day.events.length }" @click="router.push('/plan')"><span>{{ dayLabel(day.date) }}</span><strong>{{ day.date.getDate() }}</strong><i><b v-for="event in day.events.slice(0, 3)" :key="event.id" :title="event.title"></b></i><small>{{ day.events.length ? `${day.events.length} 项 · 预计 ${day.events.reduce((sum, event) => sum + estimatedEventMinutes(event), 0)}m` : '留白' }}</small></button>
         </div>
       </section>
 

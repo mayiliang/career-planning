@@ -34,7 +34,12 @@ if (fs.existsSync(pendingRestorePath)) {
     const sidecarPath = `${dbPath}${suffix}`;
     if (fs.existsSync(sidecarPath)) fs.unlinkSync(sidecarPath);
   }
-  fs.renameSync(pendingRestorePath, dbPath);
+  try {
+    fs.renameSync(pendingRestorePath, dbPath);
+  } catch (error) {
+    // 并行测试或双进程启动时，另一个进程可能已先完成同一份待恢复快照。
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
 }
 
 // 创建 SQLite 连接

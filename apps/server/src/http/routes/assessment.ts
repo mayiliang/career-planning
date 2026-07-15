@@ -259,6 +259,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         },
         knowledgePointUpdated: result.knowledgePointUpdated,
         retestEventCreated: result.retestEventCreated,
+        reviewEventCreated: result.reviewEventCreated,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -289,6 +290,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         },
         knowledgePointUpdated: result.knowledgePointUpdated,
         retestEventCreated: result.retestEventCreated,
+        reviewEventCreated: result.reviewEventCreated,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : '重新判题失败';
