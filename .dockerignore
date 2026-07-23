@@ -1,0 +1,16 @@
+.git
+.gitignore
+.DS_Store
+node_modules
+**/node_modules
+**/dist
+data
+backups
+.env
+.env.*
+!.env.example
+coverage
+test-results
+playwright-report
+*.log
+*.zip

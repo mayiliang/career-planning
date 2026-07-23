@@ -1,0 +1,40 @@
+name: career-atlas
+
+services:
+  server:
+    image: career-atlas-server:local
+    build:
+      context: .
+      target: server
+    env_file:
+      - path: ./.env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 41730
+      DATA_DIR: /app/data
+      AUTO_BOOTSTRAP: "true"
+      AUTO_BACKUP: "true"
+      AUTO_BACKUP_INTERVAL_HOURS: 24
+    volumes:
+      - career-atlas-data:/app/data
+    ports:
+      - "127.0.0.1:41730:41730"
+    restart: unless-stopped
+
+  web:
+    image: career-atlas-web:local
+    build:
+      context: .
+      target: web
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:41731:80"
+    restart: unless-stopped
+
+volumes:
+  career-atlas-data:
+    name: career-atlas-data

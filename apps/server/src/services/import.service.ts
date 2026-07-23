@@ -11,6 +11,7 @@ import { knowledgeDomains, knowledgePoints, type NewKnowledgeDomain, type NewKno
 import { parseAllKnowledgeFiles } from '@career-atlas/content-parser';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
+import { currentBeijingDate, planService } from './plan.service.js';
 
 // 项目根目录
 function getProjectRoot(): string {
@@ -23,6 +24,7 @@ function getProjectRoot(): string {
 
 const PROJECT_ROOT = getProjectRoot();
 const KNOWLEDGE_BASE_DIR = 'docs/knowledge/knowledge-base';
+const LEARNING_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'templates', 'learning-tracker-template.csv');
 
 /**
  * 扫描知识文件
@@ -263,5 +265,87 @@ export async function checkImportStatus(): Promise<{
     domainCount: domains.length,
     pointCount: points.length,
     pointCodes: points.map(p => p.code),
+  };
+}
+
+export interface ResetLearningProgressResult {
+  syncedKnowledgePoints: number;
+  resetKnowledgePoints: number;
+  deletedTemplateEvents: number;
+  deletedSystemLearningEvents: number;
+  deletedCheckins: number;
+  deletedDailyReviews: number;
+  deletedWeeklyReviews: number;
+  deletedLeaveDays: number;
+  deletedAssessmentSessions: number;
+  deletedAssessmentQuestions: number;
+  deletedAssessmentAnswers: number;
+  deletedAssessmentResults: number;
+  deletedMasteryEvents: number;
+  importedPlanEvents: number;
+  startDate: string;
+}
+
+/**
+ * 清空学习进度并按最新版 23 周模板重建计划。
+ *
+ * 保留知识内容、知识关系、岗位、项目、技能缺口和备份；只清除学习过程状态、
+ * 考核证据、打卡复盘、请假顺延记录，以及模板/系统生成的学习计划。
+ */
+export async function resetLearningProgress(startDate = currentBeijingDate()): Promise<ResetLearningProgressResult> {
+  const importResult = await executeImport();
+  const now = new Date().toISOString();
+
+  const deleted = rawDb.transaction(() => {
+    const deletedAssessmentAnswers = rawDb.prepare('DELETE FROM assessment_answers').run().changes;
+    const deletedAssessmentQuestions = rawDb.prepare('DELETE FROM assessment_questions').run().changes;
+    const deletedAssessmentResults = rawDb.prepare('DELETE FROM assessment_results').run().changes;
+    const deletedMasteryEvents = rawDb.prepare('DELETE FROM mastery_events').run().changes;
+    const deletedAssessmentSessions = rawDb.prepare('DELETE FROM assessment_sessions').run().changes;
+    const deletedCheckins = rawDb.prepare('DELETE FROM checkins').run().changes;
+    const deletedDailyReviews = rawDb.prepare('DELETE FROM daily_reviews').run().changes;
+    const deletedWeeklyReviews = rawDb.prepare('DELETE FROM weekly_reviews').run().changes;
+    const deletedLeaveDays = rawDb.prepare('DELETE FROM leave_days').run().changes;
+    const deletedTemplateEvents = rawDb.prepare("DELETE FROM plan_events WHERE source_type = 'TEMPLATE'").run().changes;
+    const deletedSystemLearningEvents = rawDb.prepare(`
+      DELETE FROM plan_events
+      WHERE source_type = 'SYSTEM'
+        AND event_type IN ('LEARNING', 'ASSESSMENT', 'RETEST', 'PROJECT_OUTPUT', 'REVIEW')
+    `).run().changes;
+    const resetKnowledgePoints = rawDb.prepare(`
+      UPDATE knowledge_points
+      SET status = 'NOT_STARTED',
+          summary = NULL,
+          self_mastered_at = NULL,
+          first_passed_at = NULL,
+          mastered_at = NULL,
+          next_review_at = NULL,
+          updated_at = ?
+    `).run(now).changes;
+
+    return {
+      resetKnowledgePoints,
+      deletedTemplateEvents,
+      deletedSystemLearningEvents,
+      deletedCheckins,
+      deletedDailyReviews,
+      deletedWeeklyReviews,
+      deletedLeaveDays,
+      deletedAssessmentSessions,
+      deletedAssessmentQuestions,
+      deletedAssessmentAnswers,
+      deletedAssessmentResults,
+      deletedMasteryEvents,
+    };
+  })();
+
+  const planResult = await planService.importFromTemplate(LEARNING_TEMPLATE_PATH, { startDate });
+  planService.normalizeTemplateSchedule();
+
+  return {
+    syncedKnowledgePoints: importResult.totalPoints,
+    importedPlanEvents: planResult.imported,
+    startDate,
+    ...deleted,
   };
 }

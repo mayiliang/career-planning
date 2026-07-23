@@ -539,6 +539,26 @@ const BackupMetadataSchema = z.object({
   note: z.string().optional(),
 });
 
+const ResetLearningProgressSchema = z.object({
+  syncedKnowledgePoints: z.number(),
+  resetKnowledgePoints: z.number(),
+  deletedTemplateEvents: z.number(),
+  deletedSystemLearningEvents: z.number(),
+  deletedCheckins: z.number(),
+  deletedDailyReviews: z.number(),
+  deletedWeeklyReviews: z.number(),
+  deletedLeaveDays: z.number(),
+  deletedAssessmentSessions: z.number(),
+  deletedAssessmentQuestions: z.number(),
+  deletedAssessmentAnswers: z.number(),
+  deletedAssessmentResults: z.number(),
+  deletedMasteryEvents: z.number(),
+  importedPlanEvents: z.number(),
+  startDate: z.string(),
+});
+
+export type ResetLearningProgressResult = z.infer<typeof ResetLearningProgressSchema>;
+
 // API 错误类型
 export class ApiError extends Error {
   code: string;
@@ -934,6 +954,13 @@ export const apiClient = {
       skippedPoints: z.number(),
       totalPoints: z.number(),
     }), { method: 'POST' });
+  },
+
+  async resetLearningProgress(startDate?: string) {
+    return request('/import/reset-learning-progress', ResetLearningProgressSchema, {
+      method: 'POST',
+      body: JSON.stringify(startDate ? { startDate } : {}),
+    });
   },
 
   async listBackups() {

@@ -185,6 +185,17 @@ export const AssessmentFeedbackSchema = z.object({
   whatWasStrong: z.array(z.string()),
   whatMustImprove: z.array(z.string()),
   suggestedRetestFocus: z.array(z.string()),
+  questionReviews: z.array(z.object({
+    questionId: z.string(),
+    score: z.number().min(0),
+    maxScore: z.number().min(0),
+    correctParts: z.array(z.string()),
+    incorrectParts: z.array(z.string()),
+    missingParts: z.array(z.string()),
+    referenceAnswer: z.string(),
+    sourceBasis: z.array(z.string()),
+    nextAction: z.string(),
+  })),
 });
 
 export type AssessmentFeedback = z.infer<typeof AssessmentFeedbackSchema>;

@@ -2,7 +2,7 @@
 
 更新时间：2026-07-13
 
-文档关系：这份文件是长期方向图；更细的 8 小时/天执行计划见[个人定制前端成长计划](personalized-frontend-mastery-plan.md)，每日安排见[每日 8 小时安排](../../templates/daily-8h-learning-schedule.csv)，项目资产沉淀见[项目经验资产库](../knowledge/project-assets.md)。
+文档关系：这份文件是长期方向图；更细的至少 500 分钟/天执行计划见[个人定制前端成长计划](personalized-frontend-mastery-plan.md)，每日安排见[每日 540 分钟安排](../../templates/daily-8h-learning-schedule.csv)，项目资产沉淀见[项目经验资产库](../knowledge/project-assets.md)。
 
 ## 这份规划的主线
 

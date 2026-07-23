@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateVerdict, PASS_THRESHOLD } from '@career-atlas/shared';
 import { buildGradingUserMessage } from '../ai/provider.js';
+import { normalizeFeedbackAndDimensionScores } from './grading.service.js';
 
 describe('评分逻辑', () => {
   describe('calculateVerdict', () => {
@@ -137,15 +138,73 @@ describe('DeepSeek 评分契约', () => {
       knowledgePointCode: 'JS-01',
       knowledgePointTitle: '闭包',
       assessmentType: 'FIRST',
-      questions: [{ id: 'q1', type: 'ESSAY', dimension: 'principlesAndBoundaries', content: '解释闭包' }],
+      questions: [{ id: 'q1', type: 'ESSAY', dimension: 'principlesAndBoundaries', maxScore: 10, content: '解释闭包' }],
       answers: [{ questionId: 'q1', content: '示例答案' }],
       rubric: '严格评分',
       passCriteria: '80 分',
+      studyMaterial: 'MDN 闭包资料',
     });
 
     expect(message).toContain('"criterionId": "Q1-mechanism"');
     expect(message).toContain('"maxScore": 10');
     expect(message).toContain('"nextAction": "可执行的下一步"');
+    expect(message).toContain('"questionReviews"');
+    expect(message).toContain('"referenceAnswer"');
+    expect(message).toContain('学习资料：');
+    expect(message).toContain('不得引入学习资料无法直接查到');
     expect(message).toContain('字段一个都不能省略');
+    expect(message).toContain('summary 不超过 120 个中文字符');
+    expect(message).toContain('referenceAnswer 不超过 180 个中文字符');
+    expect(message).toContain('引用之外的解释是否成立');
+    expect(message).toContain('如果题目允许伪代码');
+    expect(message).toContain('不要主动扩展到 React Hook 或 useEffect');
+  });
+
+  it('服务端会把 DeepSeek 返回的 Q1/Q2 逐题评审映射回真实题目，并按实际题目分值重算维度分', () => {
+    const questions = [
+      { id: 'uuid-q1', dimension: 'principlesAndBoundaries', maxScore: 10, questionContent: '{"referenceAnswer":"r1","sourceBasis":["s1"]}' },
+      { id: 'uuid-q2', dimension: 'principlesAndBoundaries', maxScore: 15, questionContent: '{"referenceAnswer":"r2","sourceBasis":["s2"]}' },
+      { id: 'uuid-q3', dimension: 'practice', maxScore: 35, questionContent: '{"referenceAnswer":"r3","sourceBasis":["s3"]}' },
+      { id: 'uuid-q4', dimension: 'troubleshootingAndDesign', maxScore: 25, questionContent: '{"referenceAnswer":"r4","sourceBasis":["s4"]}' },
+      { id: 'uuid-q5', dimension: 'projectCommunication', maxScore: 15, questionContent: '{"referenceAnswer":"r5","sourceBasis":["s5"]}' },
+    ];
+
+    const normalized = normalizeFeedbackAndDimensionScores({
+      summary: '全部正确',
+      whatWasStrong: [],
+      whatMustImprove: [],
+      suggestedRetestFocus: [],
+      questionReviews: questions.map((_, index) => ({
+        questionId: `Q${index + 1}`,
+        score: 10,
+        maxScore: 10,
+        correctParts: ['正确'],
+        incorrectParts: [],
+        missingParts: [],
+        referenceAnswer: `参考 ${index + 1}`,
+        sourceBasis: ['MDN'],
+        nextAction: '继续保持',
+      })),
+    }, {
+      principlesAndBoundaries: 20,
+      practice: 10,
+      troubleshootingAndDesign: 10,
+      projectCommunication: 10,
+    }, questions);
+
+    expect(normalized.feedback.questionReviews.map(review => review.questionId)).toEqual([
+      'uuid-q1',
+      'uuid-q2',
+      'uuid-q3',
+      'uuid-q4',
+      'uuid-q5',
+    ]);
+    expect(normalized.feedback.questionReviews.map(review => review.maxScore)).toEqual([10, 15, 35, 25, 15]);
+    expect(normalized.dimensionScores).toEqual({
+      principlesAndBoundaries: 25,
+      practice: 35,
+      troubleshootingAndDesign: 25,
+      projectCommunication: 15,
+    });
   });
 });

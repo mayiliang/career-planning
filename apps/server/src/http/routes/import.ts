@@ -7,7 +7,7 @@
  * - POST /api/v1/import/execute - 执行导入
  */
 import { FastifyInstance } from 'fastify';
-import { previewImport, executeImport, checkImportStatus } from '../../services/import.service.js';
+import { previewImport, executeImport, checkImportStatus, resetLearningProgress } from '../../services/import.service.js';
 import { z } from 'zod';
 
 // API 响应 schema
@@ -37,6 +37,28 @@ const ImportExecuteResponseSchema = z.object({
   totalPoints: z.number(),
 });
 
+const ResetLearningProgressBodySchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+}).optional();
+
+const ResetLearningProgressResponseSchema = z.object({
+  syncedKnowledgePoints: z.number(),
+  resetKnowledgePoints: z.number(),
+  deletedTemplateEvents: z.number(),
+  deletedSystemLearningEvents: z.number(),
+  deletedCheckins: z.number(),
+  deletedDailyReviews: z.number(),
+  deletedWeeklyReviews: z.number(),
+  deletedLeaveDays: z.number(),
+  deletedAssessmentSessions: z.number(),
+  deletedAssessmentQuestions: z.number(),
+  deletedAssessmentAnswers: z.number(),
+  deletedAssessmentResults: z.number(),
+  deletedMasteryEvents: z.number(),
+  importedPlanEvents: z.number(),
+  startDate: z.string(),
+});
+
 /**
  * 注册导入路由
  */
@@ -60,5 +82,12 @@ export async function registerImportRoutes(app: FastifyInstance) {
     const result = await executeImport();
     
     return reply.ok(ImportExecuteResponseSchema.parse(result));
+  });
+
+  app.post('/api/v1/import/reset-learning-progress', async (request, reply) => {
+    const body = ResetLearningProgressBodySchema.parse(request.body);
+    const result = await resetLearningProgress(body?.startDate);
+
+    return reply.ok(ResetLearningProgressResponseSchema.parse(result));
   });
 }

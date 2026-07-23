@@ -29,11 +29,12 @@ export const KNOWLEDGE_PATHS: string[][] = [
   ['AGENT-01', 'AGENT-02', 'AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07', 'AGENT-08', 'AGENT-09', 'AGENT-10'],
   ['WEBAI-01', 'WEBAI-02', 'WEBAI-03', 'WEBAI-04', 'WEBAI-05', 'WEBAI-06', 'WEBAI-07', 'WEBAI-08', 'WEBAI-09', 'WEBAI-10'],
   ['AIDEV-01', 'AIDEV-02', 'AIDEV-03', 'AIDEV-04', 'AIDEV-05', 'AIDEV-06', 'AIDEV-07', 'AIDEV-08', 'AIDEV-09', 'AIDEV-10'],
+  ['LINUX-01', 'LINUX-02', 'LINUX-03', 'LINUX-04', 'DOCKER-01', 'DOCKER-02', 'DOCKER-03', 'DOCKER-04', 'DEPLOY-01', 'DEPLOY-02'],
 ];
 
 /**
- * 16 周执行路线：先按依赖顺序串成一条主线，再按每周不超过约 48 小时的新知识负载切分。
- * 第 16 周只做毕业项目，因此 143 个知识点在前 15 周覆盖完毕。
+ * 23 周执行路线：前 18 个阶段保持知识依赖顺序，后 5 周用于求职、项目资产和综合闸门。
+ * 日历层会把 153 个知识点的显式分钟数连续切成 23 × 7 个 540 分钟学习桶。
  */
 const PLAN_ROUTE = [
   ...(KNOWLEDGE_PATHS[0] ?? []),
@@ -43,6 +44,7 @@ const PLAN_ROUTE = [
   ...(KNOWLEDGE_PATHS[3] ?? []),
   ...(KNOWLEDGE_PATHS[4] ?? []),
   ...(KNOWLEDGE_PATHS[5] ?? []),
+  ...(KNOWLEDGE_PATHS[15] ?? []),
   ...(KNOWLEDGE_PATHS[6] ?? []),
   ...(KNOWLEDGE_PATHS[7] ?? []),
   ...(KNOWLEDGE_PATHS[8] ?? []),
@@ -55,8 +57,9 @@ const PLAN_ROUTE = [
 
 const WEEK_END_CODES = [
   'NET-01', 'TS-08', 'VUE-10', 'REACT-09', 'BIZ-04',
-  'ENG-05', 'PERF-04', 'COMP-03', 'MCP-01', 'AIAPP-07',
-  'AGENT-05', 'WEBAI-03', 'AIDEV-01', 'AIDEV-09', 'CAREER-06',
+  'ENG-05', 'OBS-01', 'DEPLOY-02', 'H5-03', 'PLATFORM-03',
+  'AI-01', 'AIAPP-08', 'AGENT-06', 'WEBAI-04', 'AIDEV-01',
+  'AIDEV-09', 'CAREER-04', 'CAREER-06',
 ] as const;
 
 export const LEARNING_WEEK_PATHS: Record<number, string[]> = {};
@@ -66,12 +69,13 @@ for (let week = 1; week <= WEEK_END_CODES.length; week++) {
   LEARNING_WEEK_PATHS[week] = PLAN_ROUTE.slice(routeCursor, endIndex + 1);
   routeCursor = endIndex + 1;
 }
-LEARNING_WEEK_PATHS[16] = ['JS-04', 'TS-08', 'VUE-10', 'BIZ-08', 'TEST-03', 'AIAPP-08', 'AGENT-10', 'AIDEV-03', 'CAREER-06'];
+LEARNING_WEEK_PATHS[19] = ['TS-08', 'REACT-09', 'BIZ-08', 'DEPLOY-02', 'AIAPP-08', 'AGENT-10', 'AIDEV-03', 'CAREER-06'];
+LEARNING_WEEK_PATHS[20] = ['JS-04', 'TS-08', 'VUE-10', 'BIZ-08', 'TEST-03', 'DEPLOY-02', 'AIAPP-08', 'AGENT-10', 'AIDEV-03', 'CAREER-06'];
 
 let globalRouteOrder = 0;
 export const KNOWLEDGE_ROUTE_INDEX = new Map(
   Object.entries(LEARNING_WEEK_PATHS)
-    .filter(([week]) => Number(week) <= 15)
+    .filter(([week]) => Number(week) <= 18)
     .flatMap(([week, path]) => path.map((code) => [code, {
       week: Number(week),
       order: globalRouteOrder++,
@@ -97,6 +101,12 @@ const crossPrerequisites: Array<[string, string, string]> = [
   ['TEST-03', 'ENG-06', '发布与回滚需要关键路径自动化证据'],
   ['ENG-06', 'OBS-01', '发布闭环必须通过真实用户监控验证生产结果'],
   ['ENG-03', 'ENG-08', '供应链治理建立在可重复安装和依赖边界之上'],
+  ['ENG-06', 'DEPLOY-01', '部署交付需要发布、回滚和生产环境意识'],
+  ['NET-01', 'LINUX-02', '端口、DNS、HTTP 与缓存排障依赖网络基础'],
+  ['SEC-01', 'LINUX-04', '服务器安全是前端安全边界的生产延伸'],
+  ['LINUX-03', 'DOCKER-01', '可重复构建脚本是 Docker 镜像化的前置能力'],
+  ['DOCKER-02', 'DEPLOY-01', 'Compose 网络、环境和卷是生产部署配置的基础'],
+  ['DOCKER-04', 'DEPLOY-02', '镜像可信和扫描是 CI/CD 发布准入的一部分'],
   ['ENG-04', 'COMP-03', '组件版本治理依赖明确的构建产物与 exports'],
   ['NODE-03', 'MCP-01', 'MCP Server 首先是可维护的 Node 工具进程'],
   ['API-02', 'MCP-01', 'Tool Schema 与类型输出依赖规范化的接口模型'],
@@ -124,6 +134,8 @@ const relatedPairs: Array<[string, string, string]> = [
   ['MCP-02', 'AGENT-08', '可发现工具依赖高质量描述和 Schema'],
   ['AIDEV-03', 'TEST-03', '验证金字塔与 E2E 关键路径互相补充'],
   ['AIDEV-09', 'DS-01', '设计稿到代码需要可计算的设计 Token'],
+  ['DEPLOY-01', 'PERF-02', '静态资源缓存和 CDN 策略直接影响加载性能'],
+  ['DOCKER-01', 'ENG-01', 'Dockerfile 构建同样需要理解模块产物和构建阶段'],
 ];
 
 export function buildRelationDefinitions(): RelationDefinition[] {

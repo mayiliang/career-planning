@@ -6,81 +6,91 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Built-in AI 入门](https://developer.chrome.com/docs/ai/get-started)、[Built-in AI API 状态](https://developer.chrome.com/docs/ai/built-in-apis)
-- 严格考核：实现 availability、downloadable、downloading、available、unavailable 五种状态 UI，并提供云端 fallback。
-- 通过标准：不把实验 API 当全平台能力；模型下载需要用户激活；移动端和硬件不支持时有清晰替代路径。
+- 学习资料：[Chrome Built-in AI 入门](https://developer.chrome.com/docs/ai/get-started)、[Built-in AI API 状态](https://developer.chrome.com/docs/ai/built-in-apis)。覆盖范围：围绕「Chrome Built-in AI API 与能力检测」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《Chrome Built-in AI 入门》《Built-in AI API 状态》，分别摘出能支撑「Chrome Built-in AI API 与能力检测」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Chrome Built-in AI API 与能力检测」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现 availability、downloadable、downloading、available、unavailable 五种状态 UI，并提供云端 fallback；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：不把实验 API 当全平台能力；模型下载需要用户激活；移动端和硬件不支持时有清晰替代路径。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-02 WebGPU 核心模型与兼容边界
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN WebGPU](https://developer.mozilla.org/docs/Web/API/WebGPU_API)、[WebGPU Specification](https://www.w3.org/TR/webgpu/)
-- 严格考核：说明 adapter、device、buffer、pipeline、shader 和 command encoder 的职责，实现一次 compute shader，并展示兼容检测。
-- 通过标准：理解 WebGPU 不是 Baseline；资源正确释放；错误和 device lost 可处理；能说明与 WebGL/WASM 的边界。
+- 学习资料：[MDN WebGPU](https://developer.mozilla.org/docs/Web/API/WebGPU_API)、[WebGPU Specification](https://www.w3.org/TR/webgpu/)。覆盖范围：围绕「WebGPU 核心模型与兼容边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN WebGPU》《WebGPU Specification》，分别摘出能支撑「WebGPU 核心模型与兼容边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WebGPU 核心模型与兼容边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：说明 adapter、device、buffer、pipeline、shader 和 command encoder 的职责，实现一次 compute shader，并展示兼容检测；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：理解 WebGPU 不是 Baseline；资源正确释放；错误和 device lost 可处理；能说明与 WebGL/WASM 的边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-03 WebAssembly、SIMD 与推理性能
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN WebAssembly](https://developer.mozilla.org/docs/WebAssembly)、[WebAssembly SIMD](https://github.com/WebAssembly/simd)
-- 严格考核：比较同一计算任务的 JS、WASM 和 WebGPU 版本，记录加载、预热、执行、内存与包体数据。
-- 通过标准：基准方法可复现；不只给一次测量；能解释序列化和边界调用成本；按设备能力选择实现。
+- 学习资料：[MDN WebAssembly](https://developer.mozilla.org/docs/WebAssembly)、[WebAssembly SIMD](https://github.com/WebAssembly/simd)。覆盖范围：围绕「WebAssembly、SIMD 与推理性能」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN WebAssembly》《WebAssembly SIMD》，分别摘出能支撑「WebAssembly、SIMD 与推理性能」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WebAssembly、SIMD 与推理性能」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：比较同一计算任务的 JS、WASM 和 WebGPU 版本，记录加载、预热、执行、内存与包体数据；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：基准方法可复现；不只给一次测量；能解释序列化和边界调用成本；按设备能力选择实现。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-04 Worker、并发与主线程响应
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN Web Workers](https://developer.mozilla.org/docs/Web/API/Web_Workers_API)、[Comlink](https://github.com/GoogleChromeLabs/comlink)
-- 严格考核：把分词、向量计算或模型推理移入 Worker，支持 Transferable、进度、取消与异常传播，并测量 INP。
-- 通过标准：主线程无明显长任务；大数据不重复复制；Worker 可终止；错误不会静默；对不支持场景有降级。
+- 学习资料：[MDN Web Workers](https://developer.mozilla.org/docs/Web/API/Web_Workers_API)、[Comlink](https://github.com/GoogleChromeLabs/comlink)。覆盖范围：围绕「Worker、并发与主线程响应」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN Web Workers》《Comlink》，分别摘出能支撑「Worker、并发与主线程响应」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Worker、并发与主线程响应」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把分词、向量计算或模型推理移入 Worker，支持 Transferable、进度、取消与异常传播，并测量 INP；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：主线程无明显长任务；大数据不重复复制；Worker 可终止；错误不会静默；对不支持场景有降级。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-05 浏览器模型下载、缓存与版本管理
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Cache API](https://developer.mozilla.org/docs/Web/API/Cache)、[StorageManager](https://developer.mozilla.org/docs/Web/API/StorageManager)
-- 严格考核：设计分片下载、校验和、断点、进度、配额检测、版本切换和清理流程，并模拟下载中断与空间不足。
-- 通过标准：模型损坏不会加载；旧版本可回滚；不会无限占用磁盘；用户能看到体积、网络与删除入口。
+- 学习资料：[Cache API](https://developer.mozilla.org/docs/Web/API/Cache)、[StorageManager](https://developer.mozilla.org/docs/Web/API/StorageManager)。覆盖范围：围绕「浏览器模型下载、缓存与版本管理」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《Cache API》《StorageManager》，分别摘出能支撑「浏览器模型下载、缓存与版本管理」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「浏览器模型下载、缓存与版本管理」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计分片下载、校验和、断点、进度、配额检测、版本切换和清理流程，并模拟下载中断与空间不足；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：模型损坏不会加载；旧版本可回滚；不会无限占用磁盘；用户能看到体积、网络与删除入口。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-06 本地 Embedding 与语义搜索
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Transformers.js](https://huggingface.co/docs/transformers.js/)、[IndexedDB](https://developer.mozilla.org/docs/Web/API/IndexedDB_API)
-- 严格考核：在 Worker 中生成 embedding，把 1000 条文档向量持久化并实现 top-k 搜索，评估首载时间与相关性。
-- 通过标准：UI 不冻结；索引版本与模型绑定；数据留在本地；有至少 20 条查询评估，不以“看起来相关”代替指标。
+- 学习资料：[Transformers.js](https://huggingface.co/docs/transformers.js/)、[IndexedDB](https://developer.mozilla.org/docs/Web/API/IndexedDB_API)。覆盖范围：围绕「本地 Embedding 与语义搜索」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《Transformers.js》《IndexedDB》，分别摘出能支撑「本地 Embedding 与语义搜索」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「本地 Embedding 与语义搜索」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：在 Worker 中生成 embedding，把 1000 条文档向量持久化并实现 top-k 搜索，评估首载时间与相关性；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：UI 不冻结；索引版本与模型绑定；数据留在本地；有至少 20 条查询评估，不以“看起来相关”代替指标。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-07 多模态输入、媒体管线与隐私
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MediaDevices](https://developer.mozilla.org/docs/Web/API/MediaDevices)、[WebCodecs](https://developer.mozilla.org/docs/Web/API/WebCodecs_API)
-- 严格考核：设计图片/音频采集、预处理、预览、上传或本地推理流程，处理权限拒绝、设备切换、尺寸压缩和元数据清理。
-- 通过标准：授权是按需的；停止后释放媒体轨；不默认上传；敏感元数据处理明确；低端设备有降级。
+- 学习资料：[MediaDevices](https://developer.mozilla.org/docs/Web/API/MediaDevices)、[WebCodecs](https://developer.mozilla.org/docs/Web/API/WebCodecs_API)。覆盖范围：围绕「多模态输入、媒体管线与隐私」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MediaDevices》《WebCodecs》，分别摘出能支撑「多模态输入、媒体管线与隐私」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「多模态输入、媒体管线与隐私」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计图片/音频采集、预处理、预览、上传或本地推理流程，处理权限拒绝、设备切换、尺寸压缩和元数据清理；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：授权是按需的；停止后释放媒体轨；不默认上传；敏感元数据处理明确；低端设备有降级。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-08 混合推理与端云路由
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Hybrid AI](https://developer.chrome.com/docs/ai/built-in)、[Network Information API](https://developer.mozilla.org/docs/Web/API/Network_Information_API)
-- 严格考核：根据能力、隐私、延迟、网络、成本和任务质量设计本地/云端路由器，并写出决策表和故障注入测试。
-- 通过标准：路由决策可解释；本地失败能回退；敏感任务默认本地或显式确认；结果协议一致且可观测。
+- 学习资料：[Chrome Hybrid AI](https://developer.chrome.com/docs/ai/built-in)、[Network Information API](https://developer.mozilla.org/docs/Web/API/Network_Information_API)。覆盖范围：围绕「混合推理与端云路由」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《Chrome Hybrid AI》《Network Information API》，分别摘出能支撑「混合推理与端云路由」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「混合推理与端云路由」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：根据能力、隐私、延迟、网络、成本和任务质量设计本地/云端路由器，并写出决策表和故障注入测试；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：路由决策可解释；本地失败能回退；敏感任务默认本地或显式确认；结果协议一致且可观测。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-09 AI PWA、离线与后台同步
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[web.dev PWA](https://web.dev/learn/pwa/)、[Background Sync](https://developer.mozilla.org/docs/Web/API/Background_Synchronization_API)
-- 严格考核：实现可离线打开的 AI 笔记应用，本地排队任务、恢复网络后同步，并解决重复提交与冲突。
-- 通过标准：离线壳和数据版本一致；同步幂等；冲突不静默覆盖；不支持 Background Sync 时仍可手动恢复。
+- 学习资料：[web.dev PWA](https://web.dev/learn/pwa/)、[Background Sync](https://developer.mozilla.org/docs/Web/API/Background_Synchronization_API)。覆盖范围：围绕「AI PWA、离线与后台同步」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《web.dev PWA》《Background Sync》，分别摘出能支撑「AI PWA、离线与后台同步」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「AI PWA、离线与后台同步」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现可离线打开的 AI 笔记应用，本地排队任务、恢复网络后同步，并解决重复提交与冲突；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：离线壳和数据版本一致；同步幂等；冲突不静默覆盖；不支持 Background Sync 时仍可手动恢复。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-10 本地 AI 性能、能耗与可访问性
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Performance API](https://developer.mozilla.org/docs/Web/API/Performance_API)、[WCAG](https://www.w3.org/WAI/standards-guidelines/wcag/)
-- 严格考核：建立首 Token、tokens/s、内存、长任务、耗电代理指标和可访问性检查，比较三档设备的体验。
-- 通过标准：有真实测量与预算；高负载可暂停或降级；状态对读屏可理解；动画尊重 reduced-motion；不让“本地”掩盖糟糕性能。
+- 学习资料：[Performance API](https://developer.mozilla.org/docs/Web/API/Performance_API)、[WCAG](https://www.w3.org/WAI/standards-guidelines/wcag/)。覆盖范围：围绕「本地 AI 性能、能耗与可访问性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《Performance API》《WCAG》，分别摘出能支撑「本地 AI 性能、能耗与可访问性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「本地 AI 性能、能耗与可访问性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：建立首 Token、tokens/s、内存、长任务、耗电代理指标和可访问性检查，比较三档设备的体验；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：有真实测量与预算；高负载可暂停或降级；状态对读屏可理解；动画尊重 reduced-motion；不让“本地”掩盖糟糕性能。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## 领域综合考核
 

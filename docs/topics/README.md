@@ -12,7 +12,7 @@
 | 第 9-10 周 | `h5-hybrid-playbook.md` | H5 适配、Hybrid 调试与性能报告 |
 | 第 11-12 周 | `frontend-engineering-quality.md` | 构建、测试、发布与质量保障 |
 | 第 13-14 周 | `aiui-component-design.md` | 组件 API、设计取舍与示例 |
-| 第 15-16 周 | `api-tooling-and-ai-workflow.md` | API 工具设计和 AI 辅助研发流程 |
+| 第 11-16 周 | `api-tooling-and-ai-workflow.md` | API 工具设计和 AI 辅助研发流程 |
 
 ## 统一模板
 

@@ -139,13 +139,13 @@ const start = async () => {
     app.log.error({ error: dbHealth.error }, '数据库检查失败');
     }
 
-    // 启动服务（只绑定本地）
+    // 本机运行默认绑定 127.0.0.1；Docker 中通过 HOST=0.0.0.0 允许容器网络访问。
     await app.listen({
       port: config.port,
-      host: '127.0.0.1', // 安全：只监听本地
+      host: config.host,
     });
 
-    console.log(`Career Atlas 服务已启动: http://127.0.0.1:${config.port}`);
+    console.log(`Career Atlas 服务已启动: http://${config.host}:${config.port}`);
   } catch (err) {
     app.log.error(err);
     closeDatabase();

@@ -18,7 +18,13 @@ let timer: number | undefined;
 
 const questions = computed(() => (detail.value?.questions ?? []).map((question) => {
   try {
-    return { ...question, content: JSON.parse(question.questionContent) as { question?: string; prompt?: string; wordLimit?: number } };
+    return { ...question, content: JSON.parse(question.questionContent) as {
+      question?: string;
+      prompt?: string;
+      wordLimit?: number;
+      level?: string;
+      sourceHint?: string;
+    } };
   } catch {
     return { ...question, content: { question: question.questionContent } };
   }
@@ -113,8 +119,30 @@ async function regrade() {
 
 function parseFeedback(value: string | null) {
   if (!value) return null;
-  try { return JSON.parse(value) as { summary?: string; whatWasStrong?: string[]; whatMustImprove?: string[]; suggestedRetestFocus?: string[] }; }
+  try {
+    return JSON.parse(value) as {
+      summary?: string;
+      whatWasStrong?: string[];
+      whatMustImprove?: string[];
+      suggestedRetestFocus?: string[];
+      questionReviews?: Array<{
+        questionId: string;
+        score: number;
+        maxScore: number;
+        correctParts: string[];
+        incorrectParts: string[];
+        missingParts: string[];
+        referenceAnswer: string;
+        sourceBasis: string[];
+        nextAction: string;
+      }>;
+    };
+  }
   catch { return { summary: value }; }
+}
+
+function questionReview(questionId: string) {
+  return parseFeedback(result.value?.feedback ?? null)?.questionReviews?.find((item) => item.questionId === questionId);
 }
 
 onMounted(() => {
@@ -149,8 +177,8 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer); });
       <section v-if="detail.session.status === 'DRAFT'" class="briefing">
         <p class="briefing-number">01</p>
         <div>
-          <h2>闭卷、限时、逐题留痕</h2>
-          <p>题目覆盖原理边界、实践产出、排障设计与项目表达。提交后由 DeepSeek 按 100 分量表评分，服务端会重算通过结论。</p>
+          <h2>资料可追溯、逐层过渡、逐题留痕</h2>
+          <p>题目会从资料定位、概念解释、小例子推导、受限排错和学习复述逐步推进。答案必须能从学习资料直接查到，或由资料中的机制一跳推导出来。</p>
           <button class="primary-action" :disabled="busy" @click="start">{{ busy ? '准备中...' : '开始计时' }}</button>
         </div>
       </section>
@@ -174,6 +202,36 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer); });
             {{ busy ? '重新判题中...' : '重新调用 DeepSeek 判题' }}
           </button>
         </div>
+        <div v-if="parseFeedback(result.feedback)?.questionReviews?.length" class="question-review-list">
+          <h2>逐题评审与参考答案</h2>
+          <article v-for="(question, index) in questions" :key="question.id" class="question-review-card">
+            <header>
+              <span>{{ String(index + 1).padStart(2, '0') }}</span>
+              <div><strong>{{ question.content.question || question.content.prompt }}</strong><small>{{ questionReview(question.id)?.score ?? 0 }} / {{ questionReview(question.id)?.maxScore ?? question.maxScore }} 分</small></div>
+            </header>
+            <section class="user-answer">
+              <h3>我的答案</h3>
+              <p>{{ answers[question.id]?.trim() || '未作答' }}</p>
+            </section>
+            <section>
+              <h3>对的地方</h3>
+              <ul><li v-for="item in questionReview(question.id)?.correctParts ?? ['未识别到明确正确点']" :key="item">{{ item }}</li></ul>
+            </section>
+            <section>
+              <h3>错误或缺失</h3>
+              <ul>
+                <li v-for="item in [...(questionReview(question.id)?.incorrectParts ?? []), ...(questionReview(question.id)?.missingParts ?? [])]" :key="item">{{ item }}</li>
+                <li v-if="!(questionReview(question.id)?.incorrectParts?.length || questionReview(question.id)?.missingParts?.length)">无明显错误或缺失</li>
+              </ul>
+            </section>
+            <section class="reference-answer">
+              <h3>参考答案</h3>
+              <p>{{ questionReview(question.id)?.referenceAnswer }}</p>
+              <div v-if="questionReview(question.id)?.sourceBasis?.length"><span>依据</span><b v-for="source in questionReview(question.id)?.sourceBasis" :key="source">{{ source }}</b></div>
+            </section>
+            <footer>{{ questionReview(question.id)?.nextAction }}</footer>
+          </article>
+        </div>
       </section>
 
       <section v-else class="question-list">
@@ -181,6 +239,10 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer); });
           <div class="question-index">{{ String(index + 1).padStart(2, '0') }}</div>
           <div class="question-body">
             <div class="question-meta"><span>{{ question.dimension }}</span><strong>{{ question.maxScore }} 分</strong></div>
+            <div v-if="question.content.level || question.content.sourceHint" class="question-scope">
+              <span v-if="question.content.level">{{ question.content.level }}</span>
+              <p>{{ question.content.sourceHint }}</p>
+            </div>
             <h2>{{ question.content.question || question.content.prompt }}</h2>
             <p v-if="question.content.wordLimit" class="word-limit">建议不超过 {{ question.content.wordLimit }} 字</p>
             <textarea

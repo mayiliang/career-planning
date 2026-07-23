@@ -2,7 +2,7 @@ import { join } from 'path';
 import { projectRoot } from '../config/index.js';
 import { rawDb } from '../db/index.js';
 import { executeImport } from './import.service.js';
-import { planService } from './plan.service.js';
+import { currentBeijingDate, planService } from './plan.service.js';
 import { getBackupService } from './backup.service.js';
 import { syncKnowledgeRelations } from './knowledge-relations.service.js';
 
@@ -14,13 +14,6 @@ export interface BootstrapResult {
   normalizedPlanTimes: number;
 }
 
-function currentMonday(): string {
-  const date = new Date();
-  const daysSinceMonday = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - daysSinceMonday);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 /** 首次启动自动迁移后，增量同步知识并生成默认学习计划。 */
 export async function bootstrapLocalData(): Promise<BootstrapResult> {
   const importResult = await executeImport();
@@ -30,7 +23,7 @@ export async function bootstrapLocalData(): Promise<BootstrapResult> {
   const templatePath = join(projectRoot, 'templates', 'learning-tracker-template.csv');
 
   if (row.count === 0) {
-    const result = await planService.importFromTemplate(templatePath, { startDate: currentMonday() });
+    const result = await planService.importFromTemplate(templatePath, { startDate: currentBeijingDate() });
     planItems = result.imported;
   } else {
     const result = await planService.syncTemplatePlan(templatePath);

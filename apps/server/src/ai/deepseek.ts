@@ -68,10 +68,10 @@ export class DeepSeekProvider implements AIProvider {
       messages,
       temperature: 0.1, // 低温度减少随机性
       response_format: { type: 'json_object' },
-      max_tokens: 6000,
+      max_tokens: 8000,
       // DeepSeek 特有参数
-      thinking: { type: 'enabled' },
-      reasoning_effort: 'high',
+      thinking: { type: 'disabled' },
+      reasoning_effort: 'low',
     };
     
     // 发起请求（带重试）
@@ -98,25 +98,16 @@ export class DeepSeekProvider implements AIProvider {
       };
     }
     
-    // 检查 finish_reason
+    // 检查 finish_reason。长答案或逐题意见容易让 JSON 被截断，被截断时直接重判为更短 JSON。
     if (choice.finish_reason === 'length') {
-      return {
-        rawContent: choice.message.content,
-        parsedOutput: null,
-        parseSuccess: false,
-        parseError: 'Response truncated due to length limit',
-        usage: {
-          promptTokens: response.usage?.prompt_tokens || 0,
-          completionTokens: response.usage?.completion_tokens || 0,
-          totalTokens: response.usage?.total_tokens || 0,
-        },
-        provider: this.name,
-        model: this.model,
-        responseTime,
-      };
+      response = await this.requestWithRetry({
+        ...body,
+        max_tokens: 8000,
+        messages: buildCompactRetryMessages(messages),
+      });
     }
     
-    let rawContent = choice.message.content;
+    let rawContent = response.choices[0]?.message.content ?? '';
     let parsed = parseGradingOutput(rawContent);
 
     // JSON mode只保证语法正确，不保证业务 Schema 正确。失败时给模型一次结构修复机会。
@@ -222,6 +213,21 @@ export class DeepSeekProvider implements AIProvider {
     
     throw lastError || new Error('Max retries exceeded');
   }
+}
+
+function buildCompactRetryMessages(messages: DeepSeekMessage[]): DeepSeekMessage[] {
+  return [
+    ...messages,
+    {
+      role: 'user',
+      content: [
+        '上一轮评分输出因为长度限制被截断。',
+        '请重新完成同一份评分，只返回完整 JSON 对象。',
+        '强制压缩输出：summary <= 80 字；findings 最多 5 项；weaknesses 最多 3 项；每题 correctParts/incorrectParts/missingParts 各最多 1 项；每题 referenceAnswer <= 120 字；nextAction <= 60 字。',
+        '不要输出 Markdown、解释前言或代码围栏。',
+      ].join('\n'),
+    },
+  ];
 }
 
 function parseGradingOutput(rawContent: string): {

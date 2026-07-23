@@ -117,7 +117,7 @@ grading.failed
 | POST | `/calendar/events` | 创建事件 |
 | PATCH | `/calendar/events/:id` | 改期、描述和优先级 |
 | POST | `/calendar/events/:id/checkins` | 完成、部分、跳过或改期 |
-| POST | `/calendar/plan/import` | 从 16 周模板生成预览 |
+| POST | `/calendar/plan/import` | 从 23 周模板生成预览 |
 | POST | `/calendar/plan/commit` | 确认生成 |
 | GET/POST | `/reviews/daily` | 日复盘 |
 | GET/POST | `/reviews/weekly` | 周复盘 |
@@ -151,10 +151,16 @@ grading.failed
 | GET | `/system/health` | DB、数据目录、模型配置状态 |
 | GET | `/system/ai/status` | Provider、模型名、连接状态，不返回密钥 |
 | POST | `/system/ai/test` | 最小连接测试 |
+| GET | `/import/status` | 当前已入库知识领域、知识点数量和编号 |
+| GET | `/import/preview` | 预览 Markdown 知识库导入结果 |
+| POST | `/import/execute` | 增量同步知识内容，保留已有学习进度 |
+| POST | `/import/reset-learning-progress` | 同步最新知识库，清空学习进度和学习证据，并按最新版 23 周模板重建计划 |
 | POST | `/backup` | 创建备份 |
 | GET | `/backup` | 备份列表 |
 | POST | `/backup/restore/preview` | 恢复预览 |
 | POST | `/backup/restore/commit` | 事务恢复 |
+
+`/import/reset-learning-progress` 只影响学习主线：`knowledge_points` 的掌握状态、摘要和掌握时间，模板/系统学习计划、考核会话、评分结果、掌握事件、打卡、日复盘、周复盘和请假记录会被清空；岗位、项目资产、技能缺口、知识内容、知识关系和备份保留。默认从当前北京时间日期重新生成 161 条模板计划，也可传入 `{ "startDate": "YYYY-MM-DD" }` 指定计划起点。
 
 ## 8. 知识状态机
 

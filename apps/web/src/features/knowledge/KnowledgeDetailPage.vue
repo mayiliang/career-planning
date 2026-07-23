@@ -11,7 +11,7 @@
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
-import { apiClient } from '@/api/client';
+import { ApiError, apiClient } from '@/api/client';
 import { renderMarkdown } from '@/utils/markdown';
 
 const route = useRoute();
@@ -84,6 +84,12 @@ const createAssessmentMutation = useMutation({
     durationMinutes: 60,
   }),
   onSuccess: (session) => router.push(`/assessment/${session.id}`),
+  onError: (reason) => {
+    if (reason instanceof ApiError) {
+      const existingSession = reason.message.match(/Existing session in progress: ([0-9a-f-]+)/i)?.[1];
+      if (existingSession) router.push(`/assessment/${existingSession}`);
+    }
+  },
 });
 
 // 开始编辑摘要
@@ -157,6 +163,9 @@ const studyHtml = computed(() => renderMarkdown(point.value?.studyMaterialMd ?? 
 const assessmentHtml = computed(() => renderMarkdown(point.value?.assessmentSpecMd ?? ''));
 const criteriaHtml = computed(() => renderMarkdown(point.value?.passCriteriaMd ?? ''));
 const pendingPrerequisites = computed(() => relations.value?.prerequisites.filter((item) => item.status !== 'MASTERED').length ?? 0);
+const prerequisiteTotal = computed(() => relations.value?.prerequisites.length ?? 0);
+const dependentTotal = computed(() => relations.value?.dependents.length ?? 0);
+const relatedTotal = computed(() => relations.value?.related.length ?? 0);
 const formatMinutes = (minutes: number) => {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
@@ -169,6 +178,18 @@ const effortStages = computed(() => point.value ? [
   { key: 'assessment', label: '严格首考', minutes: point.value.assessmentMinutes },
   { key: 'retest', label: '7 天复测', minutes: point.value.retestMinutes },
 ] : []);
+const primaryActionLabel = computed(() => {
+  if (assessmentType.value === 'RETEST') return '开始复测';
+  if (assessmentType.value === 'MONTHLY_REVIEW') return '开始月度抽测';
+  if (assessmentType.value === 'FIRST') return '开始首次严格考核';
+  if (canSelfMaster.value) return '自评已掌握';
+  return '查看关系图谱';
+});
+const triggerPrimaryAction = () => {
+  if (assessmentType.value) createAssessmentMutation.mutate();
+  else if (canSelfMaster.value) startSelfMaster();
+  else router.push('/knowledge/graph');
+};
 </script>
 
 <template>
@@ -192,35 +213,27 @@ const effortStages = computed(() => point.value ? [
           <button @click="goBack" class="back-btn" aria-label="返回">
             ← 返回
           </button>
+          <button class="graph-shortcut" @click="router.push('/knowledge/graph')">关系图谱</button>
         </div>
 
         <div class="header-main">
-          <div class="title-row">
-            <span class="point-code">{{ point.code }}</span>
-            <h1 class="point-title">{{ point.title }}</h1>
+          <div class="title-cluster">
+            <div class="title-row">
+              <span class="point-code">{{ point.code }}</span>
+              <h1 class="point-title">{{ point.title }}</h1>
+            </div>
+
+            <div class="meta-row">
+              <span class="domain-tag">{{ point.domainCode }} - {{ point.domainTitle }}</span>
+              <span class="difficulty-tag">{{ point.difficulty }}</span>
+              <span v-if="point.planWeek" class="week-tag">第{{ point.planWeek }}周</span>
+            </div>
           </div>
 
-          <div class="meta-row">
-            <span class="domain-tag">{{ point.domainCode }} - {{ point.domainTitle }}</span>
-            <span class="difficulty-tag">{{ point.difficulty }}</span>
-            <span v-if="point.planWeek" class="week-tag">第{{ point.planWeek }}周</span>
-          </div>
-
-          <div class="status-row">
-            <span
-              class="status-badge"
-              :style="{ backgroundColor: statusColorMap[point.status] }"
-            >
-              {{ formatStatus(point.status) }}
-            </span>
-
-            <!-- 自评掌握按钮 -->
-            <button
-              v-if="canSelfMaster"
-              @click="startSelfMaster"
-              class="btn btn-primary"
-            >
-              自评已掌握
+          <div class="hero-actions">
+            <span class="status-badge" :style="{ backgroundColor: statusColorMap[point.status] }">{{ formatStatus(point.status) }}</span>
+            <button class="btn btn-primary" :disabled="createAssessmentMutation.isPending.value" @click="triggerPrimaryAction">
+              {{ createAssessmentMutation.isPending.value ? '正在创建...' : primaryActionLabel }}
             </button>
           </div>
         </div>
@@ -230,7 +243,7 @@ const effortStages = computed(() => point.value ? [
         <div class="effort-summary">
           <p>TIME BUDGET</p>
           <h2 id="effort-title">预计 {{ formatMinutes(point.estimatedTotalMinutes) }} 完成首次掌握</h2>
-          <span>另预留 {{ formatMinutes(point.retestMinutes) }} 完成 7 天后严格复测；实际耗时会随基础与产出质量调整。</span>
+          <span>按资料、练习、项目、考核推进；另预留 {{ formatMinutes(point.retestMinutes) }} 完成 7 天后严格复测。</span>
         </div>
         <div class="effort-stages">
           <div v-for="stage in effortStages" :key="stage.key" :data-stage="stage.key">
@@ -239,115 +252,112 @@ const effortStages = computed(() => point.value ? [
         </div>
       </section>
 
-      <section class="relation-route" aria-labelledby="relation-title">
-        <header>
-          <div><p>LEARNING PATH</p><h2 id="relation-title">知识前置与后续路径</h2></div>
-          <button @click="router.push('/knowledge/graph')">在关系图谱中查看 →</button>
-        </header>
-        <div class="relation-lanes">
-          <div class="relation-column prerequisite-column">
-            <span class="relation-label">学习之前</span>
-            <button v-for="item in relations?.prerequisites" :key="item.id" @click="router.push(`/knowledge/${item.code}`)">
-              <code>{{ item.code }}</code><strong>{{ item.title }}</strong><small :data-status="item.status">{{ formatStatus(item.status) }}</small>
-            </button>
-            <p v-if="!relations?.prerequisites.length">这是当前路径的起点，无强制前置知识。</p>
-          </div>
-          <div class="current-relation-node">
-            <span :class="{ ready: pendingPrerequisites === 0 }">{{ pendingPrerequisites ? `${pendingPrerequisites} 项前置待掌握` : '前置已就绪' }}</span>
-            <code>{{ point.code }}</code><strong>{{ point.title }}</strong><small>当前知识点</small>
-          </div>
-          <div class="relation-column dependent-column">
-            <span class="relation-label">掌握之后</span>
-            <button v-for="item in relations?.dependents" :key="item.id" @click="router.push(`/knowledge/${item.code}`)">
-              <code>{{ item.code }}</code><strong>{{ item.title }}</strong><small>解锁下一步</small>
-            </button>
-            <p v-if="!relations?.dependents.length">这是当前路径的终点，下一步可进入领域综合考核。</p>
-          </div>
-        </div>
-        <div v-if="relations?.related.length" class="related-points"><span>横向关联</span><button v-for="item in relations.related" :key="item.id" @click="router.push(`/knowledge/${item.code}`)"><code>{{ item.code }}</code>{{ item.title }}</button></div>
-      </section>
-
-      <!-- 标签页 -->
-      <div class="tabs">
-        <button
-          v-for="tab in ['study', 'assessment', 'criteria']"
-          :key="tab"
-          @click="activeTab = tab as any"
-          class="tab-btn"
-          :class="{ active: activeTab === tab }"
-        >
-          {{ tab === 'study' ? '学习资料' : tab === 'assessment' ? '严格考核' : '通过标准' }}
-        </button>
-      </div>
-
-      <!-- 内容区 -->
-      <div class="content-area">
-        <!-- 学习资料 -->
-        <div v-if="activeTab === 'study'" class="tab-content">
-          <div class="markdown-content" v-html="studyHtml"></div>
-        </div>
-
-        <!-- 严格考核 -->
-        <div v-else-if="activeTab === 'assessment'" class="tab-content">
-          <div class="markdown-content" v-html="assessmentHtml"></div>
-          <div class="assessment-launch">
-            <template v-if="assessmentType">
-              <p>系统将生成一套 100 分严格考核，覆盖原理、实践、排障和项目表达。提交后由 DeepSeek 评分。</p>
-              <button class="btn btn-primary" :disabled="createAssessmentMutation.isPending.value" @click="createAssessmentMutation.mutate()">
-                {{ createAssessmentMutation.isPending.value ? '正在创建...' : assessmentType === 'RETEST' ? '开始复测' : assessmentType === 'MONTHLY_REVIEW' ? '开始月度抽测' : '开始首次严格考核' }}
-              </button>
-              <p v-if="createAssessmentMutation.error.value" class="launch-error">{{ createAssessmentMutation.error.value.message }}</p>
-            </template>
-            <p v-else>先完成学习并提交自评摘要，才能进入严格考核。</p>
-          </div>
-        </div>
-
-        <!-- 通过标准 -->
-        <div v-else-if="activeTab === 'criteria'" class="tab-content">
-          <div class="markdown-content" v-html="criteriaHtml"></div>
-        </div>
-      </div>
-
-      <!-- 笔记区 -->
-      <div class="notes-section">
-        <h2 class="section-title">我的笔记</h2>
-
-        <!-- 编辑状态 -->
-        <div v-if="isEditing" class="note-editor">
-          <textarea
-            v-model="editedSummary"
-            placeholder="记录一个能在项目中复用的结论..."
-            rows="5"
-            class="note-textarea"
-          ></textarea>
-
-          <div class="editor-actions">
+      <div class="detail-workbench">
+        <main class="detail-main">
+          <div class="tabs" role="tablist" aria-label="知识详情内容">
             <button
-              @click="saveSummary"
-              class="btn btn-primary"
-              :disabled="!editedSummary.trim() || updateSummaryMutation.isPending.value"
+              v-for="tab in ['study', 'assessment', 'criteria']"
+              :key="tab"
+              @click="activeTab = tab as any"
+              class="tab-btn"
+              :class="{ active: activeTab === tab }"
             >
-              {{ updateSummaryMutation.isPending.value ? '保存中...' : '保存' }}
-            </button>
-            <button @click="cancelEditing" class="btn btn-secondary" :disabled="updateSummaryMutation.isPending.value">
-              取消
+              {{ tab === 'study' ? '学习资料' : tab === 'assessment' ? '严格考核' : '通过标准' }}
             </button>
           </div>
-        </div>
 
-        <!-- 显示状态 -->
-        <div v-else class="note-display">
-          <div v-if="point.summary" class="note-content">
-            {{ point.summary }}
-          </div>
-          <div v-else class="note-empty">
-            记录一个能在项目中复用的结论
+          <div class="content-area">
+            <div v-if="activeTab === 'study'" class="tab-content">
+              <div class="content-heading"><span>01</span><div><h2>学习资料</h2><p>资料可以是文档、视频、实验、项目或规范，但必须覆盖当前知识点。</p></div></div>
+              <div class="markdown-content" v-html="studyHtml"></div>
+            </div>
+
+            <div v-else-if="activeTab === 'assessment'" class="tab-content">
+              <div class="content-heading"><span>02</span><div><h2>严格考核</h2><p>用原理、实践、排障和表达验证掌握程度。</p></div></div>
+              <div class="markdown-content" v-html="assessmentHtml"></div>
+              <div class="assessment-launch">
+                <template v-if="assessmentType">
+                  <p>系统将生成一套 100 分严格考核，覆盖原理、实践、排障和项目表达。提交后由 DeepSeek 评分。</p>
+                  <button class="btn btn-primary" :disabled="createAssessmentMutation.isPending.value" @click="createAssessmentMutation.mutate()">
+                    {{ createAssessmentMutation.isPending.value ? '正在创建...' : assessmentType === 'RETEST' ? '开始复测' : assessmentType === 'MONTHLY_REVIEW' ? '开始月度抽测' : '开始首次严格考核' }}
+                  </button>
+                  <p v-if="createAssessmentMutation.error.value" class="launch-error">{{ createAssessmentMutation.error.value.message }}</p>
+                </template>
+                <p v-else>先完成学习并提交自评摘要，才能进入严格考核。</p>
+              </div>
+            </div>
+
+            <div v-else-if="activeTab === 'criteria'" class="tab-content">
+              <div class="content-heading"><span>03</span><div><h2>通过标准</h2><p>对照标准判断是否可以进入考核。</p></div></div>
+              <div class="markdown-content" v-html="criteriaHtml"></div>
+            </div>
           </div>
 
-          <button @click="startEditing" class="btn btn-secondary btn-sm">
-            编辑笔记
-          </button>
-        </div>
+          <section class="notes-section">
+            <div class="notes-heading"><div><p>LOCAL NOTE</p><h2 class="section-title">我的笔记</h2></div><button v-if="!isEditing" @click="startEditing" class="btn btn-secondary btn-sm">编辑笔记</button></div>
+
+            <div v-if="isEditing" class="note-editor">
+              <textarea v-model="editedSummary" placeholder="记录一个能在项目中复用的结论..." rows="5" class="note-textarea"></textarea>
+
+              <div class="editor-actions">
+                <button @click="saveSummary" class="btn btn-primary" :disabled="!editedSummary.trim() || updateSummaryMutation.isPending.value">
+                  {{ updateSummaryMutation.isPending.value ? '保存中...' : '保存' }}
+                </button>
+                <button @click="cancelEditing" class="btn btn-secondary" :disabled="updateSummaryMutation.isPending.value">
+                  取消
+                </button>
+              </div>
+            </div>
+
+            <div v-else class="note-display">
+              <div v-if="point.summary" class="note-content">{{ point.summary }}</div>
+              <div v-else class="note-empty">记录一个能在项目中复用的结论</div>
+            </div>
+          </section>
+        </main>
+
+        <aside class="detail-rail">
+          <section class="quick-card">
+            <p>START</p>
+            <h2>从资料精读开始</h2>
+            <span>先读资料并写出关键机制，再完成练习和项目证据。不要先点“自评已掌握”。</span>
+            <div><button @click="activeTab = 'study'">看资料</button><button @click="activeTab = 'criteria'">看标准</button></div>
+          </section>
+
+          <section class="path-stats">
+            <div><strong>{{ prerequisiteTotal }}</strong><span>前置</span></div>
+            <div><strong>{{ dependentTotal }}</strong><span>后续</span></div>
+            <div><strong>{{ relatedTotal }}</strong><span>关联</span></div>
+          </section>
+
+          <section class="relation-route" aria-labelledby="relation-title">
+            <header>
+              <div><p>LEARNING PATH</p><h2 id="relation-title">知识前置与后续路径</h2></div>
+              <button @click="router.push('/knowledge/graph')">图谱 →</button>
+            </header>
+            <div class="relation-lanes">
+              <div class="relation-column prerequisite-column">
+                <span class="relation-label">学习之前</span>
+                <button v-for="item in relations?.prerequisites" :key="item.id" @click="router.push(`/knowledge/${item.code}`)">
+                  <code>{{ item.code }}</code><strong>{{ item.title }}</strong><small :data-status="item.status">{{ formatStatus(item.status) }}</small>
+                </button>
+                <p v-if="!relations?.prerequisites.length">这是当前路径的起点，无强制前置知识。</p>
+              </div>
+              <div class="current-relation-node">
+                <span :class="{ ready: pendingPrerequisites === 0 }">{{ pendingPrerequisites ? `${pendingPrerequisites} 项前置待掌握` : '前置已就绪' }}</span>
+                <code>{{ point.code }}</code><strong>{{ point.title }}</strong><small>当前知识点</small>
+              </div>
+              <div class="relation-column dependent-column">
+                <span class="relation-label">掌握之后</span>
+                <button v-for="item in relations?.dependents" :key="item.id" @click="router.push(`/knowledge/${item.code}`)">
+                  <code>{{ item.code }}</code><strong>{{ item.title }}</strong><small>解锁下一步</small>
+                </button>
+                <p v-if="!relations?.dependents.length">这是当前路径的终点，下一步可进入领域综合考核。</p>
+              </div>
+            </div>
+            <div v-if="relations?.related.length" class="related-points"><span>横向关联</span><button v-for="item in relations.related" :key="item.id" @click="router.push(`/knowledge/${item.code}`)"><code>{{ item.code }}</code>{{ item.title }}</button></div>
+          </section>
+        </aside>
       </div>
     </div>
 
@@ -778,8 +788,349 @@ const effortStages = computed(() => point.value ? [
 .assessment-launch p { line-height: 1.7; }
 .launch-error { color: var(--color-redline); }
 
+.knowledge-detail-page {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.detail-header {
+  margin-bottom: 1rem;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .7rem;
+}
+
+.graph-shortcut {
+  min-height: 36px;
+  padding: 0 .75rem;
+  color: var(--color-primary);
+  font-size: .66rem;
+  font-weight: 700;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.header-main {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.2rem;
+  background:
+    linear-gradient(90deg, rgba(50,104,199,.08) 0 1px, transparent 1px 100%),
+    linear-gradient(180deg, #fff, #f8fbff);
+  background-size: 32px 32px, auto;
+  border-color: var(--color-primary-border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-xs);
+}
+
+.title-row {
+  gap: .7rem;
+  margin-bottom: .7rem;
+}
+
+.point-code {
+  display: inline-grid;
+  place-items: center;
+  height: 34px;
+  padding: 0 .7rem;
+  color: #fff;
+  background: var(--color-primary);
+  border-radius: 10px;
+}
+
+.point-title {
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.meta-row {
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-bottom: 0;
+}
+
+.domain-tag,
+.difficulty-tag,
+.week-tag {
+  color: var(--color-text-secondary);
+  background: #fff;
+  border: 1px solid var(--color-border);
+}
+
+.hero-actions {
+  display: grid;
+  justify-items: end;
+  gap: .55rem;
+}
+
+.status-badge {
+  border-radius: 999px;
+}
+
+.effort-panel {
+  grid-template-columns: minmax(280px,.75fr) minmax(0,1.25fr);
+  margin-bottom: .9rem;
+  border-radius: 18px;
+}
+
+.detail-workbench {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 390px;
+  gap: .9rem;
+  align-items: start;
+}
+
+.detail-main {
+  min-width: 0;
+}
+
+.detail-rail {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: .8rem;
+  min-width: 0;
+}
+
+.quick-card,
+.path-stats {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xs);
+}
+
+.quick-card {
+  padding: 1rem;
+  background: linear-gradient(155deg,#142942,#1e3c52);
+  color: #dce9f7;
+}
+
+.quick-card p {
+  margin: 0;
+  color: #7fb0f0;
+  font: 760 .58rem var(--font-mono);
+  letter-spacing: .12em;
+}
+
+.quick-card h2 {
+  margin: .25rem 0 .35rem;
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.quick-card span {
+  display: block;
+  color: #adc0d4;
+  font-size: .65rem;
+  line-height: 1.65;
+}
+
+.quick-card div {
+  display: flex;
+  gap: .45rem;
+  margin-top: .8rem;
+}
+
+.quick-card button {
+  min-height: 34px;
+  padding: 0 .7rem;
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 700;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.path-stats {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  overflow: hidden;
+}
+
+.path-stats div {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+.path-stats div:last-child {
+  border-right: 0;
+}
+
+.path-stats strong {
+  color: var(--color-primary);
+  font: 760 1.2rem var(--font-mono);
+}
+
+.path-stats span {
+  color: var(--color-text-tertiary);
+  font-size: .58rem;
+}
+
+.detail-rail .relation-route {
+  margin-bottom: 0;
+}
+
+.detail-rail .relation-route>header {
+  align-items: flex-start;
+}
+
+.detail-rail .relation-lanes {
+  grid-template-columns: 1fr;
+}
+
+.detail-rail .current-relation-node {
+  grid-row: 1;
+  min-height: 96px;
+}
+
+.detail-rail .current-relation-node::before,
+.detail-rail .current-relation-node::after {
+  display: none;
+}
+
+.detail-rail .relation-column button {
+  grid-template-columns: auto minmax(0,1fr);
+}
+
+.detail-rail .relation-column small {
+  grid-column: 2;
+}
+
+.detail-rail .related-points {
+  max-height: 120px;
+  overflow: auto;
+}
+
+.tabs {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  gap: .4rem;
+  margin-bottom: .65rem;
+  padding: .35rem;
+  background: rgba(246,249,253,.92);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.tab-btn {
+  flex: 1;
+  min-height: 42px;
+  border-radius: 10px;
+  font-size: .72rem;
+  font-weight: 760;
+}
+
+.content-area,
+.notes-section {
+  border-color: var(--color-border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-xs);
+}
+
+.content-area {
+  padding: 1.15rem;
+  margin-bottom: .9rem;
+}
+
+.content-heading {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  gap: .75rem;
+  align-items: center;
+  margin-bottom: .85rem;
+  padding-bottom: .8rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.content-heading>span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  font: 760 .68rem var(--font-mono);
+  background: var(--color-primary);
+  border-radius: 12px;
+}
+
+.content-heading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.content-heading p {
+  margin: .15rem 0 0;
+  color: var(--color-text-tertiary);
+  font-size: .66rem;
+}
+
+.markdown-content {
+  max-width: 860px;
+}
+
+.markdown-content :deep(h2) {
+  padding-top: .55rem;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.markdown-content :deep(li) {
+  line-height: 1.7;
+}
+
+.notes-section {
+  padding: 1rem;
+}
+
+.notes-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+
+.notes-heading p {
+  margin: 0;
+  color: var(--color-primary);
+  font: 740 .58rem var(--font-mono);
+  letter-spacing: .12em;
+}
+
+.notes-heading .section-title {
+  margin: .15rem 0 0;
+}
+
+.note-display {
+  margin-bottom: 0;
+}
+
 /* 响应式 */
+@media (max-width: 1080px) {
+  .detail-workbench { grid-template-columns: 1fr; }
+  .detail-rail { position: static; grid-template-columns: 1fr; }
+}
+
 @media (max-width: 768px) {
+  .header-main { grid-template-columns: 1fr; }
+  .hero-actions { justify-items: start; }
   .effort-panel { grid-template-columns: 1fr; }
   .effort-stages { grid-template-columns: repeat(5,minmax(72px,1fr)); overflow-x: auto; }
   .title-row {

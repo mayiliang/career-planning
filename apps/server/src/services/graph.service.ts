@@ -361,7 +361,9 @@ export async function getKnowledgeTree() {
   const groupDefinitions = [
     { id: 'foundation', title: 'Web 基础内核', description: '语言、类型、浏览器、网络与性能', domainCodes: ['01', '02', '07'] },
     { id: 'application', title: '框架与应用开发', description: 'React、Vue、中后台与复杂业务', domainCodes: ['03', '04', '05', '11'] },
-    { id: 'engineering', title: '工程与平台能力', description: '质量、组件系统、平台化与交付', domainCodes: ['06', '08'] },
+    { id: 'engineering', title: '工程质量能力', description: '测试、CI/CD、供应链、可观测性与发布质量', domainCodes: ['06'] },
+    { id: 'delivery', title: '部署交付能力', description: 'Linux、Docker、Nginx、CI/CD 与生产排障', domainCodes: ['16'] },
+    { id: 'platform', title: '组件与平台能力', description: '组件系统、设计系统、配置化与平台治理', domainCodes: ['08'] },
     { id: 'ai', title: 'AI 原生研发', description: '模型应用、Agent、MCP、本地推理与 AI 工程', domainCodes: ['09', '12', '13', '14', '15'] },
     { id: 'impact', title: '项目与职业影响力', description: '方案表达、项目证据与职业校准', domainCodes: ['10'] },
   ];

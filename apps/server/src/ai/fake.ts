@@ -36,6 +36,7 @@ const EXCELLENT_OUTPUT: AssessmentGradingOutput = {
     whatWasStrong: ['概念理解准确', '代码实现正确'],
     whatMustImprove: [],
     suggestedRetestFocus: [],
+    questionReviews: [],
   },
   recommendedVerdict: 'PASS',
   confidence: 0.95,
@@ -76,6 +77,7 @@ const BORDERLINE_OUTPUT: AssessmentGradingOutput = {
     whatWasStrong: ['基础概念掌握'],
     whatMustImprove: ['边界情况处理', '性能优化'],
     suggestedRetestFocus: ['边界情况处理'],
+    questionReviews: [],
   },
   recommendedVerdict: 'PASS',
   confidence: 0.78,
@@ -116,6 +118,7 @@ const FAIL_OUTPUT: AssessmentGradingOutput = {
     whatWasStrong: [],
     whatMustImprove: ['核心概念理解', '代码实践', '问题分析'],
     suggestedRetestFocus: ['核心概念理解', '代码实践'],
+    questionReviews: [],
   },
   recommendedVerdict: 'FAIL',
   confidence: 0.9,
@@ -146,6 +149,7 @@ const INJECTION_OUTPUT: AssessmentGradingOutput = {
     whatWasStrong: [],
     whatMustImprove: ['诚实作答'],
     suggestedRetestFocus: [],
+    questionReviews: [],
   },
   recommendedVerdict: 'MANUAL_REVIEW',
   confidence: 0.99,
@@ -199,6 +203,7 @@ export class FakeProvider implements AIProvider {
           ...EXCELLENT_OUTPUT,
           knowledgePointId: request.knowledgePointCode,
           assessmentType: request.assessmentType,
+          feedback: withQuestionReviews(EXCELLENT_OUTPUT.feedback, request),
         };
         rawContent = JSON.stringify(output);
         break;
@@ -208,6 +213,7 @@ export class FakeProvider implements AIProvider {
           ...BORDERLINE_OUTPUT,
           knowledgePointId: request.knowledgePointCode,
           assessmentType: request.assessmentType,
+          feedback: withQuestionReviews(BORDERLINE_OUTPUT.feedback, request),
         };
         rawContent = JSON.stringify(output);
         break;
@@ -217,6 +223,7 @@ export class FakeProvider implements AIProvider {
           ...FAIL_OUTPUT,
           knowledgePointId: request.knowledgePointCode,
           assessmentType: request.assessmentType,
+          feedback: withQuestionReviews(FAIL_OUTPUT.feedback, request),
         };
         rawContent = JSON.stringify(output);
         break;
@@ -226,6 +233,7 @@ export class FakeProvider implements AIProvider {
           ...INJECTION_OUTPUT,
           knowledgePointId: request.knowledgePointCode,
           assessmentType: request.assessmentType,
+          feedback: withQuestionReviews(INJECTION_OUTPUT.feedback, request),
         };
         rawContent = JSON.stringify(output);
         break;
@@ -260,5 +268,40 @@ export class FakeProvider implements AIProvider {
   
   async testConnection(): Promise<boolean> {
     return true;
+  }
+}
+
+function withQuestionReviews(
+  feedback: AssessmentGradingOutput['feedback'],
+  request: GradingRequest
+): AssessmentGradingOutput['feedback'] {
+  return {
+    ...feedback,
+    questionReviews: request.questions.map((question) => {
+      const parsed = parseQuestionContent(question.content);
+      return {
+        questionId: question.id,
+        score: Math.min(question.dimension === 'practice' ? 32 : 8, question.maxScore),
+        maxScore: question.maxScore,
+        correctParts: ['回答覆盖了题目要求的主要方向。'],
+        incorrectParts: [],
+        missingParts: [],
+        referenceAnswer: parsed.referenceAnswer ?? '参考答案应来自学习资料、题目依据和通过标准。',
+        sourceBasis: parsed.sourceBasis ?? ['学习资料', '通过标准'],
+        nextAction: '对照参考答案补齐证据和边界说明。',
+      };
+    }),
+  };
+}
+
+function parseQuestionContent(content: string): { referenceAnswer?: string; sourceBasis?: string[] } {
+  try {
+    const parsed = JSON.parse(content) as { referenceAnswer?: string; sourceBasis?: unknown };
+    return {
+      referenceAnswer: parsed.referenceAnswer,
+      sourceBasis: Array.isArray(parsed.sourceBasis) ? parsed.sourceBasis.filter((item): item is string => typeof item === 'string') : undefined,
+    };
+  } catch {
+    return {};
   }
 }

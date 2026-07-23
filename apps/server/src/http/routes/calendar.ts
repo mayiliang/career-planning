@@ -16,7 +16,7 @@
  */
 import type { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
-import { planService } from '../../services/plan.service.js';
+import { currentBeijingDate, planService } from '../../services/plan.service.js';
 import { projectRoot } from '../../config/index.js';
 import { join } from 'path';
 
@@ -311,7 +311,7 @@ export const calendarRoutes: FastifyPluginCallback = (app, _opts, done) => {
     },
   }, async (request, reply) => {
     const { date } = request.query as { date?: string };
-    const today = date ?? new Date().toISOString().slice(0, 10);
+    const today = date ?? currentBeijingDate();
     
     const result = await planService.getTodayPlan(today);
     

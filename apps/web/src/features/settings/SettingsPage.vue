@@ -22,6 +22,17 @@ const importMutation = useMutation({
   },
 });
 
+const resetProgressMutation = useMutation({
+  mutationFn: () => apiClient.resetLearningProgress(),
+  onSuccess: (result) => {
+    notice.value = `学习进度已重置：${result.resetKnowledgePoints} 个知识点回到未开始，已按 ${result.startDate} 重新生成 ${result.importedPlanEvents} 条计划`;
+    queryClient.invalidateQueries({ queryKey: ['system', 'import'] });
+    queryClient.invalidateQueries({ queryKey: ['knowledge'] });
+    queryClient.invalidateQueries({ queryKey: ['calendar'] });
+    queryClient.invalidateQueries({ queryKey: ['today'] });
+  },
+});
+
 const createBackupMutation = useMutation({
   mutationFn: () => apiClient.createBackup(backupNote.value.trim() || undefined),
   onSuccess: () => {
@@ -50,6 +61,11 @@ async function remove(filename: string) {
   } catch (reason) {
     notice.value = reason instanceof Error ? reason.message : '删除失败';
   }
+}
+
+function resetLearningProgress() {
+  if (!window.confirm('重置学习进度？这会清空知识掌握状态、考核记录、打卡、复盘、请假和模板学习计划，并从北京时间今天开始按最新版 20 周模板重新生成计划。岗位、项目和备份会保留。')) return;
+  resetProgressMutation.mutate();
 }
 
 function formatSize(bytes: number) {
@@ -87,7 +103,15 @@ function formatSize(bytes: number) {
     </section>
 
     <section>
-      <div class="section-heading"><span>03</span><div><h2>备份与恢复</h2><p>系统每天自动创建一次一致性快照；你也可以随时留下手动快照</p></div></div>
+      <div class="section-heading"><span>03</span><div><h2>学习进度重置</h2><p>用于知识体系大改后重新开始；从北京时间今天重排计划</p></div></div>
+      <div class="action-row reset-row">
+        <div><strong>清空进度并重建计划</strong><p>同步最新知识库，重置掌握状态和考核证据，从今天重新生成 20 周学习日历。</p></div>
+        <button class="danger-button" :disabled="resetProgressMutation.isPending.value" @click="resetLearningProgress">{{ resetProgressMutation.isPending.value ? '重置中...' : '重置学习进度' }}</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-heading"><span>04</span><div><h2>备份与恢复</h2><p>系统每天自动创建一次一致性快照；你也可以随时留下手动快照</p></div></div>
       <div class="backup-create">
         <input v-model="backupNote" maxlength="120" placeholder="给这份快照加一句备注（可选）" />
         <button :disabled="createBackupMutation.isPending.value" @click="createBackupMutation.mutate()">{{ createBackupMutation.isPending.value ? '创建中...' : '创建本地快照' }}</button>
@@ -105,5 +129,5 @@ function formatSize(bytes: number) {
 </template>
 
 <style scoped>
-.settings-page{max-width:1120px;margin:0 auto}.page-header{padding:.5rem 0 2rem}.eyebrow{margin:0;color:var(--color-primary);font:750 .72rem var(--font-mono);letter-spacing:.16em}.page-header h1{margin:.25rem 0 .5rem;font-size:clamp(2.4rem,5vw,4.6rem);line-height:1;letter-spacing:-.06em}.page-header>p:last-child{max-width:720px;margin:0;color:var(--color-text-secondary)}.notice{margin:0 0 1rem;padding:.8rem 1rem;color:var(--color-success-strong);background:var(--color-success-soft);border:1px solid var(--color-success-border);border-radius:12px}.settings-page section{margin-bottom:1rem;padding:1.35rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:18px;box-shadow:var(--shadow-xs)}.section-heading{display:grid;grid-template-columns:2.5rem 1fr;gap:.7rem;margin-bottom:1.2rem}.section-heading>span{display:grid;place-items:center;width:2rem;height:2rem;color:var(--color-primary);font:750 .68rem var(--font-mono);background:var(--color-primary-soft);border-radius:9px}.section-heading h2,.section-heading p{margin:0}.section-heading h2{font-size:1.12rem}.section-heading p{margin-top:.15rem;color:var(--color-text-tertiary);font-size:.76rem}.status-table{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-left:3.2rem}.status-table>div{display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;padding:.8rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:11px}.status-table>div span{font-size:.78rem}.status-table strong{font:700 .72rem var(--font-mono)}.status-table small{grid-column:1/-1;color:var(--color-text-tertiary);font:.62rem var(--font-mono)}.ok{color:var(--color-success)}.warn{color:var(--color-warning)}.bad,.danger{color:var(--color-danger)}.warnings{margin:.8rem 0 0 3.2rem;color:#8a682e;font-size:.76rem}.action-row,.backup-create{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-left:3.2rem}.action-row p{margin:.15rem 0 0;color:var(--color-text-tertiary);font-size:.76rem}.settings-page button{min-height:40px;padding:0 .9rem;color:var(--color-text);font-weight:650;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px;cursor:pointer}.settings-page button:hover{border-color:var(--color-primary)}.settings-page button:disabled{opacity:.5;cursor:wait}.backup-create input{flex:1;min-height:42px;padding:0 .8rem;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px}.backup-list{display:grid;gap:.6rem;margin:1rem 0 0 3.2rem}.backup-list article{display:grid;grid-template-columns:1fr auto auto;gap:1rem;align-items:center;padding:.9rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:12px}.backup-list p{margin:.2rem 0 0;color:var(--color-text-tertiary);font-size:.7rem}.backup-stats{display:flex;gap:.7rem;color:var(--color-text-secondary);font:.65rem var(--font-mono)}.backup-actions{display:flex;gap:.4rem}.empty{margin-left:3.2rem;color:var(--color-text-tertiary)}@media(max-width:760px){.status-table{grid-template-columns:1fr}.status-table,.action-row,.backup-create,.backup-list,.empty,.warnings{margin-left:0}.action-row,.backup-create{align-items:stretch;flex-direction:column}.backup-list article{grid-template-columns:1fr}.backup-stats{flex-wrap:wrap}}
+.settings-page{max-width:1120px;margin:0 auto}.page-header{padding:.5rem 0 2rem}.eyebrow{margin:0;color:var(--color-primary);font:750 .72rem var(--font-mono);letter-spacing:.16em}.page-header h1{margin:.25rem 0 .5rem;font-size:clamp(2.4rem,5vw,4.6rem);line-height:1;letter-spacing:-.06em}.page-header>p:last-child{max-width:720px;margin:0;color:var(--color-text-secondary)}.notice{margin:0 0 1rem;padding:.8rem 1rem;color:var(--color-success-strong);background:var(--color-success-soft);border:1px solid var(--color-success-border);border-radius:12px}.settings-page section{margin-bottom:1rem;padding:1.35rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:18px;box-shadow:var(--shadow-xs)}.section-heading{display:grid;grid-template-columns:2.5rem 1fr;gap:.7rem;margin-bottom:1.2rem}.section-heading>span{display:grid;place-items:center;width:2rem;height:2rem;color:var(--color-primary);font:750 .68rem var(--font-mono);background:var(--color-primary-soft);border-radius:9px}.section-heading h2,.section-heading p{margin:0}.section-heading h2{font-size:1.12rem}.section-heading p{margin-top:.15rem;color:var(--color-text-tertiary);font-size:.76rem}.status-table{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-left:3.2rem}.status-table>div{display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;padding:.8rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:11px}.status-table>div span{font-size:.78rem}.status-table strong{font:700 .72rem var(--font-mono)}.status-table small{grid-column:1/-1;color:var(--color-text-tertiary);font:.62rem var(--font-mono)}.ok{color:var(--color-success)}.warn{color:var(--color-warning)}.bad,.danger{color:var(--color-danger)}.warnings{margin:.8rem 0 0 3.2rem;color:#8a682e;font-size:.76rem}.action-row,.backup-create{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-left:3.2rem}.action-row p{margin:.15rem 0 0;color:var(--color-text-tertiary);font-size:.76rem}.settings-page button{min-height:40px;padding:0 .9rem;color:var(--color-text);font-weight:650;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px;cursor:pointer}.settings-page button:hover{border-color:var(--color-primary)}.settings-page button:disabled{opacity:.5;cursor:wait}.danger-button{color:var(--color-danger)!important;border-color:var(--color-danger)!important}.danger-button:hover{background:color-mix(in srgb,var(--color-danger) 8%,transparent)}.backup-create input{flex:1;min-height:42px;padding:0 .8rem;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px}.backup-list{display:grid;gap:.6rem;margin:1rem 0 0 3.2rem}.backup-list article{display:grid;grid-template-columns:1fr auto auto;gap:1rem;align-items:center;padding:.9rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:12px}.backup-list p{margin:.2rem 0 0;color:var(--color-text-tertiary);font-size:.7rem}.backup-stats{display:flex;gap:.7rem;color:var(--color-text-secondary);font:.65rem var(--font-mono)}.backup-actions{display:flex;gap:.4rem}.empty{margin-left:3.2rem;color:var(--color-text-tertiary)}@media(max-width:760px){.status-table{grid-template-columns:1fr}.status-table,.action-row,.backup-create,.backup-list,.empty,.warnings{margin-left:0}.action-row,.backup-create{align-items:stretch;flex-direction:column}.backup-list article{grid-template-columns:1fr}.backup-stats{flex-wrap:wrap}}
 </style>

@@ -6,81 +6,91 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[AI SDK Agents](https://ai-sdk.dev/docs/agents/overview)、[MCP 核心架构](https://modelcontextprotocol.io/docs/learn/architecture)
-- 严格考核：画出 observe-plan-act-reflect 循环，设计最大步数、预算、取消、重复动作检测和失败停止条件，并用状态机实现。
-- 通过标准：不会把 while(true) 当 Agent；每一步可审计；停止与恢复确定；用户能看到当前目标、动作和剩余预算。
+- 学习资料：[AI SDK Agents](https://ai-sdk.dev/docs/agents/overview)、[MCP 核心架构](https://modelcontextprotocol.io/docs/learn/architecture)。覆盖范围：围绕「Agent Loop、计划与停止条件」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《AI SDK Agents》《MCP 核心架构》，分别摘出能支撑「Agent Loop、计划与停止条件」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Agent Loop、计划与停止条件」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：画出 observe-plan-act-reflect 循环，设计最大步数、预算、取消、重复动作检测和失败停止条件，并用状态机实现；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：不会把 while(true) 当 Agent；每一步可审计；停止与恢复确定；用户能看到当前目标、动作和剩余预算。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-02 MCP Tools、Resources 与 Prompts
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP TypeScript SDK](https://ts.sdk.modelcontextprotocol.io/)、[MCP Server 指南](https://ts.sdk.modelcontextprotocol.io/server)
-- 严格考核：把一个现有接口文档工具拆成 tools、resources、prompts，解释三者语义边界，并实现最小 MCP Server。
-- 通过标准：只读数据优先 resource；副作用才用 tool；参数有 Zod 校验；错误使用协议错误而不是自然语言伪成功。
+- 学习资料：[MCP TypeScript SDK](https://ts.sdk.modelcontextprotocol.io/)、[MCP Server 指南](https://ts.sdk.modelcontextprotocol.io/server)。覆盖范围：围绕「MCP Tools、Resources 与 Prompts」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP TypeScript SDK》《MCP Server 指南》，分别摘出能支撑「MCP Tools、Resources 与 Prompts」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「MCP Tools、Resources 与 Prompts」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把一个现有接口文档工具拆成 tools、resources、prompts，解释三者语义边界，并实现最小 MCP Server；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：只读数据优先 resource；副作用才用 tool；参数有 Zod 校验；错误使用协议错误而不是自然语言伪成功。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-03 Streamable HTTP、stdio 与会话
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[MCP TypeScript Server Transport](https://ts.sdk.modelcontextprotocol.io/server)
-- 严格考核：分别实现本地 stdio 和远程 Streamable HTTP 连接，处理初始化、能力协商、会话 ID、断线、通知和关闭。
-- 通过标准：能说明旧 SSE 与 Streamable HTTP 的迁移边界；远程服务有 Origin 校验和认证；断线不会重复副作用。
+- 学习资料：[MCP Transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[MCP TypeScript Server Transport](https://ts.sdk.modelcontextprotocol.io/server)。覆盖范围：围绕「Streamable HTTP、stdio 与会话」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP Transports》《MCP TypeScript Server Transport》，分别摘出能支撑「Streamable HTTP、stdio 与会话」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Streamable HTTP、stdio 与会话」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：分别实现本地 stdio 和远程 Streamable HTTP 连接，处理初始化、能力协商、会话 ID、断线、通知和关闭；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：能说明旧 SSE 与 Streamable HTTP 的迁移边界；远程服务有 Origin 校验和认证；断线不会重复副作用。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-04 MCP Client、能力协商与兼容性
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Client SDK](https://ts.sdk.modelcontextprotocol.io/client)、[MCP Protocol](https://modelcontextprotocol.io/specification/2025-11-25)
-- 严格考核：实现客户端连接、工具列表、资源模板、分页、进度和取消；面对缺失 capability 时安全降级。
-- 通过标准：不假设服务端一定支持全部能力；版本不兼容有明确提示；请求可取消；分页不会漏数据或死循环。
+- 学习资料：[MCP Client SDK](https://ts.sdk.modelcontextprotocol.io/client)、[MCP Protocol](https://modelcontextprotocol.io/specification/2025-11-25)。覆盖范围：围绕「MCP Client、能力协商与兼容性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP Client SDK》《MCP Protocol》，分别摘出能支撑「MCP Client、能力协商与兼容性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「MCP Client、能力协商与兼容性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现客户端连接、工具列表、资源模板、分页、进度和取消；面对缺失 capability 时安全降级；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：不假设服务端一定支持全部能力；版本不兼容有明确提示；请求可取消；分页不会漏数据或死循环。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-05 Human-in-the-loop 与高风险审批
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation)、[Google PAIR 控制原则](https://pair.withgoogle.com/guidebook/)
-- 严格考核：为删除文件、发送消息、支付和发布四类工具设计风险分级与审批 UI，支持参数编辑、拒绝、一次授权和范围授权。
-- 通过标准：高风险动作不能静默执行；确认页展示真实参数和影响范围；拒绝不会破坏会话；授权可撤销并有审计记录。
+- 学习资料：[MCP Elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation)、[Google PAIR 控制原则](https://pair.withgoogle.com/guidebook/)。覆盖范围：围绕「Human-in-the-loop 与高风险审批」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP Elicitation》《Google PAIR 控制原则》，分别摘出能支撑「Human-in-the-loop 与高风险审批」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Human-in-the-loop 与高风险审批」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为删除文件、发送消息、支付和发布四类工具设计风险分级与审批 UI，支持参数编辑、拒绝、一次授权和范围授权；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：高风险动作不能静默执行；确认页展示真实参数和影响范围；拒绝不会破坏会话；授权可撤销并有审计记录。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-06 长任务、进度、恢复与幂等
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)、[MDN AbortController](https://developer.mozilla.org/docs/Web/API/AbortController)
-- 严格考核：实现一个可持续数分钟的代码分析任务，支持进度、取消、浏览器刷新恢复、失败重试和幂等键。
-- 通过标准：刷新不丢任务；取消可达服务端；同一幂等键不重复创建；失败区分可重试与不可重试。
+- 学习资料：[MCP Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)、[MDN AbortController](https://developer.mozilla.org/docs/Web/API/AbortController)。覆盖范围：围绕「长任务、进度、恢复与幂等」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP Tasks》《MDN AbortController》，分别摘出能支撑「长任务、进度、恢复与幂等」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「长任务、进度、恢复与幂等」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现一个可持续数分钟的代码分析任务，支持进度、取消、浏览器刷新恢复、失败重试和幂等键；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：刷新不丢任务；取消可达服务端；同一幂等键不重复创建；失败区分可重试与不可重试。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-07 多 Agent 协作与上下文隔离
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[AI SDK Multi-step Tools](https://ai-sdk.dev/docs/agents/multi-step-tools)、[MCP Sampling](https://modelcontextprotocol.io/specification/2025-11-25/client/sampling)
-- 严格考核：设计研究、实现、评审三个角色的协作协议，说明任务分解、共享产物、冲突解决和上下文权限。
-- 通过标准：有明确单一责任与交接格式；敏感上下文不广播；循环委派可检测；最终结论可追溯到各 Agent 证据。
+- 学习资料：[AI SDK Multi-step Tools](https://ai-sdk.dev/docs/agents/multi-step-tools)、[MCP Sampling](https://modelcontextprotocol.io/specification/2025-11-25/client/sampling)。覆盖范围：围绕「多 Agent 协作与上下文隔离」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《AI SDK Multi-step Tools》《MCP Sampling》，分别摘出能支撑「多 Agent 协作与上下文隔离」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「多 Agent 协作与上下文隔离」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计研究、实现、评审三个角色的协作协议，说明任务分解、共享产物、冲突解决和上下文权限；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：有明确单一责任与交接格式；敏感上下文不广播；循环委派可检测；最终结论可追溯到各 Agent 证据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-08 工具描述、Schema 与可发现性
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)、[JSON Schema](https://json-schema.org/learn/getting-started-step-by-step)
-- 严格考核：为 10 个相似业务接口重写工具名称、描述、输入 Schema 和错误，并用 20 条意图测试工具选择准确率。
-- 通过标准：名称稳定无歧义；必填/枚举/互斥约束进入 Schema；描述不泄露实现细节；选择错误有评估数据。
+- 学习资料：[MCP Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)、[JSON Schema](https://json-schema.org/learn/getting-started-step-by-step)。覆盖范围：围绕「工具描述、Schema 与可发现性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP Tools》《JSON Schema》，分别摘出能支撑「工具描述、Schema 与可发现性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「工具描述、Schema 与可发现性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为 10 个相似业务接口重写工具名称、描述、输入 Schema 和错误，并用 20 条意图测试工具选择准确率；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：名称稳定无歧义；必填/枚举/互斥约束进入 Schema；描述不泄露实现细节；选择错误有评估数据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-09 Agent 可观测性与回放
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenTelemetry JS](https://opentelemetry.io/docs/languages/js/)、[MCP Logging](https://modelcontextprotocol.io/specification/2025-11-25/server/utilities/logging)
-- 严格考核：为一次 Agent 运行记录 trace、step、tool、token、latency、approval 和 error，并实现按 runId 回放的前端时间线。
-- 通过标准：敏感参数脱敏；trace 能定位慢步骤和失败链路；不会把完整用户内容无期限写日志；回放不重新执行副作用。
+- 学习资料：[OpenTelemetry JS](https://opentelemetry.io/docs/languages/js/)、[MCP Logging](https://modelcontextprotocol.io/specification/2025-11-25/server/utilities/logging)。覆盖范围：围绕「Agent 可观测性与回放」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《OpenTelemetry JS》《MCP Logging》，分别摘出能支撑「Agent 可观测性与回放」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Agent 可观测性与回放」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为一次 Agent 运行记录 trace、step、tool、token、latency、approval 和 error，并实现按 runId 回放的前端时间线；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：敏感参数脱敏；trace 能定位慢步骤和失败链路；不会把完整用户内容无期限写日志；回放不重新执行副作用。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## AGENT-10 Agent 安全、OAuth 与最小权限
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[MCP Security Best Practices](https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices)
-- 严格考核：完成 token passthrough、confused deputy、SSRF、DNS rebinding、权限扩大和工具投毒威胁建模，并提出验证方案。
-- 通过标准：OAuth audience 与 scope 校验正确；不接受任意回调；本地服务防 DNS rebinding；工具权限默认最小化。
+- 学习资料：[MCP Authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[MCP Security Best Practices](https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices)。覆盖范围：围绕「Agent 安全、OAuth 与最小权限」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《MCP Authorization》《MCP Security Best Practices》，分别摘出能支撑「Agent 安全、OAuth 与最小权限」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Agent 安全、OAuth 与最小权限」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：完成 token passthrough、confused deputy、SSRF、DNS rebinding、权限扩大和工具投毒威胁建模，并提出验证方案；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 通过标准：OAuth audience 与 scope 校验正确；不接受任意回调；本地服务防 DNS rebinding；工具权限默认最小化。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## 领域综合考核
 

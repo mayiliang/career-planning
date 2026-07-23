@@ -25,11 +25,27 @@ const checkinForm = ref({
   difficultyLevel: 3,
 });
 
+const BEIJING_TIME_ZONE = 'Asia/Shanghai';
 const now = new Date();
-const todayDate = computed(() => now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }));
-const todayCode = computed(() => `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`);
+const todayDate = computed(() => now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: BEIJING_TIME_ZONE }));
+const todayCode = computed(() => localDateKey(now).replaceAll('-', '.'));
 const actionableEvents = computed(() => todayPlan.value?.events.filter((event) => ['PLANNED', 'IN_PROGRESS'].includes(event.status)) ?? []);
 const currentMission = computed(() => actionableEvents.value[0] ?? todayPlan.value?.events[0] ?? null);
+const currentMissionPoints = computed(() => currentMission.value?.learningBrief?.knowledgePoints ?? []);
+const firstMissionPoint = computed(() => currentMissionPoints.value[0] ?? recommendation.value?.point ?? null);
+const startSteps = computed(() => currentMission.value?.learningBrief?.learningContent.slice(0, 6) ?? []);
+const missionOutputs = computed(() => currentMission.value?.learningBrief?.outputs ?? []);
+const missionMasteryGoals = computed(() => currentMission.value?.learningBrief?.masteryGoals.slice(0, 3) ?? []);
+const missionEffortStages = computed(() => {
+  const effort = currentMission.value?.learningBrief?.effort;
+  if (!effort) return [];
+  return [
+    { label: '资料', minutes: effort.studyMinutes },
+    { label: '练习', minutes: effort.practiceMinutes },
+    { label: '项目', minutes: effort.projectMinutes },
+    { label: '考核', minutes: effort.assessmentMinutes },
+  ].filter((item) => item.minutes > 0);
+});
 const completionPercent = computed(() => {
   const stats = todayPlan.value?.stats;
   if (!stats?.total) return 0;
@@ -56,19 +72,35 @@ const upcomingDays = computed(() => {
     groups.set(key, [...(groups.get(key) ?? []), event]);
   }
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() + index + 1);
+    const date = beijingDateToDate(localDateKey(new Date(Date.now() + (index + 1) * 86_400_000)));
     const key = localDateKey(date);
     return { key, date, events: groups.get(key) ?? [] };
   });
 });
 
 function localDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: BEIJING_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function beijingDateToDate(date: string) {
+  return new Date(`${date}T12:00:00+08:00`);
+}
+
+function beijingDayStartIso(date: string) {
+  return new Date(`${date}T00:00:00+08:00`).toISOString();
+}
+
+function beijingDayEndIso(date: string) {
+  return new Date(`${date}T23:59:59+08:00`).toISOString();
 }
 
 function dayLabel(date: Date) {
-  return date.toLocaleDateString('zh-CN', { weekday: 'short' }).replace('周', '');
+  return date.toLocaleDateString('zh-CN', { weekday: 'short', timeZone: BEIJING_TIME_ZONE }).replace('周', '');
 }
 
 function eventMinutes(event: PlanEvent) {
@@ -86,20 +118,17 @@ function statusPriority(status: string) {
 async function loadDashboard() {
   loading.value = true;
   error.value = null;
-  const from = new Date();
-  from.setHours(0, 0, 0, 0);
-  const to = new Date(from);
-  to.setDate(to.getDate() + 8);
-  to.setMilliseconds(-1);
+  const today = localDateKey(new Date());
+  const toDate = localDateKey(new Date(Date.now() + 8 * 86_400_000));
   try {
     const [plan, events, points, nextAction] = await Promise.all([
       apiClient.getTodayPlan(),
-      apiClient.getCalendarEvents({ from: from.toISOString(), to: to.toISOString() }),
+      apiClient.getCalendarEvents({ from: beijingDayStartIso(today), to: beijingDayEndIso(toDate) }),
       apiClient.getKnowledgePoints(),
       apiClient.getKnowledgeRecommendation(),
     ]);
     todayPlan.value = plan;
-    upcomingEvents.value = events.filter((event) => new Date(event.startAt).getTime() >= new Date().setHours(24, 0, 0, 0));
+    upcomingEvents.value = events.filter((event) => localDateKey(new Date(event.startAt)) > today);
     learningPoints.value = points.items;
     recommendation.value = nextAction;
   } catch (reason) {
@@ -110,7 +139,7 @@ async function loadDashboard() {
 }
 
 function formatTime(isoString: string) {
-  return new Date(isoString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Date(isoString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: BEIJING_TIME_ZONE });
 }
 
 function getStatusLabel(status: string) {
@@ -177,6 +206,12 @@ function eventTitle(event: PlanEvent) {
   return event.learningBrief?.displayTitle ?? event.title;
 }
 
+function openEventKnowledge(event: PlanEvent | null) {
+  const code = event?.learningBrief?.knowledgePoints[0]?.code ?? firstMissionPoint.value?.code;
+  if (code) router.push(`/knowledge/${code}`);
+  else router.push('/knowledge');
+}
+
 async function beginRetest(event: PlanEvent) {
   const code = event.learningBrief?.knowledgePoints[0]?.code
     ?? event.title.match(/[A-Z][A-Z0-9]*-\d+/)?.[0];
@@ -216,9 +251,10 @@ onMounted(loadDashboard);
             <h2>{{ currentMission ? eventTitle(currentMission) : '为今天选择一个明确的学习成果' }}</h2>
             <p>{{ currentMission ? eventDescription(currentMission) : '计划不是为了把日历填满，而是决定今天要留下什么证据。可以从知识脑图选择一个知识点，或前往计划页安排任务。' }}</p>
             <div class="mission-actions">
-              <button v-if="currentMission && ['PLANNED', 'IN_PROGRESS'].includes(currentMission.status)" class="mission-primary" @click="openCheckinDialog(currentMission)">完成后记录证据 →</button>
+              <button v-if="currentMission && ['PLANNED', 'IN_PROGRESS'].includes(currentMission.status)" class="mission-primary" @click="openEventKnowledge(currentMission)">开始学习 →</button>
               <button v-else class="mission-primary" @click="router.push('/plan')">安排今日任务 →</button>
-              <button v-if="currentMission?.knowledgePointId" @click="router.push('/knowledge')">查看相关知识</button>
+              <button v-if="currentMission && ['PLANNED', 'IN_PROGRESS'].includes(currentMission.status)" @click="openCheckinDialog(currentMission)">完成后打卡</button>
+              <button v-if="currentMission?.knowledgePointId" @click="openEventKnowledge(currentMission)">查看相关知识</button>
               <button v-else @click="router.push('/knowledge/map')">从知识体系选择</button>
             </div>
           </div>
@@ -230,6 +266,41 @@ onMounted(loadDashboard);
           <div class="completion-orbit" :style="{ '--progress': `${completionPercent * 3.6}deg` }"><div><strong>{{ completionPercent }}%</strong><span>{{ completionPercent === 100 ? '航线完成' : '继续推进' }}</span></div></div>
           <div class="metric-grid"><div><strong>{{ completedMinutes }}</strong><span>完成分钟</span></div><div><strong>{{ plannedMinutes }}</strong><span>计划分钟</span></div><div><strong>{{ todayPlan.retests.length }}</strong><span>待复测</span></div><div><strong>{{ learningQueue.length }}</strong><span>推进中</span></div></div>
         </aside>
+      </section>
+
+      <section class="study-launchpad" aria-label="今日学习启动台">
+        <div class="launch-primary">
+          <p class="eyebrow">START HERE</p>
+          <h2>{{ firstMissionPoint ? `先学 ${firstMissionPoint.code} · ${firstMissionPoint.title}` : '先选择一个知识点开始' }}</h2>
+          <p>{{ currentMission?.learningBrief?.dailyFocus ?? recommendation?.reason ?? '打开一个知识详情页，从资料精读开始，留下可验证证据后再打卡。' }}</p>
+          <div class="launch-actions">
+            <button class="launch-main-button" @click="openEventKnowledge(currentMission)">打开学习内容</button>
+            <button v-if="currentMission" @click="openCheckinDialog(currentMission)">完成后记录证据</button>
+          </div>
+        </div>
+
+        <div class="launch-steps">
+          <header><span>按这个顺序推进</span><strong>{{ currentMission ? estimatedEventMinutes(currentMission) : plannedMinutes }} min</strong></header>
+          <ol v-if="startSteps.length">
+            <li v-for="step in startSteps" :key="step">{{ step }}</li>
+          </ol>
+          <ol v-else>
+            <li>打开推荐知识点，先读资料并写 3 个验证问题。</li>
+            <li>做一个最小 Demo 或反例，记录能复现的证据。</li>
+            <li>把结论写进今日复盘，再进行打卡。</li>
+          </ol>
+        </div>
+
+        <div class="launch-proof">
+          <header><span>今天完成的标准</span><button v-if="firstMissionPoint" @click="router.push(`/knowledge/${firstMissionPoint.code}`)">详情 →</button></header>
+          <div class="effort-pills">
+            <span v-for="stage in missionEffortStages" :key="stage.label"><b>{{ stage.label }}</b>{{ stage.minutes }}m</span>
+          </div>
+          <ul v-if="missionMasteryGoals.length">
+            <li v-for="goal in missionMasteryGoals" :key="goal.code"><code>{{ goal.code }}</code>{{ goal.text }}</li>
+          </ul>
+          <p v-else>{{ missionOutputs[0] ?? '能用自己的话讲清概念，提交可运行代码、笔记或截图证据。' }}</p>
+        </div>
       </section>
 
       <div class="today-grid">
@@ -276,7 +347,7 @@ onMounted(loadDashboard);
     <form class="dialog-content" @submit.prevent="submitCheckin">
       <header><div><p class="eyebrow">CHECK-IN · 学习证据</p><h2>{{ selectedEvent ? eventTitle(selectedEvent) : '' }}</h2></div><button type="button" aria-label="关闭" @click="showCheckinDialog = false">×</button></header>
       <fieldset><legend>这次推进的结果</legend><div class="result-options"><label v-for="option in [{ value: 'COMPLETED', label: '完成', hint: '目标与证据都达成' }, { value: 'PARTIAL', label: '部分完成', hint: '留下明确后续动作' }, { value: 'SKIPPED', label: '未执行', hint: '诚实记录阻塞原因' }]" :key="option.value" :class="{ selected: checkinForm.result === option.value }"><input v-model="checkinForm.result" type="radio" :value="option.value" /><span><strong>{{ option.label }}</strong><small>{{ option.hint }}</small></span></label></div></fieldset>
-      <div class="duration-field"><label for="duration">实际投入</label><div><button type="button" @click="checkinForm.actualMinutes = Math.max(0, checkinForm.actualMinutes - 15)">−</button><input id="duration" v-model.number="checkinForm.actualMinutes" type="number" min="0" max="480" /><span>分钟</span><button type="button" @click="checkinForm.actualMinutes = Math.min(480, checkinForm.actualMinutes + 15)">＋</button></div></div>
+      <div class="duration-field"><label for="duration">实际投入</label><div><button type="button" @click="checkinForm.actualMinutes = Math.max(0, checkinForm.actualMinutes - 15)">−</button><input id="duration" v-model.number="checkinForm.actualMinutes" type="number" min="0" max="900" /><span>分钟</span><button type="button" @click="checkinForm.actualMinutes = Math.min(900, checkinForm.actualMinutes + 15)">＋</button></div></div>
       <label class="note-field">学习证据或阻塞原因<textarea v-model="checkinForm.noteMd" placeholder="写下能证明进展的产出、关键结论，或者下一步要解决的问题"></textarea></label>
       <div class="range-row"><label>精力状态 <strong>{{ checkinForm.energyLevel }}/5</strong><input v-model.number="checkinForm.energyLevel" type="range" min="1" max="5" /></label><label>感知难度 <strong>{{ checkinForm.difficultyLevel }}/5</strong><input v-model.number="checkinForm.difficultyLevel" type="range" min="1" max="5" /></label></div>
       <footer><button type="button" @click="showCheckinDialog = false">暂不记录</button><button class="submit-button" type="submit" :disabled="checkinSaving">{{ checkinSaving ? '正在保存…' : '记录本次学习' }}</button></footer>
