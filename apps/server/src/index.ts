@@ -153,17 +153,25 @@ const start = async () => {
   }
 };
 
-// 优雅关闭
-process.on('SIGTERM', async () => {
-  app.log.info('收到 SIGTERM，准备关闭');
+let isClosing = false;
+async function shutdown(reason: string, exitCode?: number) {
+  if (isClosing) return;
+  isClosing = true;
+  app.log.info({ reason }, '准备关闭服务');
   await app.close();
   closeDatabase();
-});
+  if (exitCode !== undefined) process.exit(exitCode);
+}
 
-process.on('SIGINT', async () => {
-  app.log.info('收到 SIGINT，准备关闭');
-  await app.close();
-  closeDatabase();
-});
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
+
+// Playwright 在 Windows 上结束父 shell 后不会向子进程转发 POSIX 信号。
+// 测试环境显式启用 stdin 生命周期，让 API 在测试运行器关闭管道时可靠退出。
+if (process.env.EXIT_ON_STDIN_CLOSE === 'true') {
+  process.stdin.resume();
+  process.stdin.once('end', () => void shutdown('stdin-end', 0));
+  process.stdin.once('close', () => void shutdown('stdin-close', 0));
+}
 
 start();

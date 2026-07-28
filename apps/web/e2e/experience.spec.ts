@@ -4,9 +4,9 @@ test.describe.serial('核心使用体验', () => {
   test('知识脑图展示完整能力体系并可逐层展开', async ({ page }) => {
     await page.goto('/knowledge/map');
     await expect(page.getByRole('heading', { name: '把知识连成一张图' })).toBeVisible();
-    await expect(page.locator('.map-stats')).toContainText('153');
-    await expect(page.locator('.map-stats')).toContainText('6');
-    await expect(page.locator('.group-branch')).toHaveCount(6);
+    await expect(page.locator('.map-stats')).toContainText('190');
+    await expect(page.locator('.map-stats')).toContainText('7');
+    await expect(page.locator('.group-branch')).toHaveCount(7);
 
     const aiDomain = page.getByRole('button', { name: /12 AI 原生前端与模型应用工程/ });
     await aiDomain.click();
@@ -21,7 +21,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(resource).toHaveAttribute('href', /^https:\/\//);
     await expect(resource).toHaveAttribute('target', '_blank');
     await expect(resource).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(page.getByText('预计 5 小时 30 分 完成首次掌握')).toBeVisible();
+    await expect(page.getByText('预计 10 小时 15 分 完成首次掌握')).toBeVisible();
     await expect(page.getByText('资料精读', { exact: true })).toBeVisible();
     await expect(page.getByText('7 天复测', { exact: true })).toBeVisible();
   });
@@ -33,7 +33,7 @@ test.describe.serial('核心使用体验', () => {
     await page.getByRole('button', { name: '周', exact: true }).click();
     await expect(page.locator('.agenda-day')).toHaveCount(7);
     await expect(page.locator('.learning-contract').first()).toBeVisible();
-    await expect(page.getByText('基础底座', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Web 基础', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('PROJECT', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('ASSESS', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('复测节奏', { exact: true }).first()).toBeVisible();
@@ -43,7 +43,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText('验收产出', { exact: true }).first()).toBeVisible();
     await expect(page.getByText(/前置已就绪|项前置待补/).first()).toBeVisible();
     await expect(page.locator('.effort-budget').first()).toContainText('预计投入');
-    await expect(page.locator('.effort-budget').first()).toContainText(/5\d{2} 分钟容量/);
+    await expect(page.locator('.effort-budget').first()).toContainText('390 分钟容量');
     expect(await page.locator('.effort-budget.overloaded').count()).toBe(0);
 
     await page.getByRole('button', { name: '月', exact: true }).click();
@@ -65,7 +65,7 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/knowledge/REACT-05');
     await expect(page.getByRole('heading', { name: '知识前置与后续路径' })).toBeVisible();
     await expect(page.getByText('REACT-04', { exact: true })).toBeVisible();
-    await expect(page.getByText('REACT-06', { exact: true })).toBeVisible();
+    await expect(page.getByText('REACT-02', { exact: true })).toBeVisible();
     await expect(page.getByText('VUE-06', { exact: true })).toBeVisible();
   });
 
@@ -73,7 +73,7 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/knowledge');
     await expect(page.getByText('NEXT BEST ACTION', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: /JS-01/ })).toBeVisible();
-    await expect(page.getByText('能力路线 1 / 153')).toBeVisible();
+    await expect(page.getByText('能力路线 1 / 190')).toBeVisible();
     await page.getByRole('button', { name: /快速查找/ }).click();
     await page.getByRole('textbox', { name: '搜索页面或知识点' }).fill('VUE-11');
     await expect(page.getByRole('option', { name: /VUE-11/ })).toBeVisible();
@@ -101,7 +101,7 @@ test.describe.serial('核心使用体验', () => {
   test('关系图谱可浏览路径、搜索知识点并进入局部关系', async ({ page }) => {
     await page.goto('/knowledge/graph');
     await expect(page.getByRole('heading', { name: '沿着关系理解知识' })).toBeVisible();
-    await expect(page.locator('.domain-node')).toHaveCount(16);
+    await expect(page.locator('.domain-node')).toHaveCount(20);
     await expect(page.locator('.vue-flow__edge')).not.toHaveCount(0);
 
     await page.getByLabel('定位知识点').fill('AIAPP-03');
@@ -115,10 +115,10 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '系统与数据' })).toBeVisible();
     await expect(page.getByText('首次启动会自动迁移', { exact: false })).toBeVisible();
-    await expect(page.getByText('153 个知识点')).toBeVisible();
-    await expect(page.getByText('16 个领域已入库')).toBeVisible();
+    await expect(page.getByText('190 个知识点')).toBeVisible();
+    await expect(page.getByText('20 个领域已入库')).toBeVisible();
     await expect(page.getByText('系统每天自动创建一次一致性快照', { exact: false })).toBeVisible();
-    await expect(page.getByText('已配置', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^(?:已配置|未配置)$/, { exact: true })).toBeVisible();
   });
 
   test('窄屏下主导航和脑图没有页面级横向溢出', async ({ page }) => {

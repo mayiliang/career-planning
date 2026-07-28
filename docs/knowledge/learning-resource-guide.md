@@ -1,81 +1,66 @@
 # 学习资料与耗时使用指南
 
-更新时间：2026-07-22
+更新时间：2026-07-28
 
-这份索引是每个知识点“学习资料”的补充入口。知识点详情中的链接负责精确定位主题，本页负责提供连续课程、权威参考、工具应用和通用学习方法。学习资料不限于文本或视频，也可以是规范、实验、项目片段、工具应用、源码或本地笔记；唯一硬约束是必须覆盖当前知识点的机制、边界、反例、练习和考核依据。默认只把官方文档、标准组织、项目维护方资料列为必读；博客、视频和课程只能作为辅助解释，不能替代原始资料。
+本指南服务于 20 个领域、190 个知识点。知识点文件中的链接负责精确命中主题，本页负责说明资料优先级、连续学习主干、证据要求和耗时口径。
 
-## 每个知识点的五阶段学习协议
+## 资料准入规则
 
-1. **资料精读**：先写出 3 个待验证问题，再阅读知识点直达链接和本页领域课程；只摘录能回答问题的内容。
-2. **机制练习**：用最小 Demo、DevTools、类型测试或故障注入验证至少一个关键机制和一个反例。
-3. **项目产出**：把机制迁移到 Career Atlas 或已有真实项目，留下代码、测试、ADR、性能报告或演示材料。
-4. **严格首考**：按“资料定位 -> 概念解释 -> 小例子推导 -> 受限排错 -> 学习复述”逐层答题；问题和参考答案必须能从学习资料直接查到或一跳推导，DeepSeek 评分达到 80 且无关键否决项才算首次通过。
-5. **7 天复测**：不用原答案完成变式题；失败则回到薄弱阶段重学，不能直接标记掌握。
+按以下顺序选择资料：
 
-网站显示的“首次掌握预计耗时”包含前四阶段，复测时间单列。它是计划基线，不是硬性截止时间；打卡时填写实际投入，连续三个同类知识点偏差超过 25% 时，应按自己的历史速度调整后续计划。
+1. 当前版本的规范、标准、官方文档或项目维护方文档。
+2. 官方维护的中文文档；若中文版本落后，则使用当前英文原文，并为关键术语补充中文笔记。
+3. 官方课程、示例仓库、迁移指南和安全公告。
+4. 高质量书籍、论文、课程或技术文章，只作辅助解释，不能替代原始依据。
 
-当前 153 个知识点都已经写入显式 `预计耗时`，用于重新安排学习计划；默认档位只用于新增知识点或遗漏字段。导入后分钟数会持久化到数据库，知识详情、周计划和今日任务都读取同一份数据，不在前端临时重算。
+每个知识点至少需要两份可交叉验证的资料，并明确覆盖定义、机制、边界、反例、练习与考核依据。版本敏感主题必须写清当前版本；实验性 Web/AI API 必须包含能力检测、稳定性状态和降级方案。
 
-## 官方学习主干
+## 五阶段掌握协议
 
-| 能力领域 | 连续学习资料 | 使用方式 |
+1. 资料精读：先写 3 个待验证问题，再读取直达资料，整理定义、机制、边界和反例。
+2. 机制练习：完成最小正例、反例或故障注入，并保留 DevTools、类型、测试或日志证据。
+3. 项目产出：迁移到真实项目，留下代码、测试、ADR、性能报告、威胁模型或部署记录。
+4. 严格首考：依次完成资料定位、机制解释、最小产出、受限排错和学习复述；达到 80 分且无关键否决项。
+5. 延迟复测：首考至少 7 天后，不看原答案完成变式题；失败则回到对应阶段重学。
+
+首次掌握耗时只计算前四阶段，复测单列。计划的 390 分钟是每日容量上限，不是必须填满的配额。
+
+## 官方连续学习主干
+
+| 能力域 | 优先资料 | 使用重点 |
 | --- | --- | --- |
-| Web 基础、浏览器、性能、可访问性 | [MDN Front-end Curriculum](https://developer.mozilla.org/en-US/curriculum/)、[web.dev Learn](https://web.dev/learn/)、[W3C WAI Digital Accessibility Foundations](https://www.w3.org/WAI/courses/foundations-course/) | 用 MDN 检查基础覆盖，用 web.dev 完成 HTML、CSS、JS、Performance、Accessibility、Testing 等连续课程；WAI 课程用于建立可访问性完整视角。 |
-| TypeScript | [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)、[TSConfig Reference](https://www.typescriptlang.org/tsconfig/) | Handbook 建立类型系统心智模型；每个高级类型知识点都要配一个可编译的正例和失败用例。 |
-| Vue 3 | [Vue Guide](https://vuejs.org/guide/introduction.html)、[Vue + TypeScript](https://vuejs.org/guide/typescript/overview.html)、[Vue Testing](https://vuejs.org/guide/scaling-up/testing.html)、[Vue Performance](https://vuejs.org/guide/best-practices/performance.html) | 按 Essentials → Components → Scaling Up → Best Practices 顺序推进，并直接在本项目实现功能。 |
-| React | [React Learn](https://react.dev/learn)、[React Setup](https://react.dev/learn/setup) | 按 Describing UI、Interactivity、Managing State、Escape Hatches 形成连续学习链，再用 DevTools 和测试验证性能与状态边界。 |
-| 安全、业务边界与 AI 安全 | [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/)、[HTML5 Security](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html)、[Business Logic Security](https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html) | 每个安全知识点至少完成威胁建模、攻击复现、修复和回归测试四步；AI 与 Agent 方向同时检查 Prompt Injection、RAG 和最小权限清单。 |
-| 工程化与测试 | [Vite Guide](https://vite.dev/guide/)、[Vitest Guide](https://vitest.dev/guide/)、[Playwright Docs](https://playwright.dev/docs/intro)、[pnpm Workspaces](https://pnpm.io/workspaces) | 资料阅读必须落到可运行命令、失败用例、CI 门禁和可复现报告，不能只记配置项。 |
-| Linux、Docker 与部署交付 | [Linux man-pages](https://www.kernel.org/doc/man-pages/)、[Docker Docs](https://docs.docker.com/)、[Docker Compose](https://docs.docker.com/compose/)、[Nginx Admin Guide](https://docs.nginx.com/nginx/admin-guide/)、[GitHub Actions](https://docs.github.com/actions) | 以可运行部署为唯一验收：命令记录、Dockerfile、Compose、Nginx 缓存、健康检查、日志、回滚演练和排障报告缺一不可。 |
-| API、Node 与工具协议 | [Node.js Learn](https://nodejs.org/en/learn)、[OpenAPI Specification](https://spec.openapis.org/oas/latest.html)、[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) | 以真实 Schema、CLI 或 MCP Tool 为产出，验证异常输入、权限、超时、重试和可观测性。 |
-| AI 原生前端与浏览器 AI | [web.dev Learn AI](https://web.dev/learn/ai/)、[Chrome Built-in AI](https://developer.chrome.com/docs/ai/built-in)、[WebGPU Specification](https://www.w3.org/TR/webgpu/) | 先验证能力检测、兼容性与降级，再评测质量、延迟、成本、隐私和能耗；实验结果必须可复现。 |
+| Web、浏览器、可访问性 | [MDN 中文 Web 文档](https://developer.mozilla.org/zh-CN/docs/Web)、[web.dev Learn 中文入口](https://web.dev/learn?hl=zh-cn)、[W3C WAI](https://www.w3.org/WAI/fundamentals/) | 语义、CSS、事件、渲染、网络、存储、性能和可访问性 |
+| JavaScript、TypeScript | [MDN JavaScript 中文指南](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide)、[TypeScript 中文手册](https://www.typescriptlang.org/zh/docs/handbook/intro.html)、[TSConfig](https://www.typescriptlang.org/tsconfig/) | 运行模型、类型建模、类型测试和编译边界 |
+| React | [React 中文学习文档](https://zh-hans.react.dev/learn)、[React API](https://zh-hans.react.dev/reference/react) | 渲染、状态、Hook、Effect、并发与异步边界 |
+| Vue、Nuxt | [Vue 中文指南](https://cn.vuejs.org/guide/introduction.html)、[Vue TypeScript](https://cn.vuejs.org/guide/typescript/overview.html)、[Nuxt 文档](https://nuxt.com/docs/getting-started/introduction) | 响应式、组合式 API、状态、测试、性能和 SSR |
+| 中后台与组件系统 | [Ant Design 中文文档](https://ant.design/docs/react/introduce-cn)、[Umi Max](https://umijs.org/docs/max/introduce)、[WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/) | 业务组件、权限、设计 Token、可访问交互与平台治理 |
+| 数据、API、实时与离线 | [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview)、[OpenAPI](https://spec.openapis.org/oas/latest.html)、[GraphQL](https://graphql.org/learn/)、[MDN Service Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Service_Worker_API) | Server State、契约、缓存、冲突、实时恢复和离线 |
+| 工程、测试、供应链 | [Vite](https://vite.dev/guide/)、[Vitest](https://vitest.dev/guide/)、[Playwright](https://playwright.dev/docs/intro)、[pnpm](https://pnpm.io/workspaces)、[Sigstore](https://docs.sigstore.dev/cosign/signing/overview/) | 可重复构建、验证金字塔、CI 门禁、依赖与制品可信 |
+| 安全、身份、隐私 | [OWASP Cheat Sheet](https://cheatsheetseries.owasp.org/)、[OAuth 2.1](https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/)、[OpenID Connect](https://openid.net/developers/how-connect-works/)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/) | 不可信输入输出、会话、授权、数据最小化和威胁建模 |
+| 性能、图形与体验 | [web.dev Performance](https://web.dev/learn/performance/)、[WebGL](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGL_API)、[WebGPU](https://www.w3.org/TR/webgpu/)、[Intl](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl) | 测量、预算、图形管线、国际化与兼容性 |
+| Node、Linux、容器与云 | [Node.js Learn](https://nodejs.org/en/learn)、[Linux man-pages](https://www.kernel.org/doc/man-pages/)、[Docker](https://docs.docker.com/)、[Nginx](https://docs.nginx.com/nginx/admin-guide/)、[Kubernetes Concepts](https://kubernetes.io/docs/concepts/) | CLI/服务、进程与网络、镜像、编排、部署、观测和回滚 |
+| AI 应用与产品 | [OpenAI API 文档](https://platform.openai.com/docs/overview)、[Vercel AI SDK](https://ai-sdk.dev/docs/introduction)、[OWASP LLM Top 10](https://genai.owasp.org/llm-top-10/) | 任务价值、流式 UI、结构化输出、RAG、评估、安全与成本 |
+| Agent 与 MCP | [MCP 官方文档](https://modelcontextprotocol.io/docs/getting-started/intro)、[MCP TypeScript SDK v2](https://github.com/modelcontextprotocol/typescript-sdk)、[MCP 2026 发布说明](https://blog.modelcontextprotocol.io/posts/2026-mcp-release/) | 无状态传输、工具/资源/提示词、任务、授权、可观测性与兼容 |
+| 浏览器 AI 与 AI 研发 | [Chrome Built-in AI](https://developer.chrome.com/docs/ai/built-in)、[web.dev AI](https://web.dev/learn/ai/)、[GitHub Copilot 责任使用](https://docs.github.com/en/copilot/responsible-use) | 能力检测、本地推理、Worker、隐私、验证和团队治理 |
+| 架构与领导力 | [Google SRE](https://sre.google/books/)、[AWS Well-Architected](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)、[Google 技术写作中文课程](https://developers.google.com/tech-writing/two?hl=zh-cn) | 质量属性、ADR、渐进迁移、可靠性、成本、评审和表达 |
 
-## 工具与应用路径
-
-| 学习阶段 | 推荐工具 | 必须留下的证据 |
-| --- | --- | --- |
-| 资料精读 | MDN、React/Vue/TypeScript 官方文档、Docker Docs、OWASP、W3C 标准、项目源码搜索 | 3 个问题、关键结论、对应知识点链接 |
-| 机制练习 | TypeScript Playground、Chrome DevTools、React DevTools、Vue Devtools、Docker Desktop、ShellCheck、Postman 或 Bruno | 最小复现、反例、截图或命令输出 |
-| 项目产出 | Career Atlas、`gungnir-web`、`gungnir-h5`、`teaching-web`、`digitalteacher-web`、`digitalteacher-h5`、`aiui`、`get_apidoc` | 代码提交、测试、ADR、性能报告、部署记录或组件文档 |
-| 严格首考 | 本地 Career Atlas 考核页、DeepSeek 判卷、Vitest、Playwright、Lighthouse、Playwright Trace Viewer | 答卷、逐题评审、参考答案、失败项和修复记录 |
-| 7 天复测 | Career Atlas 复测事件、同主题变式题、真实项目二次应用 | 新答案、新代码或复盘结论 |
-
-## 耗时估算规则
-
-- **资料精读 90–135 分钟**：不仅看完链接，还要摘出定义、规则、边界和题目依据。
-- **机制练习 150–195 分钟**：至少包含一个正例、一个反例、一个可观察证据和一条失败解释。
-- **项目产出 135–210 分钟**：把机制迁移到 Career Atlas 或你的真实项目，留下代码、配置、ADR、报告或演示材料。
-- **严格首考 90–105 分钟**：按资料定位、机制解释、最小产出、受限排错、学习复述五段式完成，并保留判卷意见。
-- **7 天复测 75–90 分钟**：使用变式题，不重复原题；复测可以小范围迁移，但仍要说明资料依据。
-- 所有时间按 15 分钟取整。现在的估算刻意提高了资料和练习时间，因为上一次实测说明“资料能看懂”不等于“能回答考核题”。
+单个知识点的精确资料仍以[知识库](knowledge-base/README.md)为准。
 
 ## 默认耗时档位
 
-| 知识点前缀 | 资料 | 练习 | 项目 | 首考 | 首次掌握合计 | 复测 |
+| 类型 | 资料 | 练习 | 项目 | 首考 | 首次掌握 | 复测 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `JS`、`WEB` | 90 | 150 | 135 | 90 | 465 | 75 |
-| `A11Y`、`BROWSER` | 105 | 165 | 150 | 90 | 510 | 75 |
-| `NET` | 105 | 165 | 150 | 105 | 525 | 75 |
-| `SEC` | 120 | 180 | 150 | 105 | 555 | 90 |
-| `TS` | 105 | 165 | 135 | 90 | 495 | 75 |
-| `VUE`、`REACT`、`UMI`、`ANTD` | 105 | 165 | 150 | 90 | 510 | 75 |
-| `BIZ` | 105 | 165 | 165 | 90 | 525 | 75 |
-| `ENG`、`TEST`、`OBS`、`PERF`、`H5`、`HYBRID`、`NODE`、`API`、`MCP`、`AI` | 120 | 180 | 165 | 105 | 570 | 90 |
-| `COMP`、`DS`、`PLATFORM`、`DOCKER`、`DEPLOY` | 120 | 180 | 180 | 105 | 585 | 90 |
-| `AIAPP`、`AGENT`、`WEBAI`、`AIDEV` | 135 | 195 | 180 | 105 | 615 | 90 |
-| `LINUX` | 105 | 165 | 150 | 105 | 525 | 75 |
-| `CAREER` | 105 | 150 | 210 | 105 | 570 | 90 |
+| 基础机制 | 90 | 150 | 135 | 90 | 465 | 75 |
+| 框架、业务、体验 | 105 | 165 | 150 | 90 | 510 | 75 |
+| 工程、安全、数据、交付 | 120 | 180 | 165 | 105 | 570 | 90 |
+| AI、Agent、架构与治理 | 135 | 195 | 180 | 105 | 615 | 90 |
 
-这张表覆盖全部 153 个知识点的默认策略。当前知识库已经为每个知识点写入显式耗时，重新执行内容检查、构建和 Docker 部署后，学习计划会按这些显式分钟数重排。
+全部 190 个知识点已显式填写耗时；默认档位只用于新知识点或遗漏字段。所有时间按 15 分钟取整。
 
-覆盖格式：
+## 资料失效维护
 
-```markdown
-- 预计耗时：资料 60 分钟；练习 120 分钟；项目 90 分钟；考核 75 分钟；复测 45 分钟
-```
-
-## 资料失效与更新规则
-
-- 每月抽查本月使用过的链接；出现 404、版本过期或内容迁移时，优先替换为同一项目的新官方入口。
-- 框架和工具资料以当前主版本为准；涉及旧项目迁移时，再补充旧版本差异，而不是让旧文档成为主线。
-- 新资料必须说明它解决哪个知识点、对应哪个学习阶段、预期留下什么证据；单纯“值得收藏”不进入知识库。
+- 每月抽查实际使用过的链接；每季度执行一次全库版本审计。
+- 404、重定向到无关页面或版本过期时，优先替换为同一官方来源的新入口。
+- 中文译文与原文冲突时，以当前官方原文为准，并在学习笔记说明差异。
+- MCP、浏览器 AI、框架主版本、隐私和安全规范属于高变动内容，每月检查一次。
+- 新资料进入知识库前，必须说明覆盖哪个知识点、支持哪一类考核、预期留下什么证据。

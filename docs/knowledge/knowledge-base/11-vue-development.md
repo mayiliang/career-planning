@@ -96,8 +96,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Nuxt Documentation](https://nuxt.com/docs)、[Nuxt 4.4](https://nuxt.com/blog/v4-4)、[Nuxt Data Fetching](https://nuxt.com/docs/4.x/getting-started/data-fetching)、[Nuxt Rendering Modes](https://nuxt.com/docs/4.x/guide/concepts/rendering)。覆盖范围：围绕「Nuxt 4 全栈渲染、数据获取与性能剖析」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Nuxt Documentation》《Nuxt 4.4》《Nuxt Data Fetching》《Nuxt Rendering Modes》，分别摘出能支撑「Nuxt 4 全栈渲染、数据获取与性能剖析」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Nuxt 4 全栈渲染、数据获取与性能剖析」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把一个 Vue SPA 的列表/详情垂直切片迁到 Nuxt 4，分别使用 SSR、客户端导航和服务端路由；解决 hydration mismatch、重复请求与缓存键问题；使用构建性能分析定位一个慢模块或大 chunk；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[Nuxt Documentation](https://nuxt.com/docs)、[Nuxt 4.5](https://nuxt.com/blog/v4-5)、[Nuxt Data Fetching](https://nuxt.com/docs/4.x/getting-started/data-fetching)、[Nuxt Rendering Modes](https://nuxt.com/docs/4.x/guide/concepts/rendering)。覆盖范围：围绕「Nuxt 4 全栈渲染、数据获取与性能剖析」的定义、机制、边界、反例和通过标准；小版本发布说明只用于增量特性，稳定概念以 4.x 文档为准。
+- 严格考核：首考题 1（资料定位）：只允许使用《Nuxt Documentation》《Nuxt 4.5》《Nuxt Data Fetching》《Nuxt Rendering Modes》，定位渲染、数据缓存和性能依据；首考题 2（机制解释）：解释 SSR、客户端导航、payload 和缓存键链路；首考题 3（最小产出）：把一个 Vue SPA 的列表/详情垂直切片迁到 Nuxt 4，分别使用 SSR、客户端导航和服务端路由；解决 hydration mismatch、重复请求与缓存键问题；使用构建性能分析定位一个慢模块或大 chunk；首考题 4（受限排错）：处理版本升级、重复取数和流式渲染边界；首考题 5（学习复述）：说明稳定 4.x 概念与小版本特性的关系。命题边界：实验性 SSR Streaming 必须单独标记。
 - 通过标准：首屏 HTML、客户端接管和导航数据一致；`useFetch`/`useAsyncData` 的 key、缓存和错误边界明确；敏感逻辑留在服务端；通过键盘和路由播报验证可访问性；提交构建与运行性能前后数据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
 

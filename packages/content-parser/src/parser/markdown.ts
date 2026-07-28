@@ -45,7 +45,7 @@ export function parseKnowledgeMarkdown(content: string, _filePath: string): Pars
  * 提取领域描述
  */
 function extractDomainDescription(content: string): string | undefined {
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   const descriptionLines: string[] = [];
   let foundTitle = false;
   
@@ -72,7 +72,7 @@ function extractDomainDescription(content: string): string | undefined {
  * 提取知识点列表
  */
 function extractKnowledgePoints(content: string): ParsedKnowledgePoint[] {
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   const points: ParsedKnowledgePoint[] = [];
   
   let currentPoint: Partial<ParsedKnowledgePoint> | null = null;

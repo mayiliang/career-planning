@@ -205,7 +205,7 @@ NEEDS_RELEARNING
 ### CSV 映射
 
 - `learning-tracker-template.csv` -> plan template items。
-- `daily-8h-learning-schedule.csv` -> daily time-block template。
+- `daily-6h30m-learning-schedule.csv` -> daily time-block template。
 - `hangzhou-frontend-jobs-template.csv` -> jobs + job gaps 草稿。
 - CSV 使用真正的解析库，不允许用 `split(',')`。
 

@@ -61,9 +61,11 @@ export interface DomainStats {
 }
 
 const domainLearningPath: Array<[string, string]> = [
-  ['01', '02'], ['01', '07'], ['02', '03'], ['02', '11'], ['03', '04'],
-  ['04', '05'], ['05', '06'], ['06', '08'], ['06', '09'], ['09', '12'],
-  ['12', '13'], ['14', '12'], ['13', '15'], ['08', '10'], ['15', '10'],
+  ['01', '02'], ['01', '07'], ['01', '19'], ['02', '03'], ['02', '11'],
+  ['03', '04'], ['03', '17'], ['11', '17'], ['04', '05'], ['05', '06'],
+  ['06', '08'], ['06', '15'], ['06', '16'], ['16', '20'], ['17', '18'],
+  ['09', '12'], ['19', '12'], ['12', '13'], ['12', '14'], ['13', '15'],
+  ['18', '10'], ['20', '10'],
 ];
 
 function gridPosition(index: number, columns: number, xGap: number, yGap: number, offsetX = 0, offsetY = 0) {
@@ -359,12 +361,12 @@ export async function getKnowledgeTree() {
   }).from(knowledgePoints).orderBy(knowledgePoints.code);
 
   const groupDefinitions = [
-    { id: 'foundation', title: 'Web 基础内核', description: '语言、类型、浏览器、网络与性能', domainCodes: ['01', '02', '07'] },
-    { id: 'application', title: '框架与应用开发', description: 'React、Vue、中后台与复杂业务', domainCodes: ['03', '04', '05', '11'] },
-    { id: 'engineering', title: '工程质量能力', description: '测试、CI/CD、供应链、可观测性与发布质量', domainCodes: ['06'] },
-    { id: 'delivery', title: '部署交付能力', description: 'Linux、Docker、Nginx、CI/CD 与生产排障', domainCodes: ['16'] },
-    { id: 'platform', title: '组件与平台能力', description: '组件系统、设计系统、配置化与平台治理', domainCodes: ['08'] },
-    { id: 'ai', title: 'AI 原生研发', description: '模型应用、Agent、MCP、本地推理与 AI 工程', domainCodes: ['09', '12', '13', '14', '15'] },
+    { id: 'foundation', title: 'Web 基础内核', description: '语言、类型、浏览器与网络安全', domainCodes: ['01', '02'] },
+    { id: 'application', title: '框架与应用架构', description: 'React、Vue、中后台、业务、渲染、数据与实时协作', domainCodes: ['03', '04', '05', '11', '17'] },
+    { id: 'engineering', title: '工程与平台质量', description: '测试、构建、供应链、组件平台与 AI 辅助验证', domainCodes: ['06', '08', '15'] },
+    { id: 'experience', title: '体验、图形与产品实验', description: '性能、H5、可视化、国际化、兼容性与实验度量', domainCodes: ['07', '18'] },
+    { id: 'delivery', title: '部署、云与架构领导力', description: 'Linux、Docker、云基础设施、演进治理与技术领导力', domainCodes: ['16', '20'] },
+    { id: 'ai', title: 'AI 原生与安全治理', description: '模型应用、Agent、MCP、本地推理、身份、隐私与 AI 安全', domainCodes: ['09', '12', '13', '14', '19'] },
     { id: 'impact', title: '项目与职业影响力', description: '方案表达、项目证据与职业校准', domainCodes: ['10'] },
   ];
 

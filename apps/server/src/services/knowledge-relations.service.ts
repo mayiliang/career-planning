@@ -10,16 +10,16 @@ export type RelationDefinition = {
 };
 
 /**
- * 每个领域的推荐学习顺序。相邻节点会形成持久化的前置关系，
- * 这份清单同时是计划编排和关系图谱的顺序来源。
+ * 每个领域的推荐阅读顺序，只用于路线编排和图谱展示。
+ * 推荐顺序不等于硬前置；真正的前置关系只在 explicitPrerequisites 中声明。
  */
 export const KNOWLEDGE_PATHS: string[][] = [
   ['JS-01', 'JS-02', 'JS-03', 'JS-04', 'JS-05', 'JS-06', 'WEB-01', 'WEB-02', 'WEB-03', 'A11Y-01', 'BROWSER-01', 'WEB-04', 'NET-01', 'SEC-01', 'SEC-02', 'SEC-03'],
   ['TS-01', 'TS-02', 'TS-03', 'TS-04', 'TS-05', 'TS-06', 'TS-07', 'TS-08', 'TS-09'],
-  ['REACT-01', 'REACT-02', 'REACT-03', 'REACT-04', 'REACT-05', 'REACT-06', 'REACT-07', 'REACT-08', 'REACT-09'],
+  ['REACT-01', 'REACT-02', 'REACT-03', 'REACT-05', 'REACT-04', 'REACT-06', 'REACT-07', 'REACT-08', 'REACT-09'],
   ['UMI-01', 'UMI-02', 'UMI-03', 'UMI-04', 'ANTD-01', 'ANTD-02', 'ANTD-03', 'ANTD-04'],
   ['BIZ-01', 'BIZ-02', 'BIZ-03', 'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08'],
-  ['ENG-01', 'ENG-02', 'ENG-07', 'ENG-03', 'ENG-04', 'ENG-05', 'TEST-01', 'TEST-02', 'TEST-03', 'ENG-06', 'ENG-08', 'OBS-01'],
+  ['ENG-01', 'ENG-02', 'ENG-03', 'ENG-04', 'ENG-05', 'TEST-01', 'TEST-02', 'TEST-03', 'ENG-06', 'ENG-08', 'OBS-01', 'ENG-07'],
   ['PERF-01', 'PERF-02', 'PERF-03', 'PERF-04', 'H5-01', 'H5-02', 'HYBRID-01', 'H5-03', 'PERF-05'],
   ['COMP-01', 'COMP-02', 'DS-01', 'COMP-03', 'PLATFORM-01', 'PLATFORM-02', 'PLATFORM-03'],
   ['NODE-01', 'NODE-02', 'NODE-03', 'API-01', 'API-02', 'MCP-01', 'MCP-02', 'AI-01'],
@@ -30,62 +30,75 @@ export const KNOWLEDGE_PATHS: string[][] = [
   ['WEBAI-01', 'WEBAI-02', 'WEBAI-03', 'WEBAI-04', 'WEBAI-05', 'WEBAI-06', 'WEBAI-07', 'WEBAI-08', 'WEBAI-09', 'WEBAI-10'],
   ['AIDEV-01', 'AIDEV-02', 'AIDEV-03', 'AIDEV-04', 'AIDEV-05', 'AIDEV-06', 'AIDEV-07', 'AIDEV-08', 'AIDEV-09', 'AIDEV-10'],
   ['LINUX-01', 'LINUX-02', 'LINUX-03', 'LINUX-04', 'DOCKER-01', 'DOCKER-02', 'DOCKER-03', 'DOCKER-04', 'DEPLOY-01', 'DEPLOY-02'],
+  ['RENDER-01', 'RENDER-02', 'EDGE-01', 'DATA-01', 'DATA-02', 'REALTIME-01', 'COLLAB-01', 'PWA-01', 'GQL-01'],
+  ['GRAPHICS-01', 'GRAPHICS-02', 'VIS-01', 'ANALYTICS-01', 'EXP-01', 'EXP-02', 'I18N-01', 'I18N-02', 'CONTENT-01', 'COMPAT-01'],
+  ['IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02', 'AIPROD-01', 'AIPROD-02', 'AISAFE-01', 'AISAFE-02', 'AIGOV-01'],
+  ['ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'LEAD-01', 'BACKEND-01', 'BACKEND-02', 'BACKEND-03', 'CLOUD-01'],
 ];
 
 /**
- * 23 周执行路线：前 18 个阶段保持知识依赖顺序，后 5 周用于求职、项目资产和综合闸门。
- * 日历层会把 153 个知识点的显式分钟数连续切成 23 × 7 个 540 分钟学习桶。
+ * 48 周执行路线：前 44 周覆盖完整知识体系，后 4 周完成作品集、生产演练与综合答辩。
+ * AI 产品判断、隐私安全和 AI 辅助验证在 AI 实现之前进入，避免先造功能再补风险。
  */
 const PLAN_ROUTE = [
   ...(KNOWLEDGE_PATHS[0] ?? []),
   ...(KNOWLEDGE_PATHS[1] ?? []),
-  ...(KNOWLEDGE_PATHS[10] ?? []),
+  'IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02',
+  'ENG-01', 'ENG-02', 'ENG-03', 'ENG-04', 'ENG-05', 'TEST-01', 'TEST-02', 'TEST-03',
+  'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
   ...(KNOWLEDGE_PATHS[2] ?? []),
+  ...(KNOWLEDGE_PATHS[10] ?? []),
+  'BIZ-01', 'BIZ-02', 'BIZ-03',
   ...(KNOWLEDGE_PATHS[3] ?? []),
-  ...(KNOWLEDGE_PATHS[4] ?? []),
-  ...(KNOWLEDGE_PATHS[5] ?? []),
+  'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08',
+  ...(KNOWLEDGE_PATHS[16] ?? []),
+  ...(KNOWLEDGE_PATHS[7] ?? []),
+  'ENG-06', 'ENG-08', 'OBS-01', 'ENG-07',
   ...(KNOWLEDGE_PATHS[15] ?? []),
   ...(KNOWLEDGE_PATHS[6] ?? []),
-  ...(KNOWLEDGE_PATHS[7] ?? []),
+  'BACKEND-01', 'BACKEND-02', 'BACKEND-03', 'CLOUD-01',
   ...(KNOWLEDGE_PATHS[8] ?? []),
+  'AIPROD-01', 'AIPROD-02', 'AISAFE-01', 'AISAFE-02', 'AIGOV-01',
   ...(KNOWLEDGE_PATHS[11] ?? []),
   ...(KNOWLEDGE_PATHS[12] ?? []),
   ...(KNOWLEDGE_PATHS[13] ?? []),
-  ...(KNOWLEDGE_PATHS[14] ?? []),
+  'AIDEV-04', 'AIDEV-05', 'AIDEV-06', 'AIDEV-07', 'AIDEV-08', 'AIDEV-09', 'AIDEV-10',
+  ...(KNOWLEDGE_PATHS[17] ?? []),
+  'ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'LEAD-01',
   ...(KNOWLEDGE_PATHS[9] ?? []),
 ];
 
-const WEEK_END_CODES = [
-  'NET-01', 'TS-08', 'VUE-10', 'REACT-09', 'BIZ-04',
-  'ENG-05', 'OBS-01', 'DEPLOY-02', 'H5-03', 'PLATFORM-03',
-  'AI-01', 'AIAPP-08', 'AGENT-06', 'WEBAI-04', 'AIDEV-01',
-  'AIDEV-09', 'CAREER-04', 'CAREER-06',
-] as const;
-
+export const CONTENT_PLAN_WEEK_COUNT = 44;
 export const LEARNING_WEEK_PATHS: Record<number, string[]> = {};
-let routeCursor = 0;
-for (let week = 1; week <= WEEK_END_CODES.length; week++) {
-  const endIndex = PLAN_ROUTE.indexOf(WEEK_END_CODES[week - 1]!, routeCursor);
-  LEARNING_WEEK_PATHS[week] = PLAN_ROUTE.slice(routeCursor, endIndex + 1);
-  routeCursor = endIndex + 1;
+for (let week = 1; week <= CONTENT_PLAN_WEEK_COUNT; week++) {
+  const start = Math.floor(((week - 1) * PLAN_ROUTE.length) / CONTENT_PLAN_WEEK_COUNT);
+  const end = Math.floor((week * PLAN_ROUTE.length) / CONTENT_PLAN_WEEK_COUNT);
+  LEARNING_WEEK_PATHS[week] = PLAN_ROUTE.slice(start, end);
 }
-LEARNING_WEEK_PATHS[19] = ['TS-08', 'REACT-09', 'BIZ-08', 'DEPLOY-02', 'AIAPP-08', 'AGENT-10', 'AIDEV-03', 'CAREER-06'];
-LEARNING_WEEK_PATHS[20] = ['JS-04', 'TS-08', 'VUE-10', 'BIZ-08', 'TEST-03', 'DEPLOY-02', 'AIAPP-08', 'AGENT-10', 'AIDEV-03', 'CAREER-06'];
+LEARNING_WEEK_PATHS[45] = ['ARCH-02', 'CAREER-01', 'CAREER-02', 'CAREER-06'];
+LEARNING_WEEK_PATHS[46] = ['ENG-06', 'OBS-01', 'DEPLOY-02', 'CLOUD-01'];
+LEARNING_WEEK_PATHS[47] = ['RENDER-02', 'DATA-02', 'AIAPP-08', 'AGENT-10', 'AISAFE-02'];
+LEARNING_WEEK_PATHS[48] = ['TEST-03', 'PERF-05', 'AIGOV-01', 'LEAD-01', 'CAREER-06'];
 
 let globalRouteOrder = 0;
 export const KNOWLEDGE_ROUTE_INDEX = new Map(
   Object.entries(LEARNING_WEEK_PATHS)
-    .filter(([week]) => Number(week) <= 18)
+    .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
     .flatMap(([week, path]) => path.map((code) => [code, {
       week: Number(week),
       order: globalRouteOrder++,
     }] as const)),
 );
 
-const crossPrerequisites: Array<[string, string, string]> = [
+const explicitPrerequisites: Array<[string, string, string]> = [
   ['JS-01', 'TS-01', 'TypeScript 建立在 JavaScript 运行模型之上'],
+  ['TS-01', 'TS-02', '基本类型和收窄是对象类型建模的前置'],
+  ['TS-02', 'TS-03', '泛型需要先理解结构类型与联合收窄'],
   ['JS-03', 'REACT-01', '不可变更新与值语义是理解 React 渲染的基础'],
-  ['JS-04', 'REACT-04', '异步和事件循环是理解 Effect 外部同步的基础'],
+  ['REACT-01', 'REACT-02', '组件与渲染模型是状态更新的前置'],
+  ['REACT-02', 'REACT-05', 'Hook 规则建立在组件状态与渲染模型之上'],
+  ['REACT-05', 'REACT-04', '先掌握 Hook 规则，再学习 Effect 同步外部系统'],
+  ['JS-04', 'REACT-04', '异步和事件循环支撑 Effect 外部同步与取消'],
   ['TS-03', 'REACT-05', '泛型与约束支撑类型安全的自定义 Hook'],
   ['TS-06', 'REACT-02', '函数与组件 API 类型决定组合边界'],
   ['JS-03', 'VUE-02', '值、引用与不可变更新帮助理解 Vue 响应式边界'],
@@ -95,12 +108,13 @@ const crossPrerequisites: Array<[string, string, string]> = [
   ['TS-03', 'VUE-04', '泛型与索引访问支撑类型安全的组件契约'],
   ['NET-01', 'UMI-03', '请求层设计需要 HTTP、缓存与取消基础'],
   ['TS-08', 'BIZ-03', '权限模型需要状态与动作的类型约束'],
-  ['UMI-04', 'BIZ-03', '页面、按钮和数据权限是权限建模的应用入口'],
+  ['BIZ-03', 'UMI-04', '先建立通用权限模型，再实现框架页面和按钮权限'],
   ['ANTD-01', 'BIZ-05', '复杂表单是业务状态一致性的主要载体'],
-  ['BIZ-08', 'ENG-05', '可追踪验收标准决定质量门禁'],
   ['TEST-03', 'ENG-06', '发布与回滚需要关键路径自动化证据'],
   ['ENG-06', 'OBS-01', '发布闭环必须通过真实用户监控验证生产结果'],
   ['ENG-03', 'ENG-08', '供应链治理建立在可重复安装和依赖边界之上'],
+  ['ENG-04', 'ENG-07', '构建产物和消费边界稳定后再评估 Vite 迁移'],
+  ['ENG-05', 'AIDEV-01', 'AI 研发规格必须落入现有质量门禁'],
   ['ENG-06', 'DEPLOY-01', '部署交付需要发布、回滚和生产环境意识'],
   ['NET-01', 'LINUX-02', '端口、DNS、HTTP 与缓存排障依赖网络基础'],
   ['SEC-01', 'LINUX-04', '服务器安全是前端安全边界的生产延伸'],
@@ -110,6 +124,14 @@ const crossPrerequisites: Array<[string, string, string]> = [
   ['ENG-04', 'COMP-03', '组件版本治理依赖明确的构建产物与 exports'],
   ['NODE-03', 'MCP-01', 'MCP Server 首先是可维护的 Node 工具进程'],
   ['API-02', 'MCP-01', 'Tool Schema 与类型输出依赖规范化的接口模型'],
+  ['IDENTITY-01', 'IDENTITY-02', '理解浏览器会话边界后再接入 OAuth/OIDC'],
+  ['NET-01', 'RENDER-01', '渲染策略依赖 HTTP、缓存与导航基础'],
+  ['REACT-08', 'RENDER-02', '异步边界与 Suspense 是流式渲染的前置'],
+  ['NET-01', 'DATA-01', 'Server State 缓存建立在请求与缓存语义之上'],
+  ['DATA-01', 'DATA-02', '先掌握查询缓存，再处理乐观写入和冲突'],
+  ['NET-01', 'REALTIME-01', '实时协议需要 HTTP 与连接生命周期基础'],
+  ['REALTIME-01', 'COLLAB-01', '协作一致性建立在可靠消息与重连基础上'],
+  ['BROWSER-01', 'PWA-01', 'Service Worker 需要浏览器生命周期与存储基础'],
   ['AIAPP-04', 'AGENT-01', 'Agent Loop 通过工具调用把推理转成行动'],
   ['MCP-02', 'AGENT-02', 'Agent 使用 MCP 前必须理解工具契约与安全'],
   ['AIAPP-02', 'WEBAI-04', '本地推理同样需要流式与主线程并发控制'],
@@ -117,8 +139,22 @@ const crossPrerequisites: Array<[string, string, string]> = [
   ['ENG-05', 'AIDEV-03', 'AI 代码验证必须建立在已有质量门禁上'],
   ['TEST-03', 'AIDEV-03', 'AI 生成变更需要关键路径 E2E 兜底'],
   ['SEC-01', 'AIAPP-07', 'Prompt Injection 是不可信输入安全边界的延伸'],
+  ['PRIVACY-01', 'AIPROD-01', 'AI 产品选型必须先明确数据目的和隐私边界'],
+  ['AIPROD-01', 'AIAPP-01', '先验证 AI 任务价值，再进入模型应用实现'],
+  ['SEC-01', 'AISAFE-01', 'AI 输出安全建立在通用不可信输入输出边界上'],
+  ['AISAFE-01', 'AISAFE-02', '掌握防护链后再进行系统化红队'],
+  ['IDENTITY-02', 'AGENT-10', 'MCP OAuth 安全需要先掌握标准 OAuth/OIDC'],
   ['AGENT-10', 'AIDEV-10', '团队 AI 治理建立在最小权限和审计之上'],
+  ['AIGOV-01', 'AIDEV-10', '团队 AI 研发规范需要模型与数据治理基础'],
   ['WEB-01', 'VUE-11', 'SSR 应用仍必须保持语义、表单和可访问性基础'],
+  ['WEB-01', 'GRAPHICS-01', '图形系统仍需 HTML 语义与可访问替代基础'],
+  ['ANALYTICS-01', 'EXP-02', 'A/B 实验结论依赖稳定事件和指标口径'],
+  ['EXP-01', 'EXP-02', '实验分流依赖可治理且稳定的 Feature Flag'],
+  ['I18N-01', 'I18N-02', '先建立 locale 与文本方向，再处理时间数字格式'],
+  ['ARCH-01', 'ARCH-02', '架构评审需要明确质量属性与约束'],
+  ['ARCH-02', 'ARCH-03', '渐进迁移需要可追溯决策和退出条件'],
+  ['BACKEND-01', 'BACKEND-02', '异步任务状态设计依赖数据一致性基础'],
+  ['DOCKER-02', 'CLOUD-01', '编排平台学习需要容器网络与配置基础'],
 ];
 
 const relatedPairs: Array<[string, string, string]> = [
@@ -136,24 +172,19 @@ const relatedPairs: Array<[string, string, string]> = [
   ['AIDEV-09', 'DS-01', '设计稿到代码需要可计算的设计 Token'],
   ['DEPLOY-01', 'PERF-02', '静态资源缓存和 CDN 策略直接影响加载性能'],
   ['DOCKER-01', 'ENG-01', 'Dockerfile 构建同样需要理解模块产物和构建阶段'],
+  ['RENDER-01', 'VUE-11', 'Nuxt 与 React 服务端渲染共享通用渲染权衡'],
+  ['DATA-01', 'VUE-09', '不同框架的数据请求层共享 Server State 原理'],
+  ['REALTIME-01', 'AIAPP-02', '流式 AI UI 与实时传输共享断线恢复问题'],
+  ['ANALYTICS-01', 'OBS-01', '产品指标与技术可观测性共享数据质量治理'],
+  ['PRIVACY-01', 'AIAPP-06', 'RAG 数据进入模型前必须明确目的与留存边界'],
+  ['ARCH-03', 'ENG-07', '构建工具升级是渐进迁移方法的具体应用'],
+  ['BIZ-08', 'ENG-05', '可追踪验收标准与质量门禁需要互相校准'],
+  ['API-01', 'GQL-01', 'OpenAPI 与 GraphQL 都需要稳定的接口 Schema 契约'],
 ];
 
 export function buildRelationDefinitions(): RelationDefinition[] {
   const definitions: RelationDefinition[] = [];
-  for (const path of KNOWLEDGE_PATHS) {
-    for (let index = 0; index < path.length - 1; index++) {
-      const source = path[index];
-      const target = path[index + 1];
-      if (source && target) definitions.push({
-        source,
-        target,
-        type: 'PREREQUISITE',
-        description: `建议先掌握 ${source}，再学习 ${target}`,
-        weight: 8,
-      });
-    }
-  }
-  for (const [source, target, description] of crossPrerequisites) {
+  for (const [source, target, description] of explicitPrerequisites) {
     definitions.push({ source, target, type: 'PREREQUISITE', description, weight: 9 });
   }
   for (const [source, target, description] of relatedPairs) {

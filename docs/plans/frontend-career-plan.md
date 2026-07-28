@@ -2,7 +2,7 @@
 
 更新时间：2026-07-13  
 当前画像：5 年前端开发，负责 Web 端与 H5 端，公司常用技术栈为 React + UmiJS + Ant Design。  
-定位说明：这份文档是求职执行附录，服务于当前找工作阶段。长期成长主线请看[前端长期成长路线图](frontend-growth-roadmap.md)，至少 500 分钟/天定制执行计划请看[个人定制前端成长计划](personalized-frontend-mastery-plan.md)。
+定位说明：这份文档是求职执行附录，服务于当前找工作阶段。长期成长主线请看[前端长期成长路线图](frontend-growth-roadmap.md)，每日容量上限 390 分钟的定制执行计划请看[个人定制前端成长计划](personalized-frontend-mastery-plan.md)。
 
 ## 结论先行
 

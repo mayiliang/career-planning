@@ -1,28 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { LEARNING_WEEK_PATHS } from './plan.service.js';
+import { CONTENT_PLAN_WEEK_COUNT, LEARNING_WEEK_PATHS } from './plan.service.js';
 import { KNOWLEDGE_PATHS, buildRelationDefinitions } from './knowledge-relations.service.js';
 
-describe('知识关系与 23 周计划编排', () => {
-  it('前 18 个知识阶段恰好覆盖全部 153 个唯一知识点', () => {
+describe('知识关系与 48 周计划编排', () => {
+  it('前 44 周恰好覆盖全部 190 个唯一知识点', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
-      .filter(([week]) => Number(week) <= 18)
+      .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
       .flatMap(([, codes]) => codes);
 
-    expect(new Set(knowledgeCodes).size).toBe(153);
-    expect(new Set(plannedCodes).size).toBe(153);
+    expect(new Set(knowledgeCodes).size).toBe(190);
+    expect(new Set(plannedCodes).size).toBe(190);
     expect(new Set(plannedCodes)).toEqual(new Set(knowledgeCodes));
   });
 
-  it('每个领域除起点外都有明确的领域内前置知识', () => {
+  it('只把真实依赖建成硬前置，不把推荐阅读顺序机械转成前置', () => {
     const prerequisites = buildRelationDefinitions().filter((relation) => relation.type === 'PREREQUISITE');
     const relationKeys = new Set(prerequisites.map((relation) => `${relation.source}->${relation.target}`));
 
-    for (const path of KNOWLEDGE_PATHS) {
-      for (let index = 1; index < path.length; index++) {
-        expect(relationKeys.has(`${path[index - 1]}->${path[index]}`)).toBe(true);
-      }
-    }
+    expect(relationKeys.has('REACT-05->REACT-04')).toBe(true);
+    expect(relationKeys.has('REACT-04->REACT-05')).toBe(false);
+    expect(relationKeys.has('BIZ-03->UMI-04')).toBe(true);
+    expect(relationKeys.has('UMI-04->BIZ-03')).toBe(false);
+    expect(relationKeys.has('ENG-04->ENG-07')).toBe(true);
+    expect(relationKeys.has('AGENT-09->AGENT-10')).toBe(false);
   });
 
   it('关系定义没有重复且包含跨领域关联', () => {
@@ -35,14 +36,17 @@ describe('知识关系与 23 周计划编排', () => {
 
   it('所有跨周前置知识都排在依赖知识之前', () => {
     const weekByCode = new Map(Object.entries(LEARNING_WEEK_PATHS)
-      .filter(([week]) => Number(week) <= 18)
+      .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
       .flatMap(([week, codes]) => codes.map((code) => [code, Number(week)] as const)));
     for (const relation of buildRelationDefinitions().filter((item) => item.type === 'PREREQUISITE')) {
       const sourceWeek = weekByCode.get(relation.source);
       const targetWeek = weekByCode.get(relation.target);
       expect(sourceWeek).toBeDefined();
       expect(targetWeek).toBeDefined();
-      expect(sourceWeek!).toBeLessThanOrEqual(targetWeek!);
+      expect(
+        sourceWeek!,
+        `${relation.source}（第 ${sourceWeek} 周）必须早于 ${relation.target}（第 ${targetWeek} 周）`,
+      ).toBeLessThanOrEqual(targetWeek!);
     }
   });
 });

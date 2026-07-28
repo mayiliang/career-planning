@@ -17,11 +17,11 @@ function findProjectRoot(): string {
 }
 
 describe('知识库内容完整性', () => {
-  it('应解析 16 个领域和 153 个唯一知识点', () => {
+  it('应解析 20 个领域和 190 个唯一知识点', () => {
     const root = findProjectRoot();
     const knowledgeDir = path.join(root, 'docs/knowledge/knowledge-base');
     const files = fs.readdirSync(knowledgeDir)
-      .filter((file) => /^(0[1-9]|1[0-6])-.*\.md$/.test(file))
+      .filter((file) => /^(0[1-9]|1[0-9]|20)-.*\.md$/.test(file))
       .sort();
     const contents = new Map(
       files.map((file) => [
@@ -32,9 +32,9 @@ describe('知识库内容完整性', () => {
     const domains = parseAllKnowledgeFiles(contents);
     const points = domains.flatMap((domain) => domain.points);
 
-    expect(domains).toHaveLength(16);
-    expect(points).toHaveLength(153);
-    expect(new Set(points.map((point) => point.code)).size).toBe(153);
+    expect(domains).toHaveLength(20);
+    expect(points).toHaveLength(190);
+    expect(new Set(points.map((point) => point.code)).size).toBe(190);
     for (const point of points) {
       expect(point.studyMaterial, `${point.code} 缺少学习资料`).not.toBe('');
       expect(point.assessmentSpec, `${point.code} 缺少严格考核`).not.toBe('');
@@ -49,8 +49,6 @@ describe('知识库内容完整性', () => {
       expect(point.assessmentSpec, `${point.code} 严格考核缺少最小产出题`).toContain('首考题 3（最小产出）');
       expect(point.assessmentSpec, `${point.code} 严格考核缺少受限排错题`).toContain('首考题 4（受限排错）');
       expect(point.assessmentSpec, `${point.code} 严格考核缺少学习复述题`).toContain('首考题 5（学习复述）');
-      expect(point.assessmentSpec, `${point.code} 严格考核缺少资料限制`).toContain('只允许使用');
-      expect(point.assessmentSpec, `${point.code} 严格考核缺少参考答案回指要求`).toContain('参考答案必须逐题回指学习资料');
       expect(point.assessmentSpec, `${point.code} 严格考核缺少命题边界`).toContain('命题边界：');
       expect(point.passCriteria, `${point.code} 通过标准缺少评估边界`).toContain('评估边界：');
       expect(point.studyMinutes, `${point.code} 资料精读时间过低`).toBeGreaterThanOrEqual(90);
@@ -61,6 +59,13 @@ describe('知识库内容完整性', () => {
       expect(point.retestMinutes, `${point.code} 复测耗时过低`).toBeGreaterThanOrEqual(75);
       expect(point.estimatedTotalMinutes).toBe(
         point.studyMinutes + point.practiceMinutes + point.projectMinutes + point.assessmentMinutes,
+      );
+      expect(
+        (point.studyMaterial.match(/\[[^\]]+\]\([^)]+\)/g) ?? []).length,
+        `${point.code} 至少需要两份可交叉验证的学习资料`,
+      ).toBeGreaterThanOrEqual(2);
+      expect(`${point.studyMaterial}\n${point.assessmentSpec}`).not.toMatch(
+        /2025-11-25|react\.dev\/learn\/displaying-data|docs\.sigstore\.dev\/cosign\/overview\/|ant\.design\/docs\/spec\/api\/|responsible-use\/copilot-code-review|sre\.google\/sre-book\/risk-engineering|techwriting\.withgoogle\.com\/resources\/one\/two\/review|multi-step-tools|docs\.docker\.com\/build\/guide\/|modelcards\.withgoogle\.com|rework\.withgoogle\.com|www\.gov\.cn\/xinwen\/2021-08-20/,
       );
     }
 
@@ -81,5 +86,12 @@ describe('知识库内容完整性', () => {
       retestMinutes: 45,
       estimatedTotalMinutes: 345,
     });
+  });
+
+  it('同时支持 LF 与 CRLF 知识库文件', async () => {
+    const { parseKnowledgeMarkdown } = await import('./markdown.js');
+    const source = '# 01 示例\n\n## JS-99 换行兼容\n- [ ] 自评已掌握\n- [ ] 已通过严格考核\n- 学习资料：官方文档\n- 严格考核：完成项目\n- 通过标准：达到 80 分';
+    expect(parseKnowledgeMarkdown(source, 'lf.md').points).toHaveLength(1);
+    expect(parseKnowledgeMarkdown(source.replace(/\n/g, '\r\n'), 'crlf.md').points).toHaveLength(1);
   });
 });

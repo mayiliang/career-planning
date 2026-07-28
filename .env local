@@ -1,0 +1,18 @@
+# Career Atlas 开发环境
+
+# 本地服务配置
+HOST=127.0.0.1
+PORT=41730
+DATA_DIR=./data
+
+# AI 配置（未配置时可学习和答题，但不能执行 DeepSeek 自动评分）
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-d6b7e339b272477e9fe562a487f5d6a4
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_TIMEOUT_MS=120000
+
+# 开箱即用：启动时自动迁移、同步知识、首次生成计划，并每天备份
+AUTO_BOOTSTRAP=true
+AUTO_BACKUP=true
+AUTO_BACKUP_INTERVAL_HOURS=24

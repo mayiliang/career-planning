@@ -42,8 +42,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Dockerfile Reference](https://docs.docker.com/reference/dockerfile/)、[Docker Build Guide](https://docs.docker.com/build/guide/)、[Docker Build Cache](https://docs.docker.com/build/cache/)。覆盖范围：围绕「镜像、容器、Dockerfile 与构建缓存」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Dockerfile Reference》《Docker Build Guide》《Docker Build Cache》，分别摘出能支撑「镜像、容器、Dockerfile 与构建缓存」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「镜像、容器、Dockerfile 与构建缓存」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为一个前端应用编写多阶段 Dockerfile，完成依赖安装、构建、静态资源服务或 Node 服务运行；解释 layer、cache、`.dockerignore`、build args、环境变量和镜像体积优化；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[Dockerfile Reference](https://docs.docker.com/reference/dockerfile/)、[Docker Build](https://docs.docker.com/build/)、[Docker Build Cache](https://docs.docker.com/build/cache/)、[Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)。覆盖范围：镜像、容器、Dockerfile、BuildKit、构建上下文、缓存、多阶段构建、最小运行时和可重复制品。
+- 严格考核：首考题 1（资料定位）：只允许使用《Dockerfile Reference》《Docker Build》《Docker Build Cache》《Multi-stage Builds》，定位构建上下文、层、缓存和多阶段依据；首考题 2（机制解释）：解释 Dockerfile 指令如何形成可复用构建图和最终运行镜像；首考题 3（最小产出）：为一个前端应用编写多阶段 Dockerfile，完成依赖安装、构建、静态资源服务或 Node 服务运行；解释 cache、`.dockerignore`、build args、环境变量和镜像体积优化；首考题 4（受限排错）：处理缓存失效、密钥进入层、架构不匹配和运行时缺文件；首考题 5（学习复述）：说明构建参数与运行环境变量的边界。命题边界：必须以可重复构建和最小制品为依据。
 - 通过标准：镜像可从干净环境构建；构建缓存有效；不把 `.env`、密钥、node_modules 和无关文件打进镜像；最终镜像用户、端口、健康检查和启动命令明确。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 

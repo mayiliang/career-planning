@@ -4,7 +4,7 @@
  * Phase 1 实现：
  * - 解析 learning-tracker-template.csv
  * - 解析 hangzhou-frontend-jobs-template.csv
- * - 解析 daily-8h-learning-schedule.csv
+ * - 解析 daily-6h30m-learning-schedule.csv
  */
 import { parse } from 'csv-parse/sync';
 import type { ParsedPlanItem, ParsedJob } from '../types/index.js';

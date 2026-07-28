@@ -12,17 +12,9 @@ import { parseAllKnowledgeFiles } from '@career-atlas/content-parser';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 import { currentBeijingDate, planService } from './plan.service.js';
+import { projectRoot } from '../config/index.js';
 
-// 项目根目录
-function getProjectRoot(): string {
-  const cwd = process.cwd();
-  if (cwd.includes('/apps/server')) {
-    return path.resolve(cwd, '../..');
-  }
-  return cwd;
-}
-
-const PROJECT_ROOT = getProjectRoot();
+const PROJECT_ROOT = projectRoot;
 const KNOWLEDGE_BASE_DIR = 'docs/knowledge/knowledge-base';
 const LEARNING_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'templates', 'learning-tracker-template.csv');
 
@@ -287,7 +279,7 @@ export interface ResetLearningProgressResult {
 }
 
 /**
- * 清空学习进度并按最新版 23 周模板重建计划。
+ * 清空学习进度并按最新版 48 周模板重建计划。
  *
  * 保留知识内容、知识关系、岗位、项目、技能缺口和备份；只清除学习过程状态、
  * 考核证据、打卡复盘、请假顺延记录，以及模板/系统生成的学习计划。

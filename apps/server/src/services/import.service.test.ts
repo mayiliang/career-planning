@@ -119,15 +119,15 @@ describe('Import Service', () => {
     const checkinCount = rawDb.prepare('SELECT count(*) AS count FROM checkins').get() as { count: number };
     const assessmentCount = rawDb.prepare('SELECT count(*) AS count FROM assessment_sessions').get() as { count: number };
 
-    expect(result.syncedKnowledgePoints).toBe(153);
-    expect(result.resetKnowledgePoints).toBe(153);
+    expect(result.syncedKnowledgePoints).toBe(190);
+    expect(result.resetKnowledgePoints).toBe(190);
     expect(result.deletedTemplateEvents).toBe(1);
     expect(result.deletedCheckins).toBe(1);
     expect(result.deletedAssessmentSessions).toBe(1);
     expect(result.deletedMasteryEvents).toBe(1);
-    expect(result.importedPlanEvents).toBe(161);
+    expect(result.importedPlanEvents).toBe(336);
     expect(point).toEqual({ status: 'NOT_STARTED', summary: null, masteredAt: null });
-    expect(templateCount.count).toBe(161);
+    expect(templateCount.count).toBe(336);
     expect(userCount.count).toBe(1);
     expect(checkinCount.count).toBe(0);
     expect(assessmentCount.count).toBe(0);

@@ -51,7 +51,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MCP Architecture](https://modelcontextprotocol.io/docs/learn/architecture)、[MCP Server Concepts](https://modelcontextprotocol.io/docs/learn/server-concepts)、[MCP TypeScript SDK](https://ts.sdk.modelcontextprotocol.io/)、[MCP Transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)。覆盖范围：围绕「Server、Tool、Schema 与传输架构」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[MCP Architecture](https://modelcontextprotocol.io/docs/learn/architecture)、[MCP 2026-07-28 发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)、[MCP TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/)、[MCP HTTP Server](https://ts.sdk.modelcontextprotocol.io/v2/servers/http)。覆盖范围：无状态 Server、Tool、JSON Schema 2020-12、stdio/HTTP、显式业务状态、版本兼容与传输安全。
 - 严格考核：首考题 1（资料定位）：只允许使用《MCP Architecture》《MCP Server Concepts》《MCP TypeScript SDK》《MCP Transports》，分别摘出能支撑「Server、Tool、Schema 与传输架构」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Server、Tool、Schema 与传输架构」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计并实现一个只读查询工具；定义输入 schema、结构化输出、错误和能力边界；使用 MCP 客户端完成协议交互测试；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：工具描述使模型可正确选择；参数严格校验；无越权文件/网络访问；协议错误与业务错误可区分。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -69,7 +69,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[项目内 AI 工作流专题](../../topics/README.md)、[Google PAIR Guidebook](https://pair.withgoogle.com/guidebook/)、[GitHub Copilot Responsible Use](https://docs.github.com/en/copilot/responsible-use/copilot-code-review)、[Google Code Review Guide](https://google.github.io/eng-practices/review/)。覆盖范围：围绕「AI 辅助研发、验证与评估」的定义、机制、边界、反例和通过标准；真实需求、接口和代码评审记录只允许作为题目提供的输入材料。
+- 学习资料：[项目内 AI 工作流专题](../../topics/README.md)、[Google PAIR Guidebook](https://pair.withgoogle.com/guidebook/)、[GitHub Copilot Responsible Use](https://docs.github.com/en/copilot/responsible-use)、[Google Code Review Guide](https://google.github.io/eng-practices/review/)。覆盖范围：围绕「AI 辅助研发、验证与评估」的定义、机制、边界、反例和通过标准；真实需求、接口和代码评审记录只允许作为题目提供的输入材料。
 - 严格考核：首考题 1（资料定位）：只允许使用《项目内 AI 工作流专题》《Google PAIR Guidebook》《GitHub Copilot Responsible Use》《Google Code Review Guide》，分别摘出能支撑「AI 辅助研发、验证与评估」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「AI 辅助研发、验证与评估」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计“需求拆解→接口理解→实现→测试→审查”工作流；准备包含正常、边界和诱导错误的评估集；比较人工基线与 AI 流程；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：输出必须经编译、测试或人工证据验证；评估至少 20 个样例；能量化节省时间与新增错误；高风险步骤保留人工审批。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟

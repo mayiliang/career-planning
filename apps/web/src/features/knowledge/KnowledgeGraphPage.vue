@@ -212,7 +212,7 @@ function difficultyLabel(difficulty?: string) {
         </div>
 
         <button class="overview-button" :class="{ active: !expandedDomain }" @click="selectDomain(null)">
-          <span class="overview-mark">◎</span><span><strong>全局路径</strong><small>16 个领域的能力流向</small></span>
+          <span class="overview-mark">◎</span><span><strong>全局路径</strong><small>{{ domainStats?.length ?? 20 }} 个领域的能力流向</small></span>
         </button>
 
         <div class="domain-list" :aria-busy="domainsLoading">
