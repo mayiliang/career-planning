@@ -33,7 +33,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Umi Max Access](https://umijs.org/docs/max/access)、[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)、[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)、[React Conditional Rendering](https://react.dev/learn/conditional-rendering)。覆盖范围：围绕「页面、按钮与数据权限」的定义、机制、边界、反例和通过标准；权限与菜单配置必须由题目显式给出。
+- 学习资料：[Umi Max Access](https://umijs.org/docs/max/access)、[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)、[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)、[React Conditional Rendering](https://zh-hans.react.dev/learn/conditional-rendering)。覆盖范围：围绕「页面、按钮与数据权限」的定义、机制、边界、反例和通过标准；权限与菜单配置必须由题目显式给出。
 - 严格考核：首考题 1（资料定位）：只允许使用《Umi Max Access》《NIST RBAC》《OWASP Authorization Cheat Sheet》《React Conditional Rendering》，分别摘出能支撑「页面、按钮与数据权限」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「页面、按钮与数据权限」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现页面、按钮、字段和数据范围四层权限矩阵；构造直接访问 URL、伪造前端状态和权限刷新场景；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：前端负责体验、后端负责最终授权的边界明确；权限来源单一；无权限状态不闪现敏感内容。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -42,7 +42,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Ant Design Form](https://ant.design/components/form/)、[ProComponents Form](https://procomponents.ant.design/components/form)。覆盖范围：围绕「Form 数据流、联动与校验」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Ant Design Form](https://ant.design/components/form-cn/?locale=zh-CN)、[ProComponents Form](https://procomponents.ant.design/components/form)。覆盖范围：围绕「Form 数据流、联动与校验」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Ant Design Form》《ProComponents Form》，分别摘出能支撑「Form 数据流、联动与校验」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Form 数据流、联动与校验」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现动态数组、条件字段、异步校验、编辑回填、只读态和防重复提交；排查 `initialValues`、preserve 和联动失效问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：新建/编辑切换不串值；零值与空值显示正确；校验无竞态；提交参数与接口契约一致。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -51,7 +51,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Ant Design Table](https://ant.design/components/table/)、[ProTable](https://procomponents.ant.design/components/table)。覆盖范围：围绕「Table/ProTable 查询、分页与导出」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Ant Design Table](https://ant.design/components/table-cn/?locale=zh-CN)、[ProTable](https://procomponents.ant.design/components/table)。覆盖范围：围绕「Table/ProTable 查询、分页与导出」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Ant Design Table》《ProTable》，分别摘出能支撑「Table/ProTable 查询、分页与导出」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Table/ProTable 查询、分页与导出」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现服务端分页、排序、筛选、URL 同步、列权限、批量操作和异步导出；处理页码回退与请求竞态；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：查询条件与请求参数可追踪；刷新可恢复状态；导出遵循任务进度与下载流程；大数据量无明显卡顿。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -60,7 +60,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Ant Design Modal](https://ant.design/components/modal/)、[Drawer](https://ant.design/components/drawer/)、[Descriptions](https://ant.design/components/descriptions/)。覆盖范围：围绕「Modal、Drawer、详情与反馈」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Ant Design Modal](https://ant.design/components/modal-cn/?locale=zh-CN)、[Drawer](https://ant.design/components/drawer-cn/?locale=zh-CN)、[Descriptions](https://ant.design/components/descriptions-cn/?locale=zh-CN)。覆盖范围：围绕「Modal、Drawer、详情与反馈」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Ant Design Modal》《Drawer》《Descriptions》，分别摘出能支撑「Modal、Drawer、详情与反馈」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Modal、Drawer、详情与反馈」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现可复用详情/编辑容器；处理异步确认、关闭保护、焦点恢复、重复打开和过期数据；修复一个弹窗状态串联 Bug；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：生命周期稳定；危险操作有二次确认；关闭与重新打开状态正确；键盘和焦点行为合格。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟

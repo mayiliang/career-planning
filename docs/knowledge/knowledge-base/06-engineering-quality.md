@@ -6,7 +6,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[webpack Concepts](https://webpack.js.org/concepts/)、[Vite Guide](https://vite.dev/guide/)、[JavaScript Modules](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)。覆盖范围：围绕「模块图、构建流程与产物分析」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[webpack Concepts](https://webpack.js.org/concepts/)、[Vite Guide](https://cn.vite.dev/guide/)、[JavaScript Modules](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)。覆盖范围：围绕「模块图、构建流程与产物分析」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《webpack Concepts》《Vite Guide》《JavaScript Modules》，分别摘出能支撑「模块图、构建流程与产物分析」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「模块图、构建流程与产物分析」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：从入口追踪依赖图、loader/plugin 或转换插件、chunk 和运行时；手工解释一个构建产物；定位一次构建期与运行期差异；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：能从源码定位到产物；说清转译、打包、压缩、分包和运行时加载的区别；结论有产物证据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -15,7 +15,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Why Vite](https://vite.dev/guide/why.html)、[Vite Build](https://vite.dev/guide/build)、[Umi MFSU](https://umijs.org/docs/guides/mfsu)。覆盖范围：围绕「Vite/Webpack/Umi 开发与生产差异」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Why Vite](https://cn.vite.dev/guide/why.html)、[Vite Build](https://cn.vite.dev/guide/build)、[Umi MFSU](https://umijs.org/docs/guides/mfsu)。覆盖范围：围绕「Vite/Webpack/Umi 开发与生产差异」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Why Vite》《Vite Build》《Umi MFSU》，分别摘出能支撑「Vite/Webpack/Umi 开发与生产差异」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Vite/Webpack/Umi 开发与生产差异」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：比较开发服务器、HMR、预构建和生产打包；排查一个 dev 正常、build 失败或部署后 chunk 404 的问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：定位过程包含复现、最小化、日志与产物检查；修复兼顾 base、缓存和旧 chunk；不会用清缓存作为唯一解释。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -24,7 +24,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Vite 8 Announcement](https://vite.dev/blog/announcing-vite8)、[Vite Migration Guide](https://vite.dev/guide/migration)、[Rolldown Documentation](https://rolldown.rs/)、[Oxc Documentation](https://oxc.rs/)。覆盖范围：围绕「Vite 8、Rolldown/Oxc 与构建迁移」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Vite 8 Announcement](https://cn.vite.dev/blog/announcing-vite8)、[Vite Migration Guide](https://cn.vite.dev/guide/migration)、[Rolldown Documentation](https://rolldown.rs/)、[Oxc Documentation](https://oxc.rs/)。覆盖范围：围绕「Vite 8、Rolldown/Oxc 与构建迁移」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Vite 8 Announcement》《Vite Migration Guide》《Rolldown Documentation》《Oxc Documentation》，分别摘出能支撑「Vite 8、Rolldown/Oxc 与构建迁移」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Vite 8、Rolldown/Oxc 与构建迁移」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把一个有自定义插件、库模式和复杂分包的 Vite 项目迁移到 Vite 8；对比构建时长、峰值内存、chunk 与运行结果；修复至少一个 Rollup/Rolldown 兼容差异并写迁移 ADR；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：Node 与插件版本满足约束；冷启动、增量和生产构建均有基线；输出行为和 source map 可验证；没有以删除插件或关闭优化规避问题；能解释统一 Rust 工具链带来的收益、兼容成本和回退方案。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -33,7 +33,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[pnpm Workspaces](https://pnpm.io/workspaces)、[pnpm Dependency Types](https://pnpm.io/package_json)、[Semantic Versioning](https://semver.org/)。覆盖范围：围绕「包管理、lockfile 与 workspace」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[pnpm Workspaces](https://pnpm.node.org.cn/workspaces)、[pnpm Dependency Types](https://pnpm.node.org.cn/package_json)、[Semantic Versioning](https://semver.org/)。覆盖范围：围绕「包管理、lockfile 与 workspace」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《pnpm Workspaces》《pnpm Dependency Types》《Semantic Versioning》，分别摘出能支撑「包管理、lockfile 与 workspace」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「包管理、lockfile 与 workspace」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计多包 workspace；解释 dependencies/dev/peer/optional；解决幽灵依赖、peer 冲突和 lockfile 漂移；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：干净环境可重复安装；包边界与版本策略明确；不会通过删除 lockfile 隐藏根因。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -42,7 +42,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Node Packages](https://nodejs.org/api/packages.html)、[Vite Library Mode](https://vite.dev/guide/build.html#library-mode)、`aiui` 的 father 配置与产物。覆盖范围：围绕「组件库构建、CJS/ESM、types 与 exports」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Node Packages](https://nodejs.cn/api/packages.html)、[Vite Library Mode](https://cn.vite.dev/guide/build.html#library-mode)、`aiui` 的 father 配置与产物。覆盖范围：围绕「组件库构建、CJS/ESM、types 与 exports」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Node Packages》《Vite Library Mode》《`aiui` 的 father 配置与产物》，分别摘出能支撑「组件库构建、CJS/ESM、types 与 exports」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「组件库构建、CJS/ESM、types 与 exports」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：发布一个最小 TS 组件包，生成 ESM、CJS 和声明文件；配置 `exports`；在两种消费者环境验证；处理 CSS 与 peer 依赖；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：导入、类型、tree-shaking 和样式均可验证；React 不被重复打包；破坏性变更有版本策略。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -51,7 +51,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[ESLint Configure](https://eslint.org/docs/latest/use/configure/)、[TypeScript Compiler Options](https://www.typescriptlang.org/tsconfig/)、[lint-staged](https://github.com/lint-staged/lint-staged)、[Husky](https://typicode.github.io/husky/)。覆盖范围：围绕「lint、format、typecheck 与提交门禁」的定义、机制、边界、反例和通过标准；项目脚本必须由题目显式给出。
+- 学习资料：[ESLint Configure](https://eslint.org.cn/docs/latest/use/configure/)、[TypeScript Compiler Options](https://www.typescriptlang.org/zh/tsconfig/)、[lint-staged](https://github.com/lint-staged/lint-staged)、[Husky](https://typicode.github.io/husky/)。覆盖范围：围绕「lint、format、typecheck 与提交门禁」的定义、机制、边界、反例和通过标准；项目脚本必须由题目显式给出。
 - 严格考核：首考题 1（资料定位）：只允许使用《ESLint Configure》《TypeScript Compiler Options》《lint-staged》《Husky》，分别摘出能支撑「lint、format、typecheck 与提交门禁」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「lint、format、typecheck 与提交门禁」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为一个仓库设计本地与 CI 质量脚本；注入未使用变量、危险 Promise、类型错误和格式问题；验证门禁阻止合入；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：命令在干净环境可重复；规则有原因和例外机制；不会把所有问题自动忽略或降级为 warning。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -60,7 +60,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Vitest Writing Tests](https://vitest.dev/guide/learn/writing-tests)、[Node Test Runner](https://nodejs.org/api/test.html)。覆盖范围：围绕「单元测试、测试替身与覆盖边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Vitest Writing Tests](https://cn.vitest.dev/guide/learn/writing-tests)、[Node Test Runner](https://nodejs.cn/api/test.html)。覆盖范围：围绕「单元测试、测试替身与覆盖边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Vitest Writing Tests》《Node Test Runner》，分别摘出能支撑「单元测试、测试替身与覆盖边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「单元测试、测试替身与覆盖边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为解析、权限或状态转换纯函数设计等价类和边界测试；使用 fake/stub/mock 并解释取舍；完成一次变异测试式人工检查；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：测试能发现注入缺陷；不只追覆盖率；失败信息可读；时间、随机和外部依赖可控。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -69,7 +69,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Testing Library Queries](https://testing-library.com/docs/queries/about/)、[User Event](https://testing-library.com/docs/user-event/intro/)。覆盖范围：围绕「React 组件测试」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Testing Library Queries](https://testing-library.node.org.cn/docs/queries/about/)、[User Event](https://testing-library.node.org.cn/docs/user-event/intro/)。覆盖范围：围绕「React 组件测试」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Testing Library Queries》《User Event》，分别摘出能支撑「React 组件测试」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「React 组件测试」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为表单、异步列表或弹窗写基于用户行为的测试，覆盖成功、校验、加载、失败、重试和权限；禁止测试内部 state；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：优先使用可访问查询；异步断言稳定；测试重构组件内部实现后仍有效；至少能发现两个故意植入的缺陷。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -78,7 +78,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Playwright Introduction](https://playwright.dev/docs/intro)、[Best Practices](https://playwright.dev/docs/best-practices)。覆盖范围：围绕「E2E、关键路径与测试隔离」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Playwright Introduction](https://playwright.nodejs.cn/docs/intro)、[Best Practices](https://playwright.nodejs.cn/docs/best-practices)。覆盖范围：围绕「E2E、关键路径与测试隔离」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Playwright Introduction》《Best Practices》，分别摘出能支撑「E2E、关键路径与测试隔离」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「E2E、关键路径与测试隔离」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现登录、查询、编辑、提交和结果验证的 E2E；处理鉴权状态、网络模拟、数据隔离、失败截图和重试；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：连续运行 10 次无随机失败；测试不依赖执行顺序；失败可定位；不使用任意固定 sleep。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -87,7 +87,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[GitHub Actions](https://docs.github.com/actions)、[web.dev Monitoring](https://web.dev/articles/vitals-field-measurement-best-practices)、现有部署与监控流程。覆盖范围：围绕「CI/CD、发布、监控与回滚」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[GitHub Actions](https://docs.github.com/zh/actions)、[web.dev Monitoring](https://web.dev/articles/vitals-field-measurement-best-practices?hl=zh-cn)、现有部署与监控流程。覆盖范围：围绕「CI/CD、发布、监控与回滚」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《GitHub Actions》《web.dev Monitoring》《现有部署与监控流程》，分别摘出能支撑「CI/CD、发布、监控与回滚」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「CI/CD、发布、监控与回滚」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计从 PR 到生产的流水线，包含缓存、检查、构建、制品、环境、灰度、告警与回滚；演练错误版本和旧 chunk 问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：同一制品逐环境晋级；密钥不进入构建产物；回滚有时间目标与验证；发布结果可观测。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -96,8 +96,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OWASP Top 10 2025 - Software Supply Chain Failures](https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/)、[SLSA](https://slsa.dev/spec/v1.2/)、[CycloneDX](https://cyclonedx.org/docs/1.6/json/)、[Sigstore Cosign](https://docs.sigstore.dev/cosign/signing/overview/)。覆盖范围：围绕「软件供应链、SBOM 与制品可信」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《OWASP Top 10 2025 - Software Supply Chain Failures》《SLSA》《CycloneDX》《Sigstore Cosign》，分别摘出能支撑「软件供应链、SBOM 与制品可信」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「软件供应链、SBOM 与制品可信」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为 pnpm workspace 建立锁定安装、依赖审计、SBOM、构建来源证明、制品签名和分阶段发布；注入恶意生命周期脚本、依赖混淆和被替换制品并验证门禁；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#eng-08)、[OWASP Top 10 2025 - Software Supply Chain Failures](https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/)、[SLSA](https://slsa.dev/spec/v1.2/)、[CycloneDX](https://cyclonedx.org/docs/1.6/json/)、[Sigstore Cosign](https://docs.sigstore.dev/cosign/signing/overview/)。覆盖范围：围绕「软件供应链、SBOM 与制品可信」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《OWASP Top 10 2025 - Software Supply Chain Failures》《SLSA》《CycloneDX》《Sigstore Cosign》，分别摘出能支撑「软件供应链、SBOM 与制品可信」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「软件供应链、SBOM 与制品可信」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为 pnpm workspace 建立锁定安装、依赖审计、SBOM、构建来源证明、制品签名和分阶段发布；注入恶意生命周期脚本、依赖混淆和被替换制品并验证门禁；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：构建可重复且依赖来源可追踪；生产只部署已验证签名的同一制品；高风险依赖有处置 SLA 和例外审计；攻击样例至少被两层控制阻止；能说明漏洞扫描不等于供应链安全。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
 
@@ -105,7 +105,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/)、[OpenTelemetry Browser](https://opentelemetry.io/docs/languages/js/getting-started/browser/)、[web-vitals](https://github.com/GoogleChrome/web-vitals)、[MDN Performance APIs](https://developer.mozilla.org/en-US/docs/Web/API/Performance_API)。覆盖范围：围绕「前端 RUM、OpenTelemetry 与隐私边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[OpenTelemetry JavaScript](https://opentelemetry.io/zh/docs/languages/js/)、[OpenTelemetry Browser](https://opentelemetry.io/zh/docs/languages/js/getting-started/browser/)、[web-vitals](https://github.com/GoogleChrome/web-vitals)、[MDN Performance APIs](https://developer.mozilla.org/zh-CN/docs/Web/API/Performance_API)。覆盖范围：围绕「前端 RUM、OpenTelemetry 与隐私边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《OpenTelemetry JavaScript》《OpenTelemetry Browser》《web-vitals》《MDN Performance APIs》，分别摘出能支撑「前端 RUM、OpenTelemetry 与隐私边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「前端 RUM、OpenTelemetry 与隐私边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为关键学习流程接入错误、Web Vitals、资源、请求和用户操作链路，建立 trace/span/metric 关联与版本维度；模拟白屏、慢接口和 chunk 加载失败；制定采样、脱敏和数据保留策略；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：从告警可定位到版本、路由和失败环节；不采集答案、密钥和个人敏感数据；采样与上报开销有测量；浏览器实验性能力有隔离和回退；能用一次故障演练证明监控真正支持发现、定位、恢复和复盘。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟

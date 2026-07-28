@@ -6,7 +6,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[web.dev Performance](https://web.dev/performance/)、[Core Web Vitals](https://web.dev/articles/vitals)、[Lighthouse Performance](https://developer.chrome.com/docs/lighthouse/performance/)。覆盖范围：围绕「Core Web Vitals 与性能预算」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[web.dev Performance](https://web.dev/performance/?hl=zh-cn)、[Core Web Vitals](https://web.dev/articles/vitals?hl=zh-cn)、[Lighthouse Performance](https://developer.chrome.com/docs/lighthouse/performance/?hl=zh-cn)。覆盖范围：围绕「Core Web Vitals 与性能预算」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《web.dev Performance》《Core Web Vitals》《Lighthouse Performance》，分别摘出能支撑「Core Web Vitals 与性能预算」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Core Web Vitals 与性能预算」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：解释 LCP、INP、CLS 的测量与归因；为一个真实页面建立性能预算；比较实验室数据和真实用户数据；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：指标解释无混淆；预算包含基线、目标、设备与网络条件；能指出平均值掩盖长尾的问题。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -15,7 +15,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Network Reference](https://developer.chrome.com/docs/devtools/network/reference/)、[HTTP Caching](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Caching)、[Resource Hints](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Attributes/rel/preload)。覆盖范围：围绕「Network、资源加载与缓存优化」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Chrome Network Reference](https://developer.chrome.com/docs/devtools/network/reference/?hl=zh-cn)、[HTTP Caching](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Caching)、[Resource Hints](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Attributes/rel/preload)。覆盖范围：围绕「Network、资源加载与缓存优化」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Chrome Network Reference》《HTTP Caching》《Resource Hints》，分别摘出能支撑「Network、资源加载与缓存优化」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Network、资源加载与缓存优化」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：分析请求瀑布流、关键资源、缓存、压缩、图片和第三方脚本；提出并实施 3 项优化；对比前后数据；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：至少改善一个加载指标 20% 或用证据否定无效优化；缓存与预加载不造成重复下载或版本错乱。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -24,7 +24,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Performance](https://developer.chrome.com/docs/devtools/performance/)、[Rendering Performance](https://web.dev/articles/rendering-performance)、[Long Tasks API](https://developer.mozilla.org/zh-CN/docs/Web/API/PerformanceLongTaskTiming)。覆盖范围：围绕「主线程、渲染、长任务与交互响应」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Chrome Performance](https://developer.chrome.com/docs/devtools/performance/?hl=zh-cn)、[Rendering Performance](https://web.dev/articles/rendering-performance?hl=zh-cn)、[Long Tasks API](https://developer.mozilla.org/zh-CN/docs/Web/API/PerformanceLongTaskTiming)。覆盖范围：围绕「主线程、渲染、长任务与交互响应」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Chrome Performance》《Rendering Performance》《Long Tasks API》，分别摘出能支撑「主线程、渲染、长任务与交互响应」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「主线程、渲染、长任务与交互响应」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：录制一次卡顿操作；从 flame chart 定位脚本、布局或绘制瓶颈；通过分片、减少布局或 worker 优化；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：结论可由 trace 复核；优化不改变业务正确性；INP 或长任务时长达到题目目标。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -33,7 +33,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Memory Problems](https://developer.chrome.com/docs/devtools/memory-problems/)、[MDN Memory Management](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Memory_management)。覆盖范围：围绕「内存、监听器与资源泄漏」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Chrome Memory Problems](https://developer.chrome.com/docs/devtools/memory-problems/?hl=zh-cn)、[MDN Memory Management](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Memory_management)。覆盖范围：围绕「内存、监听器与资源泄漏」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Chrome Memory Problems》《MDN Memory Management》，分别摘出能支撑「内存、监听器与资源泄漏」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「内存、监听器与资源泄漏」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：在反复打开页面/弹窗/播放器后拍摄 heap snapshot；定位 detached DOM、未清理监听器或大对象保留；修复并复测；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：能从 retaining path 证明根因；重复操作后的堆增长稳定；不会只用强制 GC 掩盖泄漏。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
@@ -78,7 +78,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[WCAG Overview](https://www.w3.org/WAI/standards-guidelines/wcag/)、[Lighthouse Accessibility](https://developer.chrome.com/docs/lighthouse/accessibility/)。覆盖范围：围绕「可访问性与体验质量」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[WCAG Overview](https://www.w3.org/WAI/standards-guidelines/wcag/)、[Lighthouse Accessibility](https://developer.chrome.com/docs/lighthouse/accessibility/?hl=zh-cn)。覆盖范围：围绕「可访问性与体验质量」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《WCAG Overview》《Lighthouse Accessibility》，分别摘出能支撑「可访问性与体验质量」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「可访问性与体验质量」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：对一个 Web/H5 页面做键盘、对比度、语义、动态通知和缩放审计；修复全部严重问题；用自动工具加人工验证；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：Lighthouse 不存在严重问题；核心路径键盘可完成；焦点与读屏通知合理；不能只凭自动分数通过。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟

@@ -51,8 +51,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN JavaScript 模块](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)、[Node.js ESM](https://nodejs.org/api/esm.html)。覆盖范围：围绕「ES Modules 与模块边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN JavaScript 模块》《Node.js ESM》，分别摘出能支撑「ES Modules 与模块边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「ES Modules 与模块边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：解释静态依赖、live binding、循环依赖和动态导入；重构一个循环依赖示例；设计浏览器应用与组件包的导出边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文｜MDN JavaScript 模块](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)、[中文｜Node.js ECMAScript 模块](https://nodejs.cn/api/esm.html)。覆盖范围：浏览器与 Node.js 中 ESM 的静态结构、live binding、动态导入、循环依赖、强制扩展名、`package.json` 的 `type`/`exports`、ESM 与 CommonJS 互操作及模块边界设计；两份资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文｜MDN JavaScript 模块》《中文｜Node.js ECMAScript 模块》，分别摘出能支撑「ES Modules 与模块边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「ES Modules 与模块边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：解释静态依赖、live binding、循环依赖和动态导入；重构一个循环依赖示例；设计浏览器应用与组件包的导出边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：可独立定位循环依赖初始化问题；能说清 ESM/CJS 互操作风险、tree-shaking 前提和 `exports` 字段作用。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -78,7 +78,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Baseline 2026](https://web.dev/baseline/2026)、[MDN Container Queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_containment/Container_queries)、[MDN Cascade Layers](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer)、[CSS Color Module Level 5](https://www.w3.org/TR/css-color-5/)。覆盖范围：围绕「现代 CSS 架构、容器查询与设计令牌」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Baseline 2026](https://web.dev/baseline/2026?hl=zh-cn)、[MDN Container Queries](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_containment/Container_queries)、[MDN Cascade Layers](https://developer.mozilla.org/zh-CN/docs/Web/CSS/@layer)、[CSS Color Module Level 5](https://www.w3.org/TR/css-color-5/)。覆盖范围：围绕「现代 CSS 架构、容器查询与设计令牌」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Baseline 2026》《MDN Container Queries》《MDN Cascade Layers》《CSS Color Module Level 5》，分别摘出能支撑「现代 CSS 架构、容器查询与设计令牌」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「现代 CSS 架构、容器查询与设计令牌」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：90 分钟把一个依赖页面断点和全局覆盖的组件重构为容器查询、级联层、逻辑属性和设计令牌驱动；建立 Baseline 与降级矩阵；现场解释嵌套、`@scope`、`color-mix()` 和相对颜色的浏览器边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：组件放入 3 种容器均可用；层叠顺序可预测且无 `!important`；令牌覆盖颜色、间距、圆角和状态；不支持特性时核心任务仍可完成；提交 320px、768px、1440px 的视觉回归证据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -87,8 +87,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[WCAG 2.2](https://www.w3.org/TR/WCAG22/)、[WCAG 2.2 新增成功准则](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/)、[ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)、[Accessibility Insights](https://accessibilityinsights.io/docs/web/overview/)。覆盖范围：围绕「WCAG 2.2、键盘交互与无障碍测试」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《WCAG 2.2》《WCAG 2.2 新增成功准则》《ARIA Authoring Practices》《Accessibility Insights》，分别摘出能支撑「WCAG 2.2、键盘交互与无障碍测试」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WCAG 2.2、键盘交互与无障碍测试」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：审计并修复一个含命令面板、拖拽、表单错误和粘性导航的页面；只用键盘和屏幕阅读器完成关键路径；解释 Focus Not Obscured、Target Size、Dragging Movements 和 Accessible Authentication；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#a11y-01)、[WCAG 2.2](https://www.w3.org/TR/WCAG22/)、[WCAG 2.2 新增成功准则](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/)、[ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)、[Accessibility Insights](https://accessibilityinsights.io/docs/web/overview/)。覆盖范围：围绕「WCAG 2.2、键盘交互与无障碍测试」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《WCAG 2.2》《WCAG 2.2 新增成功准则》《ARIA Authoring Practices》《Accessibility Insights》，分别摘出能支撑「WCAG 2.2、键盘交互与无障碍测试」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WCAG 2.2、键盘交互与无障碍测试」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：审计并修复一个含命令面板、拖拽、表单错误和粘性导航的页面；只用键盘和屏幕阅读器完成关键路径；解释 Focus Not Obscured、Target Size、Dragging Movements 和 Accessible Authentication；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：关键流程满足 WCAG 2.2 AA；焦点可见且不被遮挡；拖拽有等价操作；动态状态可被辅助技术感知；自动扫描无严重问题并附人工测试记录，不能只以 Lighthouse 分数作为通过证据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
 
@@ -105,7 +105,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Baseline](https://web.dev/baseline/)、[Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API)、[View Transition API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API)、[Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API)。覆盖范围：围绕「原生分层 UI、视图过渡与渐进增强」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Baseline](https://web.dev/baseline/?hl=zh-cn)、[Popover API](https://developer.mozilla.org/zh-CN/docs/Web/API/Popover_API)、[View Transition API](https://developer.mozilla.org/zh-CN/docs/Web/API/View_Transition_API)、[Navigation API](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigation_API)。覆盖范围：围绕「原生分层 UI、视图过渡与渐进增强」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Baseline》《Popover API》《View Transition API》《Navigation API》，分别摘出能支撑「原生分层 UI、视图过渡与渐进增强」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「原生分层 UI、视图过渡与渐进增强」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：不用第三方弹层库实现菜单、命令面板和模态流程，正确组合 `popover`、`dialog`、top layer、`inert` 与焦点恢复；为列表到详情增加同文档/跨文档 View Transition；用特性检测封装 Navigation API 增强层；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：Escape、外部点击、焦点圈定与返回焦点行为正确；动画关闭后功能不受影响；旧浏览器走可用降级路径；无重复历史记录、焦点丢失或不可操作背景；能解释原生能力与框架路由的职责边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -132,7 +132,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN CSP 指南](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP)、[Trusted Types API](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)、[CSP 实施指南](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/CSP)。覆盖范围：围绕「CSP、Trusted Types 与安全违规报告」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[MDN CSP 指南](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/CSP)、[Trusted Types API](https://developer.mozilla.org/zh-CN/docs/Web/API/Trusted_Types_API)、[CSP 实施指南](https://developer.mozilla.org/zh-CN/docs/Web/Security/Practical_implementation_guides/CSP)。覆盖范围：围绕「CSP、Trusted Types 与安全违规报告」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《MDN CSP 指南》《Trusted Types API》《CSP 实施指南》，分别摘出能支撑「CSP、Trusted Types 与安全违规报告」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「CSP、Trusted Types 与安全违规报告」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为含第三方 SDK、Markdown 和动态脚本的应用从 Report-Only 推进到强制 CSP；接入 Trusted Types 策略和违规上报；通过攻击样例验证 DOM XSS、内联脚本和未知源被阻止；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：策略不依赖广泛 `unsafe-inline`/`unsafe-eval`；合法业务路径无误报；违规报告可定位到版本和页面；注入测试失败且错误可观测；能说明 CSP 是纵深防御而不是输入输出编码的替代品。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟
@@ -141,7 +141,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[WebAuthn Level 3](https://www.w3.org/TR/webauthn-3/)、[MDN Web Authentication API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API)、[web.dev Passkeys](https://web.dev/articles/passkey-registration)。覆盖范围：围绕「WebAuthn、Passkey 与安全认证体验」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[WebAuthn Level 3](https://www.w3.org/TR/webauthn-3/)、[MDN Web Authentication API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Authentication_API)、[web.dev Passkeys](https://web.dev/articles/passkey-registration?hl=zh-cn)。覆盖范围：围绕「WebAuthn、Passkey 与安全认证体验」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《WebAuthn Level 3》《MDN Web Authentication API》《web.dev Passkeys》，分别摘出能支撑「WebAuthn、Passkey 与安全认证体验」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WebAuthn、Passkey 与安全认证体验」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计并实现注册、登录、条件式 UI、取消、设备不可用和账号恢复流程；画出 challenge、RP、origin、credential 与服务端验证边界；完成重放、钓鱼域名和降级路径的威胁建模；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：challenge 一次性且由服务端校验；前端不把成功 UI 当成认证结果；错误提示不泄露账号状态；无 Passkey 环境仍有安全恢复路径；能在高级面试中解释公钥凭证为何降低钓鱼和凭证填充风险。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟

@@ -15,8 +15,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700)、[OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)。覆盖范围：授权码、PKCE、state/nonce、issuer/audience、发现、刷新、Scope、资源服务器和账号绑定。
-- 严格考核：首考题 1（资料定位）：定位 OAuth 安全建议和 OIDC 身份声明；首考题 2（机制解释）：画出浏览器、客户端、授权服务器和资源服务器交互；首考题 3（最小产出）：实现带 PKCE 的登录并验证 ID Token；首考题 4（受限排错）：处理 mix-up、重定向劫持、nonce 重放和错误 audience；首考题 5（学习复述）：说明 OAuth 授权与 OIDC 认证的区别。命题边界：不得自行发明协议流程。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#identity-02)、[OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700)、[OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)。覆盖范围：授权码、PKCE、state/nonce、issuer/audience、发现、刷新、Scope、资源服务器和账号绑定。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 OAuth 安全建议和 OIDC 身份声明；首考题 2（机制解释）：画出浏览器、客户端、授权服务器和资源服务器交互；首考题 3（最小产出）：实现带 PKCE 的登录并验证 ID Token；首考题 4（受限排错）：处理 mix-up、重定向劫持、nonce 重放和错误 audience；首考题 5（学习复述）：说明 OAuth 授权与 OIDC 认证的区别。命题边界：不得自行发明协议流程。
 - 通过标准：只用授权码+PKCE；严格校验 issuer/audience/state/nonce；Scope 最小化；失败不泄漏凭证。评估边界：第三方 SDK 返回成功不代表协议验证正确。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -24,8 +24,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/)、[NIST Privacy Framework](https://www.nist.gov/privacy-framework)。覆盖范围：目的限制、数据最小化、同意、透明度、留存、删除、导出、访问控制和第三方处理。
-- 严格考核：首考题 1（资料定位）：定位隐私设计原则；首考题 2（机制解释）：解释数据从收集到删除的生命周期；首考题 3（最小产出）：为 AI 对话功能制作数据清单、同意流和留存策略；首考题 4（受限排错）：发现过度采集、无法删除和第三方泄漏；首考题 5（学习复述）：说明隐私与安全的区别。命题边界：不得把隐私政策勾选框当作全部合规。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#privacy-01)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/)、[NIST Privacy Framework](https://www.nist.gov/privacy-framework)。覆盖范围：目的限制、数据最小化、同意、透明度、留存、删除、导出、访问控制和第三方处理。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位隐私设计原则；首考题 2（机制解释）：解释数据从收集到删除的生命周期；首考题 3（最小产出）：为 AI 对话功能制作数据清单、同意流和留存策略；首考题 4（受限排错）：发现过度采集、无法删除和第三方泄漏；首考题 5（学习复述）：说明隐私与安全的区别。命题边界：不得把隐私政策勾选框当作全部合规。
 - 通过标准：每项数据有目的、期限和负责人；拒绝非必要采集不阻断核心功能；删除可传播到缓存和派生数据。评估边界：法律结论必须交由专业人员确认。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -42,8 +42,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Google PAIR Guidebook](https://pair.withgoogle.com/guidebook-v2/)、[NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework)。覆盖范围：任务适配、用户价值、模型能力、延迟、成本、隐私、可解释性、基线和不采用 AI 的方案。
-- 严格考核：首考题 1（资料定位）：定位以人为本和风险管理原则；首考题 2（机制解释）：解释任务、数据、模型、体验和指标之间的关系；首考题 3（最小产出）：对三个需求完成 AI/规则/搜索方案选择；首考题 4（受限排错）：识别“为了 AI 而 AI”、代理指标和不可验证目标；首考题 5（学习复述）：说明何时应删除 AI 功能。命题边界：模型榜单不能替代真实任务评估。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#aiprod-01)、[Google PAIR Guidebook](https://pair.withgoogle.com/guidebook-v2/)、[NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework)。覆盖范围：任务适配、用户价值、模型能力、延迟、成本、隐私、可解释性、基线和不采用 AI 的方案。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位以人为本和风险管理原则；首考题 2（机制解释）：解释任务、数据、模型、体验和指标之间的关系；首考题 3（最小产出）：对三个需求完成 AI/规则/搜索方案选择；首考题 4（受限排错）：识别“为了 AI 而 AI”、代理指标和不可验证目标；首考题 5（学习复述）：说明何时应删除 AI 功能。命题边界：模型榜单不能替代真实任务评估。
 - 通过标准：存在非 AI 基线；成功/失败指标明确；成本、延迟和风险预算量化；高风险任务有人类兜底。评估边界：Demo 惊艳不等于产品价值成立。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -51,8 +51,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Google PAIR Explainability + Trust](https://pair.withgoogle.com/guidebook-v2/chapter/explainability-trust/)、[MCP Elicitation](https://modelcontextprotocol.io/docs/learn/client-concepts#elicitation)。覆盖范围：置信与不确定性表达、引用、可撤销、高风险确认、人工接管、拒绝、恢复和用户反馈。
-- 严格考核：首考题 1（资料定位）：定位透明度和用户确认原则；首考题 2（机制解释）：解释模型失败如何转化为产品状态；首考题 3（最小产出）：设计包含生成、校验、确认、撤销和申诉的流程；首考题 4（受限排错）：处理假引用、过度自信和确认疲劳；首考题 5（学习复述）：区分“显示免责声明”和真正可恢复体验。命题边界：不允许用虚构概率冒充模型置信度。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#aiprod-02)、[Google PAIR Explainability + Trust](https://pair.withgoogle.com/guidebook-v2/chapter/explainability-trust/)、[MCP Elicitation](https://modelcontextprotocol.io/docs/learn/client-concepts#elicitation)。覆盖范围：置信与不确定性表达、引用、可撤销、高风险确认、人工接管、拒绝、恢复和用户反馈。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位透明度和用户确认原则；首考题 2（机制解释）：解释模型失败如何转化为产品状态；首考题 3（最小产出）：设计包含生成、校验、确认、撤销和申诉的流程；首考题 4（受限排错）：处理假引用、过度自信和确认疲劳；首考题 5（学习复述）：区分“显示免责声明”和真正可恢复体验。命题边界：不允许用虚构概率冒充模型置信度。
 - 通过标准：关键事实可核验；高风险动作默认不自动执行；用户能中止、编辑和恢复；失败原因不泄密且可行动。评估边界：聊天式界面本身不代表良好 AI UX。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -60,8 +60,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OWASP LLM Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/)、[NIST AI RMF Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)。覆盖范围：结构校验、编码、引用验证、内容分级、PII、拒绝、人工升级和误拦截。
-- 严格考核：首考题 1（资料定位）：定位输出处理和生成式 AI 风险；首考题 2（机制解释）：解释模型输出成为代码、HTML 或工具参数前的信任边界；首考题 3（最小产出）：实现结构、链接、HTML 和敏感内容校验层；首考题 4（受限排错）：注入 XSS、危险 URL、越权指令和误报；首考题 5（学习复述）：说明 Guardrail 为何不是单个分类器。命题边界：模型自检不能作为唯一安全控制。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#aisafe-01)、[OWASP LLM Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/)、[NIST AI RMF Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)。覆盖范围：结构校验、编码、引用验证、内容分级、PII、拒绝、人工升级和误拦截。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位输出处理和生成式 AI 风险；首考题 2（机制解释）：解释模型输出成为代码、HTML 或工具参数前的信任边界；首考题 3（最小产出）：实现结构、链接、HTML 和敏感内容校验层；首考题 4（受限排错）：注入 XSS、危险 URL、越权指令和误报；首考题 5（学习复述）：说明 Guardrail 为何不是单个分类器。命题边界：模型自检不能作为唯一安全控制。
 - 通过标准：输出按最终解释器编码；危险动作二次授权；校验失败安全降级；误报漏报有评估集。评估边界：只屏蔽关键词不足以通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -69,8 +69,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OWASP GenAI Security Project](https://genai.owasp.org/)、[MITRE ATLAS](https://atlas.mitre.org/)。覆盖范围：Prompt Injection、数据投毒、模型窃取、资源耗尽、工具滥用、供应链、红队用例和纵深防御。
-- 严格考核：首考题 1（资料定位）：定位主要威胁分类与攻击技术；首考题 2（机制解释）：画出资产、信任边界、攻击面和控制；首考题 3（最小产出）：为 RAG Agent 建立威胁模型和红队集；首考题 4（受限排错）：测试间接注入、越权工具、敏感数据回显和成本攻击；首考题 5（学习复述）：区分安全测试与模型质量评估。命题边界：红队操作只针对授权环境。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#aisafe-02)、[OWASP GenAI Security Project](https://genai.owasp.org/)、[MITRE ATLAS](https://atlas.mitre.org/)。覆盖范围：Prompt Injection、数据投毒、模型窃取、资源耗尽、工具滥用、供应链、红队用例和纵深防御。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位主要威胁分类与攻击技术；首考题 2（机制解释）：画出资产、信任边界、攻击面和控制；首考题 3（最小产出）：为 RAG Agent 建立威胁模型和红队集；首考题 4（受限排错）：测试间接注入、越权工具、敏感数据回显和成本攻击；首考题 5（学习复述）：区分安全测试与模型质量评估。命题边界：红队操作只针对授权环境。
 - 通过标准：覆盖输入、检索、模型、工具和输出；控制可测试；高风险失败默认关闭；残余风险有负责人。评估边界：列举 OWASP 名称不等于完成威胁建模。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -78,8 +78,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[NIST AI RMF Playbook](https://airc.nist.gov/airmf-resources/playbook/)、[Google DeepMind Model Cards](https://deepmind.google/models/model-cards/)。覆盖范围：数据来源、许可、模型卡、版本、评估闸门、审计日志、责任人、事故响应和下线。
-- 严格考核：首考题 1（资料定位）：定位治理职能和模型透明度信息；首考题 2（机制解释）：解释模型/Prompt/数据变更如何进入生产；首考题 3（最小产出）：制作 AI 功能登记表、变更闸门和回滚流程；首考题 4（受限排错）：处理无来源数据、静默换模和审计缺口；首考题 5（学习复述）：说明治理如何服务交付而非只增加审批。命题边界：治理强度必须按风险分级。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#aigov-01)、[NIST AI RMF Playbook](https://airc.nist.gov/airmf-resources/playbook/)、[Google DeepMind Model Cards](https://deepmind.google/models/model-cards/)。覆盖范围：数据来源、许可、模型卡、版本、评估闸门、审计日志、责任人、事故响应和下线。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位治理职能和模型透明度信息；首考题 2（机制解释）：解释模型/Prompt/数据变更如何进入生产；首考题 3（最小产出）：制作 AI 功能登记表、变更闸门和回滚流程；首考题 4（受限排错）：处理无来源数据、静默换模和审计缺口；首考题 5（学习复述）：说明治理如何服务交付而非只增加审批。命题边界：治理强度必须按风险分级。
 - 通过标准：每项 AI 能力有 owner、版本、用途和评估；变更可追溯可回滚；事故可通知和停用；供应商变化有复验。评估边界：只有原则文档而无执行证据不能通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 

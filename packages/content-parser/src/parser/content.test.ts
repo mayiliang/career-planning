@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseAllKnowledgeFiles } from './markdown.js';
 
+const CHINESE_RESOURCE_PATTERN =
+  /\[[^\]]+\]\((?:\.\.\/chinese-guides\/|https?:\/\/[^)]*(?:\/zh-CN\/|\/zh-cn\/|\/zh_cn\/|\/zh\/|zh-hans\.|cn\.vuejs\.org|cn\.vite\.dev|cn\.vitest\.dev|nodejs\.cn|node\.org\.cn|playwright\.nodejs\.cn|testing-library\.node\.org\.cn|eslint\.org\.cn|nuxt\.com\.cn|hl=zh-cn|umijs\.org|ant\.design|developer\.work\.weixin\.qq\.com|open\.dingtalk\.com|\.cn\/))[^)]*\)/i;
+
 function findProjectRoot(): string {
   let current = process.cwd();
 
@@ -64,6 +67,10 @@ describe('知识库内容完整性', () => {
         (point.studyMaterial.match(/\[[^\]]+\]\([^)]+\)/g) ?? []).length,
         `${point.code} 至少需要两份可交叉验证的学习资料`,
       ).toBeGreaterThanOrEqual(2);
+      expect(
+        point.studyMaterial,
+        `${point.code} 至少需要一份中文主资料；无稳定中文版时应链接项目内中文核心讲义`,
+      ).toMatch(CHINESE_RESOURCE_PATTERN);
       expect(`${point.studyMaterial}\n${point.assessmentSpec}`).not.toMatch(
         /2025-11-25|react\.dev\/learn\/displaying-data|docs\.sigstore\.dev\/cosign\/overview\/|ant\.design\/docs\/spec\/api\/|responsible-use\/copilot-code-review|sre\.google\/sre-book\/risk-engineering|techwriting\.withgoogle\.com\/resources\/one\/two\/review|multi-step-tools|docs\.docker\.com\/build\/guide\/|modelcards\.withgoogle\.com|rework\.withgoogle\.com|www\.gov\.cn\/xinwen\/2021-08-20/,
       );
@@ -72,7 +79,24 @@ describe('知识库内容完整性', () => {
     const pointsByCode = new Map(points.map((point) => [point.code, point]));
     expect(pointsByCode.get('JS-01')?.studyMaterial).not.toMatch(/React|useEffect/i);
     expect(pointsByCode.get('JS-01')?.assessmentSpec).not.toMatch(/React|useEffect/i);
+    expect(pointsByCode.get('JS-06')?.studyMaterial).toContain('https://nodejs.cn/api/esm.html');
+    expect(pointsByCode.get('JS-06')?.studyMaterial).not.toContain('https://nodejs.org/api/esm.html');
     expect(pointsByCode.get('REACT-04')?.studyMaterial).toMatch(/Effect|Effects/i);
+
+    const advancedGuide = fs.readFileSync(
+      path.join(root, 'docs/knowledge/chinese-guides/advanced-topics.md'),
+      'utf8',
+    );
+    for (const point of points.filter((item) => item.studyMaterial.includes('../chinese-guides/'))) {
+      expect(
+        advancedGuide,
+        `${point.code} 引用了中文核心讲义，但讲义中没有对应章节`,
+      ).toContain(`## ${point.code}`);
+      expect(
+        point.assessmentSpec,
+        `${point.code} 的考核题源未包含中文核心讲义`,
+      ).toContain('《中文核心讲义》');
+    }
   });
 
   it('允许 Markdown 为复杂知识点覆盖默认耗时', async () => {

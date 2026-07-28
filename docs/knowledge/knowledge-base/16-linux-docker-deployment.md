@@ -6,8 +6,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Linux man-pages](https://www.kernel.org/doc/man-pages/)、[GNU Coreutils Manual](https://www.gnu.org/software/coreutils/manual/coreutils.html)、[Filesystem Hierarchy Standard](https://refspecs.linuxfoundation.org/fhs.shtml)。覆盖范围：围绕「Linux 文件系统、权限与常用命令」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Linux man-pages》《GNU Coreutils Manual》《Filesystem Hierarchy Standard》，分别摘出能支撑「Linux 文件系统、权限与常用命令」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Linux 文件系统、权限与常用命令」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：在一台 Linux 环境中完成目录定位、文件查找、权限修改、软链接、压缩解压、磁盘占用分析和日志截取；解释 `chmod`、`chown`、`umask`、软硬链接和 FHS 常见目录的用途；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#linux-01)、[Linux man-pages](https://www.kernel.org/doc/man-pages/)、[GNU Coreutils Manual](https://www.gnu.org/software/coreutils/manual/coreutils.html)、[Filesystem Hierarchy Standard](https://refspecs.linuxfoundation.org/fhs.shtml)。覆盖范围：围绕「Linux 文件系统、权限与常用命令」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Linux man-pages》《GNU Coreutils Manual》《Filesystem Hierarchy Standard》，分别摘出能支撑「Linux 文件系统、权限与常用命令」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Linux 文件系统、权限与常用命令」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：在一台 Linux 环境中完成目录定位、文件查找、权限修改、软链接、压缩解压、磁盘占用分析和日志截取；解释 `chmod`、`chown`、`umask`、软硬链接和 FHS 常见目录的用途；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：不使用危险通配符误删文件；能根据权限位判断读写执行能力；能用 `find`、`du`、`tar`、`ln`、`tail` 解决真实部署文件问题；所有命令留下可复现记录。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 105 分钟；复测 75 分钟
 
@@ -15,8 +15,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[procps-ng Manual](https://gitlab.com/procps-ng/procps)、[iproute2 Documentation](https://wiki.linuxfoundation.org/networking/iproute2)、[systemd Journal](https://www.freedesktop.org/software/systemd/man/latest/journalctl.html)。覆盖范围：围绕「进程、端口、日志与网络诊断」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《procps-ng Manual》《iproute2 Documentation》《systemd Journal》，分别摘出能支撑「进程、端口、日志与网络诊断」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「进程、端口、日志与网络诊断」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：排查一个前端服务无法访问的问题，使用 `ps`、`top`、`ss`、`lsof`、`curl`、`journalctl`、`dig` 或 `nslookup` 定位进程、端口、DNS、HTTP 状态和日志根因；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#linux-02)、[procps-ng Manual](https://gitlab.com/procps-ng/procps)、[iproute2 Documentation](https://wiki.linuxfoundation.org/networking/iproute2)、[systemd Journal](https://www.freedesktop.org/software/systemd/man/latest/journalctl.html)。覆盖范围：围绕「进程、端口、日志与网络诊断」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《procps-ng Manual》《iproute2 Documentation》《systemd Journal》，分别摘出能支撑「进程、端口、日志与网络诊断」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「进程、端口、日志与网络诊断」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：排查一个前端服务无法访问的问题，使用 `ps`、`top`、`ss`、`lsof`、`curl`、`journalctl`、`dig` 或 `nslookup` 定位进程、端口、DNS、HTTP 状态和日志根因；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：能区分进程未启动、端口未监听、防火墙/DNS/反向代理/应用异常；排障步骤有顺序和证据；不会只靠重启或清缓存解释问题。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 105 分钟；复测 75 分钟
 
@@ -24,8 +24,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html)、[ShellCheck Wiki](https://www.shellcheck.net/wiki/Home)、[Cron Manual](https://man7.org/linux/man-pages/man5/crontab.5.html)。覆盖范围：围绕「Shell 脚本、环境变量与自动化任务」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Bash Reference Manual》《ShellCheck Wiki》《Cron Manual》，分别摘出能支撑「Shell 脚本、环境变量与自动化任务」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Shell 脚本、环境变量与自动化任务」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：编写一个部署辅助脚本，支持参数、环境变量、错误退出、日志输出、dry-run 和帮助信息；用 ShellCheck 修复问题，并配置一个定时备份或清理任务；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#linux-03)、[Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html)、[ShellCheck Wiki](https://www.shellcheck.net/wiki/Home)、[Cron Manual](https://man7.org/linux/man-pages/man5/crontab.5.html)。覆盖范围：围绕「Shell 脚本、环境变量与自动化任务」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Bash Reference Manual》《ShellCheck Wiki》《Cron Manual》，分别摘出能支撑「Shell 脚本、环境变量与自动化任务」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Shell 脚本、环境变量与自动化任务」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：编写一个部署辅助脚本，支持参数、环境变量、错误退出、日志输出、dry-run 和帮助信息；用 ShellCheck 修复问题，并配置一个定时备份或清理任务；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：脚本启用严格模式或等价错误控制；变量引用安全；退出码可被 CI 或上层脚本判断；不会把密钥写死在脚本或提交到仓库。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 105 分钟；复测 75 分钟
 
@@ -33,8 +33,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenSSH Manual](https://www.openssh.com/manual.html)、[OWASP Server Security](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html)、[Ubuntu Server Security](https://documentation.ubuntu.com/server/how-to/security/)。覆盖范围：围绕「服务器安全、SSH、用户与基础防护」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《OpenSSH Manual》《OWASP Server Security》《Ubuntu Server Security》，分别摘出能支撑「服务器安全、SSH、用户与基础防护」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「服务器安全、SSH、用户与基础防护」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计一台前端部署服务器的最小安全基线，包含 SSH key 登录、用户权限、sudo 边界、防火墙、密钥管理、日志留存、系统更新和回滚账号策略；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#linux-04)、[OpenSSH Manual](https://www.openssh.com/manual.html)、[OWASP Server Security](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html)、[Ubuntu Server Security](https://documentation.ubuntu.com/server/how-to/security/)。覆盖范围：围绕「服务器安全、SSH、用户与基础防护」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《OpenSSH Manual》《OWASP Server Security》《Ubuntu Server Security》，分别摘出能支撑「服务器安全、SSH、用户与基础防护」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「服务器安全、SSH、用户与基础防护」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计一台前端部署服务器的最小安全基线，包含 SSH key 登录、用户权限、sudo 边界、防火墙、密钥管理、日志留存、系统更新和回滚账号策略；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：禁止明文密码和共享 root 账号；最小权限清晰；敏感配置不进入镜像和日志；能说明 TLS、端口暴露、入站规则和审计记录的边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 105 分钟；复测 75 分钟
 
@@ -42,8 +42,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Dockerfile Reference](https://docs.docker.com/reference/dockerfile/)、[Docker Build](https://docs.docker.com/build/)、[Docker Build Cache](https://docs.docker.com/build/cache/)、[Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)。覆盖范围：镜像、容器、Dockerfile、BuildKit、构建上下文、缓存、多阶段构建、最小运行时和可重复制品。
-- 严格考核：首考题 1（资料定位）：只允许使用《Dockerfile Reference》《Docker Build》《Docker Build Cache》《Multi-stage Builds》，定位构建上下文、层、缓存和多阶段依据；首考题 2（机制解释）：解释 Dockerfile 指令如何形成可复用构建图和最终运行镜像；首考题 3（最小产出）：为一个前端应用编写多阶段 Dockerfile，完成依赖安装、构建、静态资源服务或 Node 服务运行；解释 cache、`.dockerignore`、build args、环境变量和镜像体积优化；首考题 4（受限排错）：处理缓存失效、密钥进入层、架构不匹配和运行时缺文件；首考题 5（学习复述）：说明构建参数与运行环境变量的边界。命题边界：必须以可重复构建和最小制品为依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#docker-01)、[Dockerfile Reference](https://docs.docker.com/reference/dockerfile/)、[Docker Build](https://docs.docker.com/build/)、[Docker Build Cache](https://docs.docker.com/build/cache/)、[Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)。覆盖范围：镜像、容器、Dockerfile、BuildKit、构建上下文、缓存、多阶段构建、最小运行时和可重复制品。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Dockerfile Reference》《Docker Build》《Docker Build Cache》《Multi-stage Builds》，定位构建上下文、层、缓存和多阶段依据；首考题 2（机制解释）：解释 Dockerfile 指令如何形成可复用构建图和最终运行镜像；首考题 3（最小产出）：为一个前端应用编写多阶段 Dockerfile，完成依赖安装、构建、静态资源服务或 Node 服务运行；解释 cache、`.dockerignore`、build args、环境变量和镜像体积优化；首考题 4（受限排错）：处理缓存失效、密钥进入层、架构不匹配和运行时缺文件；首考题 5（学习复述）：说明构建参数与运行环境变量的边界。命题边界：必须以可重复构建和最小制品为依据。
 - 通过标准：镜像可从干净环境构建；构建缓存有效；不把 `.env`、密钥、node_modules 和无关文件打进镜像；最终镜像用户、端口、健康检查和启动命令明确。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
@@ -51,8 +51,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Docker Compose Documentation](https://docs.docker.com/compose/)、[Docker Networking](https://docs.docker.com/engine/network/)、[Docker Volumes](https://docs.docker.com/engine/storage/volumes/)。覆盖范围：围绕「Docker Compose、网络、数据卷与环境隔离」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Docker Compose Documentation》《Docker Networking》《Docker Volumes》，分别摘出能支撑「Docker Compose、网络、数据卷与环境隔离」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Docker Compose、网络、数据卷与环境隔离」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：用 Compose 编排前端、API、数据库或本地存储服务，配置网络、数据卷、健康检查、环境变量、依赖顺序和日志查看；模拟容器重建后数据保留；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#docker-02)、[Docker Compose Documentation](https://docs.docker.com/compose/)、[Docker Networking](https://docs.docker.com/engine/network/)、[Docker Volumes](https://docs.docker.com/engine/storage/volumes/)。覆盖范围：围绕「Docker Compose、网络、数据卷与环境隔离」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Docker Compose Documentation》《Docker Networking》《Docker Volumes》，分别摘出能支撑「Docker Compose、网络、数据卷与环境隔离」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Docker Compose、网络、数据卷与环境隔离」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：用 Compose 编排前端、API、数据库或本地存储服务，配置网络、数据卷、健康检查、环境变量、依赖顺序和日志查看；模拟容器重建后数据保留；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：服务间使用内部网络名访问；持久化数据不随容器删除丢失；`.env` 与示例配置分离；能解释 `depends_on` 不等于服务可用。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
@@ -60,8 +60,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Docker Logs](https://docs.docker.com/reference/cli/docker/container/logs/)、[Docker Exec](https://docs.docker.com/reference/cli/docker/container/exec/)、[Docker Resource Constraints](https://docs.docker.com/engine/containers/resource_constraints/)。覆盖范围：围绕「容器内调试、资源限制与生产运行边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Docker Logs》《Docker Exec》《Docker Resource Constraints》，分别摘出能支撑「容器内调试、资源限制与生产运行边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「容器内调试、资源限制与生产运行边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：排查一个容器启动失败、端口冲突、资源不足或文件权限问题；使用 logs、exec、inspect、stats 和健康检查定位原因，并写出修复和防复发措施；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#docker-03)、[Docker Logs](https://docs.docker.com/reference/cli/docker/container/logs/)、[Docker Exec](https://docs.docker.com/reference/cli/docker/container/exec/)、[Docker Resource Constraints](https://docs.docker.com/engine/containers/resource_constraints/)。覆盖范围：围绕「容器内调试、资源限制与生产运行边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Docker Logs》《Docker Exec》《Docker Resource Constraints》，分别摘出能支撑「容器内调试、资源限制与生产运行边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「容器内调试、资源限制与生产运行边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：排查一个容器启动失败、端口冲突、资源不足或文件权限问题；使用 logs、exec、inspect、stats 和健康检查定位原因，并写出修复和防复发措施；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：能区分构建期、启动期和运行期问题；不会进入容器手工改文件作为长期方案；资源限制、重启策略和日志策略有生产解释。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
@@ -69,8 +69,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Docker Scout](https://docs.docker.com/scout/)、[SLSA](https://slsa.dev/spec/v1.2/)、[OWASP Top 10 2025 - Software Supply Chain Failures](https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/)。覆盖范围：围绕「镜像安全、依赖扫描与制品可信」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Docker Scout》《SLSA》《OWASP Top 10 2025 - Software Supply Chain Failures》，分别摘出能支撑「镜像安全、依赖扫描与制品可信」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「镜像安全、依赖扫描与制品可信」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为一个前端镜像建立基础镜像选择、依赖扫描、非 root 运行、SBOM、镜像标签、签名或 provenance 策略；审计一次高危漏洞和基础镜像升级；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#docker-04)、[Docker Scout](https://docs.docker.com/scout/)、[SLSA](https://slsa.dev/spec/v1.2/)、[OWASP Top 10 2025 - Software Supply Chain Failures](https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/)。覆盖范围：围绕「镜像安全、依赖扫描与制品可信」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Docker Scout》《SLSA》《OWASP Top 10 2025 - Software Supply Chain Failures》，分别摘出能支撑「镜像安全、依赖扫描与制品可信」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「镜像安全、依赖扫描与制品可信」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为一个前端镜像建立基础镜像选择、依赖扫描、非 root 运行、SBOM、镜像标签、签名或 provenance 策略；审计一次高危漏洞和基础镜像升级；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：基础镜像来源可追踪；镜像标签不可只用 `latest`；高危漏洞有处置 SLA；生产部署只使用已构建、已扫描、可回滚的制品。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
@@ -78,7 +78,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Nginx Admin Guide](https://docs.nginx.com/nginx/admin-guide/)、[MDN HTTP Caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching)、[web.dev HTTP Cache](https://web.dev/articles/http-cache)。覆盖范围：围绕「Nginx、静态资源、反向代理、HTTPS 与 CDN 缓存」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[Nginx Admin Guide](https://docs.nginx.com/nginx/admin-guide/)、[MDN HTTP Caching](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Caching)、[web.dev HTTP Cache](https://web.dev/articles/http-cache?hl=zh-cn)。覆盖范围：围绕「Nginx、静态资源、反向代理、HTTPS 与 CDN 缓存」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《Nginx Admin Guide》《MDN HTTP Caching》《web.dev HTTP Cache》，分别摘出能支撑「Nginx、静态资源、反向代理、HTTPS 与 CDN 缓存」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Nginx、静态资源、反向代理、HTTPS 与 CDN 缓存」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：部署一个构建后的前端应用，配置 Nginx 静态资源、SPA fallback、反向代理、gzip/brotli、HTTPS、缓存策略和旧 chunk 失败恢复；模拟新版本发布后的缓存问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：HTML 与 hash 资源缓存策略区分；接口代理和静态资源路径清晰；刷新深层路由不 404；旧 chunk 有刷新或兼容策略；TLS 和安全响应头满足基本要求。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
@@ -87,7 +87,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[GitHub Actions](https://docs.github.com/actions)、[Docker Registry](https://docs.docker.com/docker-hub/repos/)、[DORA Metrics](https://dora.dev/guides/dora-metrics-four-keys/)。覆盖范围：围绕「CI/CD、镜像仓库、灰度发布、回滚与部署复盘」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 学习资料：[GitHub Actions](https://docs.github.com/zh/actions)、[Docker Registry](https://docs.docker.com/docker-hub/repos/)、[DORA Metrics](https://dora.dev/guides/dora-metrics-four-keys/)。覆盖范围：围绕「CI/CD、镜像仓库、灰度发布、回滚与部署复盘」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
 - 严格考核：首考题 1（资料定位）：只允许使用《GitHub Actions》《Docker Registry》《DORA Metrics》，分别摘出能支撑「CI/CD、镜像仓库、灰度发布、回滚与部署复盘」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「CI/CD、镜像仓库、灰度发布、回滚与部署复盘」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计从内容或代码提交到生产部署的流水线，包含内容检查、测试、构建、镜像推送、部署、健康检查、灰度、回滚、告警和发布记录；演练一次内容变更后的重新打包部署，以及一次失败发布回滚；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
 - 通过标准：任何知识库、计划模板、规划文档或前端代码变更都必须生成新制品并重新部署；同一制品逐环境晋级；密钥通过 CI Secret 管理；部署结果有健康检查和版本标识；回滚时间目标明确；发布复盘能说明故障、影响、修复和预防。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟

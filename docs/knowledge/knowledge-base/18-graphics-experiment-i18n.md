@@ -24,8 +24,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[D3 Documentation](https://d3js.org/getting-started)、[W3C WAI Images Tutorial](https://www.w3.org/WAI/tutorials/images/complex/)。覆盖范围：视觉编码、比例尺、坐标、颜色、交互、复杂图表替代文本、数据量与渲染策略。
-- 严格考核：首考题 1（资料定位）：定位比例尺和复杂图像可访问性要求；首考题 2（机制解释）：解释数据到视觉属性的映射；首考题 3（最小产出）：实现可筛选、缩放和键盘访问的趋势/分布图；首考题 4（受限排错）：纠正误导坐标、颜色混淆和重绘瓶颈；首考题 5（学习复述）：说明如何验证图表没有误导。命题边界：不得把“好看”作为主要评估标准。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#vis-01)、[D3 Documentation](https://d3js.org/getting-started)、[W3C WAI Images Tutorial](https://www.w3.org/WAI/tutorials/images/complex/)。覆盖范围：视觉编码、比例尺、坐标、颜色、交互、复杂图表替代文本、数据量与渲染策略。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位比例尺和复杂图像可访问性要求；首考题 2（机制解释）：解释数据到视觉属性的映射；首考题 3（最小产出）：实现可筛选、缩放和键盘访问的趋势/分布图；首考题 4（受限排错）：纠正误导坐标、颜色混淆和重绘瓶颈；首考题 5（学习复述）：说明如何验证图表没有误导。命题边界：不得把“好看”作为主要评估标准。
 - 通过标准：视觉编码与数据类型匹配；含标题、单位、来源和替代数据表；大数据量有抽样或聚合策略。评估边界：默认主题可用不代表无障碍通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -33,7 +33,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenTelemetry Browser Instrumentation](https://opentelemetry.io/docs/languages/js/getting-started/browser/)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/)。覆盖范围：事件命名、属性字典、身份边界、漏斗、留存、数据质量、采样、同意、敏感字段和版本迁移。
+- 学习资料：[OpenTelemetry Browser Instrumentation](https://opentelemetry.io/zh/docs/languages/js/getting-started/browser/)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/)。覆盖范围：事件命名、属性字典、身份边界、漏斗、留存、数据质量、采样、同意、敏感字段和版本迁移。
 - 严格考核：首考题 1（资料定位）：定位浏览器遥测与隐私原则；首考题 2（机制解释）：解释事件从页面到指标的链路；首考题 3（最小产出）：为核心漏斗设计事件字典和校验器；首考题 4（受限排错）：发现重复、遗漏、时序和口径漂移；首考题 5（学习复述）：区分产品分析、日志和性能监控。命题边界：不得采集未证明必要的个人数据。
 - 通过标准：事件有 owner、版本和校验；指标可从原始事件复算；隐私同意和删除链路明确；异常数据可告警。评估边界：只展示仪表盘截图不算证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -42,8 +42,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenFeature Specification](https://openfeature.dev/specification/)、[OpenFeature Evaluation Context](https://openfeature.dev/docs/reference/concepts/evaluation-context/)。覆盖范围：Flag 类型、评估上下文、默认值、缓存、审计、权限、灰度、Kill Switch 和技术债清理。
-- 严格考核：首考题 1（资料定位）：定位 Flag 评估和上下文规则；首考题 2（机制解释）：解释配置发布到客户端决策的过程；首考题 3（最小产出）：实现带本地默认值和紧急关闭的功能发布；首考题 4（受限排错）：处理配置服务不可用、用户串组和旧 Flag 遗留；首考题 5（学习复述）：区分发布 Flag、实验 Flag 和权限。命题边界：Flag 不能替代授权校验。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#exp-01)、[OpenFeature Specification](https://openfeature.dev/specification/)、[OpenFeature Evaluation Context](https://openfeature.dev/docs/reference/concepts/evaluation-context/)。覆盖范围：Flag 类型、评估上下文、默认值、缓存、审计、权限、灰度、Kill Switch 和技术债清理。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Flag 评估和上下文规则；首考题 2（机制解释）：解释配置发布到客户端决策的过程；首考题 3（最小产出）：实现带本地默认值和紧急关闭的功能发布；首考题 4（受限排错）：处理配置服务不可用、用户串组和旧 Flag 遗留；首考题 5（学习复述）：区分发布 Flag、实验 Flag 和权限。命题边界：Flag 不能替代授权校验。
 - 通过标准：默认值安全；分组稳定；变更可审计和回滚；每个 Flag 有到期时间和负责人。评估边界：不得在客户端下发敏感分组规则。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -51,8 +51,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[NIST Hypothesis Tests](https://www.itl.nist.gov/div898/handbook/prc/section1/prc13.htm)、[Microsoft ExP Experimentation Platform](https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/)。覆盖范围：假设、随机化、样本量、显著性、置信区间、多重比较、提前停止、护栏指标和新奇效应。
-- 严格考核：首考题 1（资料定位）：定位假设检验与在线实验原则；首考题 2（机制解释）：说明随机分流到结论的因果链；首考题 3（最小产出）：设计并分析一个转化实验；首考题 4（受限排错）：识别样本污染、SRM、窥探和指标选择偏差；首考题 5（学习复述）：解释统计显著与业务重要的差别。命题边界：不要求手算复杂统计，但必须正确解释假设和不确定性。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#exp-02)、[NIST Hypothesis Tests](https://www.itl.nist.gov/div898/handbook/prc/section1/prc13.htm)、[Microsoft ExP Experimentation Platform](https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/)。覆盖范围：假设、随机化、样本量、显著性、置信区间、多重比较、提前停止、护栏指标和新奇效应。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位假设检验与在线实验原则；首考题 2（机制解释）：说明随机分流到结论的因果链；首考题 3（最小产出）：设计并分析一个转化实验；首考题 4（受限排错）：识别样本污染、SRM、窥探和指标选择偏差；首考题 5（学习复述）：解释统计显著与业务重要的差别。命题边界：不要求手算复杂统计，但必须正确解释假设和不确定性。
 - 通过标准：主指标和护栏事前确定；分流稳定；报告效应量和区间；不因单次 p 值武断上线。评估边界：相关性图表不能代替随机实验。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -78,8 +78,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[CommonMark Specification](https://spec.commonmark.org/)、[Schema.org Documentation](https://schema.org/docs/documents.html)。覆盖范围：结构化内容模型、富文本 AST、Markdown/MDX 安全渲染、版本、引用、SEO 结构化数据、全文搜索与发布流程。
-- 严格考核：首考题 1（资料定位）：定位 Markdown 解析和结构化数据约束；首考题 2（机制解释）：解释内容从编辑、存储、构建到索引的链路；首考题 3（最小产出）：设计可版本化知识文章并安全渲染和搜索；首考题 4（受限排错）：处理 XSS、坏链接、重复 slug 和索引滞后；首考题 5（学习复述）：比较内容模型与页面模型。命题边界：不得直接执行不可信 MDX。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#content-01)、[CommonMark Specification](https://spec.commonmark.org/)、[Schema.org Documentation](https://schema.org/docs/documents.html)。覆盖范围：结构化内容模型、富文本 AST、Markdown/MDX 安全渲染、版本、引用、SEO 结构化数据、全文搜索与发布流程。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Markdown 解析和结构化数据约束；首考题 2（机制解释）：解释内容从编辑、存储、构建到索引的链路；首考题 3（最小产出）：设计可版本化知识文章并安全渲染和搜索；首考题 4（受限排错）：处理 XSS、坏链接、重复 slug 和索引滞后；首考题 5（学习复述）：比较内容模型与页面模型。命题边界：不得直接执行不可信 MDX。
 - 通过标准：内容与展示解耦；AST 经过白名单处理；链接和引用可校验；发布、回滚与索引状态可追踪。评估边界：所见即所得编辑器可用不代表内容工程完整。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -87,7 +87,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[web.dev Baseline](https://web.dev/baseline)、[Playwright Projects](https://playwright.dev/docs/test-projects)。覆盖范围：特性检测、Baseline、兼容数据、Polyfill、渐进增强、浏览器矩阵、移动真机、视觉回归和降级。
+- 学习资料：[web.dev Baseline](https://web.dev/baseline?hl=zh-cn)、[Playwright Projects](https://playwright.nodejs.cn/docs/test-projects)。覆盖范围：特性检测、Baseline、兼容数据、Polyfill、渐进增强、浏览器矩阵、移动真机、视觉回归和降级。
 - 严格考核：首考题 1（资料定位）：定位 Baseline 和多项目测试方法；首考题 2（机制解释）：说明从目标用户到兼容策略的决策链；首考题 3（最小产出）：建立 Chromium/Firefox/WebKit 与移动视口测试矩阵；首考题 4（受限排错）：处理 WebKit 布局、输入法、触屏和新 API 缺失；首考题 5（学习复述）：区分 UA 检测与能力检测。命题边界：桌面浏览器缩放不能替代真机验证。
 - 通过标准：兼容矩阵基于用户和业务；核心功能可降级；自动化覆盖关键路径；至少有一次真机证据。评估边界：只追求像素完全一致不算合理兼容目标。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
