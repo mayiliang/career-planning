@@ -6,8 +6,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[项目经验资产库](../project-assets.md)、[Microsoft DDD 领域模型](https://learn.microsoft.com/zh-cn/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)、[OWASP Business Logic Security](https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html)、目标模块的路由、service、类型、枚举和页面代码。覆盖范围：围绕「业务对象、关系与统一语言」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《项目经验资产库》《Microsoft DDD 领域模型》《OWASP Business Logic Security》《目标模块的路由》，分别摘出能支撑「业务对象、关系与统一语言」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「业务对象、关系与统一语言」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：从一个陌生模块在 60 分钟内抽取对象、标识、关系、不变量和术语表；与页面文件结构对照指出至少 3 个建模风险；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-01)、[项目经验资产库](../project-assets.md)、[Microsoft DDD 领域模型](https://learn.microsoft.com/zh-cn/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)、[OWASP Business Logic Security](https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html)（英文原文，仅用于版本核验）、目标模块的路由、service、类型、枚举和页面代码。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「业务对象、关系与统一语言」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《项目经验资产库》《Microsoft DDD 领域模型》《OWASP Business Logic Security》《目标模块的路由》，分别摘出能支撑「业务对象、关系与统一语言」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「业务对象、关系与统一语言」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：从一个陌生模块在 60 分钟内抽取对象、标识、关系、不变量和术语表；与页面文件结构对照指出至少 3 个建模风险；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：对象不是接口字段抄写；能区分实体、值对象、流程记录和展示模型；业务人员能读懂术语表。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -15,8 +15,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Statecharts 指南](https://statecharts.dev/)、[W3C SCXML](https://www.w3.org/TR/scxml/)、[XState Stately Docs](https://stately.ai/docs/state-machines-and-statecharts)、[TypeScript Narrowing](https://www.typescriptlang.org/zh/docs/handbook/2/narrowing.html)。覆盖范围：围绕「状态机与业务不变量」的定义、机制、边界、反例和通过标准；业务状态枚举与操作接口必须由题目显式给出。
-- 严格考核：首考题 1（资料定位）：只允许使用《Statecharts 指南》《W3C SCXML》《XState Stately Docs》《TypeScript Narrowing》，分别摘出能支撑「状态机与业务不变量」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「状态机与业务不变量」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把审核、申诉或结算流程画成状态机；列出每个转换的前置条件、副作用、失败与补偿；加入一个新状态做变更影响分析；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-02)、[Statecharts 指南](https://statecharts.dev/)（英文原文，仅用于版本核验）、[W3C SCXML](https://www.w3.org/TR/scxml/)（英文原文，仅用于版本核验）、[XState Stately Docs](https://stately.ai/docs/state-machines-and-statecharts)（英文原文，仅用于版本核验）、[TypeScript Narrowing](https://www.typescriptlang.org/zh/docs/handbook/2/narrowing.html)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「状态机与业务不变量」的定义、机制、边界、反例和通过标准；业务状态枚举与操作接口必须由题目显式给出。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Statecharts 指南》《W3C SCXML》《XState Stately Docs》《TypeScript Narrowing》，分别摘出能支撑「状态机与业务不变量」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「状态机与业务不变量」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把审核、申诉或结算流程画成状态机；列出每个转换的前置条件、副作用、失败与补偿；加入一个新状态做变更影响分析；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：无不可达或未解释状态；非法转换被阻止；并发提交、撤回、过期和重复回调均有策略。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -24,8 +24,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)、[Umi Access](https://umijs.org/docs/max/access)、[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)、[OWASP Access Control](https://owasp.org/www-community/Access_Control)。覆盖范围：围绕「RBAC、ABAC 与数据权限」的定义、机制、边界、反例和通过标准；权限规则必须由题目显式给出。
-- 严格考核：首考题 1（资料定位）：只允许使用《NIST RBAC》《Umi Access》《OWASP Authorization Cheat Sheet》《OWASP Access Control》，分别摘出能支撑「RBAC、ABAC 与数据权限」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「RBAC、ABAC 与数据权限」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为学校/部门/个人范围设计角色、资源、动作、条件矩阵；回答角色爆炸、临时授权、数据范围和后端校验问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-03)、[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)（英文原文，仅用于版本核验）、[Umi Access](https://umijs.org/docs/max/access)、[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)（英文原文，仅用于版本核验）、[OWASP Access Control](https://owasp.org/www-community/Access_Control)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「RBAC、ABAC 与数据权限」的定义、机制、边界、反例和通过标准；权限规则必须由题目显式给出。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《NIST RBAC》《Umi Access》《OWASP Authorization Cheat Sheet》《OWASP Access Control》，分别摘出能支撑「RBAC、ABAC 与数据权限」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「RBAC、ABAC 与数据权限」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为学校/部门/个人范围设计角色、资源、动作、条件矩阵；回答角色爆炸、临时授权、数据范围和后端校验问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：页面、动作与数据权限分层；默认拒绝；服务端授权为准；新增角色不需要散落修改大量组件。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -33,8 +33,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenAPI Specification](https://spec.openapis.org/oas/latest.html)、[HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110)、[JSON Schema](https://json-schema.org/learn/getting-started-step-by-step)、[TypeScript Everyday Types](https://www.typescriptlang.org/zh/docs/handbook/2/everyday-types.html)。覆盖范围：围绕「API 契约、DTO 与前端模型」的定义、机制、边界、反例和通过标准；接口文档与 service 代码必须由题目显式给出。
-- 严格考核：首考题 1（资料定位）：只允许使用《OpenAPI Specification》《HTTP Semantics》《JSON Schema》《TypeScript Everyday Types》，分别摘出能支撑「API 契约、DTO 与前端模型」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「API 契约、DTO 与前端模型」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：选择一个分页接口，核对请求、响应、错误、枚举和示例；设计 DTO 到 UI 模型转换；模拟字段缺失、重命名和枚举扩展；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-04)、[OpenAPI Specification](https://spec.openapis.org/oas/latest.html)（英文原文，仅用于版本核验）、[HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110)（英文原文，仅用于版本核验）、[JSON Schema](https://json-schema.org/learn/getting-started-step-by-step)（英文原文，仅用于版本核验）、[TypeScript Everyday Types](https://www.typescriptlang.org/zh/docs/handbook/2/everyday-types.html)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「API 契约、DTO 与前端模型」的定义、机制、边界、反例和通过标准；接口文档与 service 代码必须由题目显式给出。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《OpenAPI Specification》《HTTP Semantics》《JSON Schema》《TypeScript Everyday Types》，分别摘出能支撑「API 契约、DTO 与前端模型」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「API 契约、DTO 与前端模型」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：选择一个分页接口，核对请求、响应、错误、枚举和示例；设计 DTO 到 UI 模型转换；模拟字段缺失、重命名和枚举扩展；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：契约与页面使用一致；后端变化在单一边界暴露；未知值安全降级而不是错误映射成正常状态。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -42,8 +42,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Ant Design Data Entry](https://ant.design/docs/spec/data-entry-cn/?locale=zh-CN)、[WAI Forms Tutorial](https://www.w3.org/WAI/tutorials/forms/)、现有项目中同一业务对象的新建、列表、详情、编辑页面。覆盖范围：围绕「表单、表格、详情的状态一致性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Ant Design Data Entry》《WAI Forms Tutorial》《现有项目中同一业务对象的新建》《编辑页面》，分别摘出能支撑「表单、表格、详情的状态一致性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「表单、表格、详情的状态一致性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：审计同一字段在 4 个页面的名称、枚举、空值、精度、权限和提交格式；建立共享格式化与转换层并验证回归；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-05)、[Ant Design Data Entry](https://ant.design/docs/spec/data-entry-cn/?locale=zh-CN)、[WAI Forms Tutorial](https://www.w3.org/WAI/tutorials/forms/)（英文原文，仅用于版本核验）、现有项目中同一业务对象的新建、列表、详情、编辑页面。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「表单、表格、详情的状态一致性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Ant Design Data Entry》《WAI Forms Tutorial》《现有项目中同一业务对象的新建》《编辑页面》，分别摘出能支撑「表单、表格、详情的状态一致性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「表单、表格、详情的状态一致性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：审计同一字段在 4 个页面的名称、枚举、空值、精度、权限和提交格式；建立共享格式化与转换层并验证回归；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：同一事实只有一个定义来源；只读和编辑展示一致；`0`、`false`、空字符串、null 与 undefined 不混淆。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -51,8 +51,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN Fetch API](https://developer.mozilla.org/zh-CN/docs/Web/API/Fetch_API)、[HTTP 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110#name-202-accepted)、[AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)、[MDN File API](https://developer.mozilla.org/zh-CN/docs/Web/API/File_API)。覆盖范围：围绕「异步任务、导入导出与进度」的定义、机制、边界、反例和通过标准；`taskId -> ProgressBar -> downloadFile(token)` 这类流程必须由题目显式给出。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN Fetch API》《HTTP 202 Accepted》《AbortController》《MDN File API》，分别摘出能支撑「异步任务、导入导出与进度」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「异步任务、导入导出与进度」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计大文件导入/导出任务，覆盖创建、轮询、成功、失败、取消、过期和下载 token；处理页面关闭后恢复；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-06)、[MDN Fetch API](https://developer.mozilla.org/zh-CN/docs/Web/API/Fetch_API)、[HTTP 202 Accepted](https://www.rfc-editor.org/rfc/rfc9110#name-202-accepted)（英文原文，仅用于版本核验）、[AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)、[MDN File API](https://developer.mozilla.org/zh-CN/docs/Web/API/File_API)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「异步任务、导入导出与进度」的定义、机制、边界、反例和通过标准；`taskId -> ProgressBar -> downloadFile(token)` 这类流程必须由题目显式给出。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《MDN Fetch API》《HTTP 202 Accepted》《AbortController》《MDN File API》，分别摘出能支撑「异步任务、导入导出与进度」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「异步任务、导入导出与进度」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计大文件导入/导出任务，覆盖创建、轮询、成功、失败、取消、过期和下载 token；处理页面关闭后恢复；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：不会阻塞请求等待长任务；轮询有退避与终止；重复点击幂等；失败给出可行动信息。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -60,8 +60,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[HTTP Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2)、[MDN Conditional Requests](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Conditional_requests)、目标业务的错误码、日志和历史 Bug。覆盖范围：围绕「异常边界、幂等与一致性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《HTTP Idempotent Methods》《MDN Conditional Requests》《目标业务的错误码》《日志和历史 Bug》，分别摘出能支撑「异常边界、幂等与一致性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「异常边界、幂等与一致性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为提交、审核、支付或结算类操作做失败模式分析；注入超时、重复响应、部分成功、过期页面和并发修改；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-07)、[HTTP Idempotent Methods](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2)（英文原文，仅用于版本核验）、[MDN Conditional Requests](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Conditional_requests)、目标业务的错误码、日志和历史 Bug。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「异常边界、幂等与一致性」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《HTTP Idempotent Methods》《MDN Conditional Requests》《目标业务的错误码》《日志和历史 Bug》，分别摘出能支撑「异常边界、幂等与一致性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「异常边界、幂等与一致性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为提交、审核、支付或结算类操作做失败模式分析；注入超时、重复响应、部分成功、过期页面和并发修改；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：操作可安全重试或明确不可重试；UI 不伪造成功；关键冲突可被发现并恢复；错误上下文可供排障。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -69,8 +69,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Google Engineering Practices](https://google.github.io/eng-practices/)、[GitHub Planning and Tracking Work](https://docs.github.com/zh/issues/tracking-your-work-with-issues/planning-and-tracking-work-for-your-team-or-project)、[GitHub Issues](https://docs.github.com/zh/issues/tracking-your-work-with-issues/about-issues)、[Google Technical Writing](https://developers.google.com/tech-writing)。覆盖范围：围绕「需求到验收的可追踪性」的定义、机制、边界、反例和通过标准；PRD、原型、接口文档和验收记录必须由题目显式给出。
-- 严格考核：首考题 1（资料定位）：只允许使用《Google Engineering Practices》《GitHub Planning and Tracking Work》《GitHub Issues》《Google Technical Writing》，分别摘出能支撑「需求到验收的可追踪性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「需求到验收的可追踪性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把一个模糊需求转成业务规则、状态矩阵、接口影响、边界清单和验收用例；评审时接受随机需求变更；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#biz-08)、[Google Engineering Practices](https://google.github.io/eng-practices/)（英文原文，仅用于版本核验）、[GitHub Planning and Tracking Work](https://docs.github.com/zh/issues/tracking-your-work-with-issues/planning-and-tracking-work-for-your-team-or-project)、[GitHub Issues](https://docs.github.com/zh/issues/tracking-your-work-with-issues/about-issues)、[Google Technical Writing](https://developers.google.com/tech-writing)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「需求到验收的可追踪性」的定义、机制、边界、反例和通过标准；PRD、原型、接口文档和验收记录必须由题目显式给出。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Google Engineering Practices》《GitHub Planning and Tracking Work》《GitHub Issues》《Google Technical Writing》，分别摘出能支撑「需求到验收的可追踪性」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「需求到验收的可追踪性」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把一个模糊需求转成业务规则、状态矩阵、接口影响、边界清单和验收用例；评审时接受随机需求变更；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：每条规则可追踪到代码与测试；歧义被显式记录；验收覆盖主流程、权限、异常和兼容性。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 

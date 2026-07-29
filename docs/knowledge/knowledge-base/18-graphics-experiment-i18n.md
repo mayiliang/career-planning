@@ -15,8 +15,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN WebGL](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGL_API)、[WebGPU Specification](https://www.w3.org/TR/webgpu/)。覆盖范围：GPU 管线、Buffer、Texture、Shader、批处理、资源释放、device/context lost、兼容与降级。
-- 严格考核：首考题 1（资料定位）：定位两套 API 的资源和管线模型；首考题 2（机制解释）：画出数据上传到像素输出的过程；首考题 3（最小产出）：渲染十万点并实现缩放选择；首考题 4（受限排错）：诊断显存增长、上下文丢失和 Shader 错误；首考题 5（学习复述）：说明为何 WebGPU 不是 WebGL 的无条件替代。命题边界：必须标注浏览器兼容和实验特性。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#graphics-02)、[MDN WebGL](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGL_API)、[WebGPU Specification](https://www.w3.org/TR/webgpu/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：GPU 管线、Buffer、Texture、Shader、批处理、资源释放、device/context lost、兼容与降级。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位两套 API 的资源和管线模型；首考题 2（机制解释）：画出数据上传到像素输出的过程；首考题 3（最小产出）：渲染十万点并实现缩放选择；首考题 4（受限排错）：诊断显存增长、上下文丢失和 Shader 错误；首考题 5（学习复述）：说明为何 WebGPU 不是 WebGL 的无条件替代。命题边界：必须标注浏览器兼容和实验特性。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：资源生命周期正确；交互保持响应；丢失后可恢复；无支持时提供 Canvas/SVG 降级。评估边界：只比较峰值 FPS 不足以通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -24,8 +24,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#vis-01)、[D3 Documentation](https://d3js.org/getting-started)、[W3C WAI Images Tutorial](https://www.w3.org/WAI/tutorials/images/complex/)。覆盖范围：视觉编码、比例尺、坐标、颜色、交互、复杂图表替代文本、数据量与渲染策略。
-- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位比例尺和复杂图像可访问性要求；首考题 2（机制解释）：解释数据到视觉属性的映射；首考题 3（最小产出）：实现可筛选、缩放和键盘访问的趋势/分布图；首考题 4（受限排错）：纠正误导坐标、颜色混淆和重绘瓶颈；首考题 5（学习复述）：说明如何验证图表没有误导。命题边界：不得把“好看”作为主要评估标准。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#vis-01)、[D3 Documentation](https://d3js.org/getting-started)（英文原文，仅用于版本核验）、[W3C WAI Images Tutorial](https://www.w3.org/WAI/tutorials/images/complex/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：视觉编码、比例尺、坐标、颜色、交互、复杂图表替代文本、数据量与渲染策略。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位比例尺和复杂图像可访问性要求；首考题 2（机制解释）：解释数据到视觉属性的映射；首考题 3（最小产出）：实现可筛选、缩放和键盘访问的趋势/分布图；首考题 4（受限排错）：纠正误导坐标、颜色混淆和重绘瓶颈；首考题 5（学习复述）：说明如何验证图表没有误导。命题边界：不得把“好看”作为主要评估标准。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：视觉编码与数据类型匹配；含标题、单位、来源和替代数据表；大数据量有抽样或聚合策略。评估边界：默认主题可用不代表无障碍通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -33,8 +33,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[OpenTelemetry Browser Instrumentation](https://opentelemetry.io/zh/docs/languages/js/getting-started/browser/)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/)。覆盖范围：事件命名、属性字典、身份边界、漏斗、留存、数据质量、采样、同意、敏感字段和版本迁移。
-- 严格考核：首考题 1（资料定位）：定位浏览器遥测与隐私原则；首考题 2（机制解释）：解释事件从页面到指标的链路；首考题 3（最小产出）：为核心漏斗设计事件字典和校验器；首考题 4（受限排错）：发现重复、遗漏、时序和口径漂移；首考题 5（学习复述）：区分产品分析、日志和性能监控。命题边界：不得采集未证明必要的个人数据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#analytics-01)、[OpenTelemetry Browser Instrumentation](https://opentelemetry.io/zh/docs/languages/js/getting-started/browser/)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：事件命名、属性字典、身份边界、漏斗、留存、数据质量、采样、同意、敏感字段和版本迁移。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位浏览器遥测与隐私原则；首考题 2（机制解释）：解释事件从页面到指标的链路；首考题 3（最小产出）：为核心漏斗设计事件字典和校验器；首考题 4（受限排错）：发现重复、遗漏、时序和口径漂移；首考题 5（学习复述）：区分产品分析、日志和性能监控。命题边界：不得采集未证明必要的个人数据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：事件有 owner、版本和校验；指标可从原始事件复算；隐私同意和删除链路明确；异常数据可告警。评估边界：只展示仪表盘截图不算证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -42,8 +42,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#exp-01)、[OpenFeature Specification](https://openfeature.dev/specification/)、[OpenFeature Evaluation Context](https://openfeature.dev/docs/reference/concepts/evaluation-context/)。覆盖范围：Flag 类型、评估上下文、默认值、缓存、审计、权限、灰度、Kill Switch 和技术债清理。
-- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Flag 评估和上下文规则；首考题 2（机制解释）：解释配置发布到客户端决策的过程；首考题 3（最小产出）：实现带本地默认值和紧急关闭的功能发布；首考题 4（受限排错）：处理配置服务不可用、用户串组和旧 Flag 遗留；首考题 5（学习复述）：区分发布 Flag、实验 Flag 和权限。命题边界：Flag 不能替代授权校验。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#exp-01)、[OpenFeature Specification](https://openfeature.dev/specification/)（英文原文，仅用于版本核验）、[OpenFeature Evaluation Context](https://openfeature.dev/docs/reference/concepts/evaluation-context/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：Flag 类型、评估上下文、默认值、缓存、审计、权限、灰度、Kill Switch 和技术债清理。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Flag 评估和上下文规则；首考题 2（机制解释）：解释配置发布到客户端决策的过程；首考题 3（最小产出）：实现带本地默认值和紧急关闭的功能发布；首考题 4（受限排错）：处理配置服务不可用、用户串组和旧 Flag 遗留；首考题 5（学习复述）：区分发布 Flag、实验 Flag 和权限。命题边界：Flag 不能替代授权校验。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：默认值安全；分组稳定；变更可审计和回滚；每个 Flag 有到期时间和负责人。评估边界：不得在客户端下发敏感分组规则。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -51,8 +51,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#exp-02)、[NIST Hypothesis Tests](https://www.itl.nist.gov/div898/handbook/prc/section1/prc13.htm)、[Microsoft ExP Experimentation Platform](https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/)。覆盖范围：假设、随机化、样本量、显著性、置信区间、多重比较、提前停止、护栏指标和新奇效应。
-- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位假设检验与在线实验原则；首考题 2（机制解释）：说明随机分流到结论的因果链；首考题 3（最小产出）：设计并分析一个转化实验；首考题 4（受限排错）：识别样本污染、SRM、窥探和指标选择偏差；首考题 5（学习复述）：解释统计显著与业务重要的差别。命题边界：不要求手算复杂统计，但必须正确解释假设和不确定性。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#exp-02)、[NIST Hypothesis Tests](https://www.itl.nist.gov/div898/handbook/prc/section1/prc13.htm)（英文原文，仅用于版本核验）、[Microsoft ExP Experimentation Platform](https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：假设、随机化、样本量、显著性、置信区间、多重比较、提前停止、护栏指标和新奇效应。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位假设检验与在线实验原则；首考题 2（机制解释）：说明随机分流到结论的因果链；首考题 3（最小产出）：设计并分析一个转化实验；首考题 4（受限排错）：识别样本污染、SRM、窥探和指标选择偏差；首考题 5（学习复述）：解释统计显著与业务重要的差别。命题边界：不要求手算复杂统计，但必须正确解释假设和不确定性。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：主指标和护栏事前确定；分流稳定；报告效应量和区间；不因单次 p 值武断上线。评估边界：相关性图表不能代替随机实验。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -60,8 +60,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[W3C Internationalization](https://www.w3.org/International/quicktips/)、[MDN dir 属性](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Global_attributes/dir)。覆盖范围：语言标记、翻译键、复数、插值、文本扩展、RTL、字体、排序与本地化工作流。
-- 严格考核：首考题 1（资料定位）：定位语言和方向处理原则；首考题 2（机制解释）：解释内容语言、布局方向与组件样式的关系；首考题 3（最小产出）：把中英文页面扩展到阿拉伯语和复数语言；首考题 4（受限排错）：处理硬编码拼接、镜像错误和截断；首考题 5（学习复述）：说明国际化与翻译的区别。命题边界：不得用 CSS 全局翻转替代语义方向处理。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#i18n-01)、[W3C Internationalization](https://www.w3.org/International/quicktips/)（英文原文，仅用于版本核验）、[MDN dir 属性](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Global_attributes/dir)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：语言标记、翻译键、复数、插值、文本扩展、RTL、字体、排序与本地化工作流。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位语言和方向处理原则；首考题 2（机制解释）：解释内容语言、布局方向与组件样式的关系；首考题 3（最小产出）：把中英文页面扩展到阿拉伯语和复数语言；首考题 4（受限排错）：处理硬编码拼接、镜像错误和截断；首考题 5（学习复述）：说明国际化与翻译的区别。命题边界：不得用 CSS 全局翻转替代语义方向处理。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：无用户可见硬编码；逻辑属性支持 RTL；复数规则正确；伪本地化可发现布局问题。评估边界：机器翻译质量不作为前端工程通过依据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -69,8 +69,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN Intl](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl)、[Unicode CLDR](https://cldr.unicode.org/)。覆盖范围：UTC/本地时间、IANA 时区、DST、日历、数字、货币、相对时间、排序和服务端契约。
-- 严格考核：首考题 1（资料定位）：定位 Intl 与 CLDR 数据职责；首考题 2（机制解释）：解释时间瞬间、时区和显示格式的区别；首考题 3（最小产出）：实现跨时区日程与多币种展示；首考题 4（受限排错）：处理 DST 缺失/重复时刻、货币小数位和服务端无时区字符串；首考题 5（学习复述）：说明为何不能手写日期格式。命题边界：金额换算与金额格式化必须分开。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#i18n-02)、[MDN Intl](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl)、[Unicode CLDR](https://cldr.unicode.org/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：UTC/本地时间、IANA 时区、DST、日历、数字、货币、相对时间、排序和服务端契约。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Intl 与 CLDR 数据职责；首考题 2（机制解释）：解释时间瞬间、时区和显示格式的区别；首考题 3（最小产出）：实现跨时区日程与多币种展示；首考题 4（受限排错）：处理 DST 缺失/重复时刻、货币小数位和服务端无时区字符串；首考题 5（学习复述）：说明为何不能手写日期格式。命题边界：金额换算与金额格式化必须分开。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：存储和传输契约明确；DST 边界有测试；格式由 locale 决定；用户可知道事件所属时区。评估边界：本机时区测试通过不足以验收。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -78,8 +78,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#content-01)、[CommonMark Specification](https://spec.commonmark.org/)、[Schema.org Documentation](https://schema.org/docs/documents.html)。覆盖范围：结构化内容模型、富文本 AST、Markdown/MDX 安全渲染、版本、引用、SEO 结构化数据、全文搜索与发布流程。
-- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Markdown 解析和结构化数据约束；首考题 2（机制解释）：解释内容从编辑、存储、构建到索引的链路；首考题 3（最小产出）：设计可版本化知识文章并安全渲染和搜索；首考题 4（受限排错）：处理 XSS、坏链接、重复 slug 和索引滞后；首考题 5（学习复述）：比较内容模型与页面模型。命题边界：不得直接执行不可信 MDX。
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#content-01)、[CommonMark Specification](https://spec.commonmark.org/)（英文原文，仅用于版本核验）、[Schema.org Documentation](https://schema.org/docs/documents.html)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：结构化内容模型、富文本 AST、Markdown/MDX 安全渲染、版本、引用、SEO 结构化数据、全文搜索与发布流程。
+- 严格考核：题源包含《中文核心讲义》；首考题 1（资料定位）：定位 Markdown 解析和结构化数据约束；首考题 2（机制解释）：解释内容从编辑、存储、构建到索引的链路；首考题 3（最小产出）：设计可版本化知识文章并安全渲染和搜索；首考题 4（受限排错）：处理 XSS、坏链接、重复 slug 和索引滞后；首考题 5（学习复述）：比较内容模型与页面模型。命题边界：不得直接执行不可信 MDX。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：内容与展示解耦；AST 经过白名单处理；链接和引用可校验；发布、回滚与索引状态可追踪。评估边界：所见即所得编辑器可用不代表内容工程完整。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 

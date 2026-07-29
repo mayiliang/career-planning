@@ -60,8 +60,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[TypeScript 与运行时类型边界](https://www.typescriptlang.org/zh/docs/handbook/typescript-from-scratch.html)、[Zod 文档](https://zod.dev/)、[OpenAPI Specification](https://spec.openapis.org/oas/latest.html)。覆盖范围：围绕「接口契约、运行时校验与错误模型」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《TypeScript 与运行时类型边界》《Zod 文档》《OpenAPI Specification》，分别摘出能支撑「接口契约、运行时校验与错误模型」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「接口契约、运行时校验与错误模型」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：从一个真实接口示例建立请求、响应、分页、错误类型和运行时 schema；注入缺字段、错类型、未知枚举验证失败路径；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#ts-07)、[TypeScript 与运行时类型边界](https://www.typescriptlang.org/zh/docs/handbook/typescript-from-scratch.html)、[Zod 文档](https://zod.dev/)（英文原文，仅用于版本核验）、[OpenAPI Specification](https://spec.openapis.org/oas/latest.html)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「接口契约、运行时校验与错误模型」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《TypeScript 与运行时类型边界》《Zod 文档》《OpenAPI Specification》，分别摘出能支撑「接口契约、运行时校验与错误模型」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「接口契约、运行时校验与错误模型」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：从一个真实接口示例建立请求、响应、分页、错误类型和运行时 schema；注入缺字段、错类型、未知枚举验证失败路径；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：网络边界输入从 `unknown` 开始；错误可区分并可观测；schema 与静态类型不存在手工双份漂移。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -69,8 +69,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[TypeScript Narrowing](https://www.typescriptlang.org/zh/docs/handbook/2/narrowing.html)、[TypeScript `satisfies`](https://www.typescriptlang.org/zh/docs/handbook/release-notes/typescript-4-9.html)、[TypeScript Unions and Intersections](https://www.typescriptlang.org/zh/docs/handbook/unions-and-intersections.html)、[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)。覆盖范围：围绕「业务状态与权限类型建模」的定义、机制、边界、反例和通过标准；项目枚举、服务类型与权限函数只允许作为题目提供的输入样例。
-- 严格考核：首考题 1（资料定位）：只允许使用《TypeScript Narrowing》《TypeScript `satisfies`》《TypeScript Unions and Intersections》《NIST RBAC》，分别摘出能支撑「业务状态与权限类型建模」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「业务状态与权限类型建模」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：选择 `gungnir-web` 一个审核流程，将业务对象、状态、允许动作、请求参数和按钮展示建模；编写类型与运行时测试阻止非法转换；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#ts-08)、[TypeScript Narrowing](https://www.typescriptlang.org/zh/docs/handbook/2/narrowing.html)、[TypeScript `satisfies`](https://www.typescriptlang.org/zh/docs/handbook/release-notes/typescript-4-9.html)、[TypeScript Unions and Intersections](https://www.typescriptlang.org/zh/docs/handbook/unions-and-intersections.html)、[NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「业务状态与权限类型建模」的定义、机制、边界、反例和通过标准；项目枚举、服务类型与权限函数只允许作为题目提供的输入样例。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《TypeScript Narrowing》《TypeScript `satisfies`》《TypeScript Unions and Intersections》《NIST RBAC》，分别摘出能支撑「业务状态与权限类型建模」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「业务状态与权限类型建模」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：选择 `gungnir-web` 一个审核流程，将业务对象、状态、允许动作、请求参数和按钮展示建模；编写类型与运行时测试阻止非法转换；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：状态与动作关系有单一来源；非法动作既在类型层也在运行时失败；能回答后端新增状态时如何安全演进。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 

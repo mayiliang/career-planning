@@ -1,6 +1,6 @@
 # 学习资料与耗时使用指南
 
-更新时间：2026-07-28
+更新时间：2026-07-29
 
 本指南服务于 20 个领域、190 个知识点。知识点文件中的链接负责精确命中主题，本页负责说明资料优先级、连续学习主干、证据要求和耗时口径。
 
@@ -10,13 +10,15 @@
 
 1. 当前版本的规范、标准、官方文档或项目维护方文档。
 2. 官方维护的中文文档，或与官方原文同步的高质量中文镜像。
-3. 没有稳定中文版时，先提供项目内中文核心讲义，再保留当前英文官方原文用于核对 API、协议字段和版本变化。
+3. 没有稳定中文版时，必须先提供与知识点一一对应的项目内中文核心讲义；英文官方原文只能用于核对 API、协议字段和版本变化。
 4. 官方课程、示例仓库、迁移指南和安全公告。
 5. 高质量书籍、论文、课程或技术文章，只作辅助解释，不能替代原始依据。
 
-每个知识点至少需要两份可交叉验证的资料，并且**至少一份是中文主资料**。中文资料须明确覆盖定义、机制、边界和主要误区；不能只把英文链接改成中文标题。版本敏感主题必须写清当前版本；实验性 Web/AI API 必须包含能力检测、稳定性状态和降级方案。
+每个知识点至少需要两份可交叉验证的资料，并且**全部必读资料和独立首考题源都必须是中文**。中文资料须明确覆盖定义、机制、边界和主要误区；不能只把英文链接改成中文标题。版本敏感主题必须写清当前版本；实验性 Web/AI API 必须包含能力检测、稳定性状态和降级方案。
 
-当前 190 个知识点的中文主资料覆盖率为 **190/190**。主流技术优先使用官方中文页面；MCP、AI 安全、Agent 治理等缺少稳定中文版的主题使用[高级与前沿主题中文核心讲义](chinese-guides/advanced-topics.md)，同时保留英文一手资料进行版本核验。
+英文资料只有一种合法角色：**可选的版本核验原文**。每条英文链接都必须紧邻标注“英文原文，仅用于版本核验”，所在知识点必须有对应的中文核心讲义，并在学习范围和考核边界中明确它“不作为必读或独立首考题源”。未满足任一条件，内容门禁直接失败。
+
+当前 190 个知识点的中文必读资料覆盖率为 **190/190**。主流技术优先使用官方中文页面；缺少稳定中文版的主题由[高级与前沿主题中文核心讲义](chinese-guides/advanced-topics.md)和[核心与生态主题中文伴读](chinese-guides/core-and-ecosystem-topics.md)逐点补足。保留英文原文的知识点均执行上述可选核验规则。
 
 ## 五阶段掌握协议
 
@@ -32,18 +34,18 @@
 
 | 能力域 | 优先资料 | 使用重点 |
 | --- | --- | --- |
-| Web、浏览器、可访问性 | [MDN 中文 Web 文档](https://developer.mozilla.org/zh-CN/docs/Web)、[web.dev Learn 中文入口](https://web.dev/learn?hl=zh-cn)、[W3C WAI](https://www.w3.org/WAI/fundamentals/) | 语义、CSS、事件、渲染、网络、存储、性能和可访问性 |
+| Web、浏览器、可访问性 | [MDN 中文 Web 文档](https://developer.mozilla.org/zh-CN/docs/Web)、[MDN 中文 Web 表单](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Extensions/Forms)、[MDN 中文 ARIA](https://developer.mozilla.org/zh-CN/docs/Web/Accessibility/ARIA) | 语义、CSS、事件、渲染、网络、存储、性能和可访问性 |
 | JavaScript、TypeScript | [MDN JavaScript 中文指南](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide)、[TypeScript 中文手册](https://www.typescriptlang.org/zh/docs/handbook/intro.html)、[TSConfig 中文参考](https://www.typescriptlang.org/zh/tsconfig/) | 运行模型、类型建模、类型测试和编译边界 |
 | React | [React 中文学习文档](https://zh-hans.react.dev/learn)、[React API](https://zh-hans.react.dev/reference/react) | 渲染、状态、Hook、Effect、并发与异步边界 |
 | Vue、Nuxt | [Vue 中文指南](https://cn.vuejs.org/guide/introduction.html)、[Vue TypeScript](https://cn.vuejs.org/guide/typescript/overview.html)、[Nuxt 中文文档](https://nuxt.com.cn/docs/getting-started/introduction) | 响应式、组合式 API、状态、测试、性能和 SSR |
-| 中后台与组件系统 | [Ant Design 中文文档](https://ant.design/docs/react/introduce-cn)、[Umi Max](https://umijs.org/docs/max/introduce)、[WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/) | 业务组件、权限、设计 Token、可访问交互与平台治理 |
-| 数据、API、实时与离线 | [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview)、[OpenAPI](https://spec.openapis.org/oas/latest.html)、[GraphQL](https://graphql.org/learn/)、[MDN Service Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Service_Worker_API) | Server State、契约、缓存、冲突、实时恢复和离线 |
-| 工程、测试、供应链 | [Vite 中文文档](https://cn.vite.dev/guide/)、[Vitest 中文文档](https://cn.vitest.dev/guide/)、[Playwright 中文文档](https://playwright.nodejs.cn/docs/intro)、[pnpm 中文文档](https://pnpm.node.org.cn/workspaces)、[Sigstore 英文原文](https://docs.sigstore.dev/cosign/signing/overview/) | 可重复构建、验证金字塔、CI 门禁、依赖与制品可信 |
-| 安全、身份、隐私 | [OWASP Cheat Sheet](https://cheatsheetseries.owasp.org/)、[OAuth 2.1](https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/)、[OpenID Connect](https://openid.net/developers/how-connect-works/)、[W3C Privacy Principles](https://www.w3.org/TR/privacy-principles/) | 不可信输入输出、会话、授权、数据最小化和威胁建模 |
-| 性能、图形与体验 | [web.dev Performance](https://web.dev/learn/performance/)、[WebGL](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGL_API)、[WebGPU](https://www.w3.org/TR/webgpu/)、[Intl](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl) | 测量、预算、图形管线、国际化与兼容性 |
+| 中后台与组件系统 | [Ant Design 中文文档](https://ant.design/docs/react/introduce-cn)、[Umi Max](https://umijs.org/docs/max/introduce)、[MDN 中文 ARIA](https://developer.mozilla.org/zh-CN/docs/Web/Accessibility/ARIA) | 业务组件、权限、设计 Token、可访问交互与平台治理 |
+| 数据、API、实时与离线 | [核心与生态主题中文伴读](chinese-guides/core-and-ecosystem-topics.md)、[MDN 中文 Service Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Service_Worker_API)；TanStack Query、OpenAPI、GraphQL 英文原文仅按具体知识点标注后用于版本核验 | Server State、契约、缓存、冲突、实时恢复和离线 |
+| 工程、测试、供应链 | [Vite 中文文档](https://cn.vite.dev/guide/)、[Vitest 中文文档](https://cn.vitest.dev/guide/)、[Playwright 中文文档](https://playwright.nodejs.cn/docs/intro)、[pnpm 中文文档](https://pnpm.node.org.cn/workspaces)、[中文核心讲义](chinese-guides/advanced-topics.md) | 可重复构建、验证金字塔、CI 门禁、依赖与制品可信 |
+| 安全、身份、隐私 | [高级与前沿主题中文核心讲义](chinese-guides/advanced-topics.md)、[核心与生态主题中文伴读](chinese-guides/core-and-ecosystem-topics.md)；安全和身份标准英文原文仅按具体知识点标注后用于版本核验 | 不可信输入输出、会话、授权、数据最小化和威胁建模 |
+| 性能、图形与体验 | [核心与生态主题中文伴读](chinese-guides/core-and-ecosystem-topics.md)、[MDN 中文 WebGL](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGL_API)、[MDN 中文 Intl](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl) | 测量、预算、图形管线、国际化与兼容性 |
 | Node、Linux、容器与云 | [Node.js 中文文档](https://nodejs.cn/)、[中文核心讲义](chinese-guides/advanced-topics.md#linux-01)、[Docker 中文文档](https://docker.cadn.net.cn/)、[Nginx 中文文档](https://nginx.org/cn/docs/)、[Kubernetes 中文概念](https://kubernetes.io/zh-cn/docs/concepts/) | CLI/服务、进程与网络、镜像、编排、部署、观测和回滚 |
-| AI 应用与产品 | [OpenAI API 文档](https://platform.openai.com/docs/overview)、[Vercel AI SDK](https://ai-sdk.dev/docs/introduction)、[OWASP LLM Top 10](https://genai.owasp.org/llm-top-10/) | 任务价值、流式 UI、结构化输出、RAG、评估、安全与成本 |
-| Agent 与 MCP | [MCP 中文核心讲义](chinese-guides/advanced-topics.md#mcp-01)、[MCP 官方英文原文](https://modelcontextprotocol.io/docs/getting-started/intro)、[MCP TypeScript SDK v2 英文原文](https://github.com/modelcontextprotocol/typescript-sdk) | 无状态传输、工具/资源/提示词、任务、授权、可观测性与兼容 |
+| AI 应用与产品 | [高级与前沿主题中文核心讲义](chinese-guides/advanced-topics.md)、[核心与生态主题中文伴读](chinese-guides/core-and-ecosystem-topics.md)；厂商 API、SDK 和安全规范英文原文仅按具体知识点标注后用于版本核验 | 任务价值、流式 UI、结构化输出、RAG、评估、安全与成本 |
+| Agent 与 MCP | [MCP 中文核心讲义](chinese-guides/advanced-topics.md#mcp-01)；MCP 规范和 SDK 英文原文仅按具体知识点标注后用于版本核验 | 无状态传输、工具/资源/提示词、任务、授权、可观测性与兼容 |
 | 浏览器 AI 与 AI 研发 | [Chrome Built-in AI 中文页面](https://developer.chrome.com/docs/ai/built-in?hl=zh-cn)、[web.dev AI 中文页面](https://web.dev/learn/ai/?hl=zh-cn)、[GitHub Copilot 责任使用中文文档](https://docs.github.com/zh/copilot/responsible-use) | 能力检测、本地推理、Worker、隐私、验证和团队治理 |
 | 架构与领导力 | [架构领导力中文核心讲义](chinese-guides/advanced-topics.md#arch-02)、[AWS Well-Architected 中文文档](https://docs.aws.amazon.com/zh_cn/wellarchitected/latest/framework/welcome.html)、[Google 技术写作中文课程](https://developers.google.com/tech-writing/two?hl=zh-cn) | 质量属性、ADR、渐进迁移、可靠性、成本、评审和表达 |
 
@@ -65,6 +67,6 @@
 - 每月抽查实际使用过的链接；每季度执行一次全库版本审计。
 - 404、重定向到无关页面或版本过期时，优先替换为同一官方来源的新入口。
 - 中文译文与原文冲突时，以当前官方原文为准，并同步修订中文核心讲义、标明差异。
-- 自动化内容门禁要求每个知识点至少存在一份可识别的中文主资料；移除或改回纯英文资料会直接导致校验失败。
+- 自动化内容门禁要求每个知识点存在中文必读资料；每条英文原文必须逐条标注、拥有对应知识点的中文讲义，并被排除在必读和独立首考题源之外。任何一项缺失都会直接导致校验失败。
 - MCP、浏览器 AI、框架主版本、隐私和安全规范属于高变动内容，每月检查一次。
 - 新资料进入知识库前，必须说明覆盖哪个知识点、支持哪一类考核、预期留下什么证据。

@@ -69,8 +69,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Error Boundary](https://zh-hans.react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)、[`Suspense`](https://zh-hans.react.dev/reference/react/Suspense)、[React `use`](https://zh-hans.react.dev/reference/react/use)、[TanStack Query Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense)。覆盖范围：渲染错误、异步数据、Suspense 边界、错误恢复、重试、取消和框架数据源集成；同时明确 Effect 内普通请求不会自动触发 Suspense。
-- 严格考核：首考题 1（资料定位）：只允许使用《Error Boundary》《`Suspense`》《React `use`》《TanStack Query Suspense》，定位渲染错误、异步数据和恢复边界；首考题 2（机制解释）：解释 Promise、Suspense、错误边界、缓存和重试链路，并说明普通 Effect 请求为何不会触发 Suspense；首考题 3（最小产出）：为页面设计加载、空、错误、无权限、部分失败和重试状态；实现错误边界和可恢复数据边界；模拟渲染异常、接口失败与取消；首考题 4（受限排错）：诊断一次无限重试、瀑布请求或错误边界失效；首考题 5（学习复述）：比较框架集成数据源与 Effect 请求。命题边界：答案必须回指列出的资料和实际产出。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#react-08)、[Error Boundary](https://zh-hans.react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)、[`Suspense`](https://zh-hans.react.dev/reference/react/Suspense)、[React `use`](https://zh-hans.react.dev/reference/react/use)、[TanStack Query Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：渲染错误、异步数据、Suspense 边界、错误恢复、重试、取消和框架数据源集成；同时明确 Effect 内普通请求不会自动触发 Suspense。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Error Boundary》《`Suspense`》《React `use`》《TanStack Query Suspense》，定位渲染错误、异步数据和恢复边界；首考题 2（机制解释）：解释 Promise、Suspense、错误边界、缓存和重试链路，并说明普通 Effect 请求为何不会触发 Suspense；首考题 3（最小产出）：为页面设计加载、空、错误、无权限、部分失败和重试状态；实现错误边界和可恢复数据边界；模拟渲染异常、接口失败与取消；首考题 4（受限排错）：诊断一次无限重试、瀑布请求或错误边界失效；首考题 5（学习复述）：比较框架集成数据源与 Effect 请求。命题边界：答案必须回指列出的资料和实际产出。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：错误隔离范围合理；恢复不会丢失无关用户输入；能区分渲染错误、事件错误和异步请求错误的捕获边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
 

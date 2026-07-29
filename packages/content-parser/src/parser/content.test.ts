@@ -5,6 +5,32 @@ import { parseAllKnowledgeFiles } from './markdown.js';
 
 const CHINESE_RESOURCE_PATTERN =
   /\[[^\]]+\]\((?:\.\.\/chinese-guides\/|https?:\/\/[^)]*(?:\/zh-CN\/|\/zh-cn\/|\/zh_cn\/|\/zh\/|zh-hans\.|cn\.vuejs\.org|cn\.vite\.dev|cn\.vitest\.dev|nodejs\.cn|node\.org\.cn|playwright\.nodejs\.cn|testing-library\.node\.org\.cn|eslint\.org\.cn|nuxt\.com\.cn|hl=zh-cn|umijs\.org|ant\.design|developer\.work\.weixin\.qq\.com|open\.dingtalk\.com|\.cn\/))[^)]*\)/i;
+const ENGLISH_ORIGINAL_MARKER = '（英文原文，仅用于版本核验）';
+const ENGLISH_ORIGINAL_SCOPE = '英文原文仅用于版本核验，不作为必读或独立首考题源。';
+const ENGLISH_ORIGINAL_ASSESSMENT_SCOPE = '英文原文仅用于版本核验，不作为独立首考题源。';
+
+function extractMarkdownLinks(markdown: string): Array<{ markup: string; url: string }> {
+  return [...markdown.matchAll(/(\[[^\]]+\]\(([^)]+)\))/g)].map((match) => ({
+    markup: match[1] ?? '',
+    url: match[2] ?? '',
+  }));
+}
+
+function isChineseResource(markup: string): boolean {
+  if (/https?:\/\/nodejs\.cn\/en\//i.test(markup)) {
+    return false;
+  }
+  if (/https?:\/\/mobile\.ant\.design\//i.test(markup)) {
+    return false;
+  }
+  if (
+    /https?:\/\/qiankun\.umijs\.org\//i.test(markup) &&
+    !/https?:\/\/qiankun\.umijs\.org\/zh\//i.test(markup)
+  ) {
+    return false;
+  }
+  return CHINESE_RESOURCE_PATTERN.test(markup);
+}
 
 function findProjectRoot(): string {
   let current = process.cwd();
@@ -69,8 +95,41 @@ describe('知识库内容完整性', () => {
       ).toBeGreaterThanOrEqual(2);
       expect(
         point.studyMaterial,
-        `${point.code} 至少需要一份中文主资料；无稳定中文版时应链接项目内中文核心讲义`,
+        `${point.code} 必须有中文必读资料；无稳定中文版时应链接项目内中文核心讲义`,
       ).toMatch(CHINESE_RESOURCE_PATTERN);
+
+      const englishOriginals = extractMarkdownLinks(point.studyMaterial).filter(
+        ({ markup, url }) => /^https?:\/\//i.test(url) && !isChineseResource(markup),
+      );
+      for (const original of englishOriginals) {
+        expect(
+          point.studyMaterial,
+          `${point.code} 的英文链接 ${original.url} 未逐条标明“仅用于版本核验”`,
+        ).toContain(`${original.markup}${ENGLISH_ORIGINAL_MARKER}`);
+      }
+      if (englishOriginals.length > 0) {
+        const pointGuideLink =
+          `../chinese-guides/advanced-topics.md#${point.code.toLowerCase()}`;
+        const ecosystemGuideLink =
+          `../chinese-guides/core-and-ecosystem-topics.md#${point.code.toLowerCase()}`;
+        expect(
+          point.studyMaterial.includes(pointGuideLink) ||
+            point.studyMaterial.includes(ecosystemGuideLink),
+          `${point.code} 保留了英文原文，却没有对应知识点的中文核心讲义`,
+        ).toBe(true);
+        expect(
+          point.studyMaterial,
+          `${point.code} 没有声明英文原文不属于必读和独立首考题源`,
+        ).toContain(ENGLISH_ORIGINAL_SCOPE);
+        expect(
+          point.assessmentSpec,
+          `${point.code} 的考核题源未包含中文核心讲义`,
+        ).toContain('《中文核心讲义》');
+        expect(
+          point.assessmentSpec,
+          `${point.code} 没有限制英文原文不得独立命题`,
+        ).toContain(ENGLISH_ORIGINAL_ASSESSMENT_SCOPE);
+      }
       expect(`${point.studyMaterial}\n${point.assessmentSpec}`).not.toMatch(
         /2025-11-25|react\.dev\/learn\/displaying-data|docs\.sigstore\.dev\/cosign\/overview\/|ant\.design\/docs\/spec\/api\/|responsible-use\/copilot-code-review|sre\.google\/sre-book\/risk-engineering|techwriting\.withgoogle\.com\/resources\/one\/two\/review|multi-step-tools|docs\.docker\.com\/build\/guide\/|modelcards\.withgoogle\.com|rework\.withgoogle\.com|www\.gov\.cn\/xinwen\/2021-08-20/,
       );
@@ -82,20 +141,34 @@ describe('知识库内容完整性', () => {
     expect(pointsByCode.get('JS-06')?.studyMaterial).toContain('https://nodejs.cn/api/esm.html');
     expect(pointsByCode.get('JS-06')?.studyMaterial).not.toContain('https://nodejs.org/api/esm.html');
     expect(pointsByCode.get('REACT-04')?.studyMaterial).toMatch(/Effect|Effects/i);
-
-    const advancedGuide = fs.readFileSync(
-      path.join(root, 'docs/knowledge/chinese-guides/advanced-topics.md'),
-      'utf8',
+    expect(pointsByCode.get('WEB-01')?.studyMaterial).not.toContain('w3.org/WAI/ARIA/apg');
+    expect(pointsByCode.get('WEB-01')?.studyMaterial).not.toContain('英文原文');
+    expect(pointsByCode.get('WEB-01')?.studyMaterial).toContain(
+      'https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Extensions/Forms',
     );
-    for (const point of points.filter((item) => item.studyMaterial.includes('../chinese-guides/'))) {
-      expect(
-        advancedGuide,
-        `${point.code} 引用了中文核心讲义，但讲义中没有对应章节`,
-      ).toContain(`## ${point.code}`);
-      expect(
-        point.assessmentSpec,
-        `${point.code} 的考核题源未包含中文核心讲义`,
-      ).toContain('《中文核心讲义》');
+    expect(pointsByCode.get('WEB-01')?.studyMaterial).toContain(
+      'https://developer.mozilla.org/zh-CN/docs/Web/Accessibility/ARIA',
+    );
+
+    const guideFiles = [
+      'advanced-topics.md',
+      'core-and-ecosystem-topics.md',
+    ] as const;
+    const guides = new Map(
+      guideFiles.map((file) => [
+        file,
+        fs.readFileSync(path.join(root, 'docs/knowledge/chinese-guides', file), 'utf8'),
+      ]),
+    );
+    for (const point of points) {
+      for (const guideFile of guideFiles) {
+        if (point.studyMaterial.includes(`../chinese-guides/${guideFile}#`)) {
+          expect(
+            guides.get(guideFile),
+            `${point.code} 引用了 ${guideFile}，但讲义中没有对应章节`,
+          ).toContain(`## ${point.code}`);
+        }
+      }
     }
   });
 
