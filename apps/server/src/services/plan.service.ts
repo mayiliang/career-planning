@@ -2,7 +2,7 @@
  * 计划服务
  * 
  * Phase 3: 日历、计划与打卡
- * - 从 48 周 CSV 模板生成计划事件
+ * - 从 64 周 CSV 模板生成计划事件
  * - 事件查询、创建、更新
  * - 打卡和状态管理
  */
@@ -73,7 +73,7 @@ export interface LearningWeekBlueprint {
 
 export const BEIJING_TIME_ZONE = 'Asia/Shanghai';
 export const DAILY_LEARNING_CAPACITY_MINUTES = 390;
-export const TEMPLATE_PLAN_WEEK_COUNT = 48;
+export const TEMPLATE_PLAN_WEEK_COUNT = 64;
 const TEMPLATE_PLAN_DAY_COUNT = TEMPLATE_PLAN_WEEK_COUNT * 7;
 const CONTENT_PLAN_DAY_COUNT = CONTENT_PLAN_WEEK_COUNT * 7;
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -113,24 +113,28 @@ function scheduledDurationMinutes(description: string | null | undefined): numbe
 }
 
 const PHASE_BLUEPRINTS = [
-  { through: 4, phase: 'Web 基础', theme: 'JavaScript、浏览器、网络与 TypeScript', projectAnchor: '浏览器机制实验室' },
-  { through: 8, phase: '安全与工程', theme: '身份隐私、工程规范、测试与 AI 验证', projectAnchor: '安全边界与质量流水线' },
-  { through: 12, phase: '框架核心', theme: 'React、Vue 与复杂状态', projectAnchor: '双框架垂直切片' },
-  { through: 16, phase: '业务架构', theme: '中后台、业务建模、渲染与 Server State', projectAnchor: '复杂业务工作台' },
-  { through: 20, phase: '应用平台', theme: '实时协作、离线、组件系统与平台化', projectAnchor: '实时离线组件平台' },
-  { through: 24, phase: '质量交付', theme: '发布、可观测性、供应链与容器部署', projectAnchor: '生产质量与部署流水线' },
-  { through: 28, phase: '性能与后端素养', theme: '性能、H5、数据库、队列、对象存储与云', projectAnchor: '高性能异步任务应用' },
-  { through: 32, phase: 'AI 产品与应用', theme: 'AI 产品判断、安全、流式 UI、RAG 与评估', projectAnchor: '可信 AI 应用' },
-  { through: 36, phase: 'Agent 与 MCP', theme: 'Agent、MCP 2026 与浏览器本地 AI', projectAnchor: '可恢复最小权限 Agent' },
-  { through: 40, phase: 'AI 工程与产品实验', theme: 'AI 辅助研发、图形可视化、埋点与实验', projectAnchor: 'AI 研发实验看板' },
-  { through: 44, phase: '架构与影响力', theme: '国际化、架构演进、技术领导力与职业表达', projectAnchor: '高级前端架构资产包' },
+  { through: 4, phase: '语言与浏览器', theme: 'JavaScript、算法复杂度、异步与浏览器机制', projectAnchor: '浏览器与算法机制实验室' },
+  { through: 8, phase: 'Web 平台与安全', theme: '语义、可访问性、CSS、Web Components、网络与安全', projectAnchor: '可访问跨框架 Web 平台' },
+  { through: 12, phase: '类型与协作底座', theme: 'TypeScript、身份隐私、Git、系统调试与 Node.js', projectAnchor: '安全可调试的协作工具链' },
+  { through: 16, phase: '工程质量', theme: '构建、依赖、测试、门禁与 AI 规格验证', projectAnchor: '可追溯质量流水线' },
+  { through: 20, phase: '框架核心', theme: 'React、Vue、渲染、状态与性能', projectAnchor: '双框架垂直切片' },
+  { through: 24, phase: '复杂业务', theme: 'Vue 工程化、业务建模、权限与中后台组件', projectAnchor: '复杂业务工作台' },
+  { through: 28, phase: '数据与渲染架构', theme: '接口契约、SSR、Server State、实时协作与离线', projectAnchor: '实时离线数据应用' },
+  { through: 32, phase: '组件、体验与平台', theme: '组件 API、设计系统、UX、微前端与多运行时', projectAnchor: '跨框架体验平台' },
+  { through: 36, phase: '供应链与交付', theme: '供应链、Linux、Docker、CI/CD、部署与可观测性', projectAnchor: '可信生产交付流水线' },
+  { through: 40, phase: '性能与后端素养', theme: '性能、H5、数据库、队列、对象存储与云', projectAnchor: '高性能异步任务应用' },
+  { through: 44, phase: 'AI 产品与 MCP', theme: 'API/MCP、AI 产品判断、安全、流式 UI 与 RAG', projectAnchor: '可信 AI 应用' },
+  { through: 48, phase: 'AI 应用与 Agent', theme: 'Generative UI、MCP Apps、实时语音、评估与 Agent', projectAnchor: '实时多模态协作 Agent' },
+  { through: 52, phase: 'Agent 与浏览器 AI', theme: 'Agent 协议、安全、可观测与浏览器本地推理', projectAnchor: '可恢复最小权限 Agent' },
+  { through: 56, phase: 'AI 工程与可视化', theme: 'AI 辅助研发、图形可视化、埋点与实验', projectAnchor: 'AI 研发实验看板' },
+  { through: 60, phase: '全球化与技术领导', theme: '实验、国际化、SEO、兼容、架构演进与职业表达', projectAnchor: '高级前端架构资产包' },
 ] as const;
 
 function learningBlueprint(week: number): LearningWeekBlueprint {
-  if (week === 45) return { phase: '证据整合', theme: '作品集与项目证据', projectAnchor: '四个代表项目资产包', outcome: '把知识证据转成可审查的架构、代码、测试和决策材料', assessment: '项目深挖 + 架构评审 + 证据复核' };
-  if (week === 46) return { phase: '生产演练', theme: '部署、监控、故障与回滚', projectAnchor: 'Career Atlas 生产化交付', outcome: '完成生产部署、故障注入、恢复和发布复盘', assessment: '部署实作 + 故障定位 + 回滚答辩' };
-  if (week === 47) return { phase: '综合项目', theme: 'AI 时代高级前端综合实作', projectAnchor: '可信 AI 协作应用', outcome: '整合渲染、数据、AI、安全、性能和工程能力', assessment: '跨领域实作 + 红队 + 性能与无障碍验收' };
-  if (week === 48) return { phase: '毕业闸门', theme: '综合答辩、盲测与求职启动', projectAnchor: '高级前端能力答辩包', outcome: '交付可运行产品、证据矩阵、作品集、简历和后续复测计划', assessment: '4 小时综合实作 + 90 分钟答辩 + 盲测复核' };
+  if (week === 61) return { phase: '证据整合', theme: '作品集与项目证据', projectAnchor: '四个代表项目资产包', outcome: '把知识证据转成可审查的架构、代码、测试和决策材料', assessment: '项目深挖 + 架构评审 + 证据复核' };
+  if (week === 62) return { phase: '生产演练', theme: '部署、监控、故障与回滚', projectAnchor: 'Career Atlas 生产化交付', outcome: '完成生产部署、故障注入、恢复和发布复盘', assessment: '部署实作 + 故障定位 + 回滚答辩' };
+  if (week === 63) return { phase: '综合项目', theme: 'AI 时代高级前端综合实作', projectAnchor: '可信 AI 协作应用', outcome: '整合渲染、数据、AI、安全、性能、UX 和工程能力', assessment: '跨领域实作 + 红队 + 性能、无障碍与可用性验收' };
+  if (week === 64) return { phase: '毕业闸门', theme: '综合答辩、盲测与求职启动', projectAnchor: '高级前端能力答辩包', outcome: '交付可运行产品、证据矩阵、作品集、简历和后续复测计划', assessment: '4 小时综合实作 + 90 分钟答辩 + 盲测复核' };
   const phase = PHASE_BLUEPRINTS.find((item) => week <= item.through) ?? PHASE_BLUEPRINTS.at(-1)!;
   const codes = LEARNING_WEEK_PATHS[week] ?? [];
   return {
@@ -149,7 +153,7 @@ export const LEARNING_WEEK_BLUEPRINTS: Record<number, LearningWeekBlueprint> = O
   }),
 );
 
-// ===== 48 周计划模板解析 =====
+// ===== 64 周计划模板解析 =====
 
 /**
  * 学习计划模板项（从 CSV 解析）
@@ -217,7 +221,7 @@ function getDayOfWeek(dayName: string): number {
 /**
  * 计算计划日期
  * @param startDate 计划开始日期（周一）
- * @param weekNumber 周次（1-48）
+ * @param weekNumber 周次（1-64）
  * @param dayOfWeek 星期几（0-6）
  */
 function calculatePlanDateKey(startDate: string, weekNumber: number, dayOfWeek: number): string {
@@ -294,8 +298,8 @@ function routeCodesForInitialMastery(): string[] {
 }
 
 /**
- * 把完整学习合同铺到 48 周：
- * - 前 44 周按每日最多 390 分钟安排首次掌握；
+ * 把完整学习合同铺到 64 周：
+ * - 前 60 周按每日最多 390 分钟安排首次掌握；
  * - 首考完成后把复测加入至少 7 天后的到期队列，并优先于新内容；
  * - 后 4 周保留给作品集、生产演练、综合项目和毕业闸门。
  */
@@ -350,7 +354,7 @@ function allTemplateEffortSegments(effortByCode = loadEffortByCode()): EffortSeg
   const pendingRetestMinutes = retests.reduce((sum, item) => sum + item.remaining, 0);
   if (queueIndex < queue.length || pendingRetestMinutes > 0) {
     const pendingInitialMinutes = queue.slice(queueIndex).reduce((sum, item) => sum + item.remaining, 0);
-    throw new Error(`48 周计划容量不足：仍有首次掌握 ${pendingInitialMinutes} 分钟、复测 ${pendingRetestMinutes} 分钟未安排`);
+    throw new Error(`64 周计划容量不足：仍有首次掌握 ${pendingInitialMinutes} 分钟、复测 ${pendingRetestMinutes} 分钟未安排`);
   }
 
   // 知识合同提前完成时，用短时项目整合保持路线连续；390 分钟是上限，不是必须填满的配额。

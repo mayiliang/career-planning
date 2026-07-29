@@ -242,8 +242,8 @@ export const weeklyReviews = sqliteTable('weekly_reviews', {
   adjustmentsMd: text('adjustments_md'), // 下周调整
   nextWeekFocus: text('next_week_focus'), // 下周重点
 
-  // 48 周计划进度
-  planWeekNumber: integer('plan_week_number'), // 对应 48 周计划的周次
+  // 64 周计划进度
+  planWeekNumber: integer('plan_week_number'), // 对应 64 周计划的周次
   themeCompleted: integer('theme_completed', { mode: 'boolean' }), // 当周主题是否完成
 
   // 实际学习时长（分钟）

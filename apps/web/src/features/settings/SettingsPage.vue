@@ -64,7 +64,7 @@ async function remove(filename: string) {
 }
 
 function resetLearningProgress() {
-  if (!window.confirm('重置学习进度？这会清空知识掌握状态、考核记录、打卡、复盘、请假和模板学习计划，并从北京时间今天开始按最新版 48 周模板重新生成计划。岗位、项目和备份会保留。')) return;
+  if (!window.confirm('重置学习进度？这会清空知识掌握状态、考核记录、打卡、复盘、请假和模板学习计划，并从北京时间今天开始按最新版 64 周模板重新生成计划。岗位、项目和备份会保留。')) return;
   resetProgressMutation.mutate();
 }
 
@@ -78,7 +78,7 @@ function formatSize(bytes: number) {
     <header class="page-header">
       <p class="eyebrow">LOCAL CONTROL ROOM</p>
       <h1>系统与数据</h1>
-      <p>首次启动会自动迁移、同步知识、生成每周 7 天的 48 周学习计划并创建每日快照。这里不会回显任何 API Key。</p>
+      <p>首次启动会自动迁移、同步知识、生成每周 7 天的 64 周学习计划并创建每日快照。这里不会回显任何 API Key。</p>
     </header>
 
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
@@ -105,7 +105,7 @@ function formatSize(bytes: number) {
     <section>
       <div class="section-heading"><span>03</span><div><h2>学习进度重置</h2><p>用于知识体系大改后重新开始；从北京时间今天重排计划</p></div></div>
       <div class="action-row reset-row">
-        <div><strong>清空进度并重建计划</strong><p>同步最新知识库，重置掌握状态和考核证据，从今天重新生成 48 周学习日历。</p></div>
+        <div><strong>清空进度并重建计划</strong><p>同步最新知识库，重置掌握状态和考核证据，从今天重新生成 64 周学习日历。</p></div>
         <button class="danger-button" :disabled="resetProgressMutation.isPending.value" @click="resetLearningProgress">{{ resetProgressMutation.isPending.value ? '重置中...' : '重置学习进度' }}</button>
       </div>
     </section>

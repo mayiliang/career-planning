@@ -68,6 +68,30 @@ describe('Import Service', () => {
     expect(status).toHaveProperty('pointCodes');
   });
 
+  it('应该删除已经从 Markdown 权威目录移除的幽灵知识点和领域', async () => {
+    await executeImport();
+    const sourcePoint = rawDb.prepare("SELECT * FROM knowledge_points WHERE code = 'JS-01'").get() as Record<string, unknown>;
+    const stalePoint = { ...sourcePoint, id: 'stale-import-point', code: 'STALE-01', title: '已移除知识点' };
+    const pointColumns = Object.keys(stalePoint);
+    rawDb.prepare(`
+      INSERT INTO knowledge_points (${pointColumns.join(', ')})
+      VALUES (${pointColumns.map(() => '?').join(', ')})
+    `).run(...pointColumns.map((column) => stalePoint[column]));
+
+    const sourceDomain = rawDb.prepare("SELECT * FROM knowledge_domains WHERE code = '01'").get() as Record<string, unknown>;
+    const staleDomain = { ...sourceDomain, id: 'stale-import-domain', code: '99', title: '已移除领域' };
+    const domainColumns = Object.keys(staleDomain);
+    rawDb.prepare(`
+      INSERT INTO knowledge_domains (${domainColumns.join(', ')})
+      VALUES (${domainColumns.map(() => '?').join(', ')})
+    `).run(...domainColumns.map((column) => staleDomain[column]));
+
+    const result = await executeImport();
+    expect(result.deletedPoints).toBe(1);
+    expect(result.deletedDomains).toBe(1);
+    expect((await checkImportStatus()).pointCount).toBe(219);
+  });
+
   it('应该能够重置学习进度并保留用户自建计划', async () => {
     rawDb.prepare('DELETE FROM assessment_answers').run();
     rawDb.prepare('DELETE FROM assessment_questions').run();
@@ -119,15 +143,15 @@ describe('Import Service', () => {
     const checkinCount = rawDb.prepare('SELECT count(*) AS count FROM checkins').get() as { count: number };
     const assessmentCount = rawDb.prepare('SELECT count(*) AS count FROM assessment_sessions').get() as { count: number };
 
-    expect(result.syncedKnowledgePoints).toBe(190);
-    expect(result.resetKnowledgePoints).toBe(190);
+    expect(result.syncedKnowledgePoints).toBe(219);
+    expect(result.resetKnowledgePoints).toBe(219);
     expect(result.deletedTemplateEvents).toBe(1);
     expect(result.deletedCheckins).toBe(1);
     expect(result.deletedAssessmentSessions).toBe(1);
     expect(result.deletedMasteryEvents).toBe(1);
-    expect(result.importedPlanEvents).toBe(336);
+    expect(result.importedPlanEvents).toBe(448);
     expect(point).toEqual({ status: 'NOT_STARTED', summary: null, masteredAt: null });
-    expect(templateCount.count).toBe(336);
+    expect(templateCount.count).toBe(448);
     expect(userCount.count).toBe(1);
     expect(checkinCount.count).toBe(0);
     expect(assessmentCount.count).toBe(0);

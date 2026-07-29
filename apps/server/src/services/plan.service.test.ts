@@ -2,7 +2,7 @@
  * 计划服务测试
  * 
  * Phase 3 验收：
- * - 可以从模板生成完整 48 周计划
+ * - 可以从模板生成完整 64 周计划
  * - 打卡和改期历史可追踪
  * - 7 天复测事件类型已准备好
  */
@@ -17,14 +17,14 @@ describe('Plan Service', () => {
   const templatePath = join(projectRoot, 'templates', 'learning-tracker-template.csv');
   
   describe('parseLearningPlanCSV', () => {
-    it('应该正确解析 48 周计划 CSV', async () => {
+    it('应该正确解析 64 周计划 CSV', async () => {
       const fs = await import('fs/promises');
       const csvContent = await fs.readFile(templatePath, 'utf-8');
       
       const items = parseLearningPlanCSV(csvContent);
       
       // 验证解析结果
-      expect(items.length).toBe(336); // 48 周 × 7 天
+      expect(items.length).toBe(448); // 64 周 × 7 天
       
       // 验证第一周内容
       const firstItem = items[0];
@@ -36,7 +36,7 @@ describe('Plan Service', () => {
       
       // 验证最后一周内容
       const lastItem = items[items.length - 1];
-      expect(lastItem.week).toBe(48);
+      expect(lastItem.week).toBe(64);
       expect(lastItem.theme).toBe('综合答辩、盲测与求职启动');
     });
     
@@ -80,8 +80,8 @@ describe('Plan Service', () => {
       const preview = await planService.previewFromTemplate(templatePath, { startDate });
       
       // 验证预览结构
-      expect(preview.totalItems).toBe(336);
-      expect(preview.weeks.length).toBe(48);
+      expect(preview.totalItems).toBe(448);
+      expect(preview.weeks.length).toBe(64);
       
       // 验证第一周
       const week1 = preview.weeks.find(w => w.week === 1);
@@ -147,10 +147,10 @@ describe('7 天计划升级与请假顺延', () => {
     expect(await service.syncTemplatePlan(templatePath)).toEqual({ created: 0, updated: 0, preserved: 0 });
     rawDb.prepare("DELETE FROM plan_events WHERE template_day IN ('周六', '周日')").run();
 
-    expect((rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number }).count).toBe(240);
-    expect(await service.ensureSevenDayTemplate(templatePath)).toBe(96);
+    expect((rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number }).count).toBe(320);
+    expect(await service.ensureSevenDayTemplate(templatePath)).toBe(128);
     expect(await service.ensureSevenDayTemplate(templatePath)).toBe(0);
-    expect((rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number }).count).toBe(336);
+    expect((rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number }).count).toBe(448);
   });
 
   it('同步新蓝图时更新未开始计划并保留已有打卡证据', async () => {
@@ -169,11 +169,11 @@ describe('7 天计划升级与请假顺延', () => {
 
   it('周计划按前置顺序覆盖全部知识且每周学习强度支撑 7 天连续推进', async () => {
     const route = Array.from({ length: CONTENT_PLAN_WEEK_COUNT }, (_, index) => LEARNING_WEEK_PATHS[index + 1] ?? []).flat();
-    expect(route).toHaveLength(190);
-    expect(new Set(route).size).toBe(190);
+    expect(route).toHaveLength(219);
+    expect(new Set(route).size).toBe(219);
     rawDb.prepare('DELETE FROM plan_events').run();
     const result = await service.importFromTemplate(templatePath, { startDate: '2026-07-20' });
-    expect(result.events).toHaveLength(336);
+    expect(result.events).toHaveLength(448);
     for (const event of result.events) {
       const expected = Number(event.description?.match(/^预计投入：(\d+) 分钟/m)?.[1] ?? 0);
       expect(expected, `${event.templateWeek}-${event.templateDay} 未安排学习合同`).toBeGreaterThan(0);
@@ -200,14 +200,14 @@ describe('7 天计划升级与请假顺延', () => {
         }
       }
     }
-    expect(lastAssessmentAt.size).toBe(190);
-    expect(firstRetestAt.size).toBe(190);
+    expect(lastAssessmentAt.size).toBe(219);
+    expect(firstRetestAt.size).toBe(219);
     for (const [code, assessmentAt] of lastAssessmentAt) {
       expect(firstRetestAt.get(code)! - assessmentAt, `${code} 的复测必须至少延迟 7 天`)
         .toBeGreaterThanOrEqual(7 * 24 * 60 * 60 * 1_000);
     }
     expect(LEARNING_WEEK_PATHS[1]?.[0]).toBe('JS-01');
-    expect(LEARNING_WEEK_PATHS[44]?.at(-1)).toBe('CAREER-06');
+    expect(LEARNING_WEEK_PATHS[60]?.at(-1)).toBe('CAREER-06');
   });
 
   it('请假会将当天及未来未完成学习任务整体顺延一天', async () => {

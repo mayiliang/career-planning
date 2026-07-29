@@ -15,7 +15,8 @@
     "build": "tsc",
     "test": "vitest run",
     "lint": "eslint src --ext .ts",
-    "content:check": "vitest run src/parser/content.test.ts"
+    "content:check": "vitest run src/parser/content.test.ts",
+    "content:links": "node scripts/check-learning-links.mjs"
   },
   "dependencies": {
     "unified": "^11.0.5",

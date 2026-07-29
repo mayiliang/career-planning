@@ -85,6 +85,8 @@ export async function executeImport(): Promise<{
   importedPoints: number;
   updatedPoints: number;
   skippedPoints: number;
+  deletedPoints: number;
+  deletedDomains: number;
   totalPoints: number;
 }> {
   const { files } = scanKnowledgeFiles();
@@ -101,9 +103,28 @@ export async function executeImport(): Promise<{
   let importedPoints = 0;
   let updatedPoints = 0;
   let skippedPoints = 0;
+  let deletedPoints = 0;
+  let deletedDomains = 0;
+  const sourcePointCodes = new Set(domains.flatMap((domain) => domain.points.map((point) => point.code)));
+  const sourceDomainCodes = new Set(domains.map((domain) => domain.code));
   
   // 使用事务
   const transaction = rawDb.transaction(() => {
+    // Markdown 是知识目录的权威来源；合并或移除的合同必须从数据库同步退场，
+    // 否则关系图、统计和学习路径会继续展示幽灵知识点。
+    const deletePoint = rawDb.prepare('DELETE FROM knowledge_points WHERE id = ?');
+    for (const point of db.select().from(knowledgePoints).all()) {
+      if (!sourcePointCodes.has(point.code)) {
+        deletedPoints += deletePoint.run(point.id).changes;
+      }
+    }
+    const deleteDomain = rawDb.prepare('DELETE FROM knowledge_domains WHERE id = ?');
+    for (const domain of db.select().from(knowledgeDomains).all()) {
+      if (!sourceDomainCodes.has(domain.code)) {
+        deletedDomains += deleteDomain.run(domain.id).changes;
+      }
+    }
+
     for (const domain of domains) {
       // 检查领域是否已存在
       const existingDomain = db.select()
@@ -233,6 +254,8 @@ export async function executeImport(): Promise<{
       importedPoints,
       updatedPoints,
       skippedPoints,
+      deletedPoints,
+      deletedDomains,
       totalPoints: domains.reduce((sum, d) => sum + d.points.length, 0),
     };
   });
@@ -279,7 +302,7 @@ export interface ResetLearningProgressResult {
 }
 
 /**
- * 清空学习进度并按最新版 48 周模板重建计划。
+ * 清空学习进度并按最新版 64 周模板重建计划。
  *
  * 保留知识内容、知识关系、岗位、项目、技能缺口和备份；只清除学习过程状态、
  * 考核证据、打卡复盘、请假顺延记录，以及模板/系统生成的学习计划。

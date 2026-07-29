@@ -6,45 +6,81 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN JavaScript 执行模型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Execution_model)、[MDN 作用域](https://developer.mozilla.org/zh-CN/docs/Glossary/Scope)、[MDN 闭包](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Closures)、[MDN 函数](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Functions)。覆盖范围：围绕「执行上下文、作用域与闭包」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN JavaScript 执行模型》《MDN 作用域》《MDN 闭包》《MDN 函数》，分别摘出能支撑「执行上下文、作用域与闭包」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「执行上下文、作用域与闭包」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：闭卷画出 3 段嵌套函数的作用域链并预测输出；30 分钟实现带私有状态、撤销和订阅能力的闭包模块；解释循环闭包、共享状态和不必要闭包的边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：输出全对；实现无全局泄漏且测试覆盖多实例隔离；能解释词法作用域、创建时机、内存保留和不适合使用闭包的场景。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN JavaScript 执行模型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Execution_model)、[MDN 作用域](https://developer.mozilla.org/zh-CN/docs/Glossary/Scope)、[MDN 闭包](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Closures)、[MDN 函数](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Functions)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN JavaScript 执行模型》《MDN 作用域》《MDN 闭包》《MDN 函数》，分别摘出能支撑「执行上下文、作用域与闭包」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：闭卷画出 3 段嵌套函数的作用域链并预测输出；30 分钟实现带私有状态、撤销和订阅能力的闭包模块；解释循环闭包、共享状态和不必要闭包的边界；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：输出全对；实现无全局泄漏且测试覆盖多实例隔离；能解释词法作用域、创建时机、内存保留和不适合使用闭包的场景。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## JS-02 原型、对象模型与 `this`
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN 对象模型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain)、[MDN `this`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/this)。覆盖范围：围绕「原型、对象模型与 `this`」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN 对象模型》《MDN `this`》，分别摘出能支撑「原型、对象模型与 `this`」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「原型、对象模型与 `this`」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：闭卷解释 `new`、原型查找、class 语法和 `call/apply/bind`；实现简化版 `new` 与 `bind`；排查一个方法丢失 `this` 的真实 Bug；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：正确处理构造函数显式返回、箭头函数和多层原型；能比较组合、class 与原型委托的边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN 对象模型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain)、[MDN `this`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/this)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN 对象模型》《MDN `this`》，分别摘出能支撑「原型、对象模型与 `this`」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：闭卷解释 `new`、原型查找、class 语法和 `call/apply/bind`；实现简化版 `new` 与 `bind`；排查一个方法丢失 `this` 的真实 Bug；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：正确处理构造函数显式返回、箭头函数和多层原型；能比较组合、class 与原型委托的边界。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## JS-03 类型、相等、拷贝与不可变更新
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN 数据类型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Data_structures)、[MDN 相等比较](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness)、[structuredClone](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/structuredClone)。覆盖范围：围绕「类型、相等、拷贝与不可变更新」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN 数据类型》《MDN 相等比较》《structuredClone》，分别摘出能支撑「类型、相等、拷贝与不可变更新」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「类型、相等、拷贝与不可变更新」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：完成 15 道隐式转换与相等判断题；实现支持循环引用的深拷贝或明确拒绝的类型；修复一段因引用共享导致的状态污染代码；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：至少答对 13 题；实现对 Date、Map、Set、数组和循环引用有明确策略；能说明深拷贝不是默认解决方案。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN 数据类型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Data_structures)、[MDN 相等比较](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness)、[structuredClone](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/structuredClone)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN 数据类型》《MDN 相等比较》《structuredClone》，分别摘出能支撑「类型、相等、拷贝与不可变更新」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：完成 15 道隐式转换与相等判断题；实现支持循环引用的深拷贝或明确拒绝的类型；修复一段因引用共享导致的状态污染代码；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：至少答对 13 题；实现对 Date、Map、Set、数组和循环引用有明确策略；能说明深拷贝不是默认解决方案。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
+
+## JS-07 迭代协议、元编程与资源生命周期
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#js-07)、[中文｜MDN 迭代协议](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Iteration_protocols)、[中文｜MDN Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy)、[中文｜MDN Reflect](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Reflect)。覆盖范围：可迭代/迭代器协议、生成器、`Symbol`、`Proxy`/`Reflect` 不变量、惰性序列、同步/异步资源释放、可观测性与性能边界；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《中文｜MDN 迭代协议》《中文｜MDN Proxy》《中文｜MDN Reflect》，定位协议、不变量与资源清理规则；首考题 2（机制解释）：闭卷解释 `for...of`、生成器暂停恢复、代理陷阱与反射转发的因果链路；首考题 3（最小产出）：实现可提前终止的惰性分页迭代器、异步生成器与带清理语义的资源包装器；首考题 4（受限排错）：仅根据调用轨迹定位无限迭代、重复消费、代理不变量破坏或资源未释放；首考题 5（学习复述）：3 分钟说明何时选普通集合、生成器、代理或显式资源管理。命题边界：不考冷门语法记忆；必须验证终止、异常与清理路径。
+- 通过标准：自定义迭代器符合协议并能提前关闭；异步迭代支持取消和背压；代理不破坏目标对象不变量；资源在成功、异常和取消路径均只释放一次。评估边界：只会写生成器示例或把 Proxy 当通用状态管理方案不能通过。
+- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
+
+## CS-01 复杂度、数据规模与工程成本判断
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#cs-01)、[中文｜OI Wiki 复杂度](https://oi-wiki.org/basic/complexity/)、[中文｜MDN 性能 API](https://developer.mozilla.org/zh-CN/docs/Web/API/Performance_API)。覆盖范围：输入规模、时间/空间复杂度、最坏/平均/摊还分析、常数与内存局部性、基准设计、规模曲线、主线程帧预算、序列化和服务端计算边界；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《中文｜OI Wiki 复杂度》《中文｜MDN 性能 API》，分别定位渐进复杂度、测量方法和浏览器性能边界；首考题 2（机制解释）：闭卷解释为何相同 Big-O 仍可能表现不同，以及一次小样本跑分为何不能证明可扩展；首考题 3（最小产出）：为线性、对数、线性对数和平方增长各构造一个前端数据处理实验，给出推导、规模曲线、内存与主线程证据；首考题 4（受限排错）：仅根据输入规模、调用次数、火焰图和内存数据定位一个复杂度退化；首考题 5（学习复述）：3 分钟说明何时优化算法、何时分块/Worker、何时转移到服务端。命题边界：不考竞赛技巧；必须同时给出推导和测量证据。
+- 通过标准：能正确定义规模与基本操作；能区分最坏、平均和摊还复杂度；基准可重复且避免预热、缓存和样本偏差；能说明浏览器资源边界。评估边界：只背 Big-O 表、只测单一规模或只给运行时间不能通过。
+- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
+
+## CS-02 常用数据结构、算法模式与正确性
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#cs-02)、[中文｜OI Wiki 数据结构](https://oi-wiki.org/ds/)、[中文｜MDN Map](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map)、[中文｜MDN Set](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)。覆盖范围：数组、链式结构、栈、队列、哈希、集合、堆、树、图与 Trie；排序稳定性、二分边界、双指针、滑动窗口、DFS/BFS、拓扑排序、贪心和动态规划的适用条件；不变量、终止性、边界样例与属性测试；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《中文｜OI Wiki 数据结构》《中文｜MDN Map》《中文｜MDN Set》，定位结构语义、典型操作和退化边界；首考题 2（机制解释）：闭卷比较数组、Map、Set、堆、树和图的查询、写入、遍历及内存取舍，并说明算法不变量；首考题 3（最小产出）：实现稳定排序/二分边界、动态 Top-K、依赖拓扑排序和树形权限查询，配套示例测试与属性测试；首考题 4（受限排错）：处理重复值、空输入、环、递归爆栈、错误比较器和哈希身份错误；首考题 5（学习复述）：3 分钟说明为何选择该结构而非熟悉的数组。命题边界：不要求冷门竞赛模板；考核可迁移模式、正确性和取舍。
+- 通过标准：实现覆盖空值、重复、极端规模、环和非法输入；能写出关键不变量、复杂度及退化条件；不会把对象字符串化后草率当稳定键。评估边界：只通过理想样例或背诵模板不能通过。
+- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
+
+## CS-03 前端大数据处理、增量计算与内存边界
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#cs-03)、[中文｜MDN Web Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Using_web_workers)、[中文｜MDN Streams API](https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API)、[中文｜MDN 可转移对象](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Transferable_objects)。覆盖范围：长列表索引、分块/流式/增量计算、迭代器、缓存淘汰、TypedArray、Worker、结构化克隆与 Transferable、取消、背压、内存峰值、GC 抖动、虚拟化、服务端聚合和本地向量检索边界；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《中文｜MDN Web Worker》《中文｜MDN Streams API》《中文｜MDN 可转移对象》，定位并发、流和数据传递边界；首考题 2（机制解释）：解释分块、增量索引、Worker 和服务端计算如何影响总计算量、交互延迟、复制成本与内存峰值；首考题 3（最小产出）：实现可取消的十万级筛选、Top-K 和增量聚合，比较主线程、Worker 与服务端模拟三种方案；首考题 4（受限排错）：定位重复排序、无界缓存、结构化克隆放大、消息洪泛和 GC 停顿；首考题 5（学习复述）：3 分钟给出大数据 UI 的分层决策。命题边界：不得把“移到 Worker”描述成消除计算成本。
+- 通过标准：交互延迟、吞吐、内存和取消均有证据；Worker 通信有批量、背压与清理；超出客户端边界时能可靠降级或交给服务端。评估边界：只展示十万条数据最终算完而没有响应性和资源证据不能通过。
+- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
 
 ## JS-04 异步、Promise 与事件循环
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN 异步 JavaScript](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Extensions/Async_JS)、[MDN 微任务指南](https://developer.mozilla.org/zh-CN/docs/Web/API/HTML_DOM_API/Microtask_guide)。覆盖范围：围绕「异步、Promise 与事件循环」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN 异步 JavaScript》《MDN 微任务指南》，分别摘出能支撑「异步、Promise 与事件循环」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「异步、Promise 与事件循环」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：闭卷完成 10 道宏任务/微任务输出题；45 分钟实现并发数受限、可取消、失败重试的任务调度器；解释浏览器与 Node 事件循环差异；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：输出题至少 9/10；调度器通过并发、顺序、取消、超时和错误测试；不会把 Promise 回调误判为普通宏任务。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN 异步 JavaScript](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Extensions/Async_JS)、[MDN 微任务指南](https://developer.mozilla.org/zh-CN/docs/Web/API/HTML_DOM_API/Microtask_guide)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN 异步 JavaScript》《MDN 微任务指南》，分别摘出能支撑「异步、Promise 与事件循环」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：闭卷完成 10 道宏任务/微任务输出题；45 分钟实现并发数受限、可取消、失败重试的任务调度器；解释浏览器与 Node 事件循环差异；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：输出题至少 9/10；调度器通过并发、顺序、取消、超时和错误测试；不会把 Promise 回调误判为普通宏任务。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## JS-05 Promise 错误处理与异步控制流
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN Promise](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Using_promises)、[MDN AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)。覆盖范围：围绕「Promise 错误处理与异步控制流」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN Promise》《MDN AbortController》，分别摘出能支撑「Promise 错误处理与异步控制流」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「Promise 错误处理与异步控制流」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：实现 `all` 或 `allSettled`；为搜索联想请求加入取消、竞态保护和错误分级；回答未处理拒绝、finally 返回值和串并行取舍；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：实现符合原生语义且有边界测试；旧请求不能覆盖新结果；能区分业务错误、网络错误、取消和程序错误。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN Promise](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Using_promises)、[MDN AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN Promise》《MDN AbortController》，分别摘出能支撑「Promise 错误处理与异步控制流」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：实现 `all` 或 `allSettled`；为搜索联想请求加入取消、竞态保护和错误分级；回答未处理拒绝、finally 返回值和串并行取舍；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：实现符合原生语义且有边界测试；旧请求不能覆盖新结果；能区分业务错误、网络错误、取消和程序错误。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## JS-06 ES Modules 与模块边界
@@ -52,8 +88,8 @@
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
 - 学习资料：[中文｜MDN JavaScript 模块](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)、[中文｜Node.js ECMAScript 模块](https://nodejs.cn/api/esm.html)。覆盖范围：浏览器与 Node.js 中 ESM 的静态结构、live binding、动态导入、循环依赖、强制扩展名、`package.json` 的 `type`/`exports`、ESM 与 CommonJS 互操作及模块边界设计；两份资料均为中文。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文｜MDN JavaScript 模块》《中文｜Node.js ECMAScript 模块》，分别摘出能支撑「ES Modules 与模块边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「ES Modules 与模块边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：解释静态依赖、live binding、循环依赖和动态导入；重构一个循环依赖示例；设计浏览器应用与组件包的导出边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：可独立定位循环依赖初始化问题；能说清 ESM/CJS 互操作风险、tree-shaking 前提和 `exports` 字段作用。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文｜MDN JavaScript 模块》《中文｜Node.js ECMAScript 模块》，分别摘出能支撑「ES Modules 与模块边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：解释静态依赖、live binding、循环依赖和动态导入；重构一个循环依赖示例；设计浏览器应用与组件包的导出边界；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：可独立定位循环依赖初始化问题；能说清 ESM/CJS 互操作风险、tree-shaking 前提和 `exports` 字段作用。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## WEB-01 HTML 语义、表单与可访问性基础
@@ -61,94 +97,139 @@
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
 - 学习资料：[中文｜MDN HTML 语义化](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Core/Structuring_content)、[中文｜MDN Web 表单](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Extensions/Forms)、[中文｜MDN ARIA](https://developer.mozilla.org/zh-CN/docs/Web/Accessibility/ARIA)、[中文｜MDN dialog 元素](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Elements/dialog)。覆盖范围：HTML 语义结构、标签与控件关联、表单分组和错误提示、原生元素优先原则、ARIA 的名称/角色/状态、键盘操作以及对话框焦点进入、约束和恢复；全部必读资料均为中文。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文｜MDN HTML 语义化》《中文｜MDN Web 表单》《中文｜MDN ARIA》《中文｜MDN dialog 元素》，分别摘出能支撑「HTML 语义、表单与可访问性基础」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「HTML 语义、表单与可访问性基础」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：把一段全是 `div` 的表单与弹窗改成语义结构；只用键盘完成操作；用辅助技术树检查名称、角色、状态；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：表单标签、焦点顺序、错误提示和弹窗焦点管理正确；不能用 ARIA 掩盖可使用原生元素的问题。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文｜MDN HTML 语义化》《中文｜MDN Web 表单》《中文｜MDN ARIA》《中文｜MDN dialog 元素》，分别摘出能支撑「HTML 语义、表单与可访问性基础」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：把一段全是 `div` 的表单与弹窗改成语义结构；只用键盘完成操作；用辅助技术树检查名称、角色、状态；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：表单标签、焦点顺序、错误提示和弹窗焦点管理正确；不能用 ARIA 掩盖可使用原生元素的问题。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## WEB-02 CSS 布局、层叠与响应式
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN CSS 布局](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Core/CSS_layout)、[MDN 层叠](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_cascade/Cascade)。覆盖范围：围绕「CSS 布局、层叠与响应式」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN CSS 布局》《MDN 层叠》，分别摘出能支撑「CSS 布局、层叠与响应式」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「CSS 布局、层叠与响应式」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：90 分钟无组件库实现响应式列表、吸顶工具栏和弹层；解决 BFC、层叠上下文、溢出和长文本问题；解释 Flex/Grid 选择；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：覆盖 320px、768px、1440px；无横向溢出；不能依赖大量 `!important` 或固定像素碰巧通过。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN CSS 布局](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Core/CSS_layout)、[MDN 层叠](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_cascade/Cascade)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN CSS 布局》《MDN 层叠》，分别摘出能支撑「CSS 布局、层叠与响应式」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：90 分钟无组件库实现响应式列表、吸顶工具栏和弹层；解决 BFC、层叠上下文、溢出和长文本问题；解释 Flex/Grid 选择；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 通过标准：覆盖 320px、768px、1440px；无横向溢出；不能依赖大量 `!important` 或固定像素碰巧通过。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## WEB-03 现代 CSS 架构、容器查询与设计令牌
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#web-03)、[Baseline 2026](https://web.dev/baseline/2026?hl=zh-cn)、[MDN Container Queries](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_containment/Container_queries)、[MDN Cascade Layers](https://developer.mozilla.org/zh-CN/docs/Web/CSS/@layer)、[CSS Color Module Level 5](https://www.w3.org/TR/css-color-5/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「现代 CSS 架构、容器查询与设计令牌」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《Baseline 2026》《MDN Container Queries》《MDN Cascade Layers》《CSS Color Module Level 5》，分别摘出能支撑「现代 CSS 架构、容器查询与设计令牌」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「现代 CSS 架构、容器查询与设计令牌」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：90 分钟把一个依赖页面断点和全局覆盖的组件重构为容器查询、级联层、逻辑属性和设计令牌驱动；建立 Baseline 与降级矩阵；现场解释嵌套、`@scope`、`color-mix()` 和相对颜色的浏览器边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：组件放入 3 种容器均可用；层叠顺序可预测且无 `!important`；令牌覆盖颜色、间距、圆角和状态；不支持特性时核心任务仍可完成；提交 320px、768px、1440px 的视觉回归证据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#web-03)、[Baseline 2026](https://web.dev/baseline/2026?hl=zh-cn)、[MDN Container Queries](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_containment/Container_queries)、[MDN Cascade Layers](https://developer.mozilla.org/zh-CN/docs/Web/CSS/@layer)、[MDN CSS Anchor Positioning](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Anchor_positioning)（英文原文，仅用于版本核验）、[MDN Scroll-driven Animations](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Scroll-driven_animations)（英文原文，仅用于版本核验）、[CSS Color Module Level 5](https://www.w3.org/TR/css-color-5/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：容器查询、级联层、嵌套、`@scope`、逻辑属性、Subgrid、`content-visibility`；语义/组件/原始设计令牌；现代颜色与相对颜色；Anchor Positioning、Scroll-driven Animations、滚动状态/时间线、回退和 reduced-motion；Baseline 与真实用户浏览器矩阵；作用域、性能、可访问性和渐进增强。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位现代 CSS 作用域、响应、定位、滚动动画、令牌和成熟度边界；首考题 2（机制解释）：闭卷解释视口、容器、锚点和滚动时间线分别由什么状态驱动，以及它们如何改变组件复用和脚本职责；首考题 3（最小产出）：把依赖页面断点、全局覆盖、脚本定位和滚动监听的组件重构为容器查询、级联层、逻辑属性、令牌、锚点定位和滚动驱动增强；建立 Baseline/目标流量矩阵、无新特性回退和 reduced-motion 路径；首考题 4（受限排错）：定位查询容器缺失、层叠层顺序、锚点回退、滚动时间线、writing-mode、`content-visibility` 可访问性或旧浏览器降级问题；首考题 5（学习复述）：3 分钟说明哪些现代 CSS 可以替代 JavaScript、哪些仍需脚本或服务端状态。命题边界：不得因新特性减少代码就跳过键盘、读屏、缩放、打印和真实支持矩阵；英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：组件放入 3 种容器和两种 writing-mode 均可用；层叠顺序可预测且无 `!important`；令牌覆盖颜色、间距、圆角和状态；定位/滚动增强关闭或不支持时核心任务仍可完成；动画尊重 reduced-motion；提交目标浏览器、320px/768px/1440px 和至少一项键盘/读屏视觉回归证据。评估边界：只在最新版 Chrome 展示效果或用 polyfill 隐藏兼容结论不能通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
 ## A11Y-01 WCAG 2.2、键盘交互与无障碍测试
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#a11y-01)、[WCAG 2.2](https://www.w3.org/TR/WCAG22/)（英文原文，仅用于版本核验）、[WCAG 2.2 新增成功准则](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/)（英文原文，仅用于版本核验）、[ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)（英文原文，仅用于版本核验）、[Accessibility Insights](https://accessibilityinsights.io/docs/web/overview/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「WCAG 2.2、键盘交互与无障碍测试」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《WCAG 2.2》《WCAG 2.2 新增成功准则》《ARIA Authoring Practices》《Accessibility Insights》，分别摘出能支撑「WCAG 2.2、键盘交互与无障碍测试」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WCAG 2.2、键盘交互与无障碍测试」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：审计并修复一个含命令面板、拖拽、表单错误和粘性导航的页面；只用键盘和屏幕阅读器完成关键路径；解释 Focus Not Obscured、Target Size、Dragging Movements 和 Accessible Authentication；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：关键流程满足 WCAG 2.2 AA；焦点可见且不被遮挡；拖拽有等价操作；动态状态可被辅助技术感知；自动扫描无严重问题并附人工测试记录，不能只以 Lighthouse 分数作为通过证据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
-- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
+- 学习资料：[中文核心讲义](../chinese-guides/advanced-topics.md#a11y-01)、[中文｜MDN 无障碍课程](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Core/Accessibility)、[中文｜MDN ARIA](https://developer.mozilla.org/zh-CN/docs/Web/Accessibility/ARIA)、[中文｜Chrome DevTools 无障碍参考](https://developer.chrome.com/docs/devtools/accessibility/reference?hl=zh-cn)、[中文｜Lighthouse 无障碍评分](https://developer.chrome.com/docs/lighthouse/accessibility/scoring?hl=zh-cn)。覆盖范围：WCAG 2.2 POUR 与 A/AA/AAA；语义、名称/角色/值、键盘模型、焦点进入/圈定/恢复、动态通知、表单错误、拖拽等价操作、目标尺寸、缩放、对比度、字幕与 reduced-motion；自动扫描、无障碍树、键盘和屏幕阅读器人工验证；全部必读资料和首考题源均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「WCAG 2.2、键盘交互与无障碍测试」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷解释语义树、焦点、名称计算、动态通知和用户偏好如何共同影响辅助技术体验；首考题 3（最小产出）：审计并修复一个含命令面板、拖拽、表单错误、粘性导航、媒体和动画的页面，只用键盘和屏幕阅读器完成关键路径；首考题 4（受限排错）：定位焦点丢失、读屏重复、不可见标签、对比度、缩放或 reduced-motion 失效，证据只能来自中文题源和产出；首考题 5（学习复述）：3 分钟向同事说明自动扫描为什么不能替代人工测试。命题边界：首考和评分只能使用列出的中文资料与考核产出。
+- 通过标准：关键流程满足 WCAG 2.2 AA；焦点可见且不被遮挡；拖拽有等价操作；动态状态、错误和媒体可被辅助技术感知；动画尊重 reduced-motion；自动扫描无严重问题并附键盘、无障碍树和屏幕阅读器人工记录。评估边界：Lighthouse 分数、ARIA 数量或单一读屏器通过均不能单独作为通过证据。
+- 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
 
 ## BROWSER-01 渲染流水线、DOM 事件与存储
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN 关键渲染路径](https://developer.mozilla.org/zh-CN/docs/Web/Performance/Guides/Critical_rendering_path)、[MDN 事件](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Core/Scripting/Events)、[Web Storage](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Storage_API)。覆盖范围：围绕「渲染流水线、DOM 事件与存储」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN 关键渲染路径》《MDN 事件》《Web Storage》，分别摘出能支撑「渲染流水线、DOM 事件与存储」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「渲染流水线、DOM 事件与存储」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：画出 HTML 到像素的流程；实现事件委托并处理动态节点；比较 cookie、localStorage、sessionStorage、IndexedDB 的一致性与安全边界；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：能用 DevTools 证据区分 style/layout/paint/composite；事件实现正确处理冒泡与清理；存储选型不保存不应落盘的敏感数据。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#browser-01)、[MDN 关键渲染路径](https://developer.mozilla.org/zh-CN/docs/Web/Performance/Guides/Critical_rendering_path)、[MDN 事件](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Core/Scripting/Events)、[MDN IndexedDB](https://developer.mozilla.org/zh-CN/docs/Web/API/IndexedDB_API)、[Web Storage](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Storage_API)。覆盖范围：HTML/CSS 到像素的渲染阶段、事件传播与委托、Cookie/Web Storage/IndexedDB 的容量、事务、一致性、同步阻塞、安全与生命周期边界；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《MDN 关键渲染路径》《MDN 事件》《MDN IndexedDB》《Web Storage》，分别定位渲染、事件和三类存储的语义边界；首考题 2（机制解释）：闭卷解释样式、布局、绘制、合成，事件捕获/冒泡，以及同步键值存储与异步事务数据库的差异；首考题 3（最小产出）：画出 HTML 到像素的流程，实现可清理的事件委托，并为离线草稿设计 IndexedDB 事务和迁移；首考题 4（受限排错）：根据性能轨迹、事件路径和存储事务证据定位强制布局、重复监听或部分写入；首考题 5（学习复述）：3 分钟说明 Cookie、Web Storage 与 IndexedDB 的选型。命题边界：不得把容量大小当唯一依据，也不得把前端存储视为可信安全边界。
+- 通过标准：能用 DevTools 证据区分 style/layout/paint/composite；事件实现正确处理冒泡与清理；存储选型不保存不应落盘的敏感数据。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
+
+## BROWSER-02 观察器、调度、页面生命周期与多标签页协同
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#browser-02)、[中文｜优化长任务](https://web.dev/articles/optimize-long-tasks?hl=zh-CN)、[中文｜使用 scheduler.yield](https://developer.chrome.com/blog/use-scheduler-yield?hl=zh-cn)、[中文｜Chrome 页面生命周期](https://developer.chrome.com/docs/web-platform/page-lifecycle-api?hl=zh-cn)、[中文｜MDN BroadcastChannel](https://developer.mozilla.org/zh-CN/docs/Web/API/BroadcastChannel)、[中文｜MDN Web Locks API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Locks_API)。覆盖范围：Intersection/Resize/Mutation/Performance Observer；`requestAnimationFrame`、空闲任务、`scheduler.postTask()`/`scheduler.yield()`、优先级、TaskController/AbortSignal、分片、公平性与饥饿；可见性、冻结/恢复和 BFCache；BroadcastChannel、SharedWorker、Web Locks、互斥与领导者选举；能力检测、清理和降级；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《中文｜优化长任务》《中文｜使用 scheduler.yield》《中文｜Chrome 页面生命周期》《中文｜MDN BroadcastChannel》《中文｜MDN Web Locks API》，定位调度优先级/取消、生命周期、跨上下文消息和互斥规则；首考题 2（机制解释）：闭卷解释观察器回调、用户阻塞/可见/后台任务、yield continuation、后台限流、冻结恢复与多标签竞争如何相互影响；首考题 3（最小产出）：把一个长计算切分为有优先级、可取消且有无 Scheduling API 降级的任务，同时实现可见才计算、生命周期安全自动保存和多标签单领导者任务，并对比 INP、总耗时和饥饿；首考题 4（受限排错）：定位错误优先级、后台任务饿死交互、过度 yield、观察器泄漏、恢复后重复订阅、BFCache 失效、消息回环或双领导者；首考题 5（学习复述）：3 分钟说明微任务、帧、空闲、优先任务、Worker、广播与锁的选型。命题边界：Scheduling API 不是 Baseline，必须能力检测；不得依赖固定计时碰运气，必须覆盖不可见、冻结、恢复、关闭和不支持 API 的路径。
+- 通过标准：主线程分片后交互改善且业务总耗时没有无界恶化；优先级、取消和降级可验证；回调可取消且无泄漏；后台页面不做无效高频工作；恢复后状态一致且不重复提交；多标签竞争有版本化协议、超时和确定性降级；BFCache 与兼容性有实测证据。评估边界：只调用一次 `yield()`、只演示单标签前台路径或没有比较调度开销不能通过。
+- 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEB-04 原生分层 UI、视图过渡与渐进增强
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Baseline](https://web.dev/baseline/?hl=zh-cn)、[Popover API](https://developer.mozilla.org/zh-CN/docs/Web/API/Popover_API)、[View Transition API](https://developer.mozilla.org/zh-CN/docs/Web/API/View_Transition_API)、[Navigation API](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigation_API)。覆盖范围：围绕「原生分层 UI、视图过渡与渐进增强」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《Baseline》《Popover API》《View Transition API》《Navigation API》，分别摘出能支撑「原生分层 UI、视图过渡与渐进增强」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「原生分层 UI、视图过渡与渐进增强」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：不用第三方弹层库实现菜单、命令面板和模态流程，正确组合 `popover`、`dialog`、top layer、`inert` 与焦点恢复；为列表到详情增加同文档/跨文档 View Transition；用特性检测封装 Navigation API 增强层；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：Escape、外部点击、焦点圈定与返回焦点行为正确；动画关闭后功能不受影响；旧浏览器走可用降级路径；无重复历史记录、焦点丢失或不可操作背景；能解释原生能力与框架路由的职责边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[Baseline](https://web.dev/baseline/?hl=zh-cn)、[Baseline 2025](https://web.dev/baseline/2025?hl=zh-cn)、[Popover API](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Global_attributes/popover)、[View Transition API](https://developer.mozilla.org/zh-CN/docs/Web/API/View_Transition_API)、[Navigation API](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigation_API)。覆盖范围：`dialog`、popover、top layer、`inert`、声明式 invoker commands/`commandfor`、可定制原生控件与状态保持 DOM 移动；同文档、跨文档和元素范围 View Transition；Navigation API；焦点、历史、表单、恢复、reduced-motion；Baseline、有限支持/实验能力的分层与渐进增强。
+- 严格考核：首考题 1（资料定位）：只允许使用《Baseline》《Baseline 2025》《Popover API》《View Transition API》《Navigation API》，分别定位原生分层 UI、声明式命令、视图过渡、导航与成熟度依据；首考题 2（机制解释）：闭卷解释 top layer、焦点/背景隔离、命令触发、DOM 状态保持、导航历史和 View Transition 快照如何协作；首考题 3（最小产出）：不用第三方弹层库实现菜单、命令面板和模态流程，组合 `popover`、`dialog`、top layer、`inert`、声明式命令和焦点恢复；为列表到详情增加可关闭的同/跨文档 View Transition，并为 Navigation API、可定制控件和新命令提供能力检测与传统 HTML 降级；首考题 4（受限排错）：定位重复命令、无障碍名称、焦点丢失、背景可操作、历史重复、DOM 移动状态丢失、过渡伪元素层级或 reduced-motion 失效；首考题 5（学习复述）：3 分钟说明何时选择原生能力、框架抽象或普通链接/表单。命题边界：成熟度必须按测试日期冻结；有限支持或实验能力不得成为完成核心任务的唯一路径。
+- 通过标准：Escape、外部点击、焦点圈定与返回焦点行为正确；声明式命令和脚本 fallback 语义一致；动画关闭后功能不受影响；旧浏览器走可用降级；无重复历史、焦点丢失、表单状态意外重置或不可操作背景；能解释原生能力与框架路由的职责边界。评估边界：只展示动画、只在单浏览器工作或以自定义 div 伪装原生控件不能通过。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
-## NET-01 HTTP、缓存、Cookie 与 CORS
+## WEB-05 Web Components、Shadow DOM 与跨框架互操作
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN HTTP](https://developer.mozilla.org/zh-CN/docs/Web/HTTP)、[HTTP 缓存](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Caching)、[CORS](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/CORS)。覆盖范围：围绕「HTTP、缓存、Cookie 与 CORS」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN HTTP》《HTTP 缓存》《CORS》，分别摘出能支撑「HTTP、缓存、Cookie 与 CORS」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「HTTP、缓存、Cookie 与 CORS」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：分析一份请求瀑布流；为 HTML、带哈希静态资源和用户 API 设计缓存头；手工推演带凭证 CORS 预检；定位 304、缓存未更新和跨域失败；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：缓存策略不会泄漏用户数据；正确区分 `no-cache`/`no-store`、强缓存/协商缓存、同源策略/CORS；能给出客户端和服务端验证步骤。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
-- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 105 分钟；复测 75 分钟
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#web-05)、[中文｜MDN Web Components](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components)、[中文｜MDN 使用自定义元素](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components/Using_custom_elements)、[中文｜MDN 使用 Shadow DOM](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components/Using_shadow_DOM)。覆盖范围：Custom Elements 生命周期与注册表、Shadow DOM 封装、template/slot、属性与属性值反射、ElementInternals 与表单关联、自定义状态、CSS Parts/自定义属性、composed 事件和焦点/无障碍树；在原生、React、Vue、微前端和设计系统中的互操作与版本边界；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《中文｜MDN Web Components》《中文｜MDN 使用自定义元素》《中文｜MDN 使用 Shadow DOM》，定位生命周期、封装、Slot 和事件边界；首考题 2（机制解释）：闭卷画出 light DOM、shadow tree、flattened tree、事件 composed path 与焦点关系，并解释 Shadow DOM 不等于安全沙箱；首考题 3（最小产出）：实现一个可表单提交、可主题化、可键盘操作的自定义元素，在原生页面、React 和 Vue 中消费，提交属性/事件/样式/SSR 降级契约；首考题 4（受限排错）：定位重复注册、属性循环、事件不穿透、样式无法覆盖、表单值丢失或读屏名称错误；首考题 5（学习复述）：3 分钟说明何时选择 Web Component、框架组件或普通函数。命题边界：不得把某个封装库的 API 当成平台标准，也不得通过关闭 Shadow DOM 回避边界问题。
+- 通过标准：组件跨三个消费环境行为一致；事件、属性、方法、Slot、样式和版本契约清楚；表单、键盘和读屏可用；支持能力检测和无 Shadow DOM/SSR 的可用降级；能说明封装、性能和调试代价。评估边界：只在单一框架运行、只展示视觉封装或依赖全局样式碰巧生效不能通过。
+- 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
+
+## NET-01 浏览器网络链路、HTTP、缓存、Cookie 与 CORS
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#net-01)、[中文｜MDN HTTP](https://developer.mozilla.org/zh-CN/docs/Web/HTTP)、[中文｜MDN HTTP 的发展](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Evolution_of_HTTP)、[中文｜MDN HTTP 缓存](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Caching)、[中文｜MDN CORS](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/CORS)、[中文｜Chrome Network 参考](https://developer.chrome.com/docs/devtools/network/reference?hl=zh-cn)。覆盖范围：从 URL、DNS、连接、TCP/TLS/证书到请求响应的浏览器链路；HTTP 语义、状态码、字段、压缩、Cookie、缓存、CORS；HTTP/1.1、HTTP/2 与 HTTP/3/QUIC 的连接、多路复用和阻塞差异；请求优先级、Service Worker、代理、CDN、TTFB 和瀑布流诊断；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用列出的中文资料，分别定位浏览器请求阶段、HTTP 版本差异、缓存语义和 CORS 约束；首考题 2（机制解释）：闭卷画出导航从 DNS、连接、TLS、请求、缓存/Service Worker 到响应解析的链路，并解释 HTTP/2 与 HTTP/3 的多路复用和丢包影响；首考题 3（最小产出）：分析一份含 DNS、连接、SSL、重定向、缓存、优先级和 API 的瀑布流，为 HTML、哈希资源和用户数据设计缓存/CORS/Cookie 策略；首考题 4（受限排错）：定位证书、代理、304、缓存污染、预检、凭证、协议回退或 TTFB 异常，必须给出客户端与服务端证据；首考题 5（学习复述）：3 分钟说明网络层优化何时有效以及为何不能只看下载时长。命题边界：不要求实现传输协议，但必须能用浏览器证据判断故障所在层。
+- 通过标准：能从 Timing 和协议列解释请求延迟；缓存不泄漏用户数据；正确区分 HTTP 语义、传输版本、同源策略和 CORS；证书、Cookie、代理与 Service Worker 边界清楚；优化有前后瀑布证据。评估边界：清缓存、切换浏览器或背诵状态码不能代替根因诊断。
+- 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
+
+## DEBUG-01 浏览器、异步与生产环境系统化调试
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#debug-01)、[中文｜Chrome JavaScript 调试](https://developer.chrome.com/docs/devtools/javascript?hl=zh-cn)、[中文｜Chrome 断点参考](https://developer.chrome.com/docs/devtools/javascript/breakpoints?hl=zh-cn)、[中文｜Chrome Source Map](https://developer.chrome.com/docs/devtools/javascript/source-maps?hl=zh-cn)、[中文｜Pro Git 使用 Git 调试](https://git-scm.com/book/zh/v2/Git-工具-使用-Git-调试)。覆盖范围：可重复最小用例、预期/实际差异、假设排序和证伪；行/条件/日志/DOM/事件/XHR/异常断点、调用栈、异步栈、闭包和 Worker 上下文；网络重放、存储、Source Map、压缩产物与生产错误映射；日志、Trace、版本差异、`git bisect` 和回归测试；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用列出的中文资料，定位适合不同故障的断点、Source Map 和 `git bisect` 方法；首考题 2（机制解释）：闭卷说明“复现—取证—假设—最小验证—修复—回归”的闭环以及相关性为何不等于根因；首考题 3（最小产出）：分别诊断一个异步竞争、DOM 事件、请求/缓存和压缩后生产错误，保存断点、调用栈、网络、Source Map 与修复提交证据；首考题 4（受限排错）：面对间歇性且只在生产出现的故障，禁止先改代码，必须先缩小输入、环境、版本和时间范围，并用自动化 `git bisect` 或等价二分定位首个坏变更；首考题 5（学习复述）：3 分钟向同事复盘事实、假设、证据和排除项。命题边界：禁止以大量 `console.log`、清缓存、重启、关闭压缩或回滚全部功能掩盖根因。
+- 通过标准：故障可稳定复现或明确记录不可复现条件；每个结论都有可审计证据；能跨源代码、构建产物、浏览器、网络和版本定位；修复包含最小回归测试且不会扩大影响面；敏感 Source Map 有正确的发布与访问策略。评估边界：偶然修好、只描述最终改动或没有排除竞争假设不能通过。
+- 预计耗时：资料 120 分钟；练习 180 分钟；项目 165 分钟；考核 105 分钟；复测 90 分钟
 
 ## SEC-01 XSS、CSRF、鉴权与前端安全边界
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#sec-01)、[MDN Web 安全](https://developer.mozilla.org/zh-CN/docs/Web/Security)、[OWASP XSS 防护](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)（英文原文，仅用于版本核验）、[OWASP CSRF 防护](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「XSS、CSRF、鉴权与前端安全边界」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《MDN Web 安全》《OWASP XSS 防护》《OWASP CSRF 防护》，分别摘出能支撑「XSS、CSRF、鉴权与前端安全边界」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「XSS、CSRF、鉴权与前端安全边界」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：审查一个富文本/Markdown 页面和 token 登录流程；构造威胁模型；修复 5 个包含 XSS、CSRF、开放重定向、越权误判和敏感信息泄露的问题；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：至少发现全部高危问题；能说明前端权限显示不等于服务端授权；修复包含输入、输出、传输、Cookie 和 CSP 层面的合理边界。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#sec-01)、[MDN Web 安全](https://developer.mozilla.org/zh-CN/docs/Web/Security)、[OWASP XSS 防护](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)（英文原文，仅用于版本核验）、[OWASP CSRF 防护](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)（英文原文，仅用于版本核验）、[OWASP DOM Clobbering](https://cheatsheetseries.owasp.org/cheatsheets/DOM_Clobbering_Prevention_Cheat_Sheet.html)（英文原文，仅用于版本核验）、[OWASP Prototype Pollution](https://cheatsheetseries.owasp.org/cheatsheets/Prototype_Pollution_Prevention_Cheat_Sheet.html)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：上下文相关 XSS、DOM XSS、DOM Clobbering、Prototype Pollution；CSRF、开放重定向、客户端鉴权误用、敏感数据/日志泄露；URL/HTML/对象键与配置等不可信输入；输入约束、输出编码、安全 DOM API、对象合并防护、Cookie/请求和服务端授权边界。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位 XSS、CSRF、DOM 命名解析、原型链污染和授权边界；首考题 2（机制解释）：闭卷解释不可信字符串、DOM 命名属性和攻击者控制的对象键如何分别进入执行、全局引用或原型链，并说明前端隐藏按钮为何不是授权；首考题 3（最小产出）：审查富文本/Markdown、动态 DOM、深合并配置和登录流程，构造威胁模型并修复 XSS、CSRF、DOM Clobbering、Prototype Pollution、开放重定向、越权误判和敏感信息泄露；首考题 4（受限排错）：使用最小攻击输入与调用链定位编码上下文错误、命名遮蔽、`__proto__`/constructor 键、错误 SameSite 或仅客户端权限检查；首考题 5（学习复述）：3 分钟说明各防线阻止的具体数据流。命题边界：不得要求背诵 Payload；英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：发现全部高危数据流；输出编码匹配上下文并避免危险 DOM sink；DOM 引用不依赖可被命名元素遮蔽的隐式全局；反序列化/合并拒绝危险键且使用安全对象边界；CSRF 与服务端授权有效；修复含自动攻击回归。评估边界：只装净化库、只加前端权限判断或只让单个 Payload 失败不能通过。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟
 
 ## SEC-02 CSP、Trusted Types 与安全违规报告
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[MDN CSP 指南](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/CSP)、[Trusted Types API](https://developer.mozilla.org/zh-CN/docs/Web/API/Trusted_Types_API)、[CSP 实施指南](https://developer.mozilla.org/zh-CN/docs/Web/Security/Practical_implementation_guides/CSP)。覆盖范围：围绕「CSP、Trusted Types 与安全违规报告」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《MDN CSP 指南》《Trusted Types API》《CSP 实施指南》，分别摘出能支撑「CSP、Trusted Types 与安全违规报告」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「CSP、Trusted Types 与安全违规报告」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：为含第三方 SDK、Markdown 和动态脚本的应用从 Report-Only 推进到强制 CSP；接入 Trusted Types 策略和违规上报；通过攻击样例验证 DOM XSS、内联脚本和未知源被阻止；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。
-- 通过标准：策略不依赖广泛 `unsafe-inline`/`unsafe-eval`；合法业务路径无误报；违规报告可定位到版本和页面；注入测试失败且错误可观测；能说明 CSP 是纵深防御而不是输入输出编码的替代品。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[MDN CSP 指南](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/CSP)、[Trusted Types API](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/trustedTypes)、[CSP 实施指南](https://developer.mozilla.org/zh-CN/docs/Web/Security)、[MDN 子资源完整性 SRI](https://developer.mozilla.org/zh-CN/docs/Web/Security/Defenses/Subresource_Integrity)、[MDN 混合内容](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/block-all-mixed-content)。覆盖范围：CSP nonce/hash/strict-dynamic、Report-Only 到强制、Trusted Types sink/policy、违规报告；`frame-ancestors` 与点击劫持；SRI、CORS 与第三方脚本/样式完整性；HTTPS、Mixed Content 与 Secure Context；第三方 SDK/Tag Manager 的来源、能力、更新和退出边界；全部必读资料均为中文。
+- 严格考核：首考题 1（资料定位）：只允许使用《MDN CSP 指南》《Trusted Types API》《CSP 实施指南》《MDN 子资源完整性 SRI》《MDN 混合内容》，分别定位脚本执行、DOM sink、嵌入、资源完整性与安全上下文边界；首考题 2（机制解释）：闭卷解释 CSP、Trusted Types、SRI、HTTPS 和 `frame-ancestors` 分别防护哪段链路以及为何不能相互替代；首考题 3（最小产出）：为含第三方 SDK、Tag Manager、Markdown 和动态脚本的应用从 Report-Only 推进到强制 CSP，接入 Trusted Types、SRI 和违规上报，并验证 DOM XSS、未知源、被替换 CDN 资源、混合内容和恶意嵌入被阻止；首考题 4（受限排错）：定位 nonce 缓存复用、SRI/CORS 不匹配、第三方动态加载、违规报告噪声、iframe 嵌入或 HTTPS 页面加载不安全资源；首考题 5（学习复述）：3 分钟说明第三方脚本为何等同于站点权限及其准入/退出方案。命题边界：不得用广泛 allowlist、关闭证书检查或取消 SRI 规避兼容问题。
+- 通过标准：策略不依赖广泛 `unsafe-inline`/`unsafe-eval`；合法路径无误报；第三方脚本有 owner、必要性、完整性/更新和退出方案；违规报告可定位版本和页面；注入、资源替换、恶意嵌入和 Mixed Content 测试失败且可观测；能说明这些控制是纵深防御。评估边界：只设置响应头、只在本地 HTTPS 运行或让浏览器控制台无报错不能通过。
+- 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟
+
+## SEC-04 跨源隔离、嵌入式上下文与权限策略
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#sec-04)、[中文｜MDN COEP](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy)、[中文｜MDN 权限策略](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Permissions_Policy)、[MDN COOP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Opener-Policy)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：同源与站点、COOP/COEP/CORP/CORS、`crossOriginIsolated`、SharedArrayBuffer、Origin-Agent-Cluster；iframe sandbox/allow/credentialless、Permissions Policy、CSP `frame-ancestors` 与 UI redressing；`postMessage` 来源/Schema；弹窗 opener、第三方嵌入、跨站可观察差异与 XS-Leaks 防护；迁移、兼容、报告和降级。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位跨源隔离、资源准入、嵌入权限、消息、点击劫持和跨站信息泄露边界；首考题 2（机制解释）：画出顶层页、跨源 iframe、弹窗、Worker 和第三方资源的浏览上下文/进程/权限/可观察信号；首考题 3（最小产出）：为使用 SharedArrayBuffer 和合作方 iframe 的页面配置 COOP/COEP/CORP、sandbox、allow、`frame-ancestors` 与严格 `postMessage` 协议，统一敏感资源错误/缓存行为并提供不支持时降级；首考题 4（受限排错）：处理第三方资源被 COEP 阻断、opener 泄漏、通配消息来源、权限越授、恶意嵌入、跨站登录状态探测和登录弹窗失效；首考题 5（学习复述）：3 分钟解释隔离、嵌入和跨站防护为何会影响集成。命题边界：不得通过关闭隔离、使用 `*` 来源、放宽全部 iframe 权限或隐藏 UI 规避问题。英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：`crossOriginIsolated` 与资源加载有自动化验证；消息校验 origin、source、版本和 Schema；iframe 权限和可嵌入父来源最小；敏感跨站资源不通过状态码、尺寸、缓存或时序暴露稳定身份信号；弹窗/第三方登录有兼容方案；违规可观测。评估边界：只设置两个隔离头、只加遮罩或未验证第三方资源、弹窗、恶意父页面和降级路径不能通过。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟
 
 ## SEC-03 WebAuthn、Passkey 与安全认证体验
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#sec-03)、[WebAuthn Level 3](https://www.w3.org/TR/webauthn-3/)（英文原文，仅用于版本核验）、[MDN Web Authentication API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Authentication_API)、[web.dev Passkeys](https://web.dev/articles/passkey-registration?hl=zh-cn)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：围绕「WebAuthn、Passkey 与安全认证体验」的定义、机制、边界、反例和通过标准；首考不得引入未列资料或题目未点名的框架/项目场景。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》及《WebAuthn Level 3》《MDN Web Authentication API》《web.dev Passkeys》，分别摘出能支撑「WebAuthn、Passkey 与安全认证体验」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：不用资料复述「WebAuthn、Passkey 与安全认证体验」的因果链路、适用条件、失败表现和不该使用的场景；首考题 3（最小产出）：设计并实现注册、登录、条件式 UI、取消、设备不可用和账号恢复流程；画出 challenge、RP、origin、credential 与服务端验证边界；完成重放、钓鱼域名和降级路径的威胁建模；首考题 4（受限排错）：围绕首考题 3 的产出给出一个失败现象，写出预期结果、实际异常、3 个可能原因、验证步骤和修复方案，证据只能来自上述资料或产出；首考题 5（学习复述）：3 分钟向同事讲清是什么、什么时候用、如何验证没有用错。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；不得使用未列资料或题目未点名的框架/项目场景作为主要依据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：challenge 一次性且由服务端校验；前端不把成功 UI 当成认证结果；错误提示不泄露账号状态；无 Passkey 环境仍有安全恢复路径；能在高级面试中解释公钥凭证为何降低钓鱼和凭证填充风险。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#sec-03)、[WebAuthn Level 3](https://www.w3.org/TR/webauthn-3/)（英文原文，仅用于版本核验）、[MDN Web Authentication API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Authentication_API)、[web.dev Passkeys](https://web.dev/articles/passkey-registration?hl=zh-cn)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「WebAuthn、Passkey 与安全认证体验」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：设计并实现注册、登录、条件式 UI、取消、设备不可用和账号恢复流程；画出 challenge、RP、origin、credential 与服务端验证边界；完成重放、钓鱼域名和降级路径的威胁建模；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：challenge 一次性且由服务端校验；前端不把成功 UI 当成认证结果；错误提示不泄露账号状态；无 Passkey 环境仍有安全恢复路径；能在高级面试中解释公钥凭证为何降低钓鱼和凭证填充风险。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟
+
+## SEC-05 Web Crypto、密钥生命周期与客户端密码学边界
+
+- [ ] 自评已掌握
+- [ ] 已通过严格考核
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#sec-05)、[中文｜MDN SubtleCrypto](https://developer.mozilla.org/zh-CN/docs/Web/API/SubtleCrypto)、[Web Cryptography Level 2](https://www.w3.org/TR/webcrypto-2/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：安全随机数、摘要/HMAC、签名/验签、对称/非对称加密、密钥生成/导入/派生/包装/轮换/销毁、算法参数、传输与存储边界、服务端/KMS/HSM 职责以及浏览器威胁模型。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位密码原语、算法参数、密钥可提取性与生命周期规则；首考题 2（机制解释）：闭卷区分编码、哈希、MAC、签名、加密和密码派生，并解释浏览器内密钥为何不能自动成为可信根；首考题 3（最小产出）：实现带版本的签名验签与本地加密信封，设计轮换、撤销、恢复和服务端验证流程；首考题 4（受限排错）：仅依据算法、IV/nonce、编码、密钥用途和来源证据定位验签失败、nonce 重用或密钥泄漏；首考题 5（学习复述）：3 分钟说明哪些密码学操作可放前端、哪些必须交给服务端或托管密钥系统。命题边界：禁止自创算法或把混淆当加密；英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：随机数与 nonce 使用正确；密钥用途和可提取性最小化；签名与加密语义不混淆；轮换后新旧数据可受控迁移；XSS、日志、备份、设备丢失和服务端信任边界均有威胁模型。评估边界：只让示例成功运行、没有密钥生命周期和攻击验证不能通过。
+- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## 领域综合考核
 
 - [ ] 已通过领域综合考核
 - 任务：独立实现一个无框架的可访问数据看板，包含异步请求、缓存、取消、响应式布局、错误处理和安全渲染，并附 DevTools 网络/渲染分析报告。
-- 通过标准：4 小时内完成；自动测试覆盖核心逻辑；键盘可用；无明显 XSS 风险；能闭卷解释任意 5 处实现的浏览器底层原因。评估边界：不得用未列资料或题目未点名的框架/项目场景作为主要评分依据。
+- 通过标准：4 小时内完成；自动测试覆盖核心逻辑；键盘可用；无明显 XSS 风险；能闭卷解释任意 5 处实现的浏览器底层原因。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 120 分钟；练习 180 分钟；项目 150 分钟；考核 105 分钟；复测 90 分钟

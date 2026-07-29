@@ -4,7 +4,7 @@ test.describe.serial('核心使用体验', () => {
   test('知识脑图展示完整能力体系并可逐层展开', async ({ page }) => {
     await page.goto('/knowledge/map');
     await expect(page.getByRole('heading', { name: '把知识连成一张图' })).toBeVisible();
-    await expect(page.locator('.map-stats')).toContainText('190');
+    await expect(page.locator('.map-stats')).toContainText('219');
     await expect(page.locator('.map-stats')).toContainText('7');
     await expect(page.locator('.group-branch')).toHaveCount(7);
 
@@ -33,7 +33,7 @@ test.describe.serial('核心使用体验', () => {
     await page.getByRole('button', { name: '周', exact: true }).click();
     await expect(page.locator('.agenda-day')).toHaveCount(7);
     await expect(page.locator('.learning-contract').first()).toBeVisible();
-    await expect(page.getByText('Web 基础', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('浏览器与算法机制实验室', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('PROJECT', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('ASSESS', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('复测节奏', { exact: true }).first()).toBeVisible();
@@ -73,7 +73,7 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/knowledge');
     await expect(page.getByText('NEXT BEST ACTION', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: /JS-01/ })).toBeVisible();
-    await expect(page.getByText('能力路线 1 / 190')).toBeVisible();
+    await expect(page.getByText('能力路线 1 / 219')).toBeVisible();
     await page.getByRole('button', { name: /快速查找/ }).click();
     await page.getByRole('textbox', { name: '搜索页面或知识点' }).fill('VUE-11');
     await expect(page.getByRole('option', { name: /VUE-11/ })).toBeVisible();
@@ -108,14 +108,14 @@ test.describe.serial('核心使用体验', () => {
     await page.getByRole('button', { name: /AIAPP-03/ }).click();
     await expect(page.getByText('AIAPP-03', { exact: true }).last()).toBeVisible();
     await expect(page.getByText('单击选择 · 双击打开知识点')).toBeVisible();
-    await expect(page.locator('.knowledge-node')).toHaveCount(10);
+    await expect(page.locator('.knowledge-node')).toHaveCount(15);
   });
 
   test('系统页显示自动初始化、DeepSeek 和自动备份状态', async ({ page }) => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '系统与数据' })).toBeVisible();
     await expect(page.getByText('首次启动会自动迁移', { exact: false })).toBeVisible();
-    await expect(page.getByText('190 个知识点')).toBeVisible();
+    await expect(page.getByText('219 个知识点')).toBeVisible();
     await expect(page.getByText('20 个领域已入库')).toBeVisible();
     await expect(page.getByText('系统每天自动创建一次一致性快照', { exact: false })).toBeVisible();
     await expect(page.getByText(/^(?:已配置|未配置)$/, { exact: true })).toBeVisible();

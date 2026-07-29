@@ -31,7 +31,7 @@ export default defineConfig({
     proxy: {
       // API 请求代理到后端服务
       '/api': {
-        target: 'http://127.0.0.1:41730',
+        target: process.env.VITE_PROXY_TARGET ?? 'http://127.0.0.1:41730',
         changeOrigin: true,
       },
     },

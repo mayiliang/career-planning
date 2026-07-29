@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { CONTENT_PLAN_WEEK_COUNT, LEARNING_WEEK_PATHS } from './plan.service.js';
 import { KNOWLEDGE_PATHS, buildRelationDefinitions } from './knowledge-relations.service.js';
 
-describe('知识关系与 48 周计划编排', () => {
-  it('前 44 周恰好覆盖全部 190 个唯一知识点', () => {
+describe('知识关系与 64 周计划编排', () => {
+  it('前 60 周恰好覆盖全部 219 个唯一知识点', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
       .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
       .flatMap(([, codes]) => codes);
 
-    expect(new Set(knowledgeCodes).size).toBe(190);
-    expect(new Set(plannedCodes).size).toBe(190);
+    expect(new Set(knowledgeCodes).size).toBe(219);
+    expect(new Set(plannedCodes).size).toBe(219);
     expect(new Set(plannedCodes)).toEqual(new Set(knowledgeCodes));
   });
 
@@ -22,7 +22,29 @@ describe('知识关系与 48 周计划编排', () => {
     expect(relationKeys.has('REACT-04->REACT-05')).toBe(false);
     expect(relationKeys.has('BIZ-03->UMI-04')).toBe(true);
     expect(relationKeys.has('UMI-04->BIZ-03')).toBe(false);
+    expect(relationKeys.has('GIT-01->GIT-02')).toBe(true);
+    expect(relationKeys.has('GIT-02->DEBUG-01')).toBe(true);
+    expect(relationKeys.has('MCP-01->AGENT-08')).toBe(true);
+    expect(relationKeys.has('A11Y-01->UX-01')).toBe(true);
     expect(relationKeys.has('ENG-04->ENG-07')).toBe(true);
+    expect(relationKeys.has('CS-02->CS-03')).toBe(true);
+    expect(relationKeys.has('SEC-04->WEBAGENT-01')).toBe(true);
+    expect(relationKeys.has('AIAPP-01->AIAPP-12')).toBe(true);
+    expect(relationKeys.has('AIAPP-12->AIAPP-13')).toBe(true);
+    expect(relationKeys.has('AGENT-07->AGENT-11')).toBe(true);
+    expect(relationKeys.has('WEBAI-03->WEBAI-11')).toBe(true);
+    expect(relationKeys.has('PWA-01->PWA-02')).toBe(true);
+    expect(relationKeys.has('TEST-04->ENG-06')).toBe(true);
+    expect(relationKeys.has('AIAPP-09->SUSTAIN-01')).toBe(true);
+    expect(relationKeys.has('HYBRID-01->MOBILE-01')).toBe(true);
+    expect(relationKeys.has('ENG-06->DX-01')).toBe(true);
+    expect(relationKeys.has('H5-03->MEDIA-01')).toBe(true);
+    expect(relationKeys.has('WASM-01->WEBAI-03')).toBe(true);
+    expect(relationKeys.has('AIDEV-03->AIDEV-11')).toBe(true);
+    expect(relationKeys.has('NODE-02->NODE-04')).toBe(true);
+    expect(relationKeys.has('SEC-04->EMBED-01')).toBe(true);
+    expect(relationKeys.has('PWA-01->LOCALFIRST-01')).toBe(true);
+    expect(relationKeys.has('WEB-01->EDITOR-01')).toBe(true);
     expect(relationKeys.has('AGENT-09->AGENT-10')).toBe(false);
   });
 

@@ -4,10 +4,12 @@ import path from 'node:path';
 import { parseAllKnowledgeFiles } from './markdown.js';
 
 const CHINESE_RESOURCE_PATTERN =
-  /\[[^\]]+\]\((?:\.\.\/chinese-guides\/|https?:\/\/[^)]*(?:\/zh-CN\/|\/zh-cn\/|\/zh_cn\/|\/zh\/|zh-hans\.|cn\.vuejs\.org|cn\.vite\.dev|cn\.vitest\.dev|nodejs\.cn|node\.org\.cn|playwright\.nodejs\.cn|testing-library\.node\.org\.cn|eslint\.org\.cn|nuxt\.com\.cn|hl=zh-cn|umijs\.org|ant\.design|developer\.work\.weixin\.qq\.com|open\.dingtalk\.com|\.cn\/))[^)]*\)/i;
+  /\[[^\]]+\]\((?:\.\.\/chinese-guides\/|https?:\/\/[^)]*(?:\/zh-CN\/|\/zh-cn\/|\/zh_cn\/|\/zh\/|zh-hans\.|cn\.vuejs\.org|cn\.vite\.dev|cn\.vitest\.dev|nodejs\.cn|node\.org\.cn|playwright\.nodejs\.cn|testing-library\.node\.org\.cn|eslint\.org\.cn|nuxt\.com\.cn|oi-wiki\.org|hl=zh-cn|hl=zh_cn|umijs\.org|ant\.design|lbs\.amap\.com|developer\.work\.weixin\.qq\.com|open\.dingtalk\.com|\.cn\/))[^)]*\)/i;
 const ENGLISH_ORIGINAL_MARKER = '（英文原文，仅用于版本核验）';
 const ENGLISH_ORIGINAL_SCOPE = '英文原文仅用于版本核验，不作为必读或独立首考题源。';
 const ENGLISH_ORIGINAL_ASSESSMENT_SCOPE = '英文原文仅用于版本核验，不作为独立首考题源。';
+const LEGACY_TEMPLATE_PATTERN =
+  /围绕「.+」的定义、机制、边界、反例和通过标准|围绕首考题 3 的产出给出一个失败现象|3 分钟向同事讲清是什么、什么时候用、如何验证没有用错|不得用未列资料或题目未点名的框架\/项目场景作为主要评分依据/;
 
 function extractMarkdownLinks(markdown: string): Array<{ markup: string; url: string }> {
   return [...markdown.matchAll(/(\[[^\]]+\]\(([^)]+)\))/g)].map((match) => ({
@@ -46,7 +48,7 @@ function findProjectRoot(): string {
 }
 
 describe('知识库内容完整性', () => {
-  it('应解析 20 个领域和 190 个唯一知识点', () => {
+  it('应解析 20 个领域和 219 个唯一知识点', () => {
     const root = findProjectRoot();
     const knowledgeDir = path.join(root, 'docs/knowledge/knowledge-base');
     const files = fs.readdirSync(knowledgeDir)
@@ -60,15 +62,25 @@ describe('知识库内容完整性', () => {
     );
     const domains = parseAllKnowledgeFiles(contents);
     const points = domains.flatMap((domain) => domain.points);
+    const insufficientChineseGuides: string[] = [];
+    const insufficientCoverageScopes: string[] = [];
 
     expect(domains).toHaveLength(20);
-    expect(points).toHaveLength(190);
-    expect(new Set(points.map((point) => point.code)).size).toBe(190);
+    expect(points).toHaveLength(219);
+    expect(new Set(points.map((point) => point.code)).size).toBe(219);
     for (const point of points) {
       expect(point.studyMaterial, `${point.code} 缺少学习资料`).not.toBe('');
       expect(point.assessmentSpec, `${point.code} 缺少严格考核`).not.toBe('');
       expect(point.passCriteria, `${point.code} 缺少通过标准`).not.toBe('');
       expect(point.studyMaterial, `${point.code} 学习资料缺少覆盖范围`).toContain('覆盖范围：');
+      expect(
+        `${point.studyMaterial}\n${point.assessmentSpec}\n${point.passCriteria}`,
+        `${point.code} 仍含不能证明具体覆盖或诊断能力的旧模板句`,
+      ).not.toMatch(LEGACY_TEMPLATE_PATTERN);
+      const coverageLength = point.studyMaterial.split('覆盖范围：')[1]?.length ?? 0;
+      if (coverageLength < 60) {
+        insufficientCoverageScopes.push(`${point.code}:${coverageLength}/60`);
+      }
       const sourceScope = point.studyMaterial.split('。覆盖范围：')[0] ?? point.studyMaterial;
       expect(sourceScope, `${point.code} 学习资料题源含有隐性项目背景`).not.toMatch(
         /真实|历史问题|所用|现有 service|项目现有|项目真实|项目中的|目标项目|历史技术方案|团队规范|自己已经通过/,
@@ -129,18 +141,78 @@ describe('知识库内容完整性', () => {
           point.assessmentSpec,
           `${point.code} 没有限制英文原文不得独立命题`,
         ).toContain(ENGLISH_ORIGINAL_ASSESSMENT_SCOPE);
+        const sourceQuestion = point.assessmentSpec.match(
+          /首考题 1（资料定位）：(.+?)；首考题 2（机制解释）：/,
+        )?.[1] ?? '';
+        expect(
+          sourceQuestion,
+          `${point.code} 的资料定位题必须只以中文核心讲义命题，英文原文只能核验版本`,
+        ).toContain('只允许使用《中文核心讲义》');
+        expect(
+          (sourceQuestion.match(/《/g) ?? []).length,
+          `${point.code} 的资料定位题仍混入了中文核心讲义以外的命题资料`,
+        ).toBe(1);
+
+        const guideFile = point.studyMaterial.includes('../chinese-guides/advanced-topics.md#')
+          ? 'advanced-topics.md'
+          : 'core-and-ecosystem-topics.md';
+        const guideText = fs.readFileSync(
+          path.join(root, 'docs/knowledge/chinese-guides', guideFile),
+          'utf8',
+        );
+        const escapedCode = point.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const guideSection = guideText.match(
+          new RegExp(`^## ${escapedCode}\\r?\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm'),
+        )?.[1]?.trim() ?? '';
+        const chineseExternalCount = extractMarkdownLinks(point.studyMaterial).filter(
+          ({ markup, url }) => /^https?:\/\//i.test(url) && isChineseResource(markup),
+        ).length;
+        const minimumGuideLength =
+          chineseExternalCount === 0 ? 200 : chineseExternalCount === 1 ? 140 : 120;
+        if (guideSection.length < minimumGuideLength) {
+          insufficientChineseGuides.push(
+            `${point.code}:${guideSection.length}/${minimumGuideLength}（中文外部资料 ${chineseExternalCount}）`,
+          );
+        }
       }
       expect(`${point.studyMaterial}\n${point.assessmentSpec}`).not.toMatch(
         /2025-11-25|react\.dev\/learn\/displaying-data|docs\.sigstore\.dev\/cosign\/overview\/|ant\.design\/docs\/spec\/api\/|responsible-use\/copilot-code-review|sre\.google\/sre-book\/risk-engineering|techwriting\.withgoogle\.com\/resources\/one\/two\/review|multi-step-tools|docs\.docker\.com\/build\/guide\/|modelcards\.withgoogle\.com|rework\.withgoogle\.com|www\.gov\.cn\/xinwen\/2021-08-20/,
       );
     }
+    expect(
+      insufficientChineseGuides,
+      '保留英文核验原文的知识点必须有与中文外部资料数量相匹配的中文讲义深度',
+    ).toEqual([]);
+    expect(
+      insufficientCoverageScopes,
+      '覆盖范围必须足以界定机制、反例和验收边界',
+    ).toEqual([]);
 
     const pointsByCode = new Map(points.map((point) => [point.code, point]));
+    for (const code of [
+      'CS-01', 'CS-02', 'CS-03', 'DEBUG-01', 'WEB-05', 'SEC-04', 'UX-01',
+      'RUNTIME-01', 'RUNTIME-02', 'MOBILE-01', 'SEO-01', 'AIAPP-11', 'AIAPP-12',
+      'WEBAGENT-01', 'JS-07', 'BROWSER-02', 'SEC-05', 'TEST-04', 'PWA-02',
+      'WEBAI-11', 'AGENT-11', 'AIUI-01', 'AIAPP-13', 'AIMEDIA-01', 'SUSTAIN-01',
+      'DX-01', 'MEDIA-01', 'WASM-01', 'AIDEV-11',
+      'NODE-04', 'EDITOR-01', 'LOCALFIRST-01', 'EMBED-01',
+    ]) {
+      expect(pointsByCode.has(code), `${code} 必须进入正式知识体系`).toBe(true);
+    }
+    for (const code of ['AI-01', 'CAREER-03', 'PERF-05', 'DEPLOY-02', 'AIDEV-05', 'AGENT-02', 'MCP-02']) {
+      expect(pointsByCode.has(code), `${code} 已被合并，不应继续形成重复学习合同`).toBe(false);
+    }
     expect(pointsByCode.get('JS-01')?.studyMaterial).not.toMatch(/React|useEffect/i);
     expect(pointsByCode.get('JS-01')?.assessmentSpec).not.toMatch(/React|useEffect/i);
     expect(pointsByCode.get('JS-06')?.studyMaterial).toContain('https://nodejs.cn/api/esm.html');
     expect(pointsByCode.get('JS-06')?.studyMaterial).not.toContain('https://nodejs.org/api/esm.html');
     expect(pointsByCode.get('REACT-04')?.studyMaterial).toMatch(/Effect|Effects/i);
+    for (const code of ['GIT-01', 'GIT-02', 'GIT-03']) {
+      expect(pointsByCode.get(code)?.studyMaterial, `${code} 必须使用中文 Git 学习资料`)
+        .toMatch(/git-scm\.com\/book\/zh\/v2|docs\.github\.com\/zh\//);
+      expect(pointsByCode.get(code)?.studyMaterial, `${code} 不应依赖英文必读资料`)
+        .not.toContain('英文原文');
+    }
     expect(pointsByCode.get('WEB-01')?.studyMaterial).not.toContain('w3.org/WAI/ARIA/apg');
     expect(pointsByCode.get('WEB-01')?.studyMaterial).not.toContain('英文原文');
     expect(pointsByCode.get('WEB-01')?.studyMaterial).toContain(
@@ -149,6 +221,19 @@ describe('知识库内容完整性', () => {
     expect(pointsByCode.get('WEB-01')?.studyMaterial).toContain(
       'https://developer.mozilla.org/zh-CN/docs/Web/Accessibility/ARIA',
     );
+    expect(pointsByCode.get('A11Y-01')?.studyMaterial).not.toContain('w3.org/WAI/ARIA/apg');
+    expect(pointsByCode.get('A11Y-01')?.studyMaterial).not.toContain('英文原文');
+    expect(pointsByCode.get('AIAPP-05')?.studyMaterial).toContain(
+      'https://modelcontextprotocol.io/extensions/apps/overview',
+    );
+    expect(pointsByCode.get('BROWSER-02')?.studyMaterial).toContain('scheduler.yield');
+    expect(pointsByCode.get('H5-03')?.studyMaterial).toContain('lbs.amap.com/api/javascript-api-v2');
+    expect(pointsByCode.get('H5-03')?.studyMaterial).toContain('multipart-upload');
+    expect(pointsByCode.get('AIAPP-09')?.studyMaterial).toContain('token_usage');
+    expect(pointsByCode.get('AIAPP-09')?.studyMaterial).toContain('kv_cache');
+    expect(pointsByCode.get('WEBAI-05')?.studyMaterial).toContain('Origin_private_file_system');
+    expect(pointsByCode.get('WEBAI-03')?.studyMaterial).toContain('完成 `WASM-01`');
+    expect(pointsByCode.get('AIDEV-11')?.studyMaterial).toContain('playwright.nodejs.cn/docs/trace-viewer');
 
     const guideFiles = [
       'advanced-topics.md',

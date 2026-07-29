@@ -5,7 +5,7 @@
  * Phase 3 实现：
  * - 月视图显示计划事件
  * - 创建计划事件
- * - 导入 48 周计划
+ * - 导入 64 周计划
  */
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -286,8 +286,8 @@ watch(currentDate, () => {
     </header>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
     <section class="plan-overview-strip" aria-label="当前计划概览">
-      <div><strong>48</strong><span>周完整路径</span></div>
-      <div><strong>190</strong><span>知识点全覆盖</span></div>
+      <div><strong>64</strong><span>周完整路径</span></div>
+      <div><strong>219</strong><span>知识点全覆盖</span></div>
       <div><strong>{{ activeKnowledgeCodes.size }}</strong><span>本{{ viewMode === 'day' ? '日' : viewMode === 'week' ? '周' : '期' }}知识点</span></div>
       <div><strong>{{ activeTasks }}</strong><span>严格任务</span></div>
       <div class="dependency-summary" :class="{ ready: pendingPrerequisites === 0 }"><i></i><span><strong>{{ pendingPrerequisites ? `${pendingPrerequisites} 项前置待补` : '前置路径已就绪' }}</strong><small>前置状态只做学习顺序提示，不会阻止打开任务</small></span></div>

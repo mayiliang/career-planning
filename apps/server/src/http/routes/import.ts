@@ -34,6 +34,8 @@ const ImportExecuteResponseSchema = z.object({
   importedPoints: z.number(),
   updatedPoints: z.number(),
   skippedPoints: z.number(),
+  deletedPoints: z.number(),
+  deletedDomains: z.number(),
   totalPoints: z.number(),
 });
 
