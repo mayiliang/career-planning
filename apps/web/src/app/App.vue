@@ -39,9 +39,10 @@ const statusColor = computed(() => {
 
 // 导航菜单项
 const navItems = [
-  { path: '/', label: '今日', hint: 'TODAY', glyph: '今' },
+  { path: '/', label: '学习台', hint: 'LEARN', glyph: '学' },
   { path: '/knowledge/map', label: '知识体系', hint: 'ATLAS', glyph: '知' },
-  { path: '/plan', label: '学习计划', hint: 'PLAN', glyph: '程' },
+  { path: '/notes', label: '笔记中心', hint: 'NOTES', glyph: '记' },
+  { path: '/plan', label: '路线参考', hint: 'OPTIONAL', glyph: '路' },
   { path: '/jobs', label: '求职支线', hint: 'JOBS', glyph: '职' },
 ];
 

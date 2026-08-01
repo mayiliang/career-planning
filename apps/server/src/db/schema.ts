@@ -58,6 +58,16 @@ export const knowledgePoints = sqliteTable('knowledge_points', {
     enum: ['NOT_STARTED', 'LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'MASTERED', 'NEEDS_RELEARNING']
   }).notNull(),
 
+  // 自主学习与掌握证据是两条独立状态轴；旧 status 继续保留以兼容历史数据。
+  learningState: text('learning_state', {
+    enum: ['NOT_STARTED', 'LEARNING', 'LEARNED', 'DEFERRED']
+  }).notNull().default('NOT_STARTED'),
+  masteryLevel: integer('mastery_level').notNull().default(0), // M0-M4
+  learnedAt: text('learned_at'),
+  deferredAt: text('deferred_at'),
+  deferReason: text('defer_reason'),
+  currentFocus: integer('current_focus', { mode: 'boolean' }).notNull().default(false),
+
   // 状态时间
   selfMasteredAt: text('self_mastered_at'),
   firstPassedAt: text('first_passed_at'),
@@ -277,6 +287,14 @@ export const assessmentSessions = sqliteTable('assessment_sessions', {
   // 时长配置（分钟）
   durationMinutes: integer('duration_minutes').notNull(),
 
+  // 可选的渐进式掌握挑战：M1 理解、M2 引导应用、M3 独立掌握、M4 稳定掌握。
+  masteryStage: integer('mastery_stage').notNull().default(3),
+  challengeMode: text('challenge_mode', { enum: ['THEORY', 'PRACTICE', 'MIXED'] }).notNull().default('THEORY'),
+  challengeProfile: text('challenge_profile', {
+    enum: ['AUTO', 'THEORY_ONLY', 'EXAMPLE_DRIVEN', 'CODING', 'DEBUGGING', 'TOOL_OPERATION', 'DESIGN_CASE']
+  }).notNull().default('AUTO'),
+  assistanceLevel: integer('assistance_level').notNull().default(0),
+
   // 时间戳
   startedAt: text('started_at'),
   submittedAt: text('submitted_at'),
@@ -430,6 +448,82 @@ export const masteryEvents = sqliteTable('mastery_events', {
 }, (table) => ({
   knowledgePointCodeIdx: index('me_knowledge_point_code_idx').on(table.knowledgePointCode),
   createdAtIdx: index('me_created_at_idx').on(table.createdAt),
+}));
+
+// ===== 笔记中心 =====
+// 原始笔记永不被 AI 静默覆盖；organizedMd 只是候选整理稿。
+export const knowledgeNotes = sqliteTable('knowledge_notes', {
+  id: text('id').primaryKey().notNull(),
+  knowledgePointCode: text('knowledge_point_code').notNull().unique(),
+  domainCodeSnapshot: text('domain_code_snapshot'),
+  pointTitleSnapshot: text('point_title_snapshot').notNull(),
+  originalMd: text('original_md').notNull().default(''),
+  organizedMd: text('organized_md'),
+  activeVersionSource: text('active_version_source', { enum: ['ORIGINAL', 'ORGANIZED'] }).notNull().default('ORIGINAL'),
+  aiReviewJson: text('ai_review_json'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  updatedAtIdx: index('kn_updated_at_idx').on(table.updatedAt),
+}));
+
+export const knowledgeNoteVersions = sqliteTable('knowledge_note_versions', {
+  id: text('id').primaryKey().notNull(),
+  noteId: text('note_id').notNull().references(() => knowledgeNotes.id, { onDelete: 'cascade' }),
+  versionNo: integer('version_no').notNull(),
+  source: text('source', { enum: ['USER', 'AI_DRAFT', 'AI_ACCEPTED', 'MIGRATED'] }).notNull(),
+  contentMd: text('content_md').notNull(),
+  changeSummary: text('change_summary'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  noteIdx: index('knv_note_idx').on(table.noteId),
+}));
+
+// ===== 自主学习打卡 =====
+export const learningCheckins = sqliteTable('learning_checkins', {
+  id: text('id').primaryKey().notNull(),
+  checkinDate: text('checkin_date').notNull().unique(),
+  summaryMd: text('summary_md'),
+  actualMinutes: integer('actual_minutes'),
+  energyLevel: integer('energy_level'),
+  difficultyLevel: integer('difficulty_level'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const learningCheckinPoints = sqliteTable('learning_checkin_points', {
+  id: text('id').primaryKey().notNull(),
+  checkinId: text('checkin_id').notNull().references(() => learningCheckins.id, { onDelete: 'cascade' }),
+  knowledgePointCode: text('knowledge_point_code').notNull(),
+  activity: text('activity', { enum: ['PROGRESSED', 'LEARNED', 'REVIEWED', 'CHALLENGED'] }).notNull().default('PROGRESSED'),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  checkinIdx: index('lcp_checkin_idx').on(table.checkinId),
+}));
+
+// 分支选择属于个人路线偏好，不修改知识图谱本身。
+export const learningRouteChoices = sqliteTable('learning_route_choices', {
+  id: text('id').primaryKey().notNull(),
+  sourceCode: text('source_code').notNull(),
+  targetCode: text('target_code').notNull(),
+  state: text('state', { enum: ['SELECTED', 'DEFERRED'] }).notNull(),
+  scope: text('scope', { enum: ['POINT', 'BRANCH'] }).notNull().default('POINT'),
+  reason: text('reason'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  stateIdx: index('lrc_state_idx').on(table.state),
+}));
+
+export const assessmentHintEvents = sqliteTable('assessment_hint_events', {
+  id: text('id').primaryKey().notNull(),
+  sessionId: text('session_id').notNull().references(() => assessmentSessions.id, { onDelete: 'cascade' }),
+  questionId: text('question_id').references(() => assessmentQuestions.id, { onDelete: 'cascade' }),
+  level: integer('level').notNull(),
+  hintKind: text('hint_kind', { enum: ['EXPLAIN', 'HINT', 'DECOMPOSE', 'OUTLINE', 'STARTER', 'SIMILAR_EXAMPLE', 'FULL_ANSWER'] }).notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => ({
+  sessionIdx: index('ahe_session_idx').on(table.sessionId),
 }));
 
 // ===== 岗位表 =====
@@ -639,6 +733,12 @@ export const schema = {
   assessmentAnswers,
   assessmentResults,
   masteryEvents,
+  knowledgeNotes,
+  knowledgeNoteVersions,
+  learningCheckins,
+  learningCheckinPoints,
+  learningRouteChoices,
+  assessmentHintEvents,
   jobs,
   jobActivities,
   skillGaps,
@@ -674,6 +774,10 @@ export type AssessmentResultRecord = typeof assessmentResults.$inferSelect;
 export type NewAssessmentResult = typeof assessmentResults.$inferInsert;
 export type MasteryEventRecord = typeof masteryEvents.$inferSelect;
 export type NewMasteryEvent = typeof masteryEvents.$inferInsert;
+export type KnowledgeNoteRecord = typeof knowledgeNotes.$inferSelect;
+export type KnowledgeNoteVersionRecord = typeof knowledgeNoteVersions.$inferSelect;
+export type LearningCheckinRecord = typeof learningCheckins.$inferSelect;
+export type LearningRouteChoiceRecord = typeof learningRouteChoices.$inferSelect;
 
 // Phase 6: 求职支线类型导出
 export type JobRecord = typeof jobs.$inferSelect;

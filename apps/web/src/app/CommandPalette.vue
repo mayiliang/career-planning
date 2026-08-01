@@ -18,10 +18,11 @@ const { data } = useQuery({
 });
 
 const destinations = [
-  { label: '今天的学习航线', hint: '继续当前任务与打卡', path: '/', code: 'TODAY', type: '页面' },
+  { label: '学习台', hint: '继续当前知识点与今日打卡', path: '/', code: 'LEARN', type: '页面' },
   { label: '知识体系脑图', hint: '查看完整能力结构', path: '/knowledge/map', code: 'ATLAS', type: '页面' },
   { label: '知识关系图谱', hint: '查看前置与关联关系', path: '/knowledge/graph', code: 'GRAPH', type: '页面' },
-  { label: '学习计划', hint: '查看每日任务与请假顺延', path: '/plan', code: 'PLAN', type: '页面' },
+  { label: '笔记中心', hint: '按知识体系管理原文与 AI 整理稿', path: '/notes', code: 'NOTES', type: '页面' },
+  { label: '64 周路线参考', hint: '只查看推荐先后顺序，不生成每日任务', path: '/plan', code: 'ROUTE', type: '页面' },
   { label: '求职支线', hint: '管理岗位、反馈与技能缺口', path: '/jobs', code: 'JOBS', type: '页面' },
   { label: '设置与本地数据', hint: 'DeepSeek、备份与恢复', path: '/settings', code: 'LOCAL', type: '页面' },
 ];

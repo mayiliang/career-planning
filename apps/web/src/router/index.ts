@@ -19,7 +19,7 @@ const routes = [
     path: '/',
     name: 'Today',
     component: () => import('@/features/today/TodayPage.vue'),
-    meta: { title: '今日' },
+    meta: { title: '学习台' },
   },
   {
     path: '/knowledge',
@@ -49,13 +49,19 @@ const routes = [
     path: '/assessment/:id',
     name: 'Assessment',
     component: () => import('@/features/assessment/AssessmentPage.vue'),
-    meta: { title: '严格考核' },
+    meta: { title: '掌握挑战' },
   },
   {
     path: '/plan',
     name: 'Plan',
     component: () => import('@/features/calendar/CalendarPage.vue'),
-    meta: { title: '计划' },
+    meta: { title: '路线参考' },
+  },
+  {
+    path: '/notes',
+    name: 'Notes',
+    component: () => import('@/features/notes/NotesPage.vue'),
+    meta: { title: '笔记中心' },
   },
   {
     path: '/jobs',

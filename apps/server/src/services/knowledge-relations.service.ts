@@ -87,6 +87,10 @@ LEARNING_WEEK_PATHS[63] = ['RENDER-02', 'DATA-02', 'AIAPP-08', 'AGENT-10', 'AISA
 LEARNING_WEEK_PATHS[64] = ['TEST-03', 'A11Y-01', 'UX-01', 'AIGOV-01', 'LEAD-01', 'CAREER-06'];
 
 let globalRouteOrder = 0;
+/** 所有推荐入口共用的唯一顺序；不包含后四周重复使用的综合实践节点。 */
+export const RECOMMENDED_KNOWLEDGE_ROUTE = Object.entries(LEARNING_WEEK_PATHS)
+  .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
+  .flatMap(([, path]) => path);
 export const KNOWLEDGE_ROUTE_INDEX = new Map(
   Object.entries(LEARNING_WEEK_PATHS)
     .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)

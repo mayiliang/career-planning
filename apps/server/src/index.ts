@@ -34,6 +34,7 @@ import { graphRoutes } from './http/routes/graph.js';
 import { assessmentRoutes } from './http/routes/assessment.js';
 import { jobsRoutes } from './http/routes/jobs.js';
 import { backupRoutes } from './http/routes/backup.js';
+import { learningRoutes } from './http/routes/learning.js';
 import { getConfig } from './config/index.js';
 import { checkDatabaseHealth, closeDatabase } from './db/index.js';
 import { bootstrapLocalData, startAutomaticBackups } from './services/bootstrap.service.js';
@@ -121,6 +122,9 @@ await app.register(jobsRoutes);
 
 // Phase 8: 备份路由
 await app.register(backupRoutes);
+
+// 自主学习工作台、笔记中心、学习打卡与个人分支偏好
+await app.register(learningRoutes);
 
 // 启动服务
 const start = async () => {

@@ -1,8 +1,4 @@
-import { join } from 'path';
-import { projectRoot } from '../config/index.js';
-import { rawDb } from '../db/index.js';
 import { executeImport } from './import.service.js';
-import { currentBeijingDate, planService } from './plan.service.js';
 import { getBackupService } from './backup.service.js';
 import { syncKnowledgeRelations } from './knowledge-relations.service.js';
 
@@ -14,29 +10,17 @@ export interface BootstrapResult {
   normalizedPlanTimes: number;
 }
 
-/** 首次启动自动迁移后，增量同步知识并生成默认学习计划。 */
+/** 首次启动自动迁移后只同步知识与关系；自主学习模式不再生成每日任务。 */
 export async function bootstrapLocalData(): Promise<BootstrapResult> {
   const importResult = await executeImport();
   const relationResult = syncKnowledgeRelations();
-  const row = rawDb.prepare('SELECT count(*) AS count FROM plan_events').get() as { count: number };
-  let planItems = 0;
-  const templatePath = join(projectRoot, 'templates', 'learning-tracker-template.csv');
-
-  if (row.count === 0) {
-    const result = await planService.importFromTemplate(templatePath, { startDate: currentBeijingDate() });
-    planItems = result.imported;
-  } else {
-    const result = await planService.syncTemplatePlan(templatePath);
-    planItems = result.created + result.updated;
-  }
-  const normalizedPlanTimes = planService.normalizeTemplateSchedule();
 
   return {
     knowledgePoints: importResult.totalPoints,
-    planCreated: planItems > 0,
-    planItems,
+    planCreated: false,
+    planItems: 0,
     knowledgeRelations: relationResult.total,
-    normalizedPlanTimes,
+    normalizedPlanTimes: 0,
   };
 }
 

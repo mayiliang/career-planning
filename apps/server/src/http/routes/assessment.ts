@@ -15,6 +15,7 @@ import {
   saveAnswer,
   submitAssessmentSession,
   cancelAssessmentSession,
+  revealAssessmentHint,
 } from '../../services/assessment.service.js';
 import { gradeAssessment, regradeAssessment } from '../../services/grading.service.js';
 import {
@@ -58,18 +59,26 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     const body = CreateAssessmentRequestSchema.parse(request.body);
     
     try {
-      const session = await createAssessmentSession({
+      const creation = await createAssessmentSession({
         knowledgePointCode: body.knowledgePointCode,
         type: body.type,
         durationMinutes: body.durationMinutes,
+        masteryStage: body.masteryStage,
+        challengeMode: body.challengeMode,
+        challengeProfile: body.challengeProfile,
       });
       
+      const session = creation.session;
       return reply.ok({
         id: session.id,
         knowledgePointCode: session.knowledgePointCode,
         assessmentType: session.assessmentType,
         status: session.status,
         durationMinutes: session.durationMinutes,
+        masteryStage: session.masteryStage,
+        challengeMode: session.challengeMode,
+        challengeProfile: session.challengeProfile,
+        assistanceLevel: session.assistanceLevel,
         startedAt: session.startedAt,
         submittedAt: session.submittedAt,
         gradedAt: session.gradedAt,
@@ -78,6 +87,8 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         model: session.model,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
+        resumedExisting: creation.resumedExisting,
+        resumeMessage: creation.resumeMessage,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -99,6 +110,10 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
           assessmentType: session.assessmentType,
           status: session.status,
           durationMinutes: session.durationMinutes,
+          masteryStage: session.masteryStage,
+          challengeMode: session.challengeMode,
+          challengeProfile: session.challengeProfile,
+          assistanceLevel: session.assistanceLevel,
           startedAt: session.startedAt,
           submittedAt: session.submittedAt,
           gradedAt: session.gradedAt,
@@ -148,6 +163,10 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         assessmentType: session.assessmentType,
         status: session.status,
         durationMinutes: session.durationMinutes,
+        masteryStage: session.masteryStage,
+        challengeMode: session.challengeMode,
+        challengeProfile: session.challengeProfile,
+        assistanceLevel: session.assistanceLevel,
         startedAt: session.startedAt,
         submittedAt: session.submittedAt,
         gradedAt: session.gradedAt,
@@ -200,6 +219,10 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         assessmentType: session.assessmentType,
         status: session.status,
         durationMinutes: session.durationMinutes,
+        masteryStage: session.masteryStage,
+        challengeMode: session.challengeMode,
+        challengeProfile: session.challengeProfile,
+        assistanceLevel: session.assistanceLevel,
         startedAt: session.startedAt,
         submittedAt: session.submittedAt,
         gradedAt: session.gradedAt,
@@ -233,6 +256,10 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
           assessmentType: result.session.assessmentType,
           status: result.session.status,
           durationMinutes: result.session.durationMinutes,
+          masteryStage: result.session.masteryStage,
+          challengeMode: result.session.challengeMode,
+          challengeProfile: result.session.challengeProfile,
+          assistanceLevel: result.session.assistanceLevel,
           startedAt: result.session.startedAt,
           submittedAt: result.session.submittedAt,
           gradedAt: result.session.gradedAt,
@@ -298,6 +325,16 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       return reply.error(code, message, code === 'AI_NOT_CONFIGURED' ? 400 : 502);
     }
   });
+
+  app.post('/api/v1/assessments/:id/questions/:questionId/hints', async (request, reply) => {
+    const { id, questionId } = request.params as { id: string; questionId: string };
+    const body = z.object({ kind: z.enum(['EXPLAIN', 'HINT', 'DECOMPOSE', 'OUTLINE', 'STARTER', 'SIMILAR_EXAMPLE', 'FULL_ANSWER']) }).parse(request.body);
+    try {
+      return reply.ok(await revealAssessmentHint(id, questionId, body.kind));
+    } catch (error) {
+      return reply.error('HINT_UNAVAILABLE', error instanceof Error ? error.message : '无法提供提示');
+    }
+  });
   
   // ===== GET /api/v1/assessments/:id/result - 获取评分结果 =====
   app.get('/api/v1/assessments/:id/result', async (request, reply) => {
@@ -347,6 +384,10 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         assessmentType: session.assessmentType,
         status: session.status,
         durationMinutes: session.durationMinutes,
+        masteryStage: session.masteryStage,
+        challengeMode: session.challengeMode,
+        challengeProfile: session.challengeProfile,
+        assistanceLevel: session.assistanceLevel,
         startedAt: session.startedAt,
         submittedAt: session.submittedAt,
         gradedAt: session.gradedAt,

@@ -149,9 +149,9 @@ describe('Import Service', () => {
     expect(result.deletedCheckins).toBe(1);
     expect(result.deletedAssessmentSessions).toBe(1);
     expect(result.deletedMasteryEvents).toBe(1);
-    expect(result.importedPlanEvents).toBe(448);
-    expect(point).toEqual({ status: 'NOT_STARTED', summary: null, masteredAt: null });
-    expect(templateCount.count).toBe(448);
+    expect(result.importedPlanEvents).toBe(0);
+    expect(point).toEqual({ status: 'NOT_STARTED', summary: '测试摘要', masteredAt: null });
+    expect(templateCount.count).toBe(0);
     expect(userCount.count).toBe(1);
     expect(checkinCount.count).toBe(0);
     expect(assessmentCount.count).toBe(0);

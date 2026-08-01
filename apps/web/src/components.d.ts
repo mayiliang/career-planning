@@ -7,6 +7,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BaseDialog: typeof import('./components/BaseDialog.vue')['default']
+    PracticeWorkspace: typeof import('./components/PracticeWorkspace.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

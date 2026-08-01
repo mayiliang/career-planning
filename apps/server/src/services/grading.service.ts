@@ -13,14 +13,12 @@ import {
   assessmentResults,
   knowledgePoints,
   masteryEvents,
-  planEvents,
 } from '../db/schema.js';
 import type {
   AssessmentSessionRecord,
   AssessmentResultRecord,
   NewAssessmentResult,
   NewMasteryEvent,
-  NewPlanEvent,
 } from '../db/schema.js';
 import { createProvider } from '../ai/index.js';
 import {
@@ -290,21 +288,11 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
       knowledgePointUpdated = await updateKnowledgePointStatus(
         session.knowledgePointCode,
         session.assessmentType,
-        request.sessionId
+        request.sessionId,
+        session.masteryStage,
+        session.assistanceLevel
       );
-      
-      // 首次通过，创建 7 天后复测事件
-      if (session.assessmentType === 'FIRST') {
-        retestEventCreated = await createRetestEvent(
-          session.knowledgePointCode,
-          request.sessionId
-        );
-      } else if (session.assessmentType === 'RETEST') {
-        reviewEventCreated = await createMonthlyReviewEvent(
-          session.knowledgePointCode,
-          request.sessionId
-        );
-      }
+      // M4 只是 7 天后解锁的可选稳定性挑战，不再自动塞入日历制造“逾期”。
     } else if (serverCalculatedVerdict === 'FAIL') {
       // 失败，回退到 LEARNING 状态
       await handleAssessmentFailure(
@@ -371,7 +359,9 @@ export async function regradeAssessment(sessionId: string): Promise<GradeResult>
 async function updateKnowledgePointStatus(
   knowledgePointCode: string,
   assessmentType: string,
-  sessionId: string
+  sessionId: string,
+  masteryStage: number,
+  assistanceLevel: number
 ): Promise<boolean> {
   const knowledgePoint = await db.query.knowledgePoints.findFirst({
     where: eq(knowledgePoints.code, knowledgePointCode),
@@ -382,36 +372,26 @@ async function updateKnowledgePointStatus(
   }
   
   const now = new Date().toISOString();
-  let newStatus: typeof knowledgePoints.$inferSelect.status;
-  let action: NewMasteryEvent['action'];
-  
-  if (assessmentType === 'FIRST') {
-    newStatus = 'FIRST_PASS_PENDING_RETEST';
-    action = 'firstPass';
-  } else if (assessmentType === 'RETEST') {
-    newStatus = 'MASTERED';
-    action = 'retestPass';
-  } else {
-    // MONTHLY_REVIEW 通过，保持 MASTERED
-    newStatus = 'MASTERED';
-    action = 'reviewPass';
-  }
-  
-  // 验证状态转换
-  const { isValidTransition } = await import('@career-atlas/shared');
-  if (!isValidTransition(knowledgePoint.status, newStatus)) {
-    console.error(`Invalid state transition: ${knowledgePoint.status} -> ${newStatus}`);
-    return false;
-  }
+  // 解释题/轻提示不惩罚；拆解、提纲、开头或完整答案意味着本次最高认证 M2。
+  const certifiedStage = assistanceLevel >= 3 ? Math.min(masteryStage, 2) : masteryStage;
+  const newLevel = Math.max(knowledgePoint.masteryLevel, certifiedStage);
+  const newStatus: typeof knowledgePoints.$inferSelect.status = newLevel >= 3
+    ? 'MASTERED'
+    : 'FIRST_PASS_PENDING_RETEST';
+  const action: NewMasteryEvent['action'] = certifiedStage >= 4
+    ? 'reviewPass'
+    : certifiedStage >= 3 ? 'retestPass' : 'firstPass';
   
   // 更新知识点状态
   await db
     .update(knowledgePoints)
     .set({
       status: newStatus,
-      firstPassedAt: assessmentType === 'FIRST' ? now : knowledgePoint.firstPassedAt,
-      masteredAt: assessmentType === 'RETEST' ? now : knowledgePoint.masteredAt,
-      nextReviewAt: assessmentType === 'RETEST' ? calculateNextReviewDate() : knowledgePoint.nextReviewAt,
+      learningState: 'LEARNED',
+      masteryLevel: newLevel,
+      firstPassedAt: knowledgePoint.firstPassedAt ?? now,
+      masteredAt: newLevel >= 3 ? (knowledgePoint.masteredAt ?? now) : knowledgePoint.masteredAt,
+      nextReviewAt: newLevel >= 3 && newLevel < 4 ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null,
       updatedAt: now,
     })
     .where(eq(knowledgePoints.code, knowledgePointCode));
@@ -424,6 +404,7 @@ async function updateKnowledgePointStatus(
     fromStatus: knowledgePoint.status,
     toStatus: newStatus,
     assessmentSessionId: sessionId,
+    evidenceSummary: `掌握挑战 M${masteryStage} 通过；帮助等级 ${assistanceLevel}；认证为 M${certifiedStage}`,
     createdAt: now,
   };
   
@@ -448,26 +429,21 @@ async function handleAssessmentFailure(
   }
   
   const now = new Date().toISOString();
-  let newStatus: typeof knowledgePoints.$inferSelect.status;
+  const newStatus: typeof knowledgePoints.$inferSelect.status = knowledgePoint.status;
   let action: NewMasteryEvent['action'];
   
   if (assessmentType === 'FIRST') {
-    newStatus = 'LEARNING';
     action = 'firstFail';
   } else if (assessmentType === 'RETEST') {
-    newStatus = 'NEEDS_RELEARNING';
     action = 'retestFail';
   } else {
-    // MONTHLY_REVIEW 失败
-    newStatus = 'NEEDS_RELEARNING';
     action = 'reviewFail';
   }
   
-  // 更新知识点状态
+  // 掌握挑战完全可选：失败只形成诊断证据，不撤销“已学完”，也不降低既有掌握等级。
   await db
     .update(knowledgePoints)
     .set({
-      status: newStatus,
       updatedAt: now,
     })
     .where(eq(knowledgePoints.code, knowledgePointCode));
@@ -484,73 +460,6 @@ async function handleAssessmentFailure(
   };
   
   await db.insert(masteryEvents).values(event);
-}
-
-// ===== 创建复测事件 =====
-
-async function createRetestEvent(
-  knowledgePointCode: string,
-  sessionId: string
-): Promise<boolean> {
-  const now = new Date();
-  const retestDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 天后
-  
-  const point = await db.query.knowledgePoints.findFirst({ where: eq(knowledgePoints.code, knowledgePointCode) });
-  const event: NewPlanEvent = {
-    id: randomUUID(),
-    eventType: 'RETEST',
-    title: `复测: ${knowledgePointCode}`,
-    description: '首次考核通过，需要进行复测',
-    startAt: retestDate.toISOString(),
-    endAt: new Date(retestDate.getTime() + 60 * 60 * 1000).toISOString(), // 1 小时
-    allDay: false,
-    status: 'PLANNED',
-    priority: 2,
-    knowledgePointId: point?.id ?? null,
-    assessmentSessionId: sessionId,
-    sourceType: 'SYSTEM',
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  };
-  
-  await db.insert(planEvents).values(event);
-  
-  return true;
-}
-
-/** 复测通过后，把 30 天迁移复习真正放入日历，而不只保存一个不可见时间戳。 */
-async function createMonthlyReviewEvent(
-  knowledgePointCode: string,
-  sessionId: string
-): Promise<boolean> {
-  const point = await db.query.knowledgePoints.findFirst({ where: eq(knowledgePoints.code, knowledgePointCode) });
-  const now = new Date();
-  const reviewDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  await db.insert(planEvents).values({
-    id: randomUUID(),
-    eventType: 'REVIEW',
-    title: `月度迁移复习: ${knowledgePointCode}`,
-    description: '复测通过 30 天后的迁移题抽测；未通过将重新进入学习状态。',
-    startAt: reviewDate.toISOString(),
-    endAt: new Date(reviewDate.getTime() + 60 * 60 * 1000).toISOString(),
-    allDay: false,
-    status: 'PLANNED',
-    priority: 3,
-    knowledgePointId: point?.id ?? null,
-    assessmentSessionId: sessionId,
-    sourceType: 'SYSTEM',
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  });
-  return true;
-}
-
-// ===== 计算下次复习日期 =====
-
-function calculateNextReviewDate(): string {
-  // 默认 30 天后进行月度抽测
-  const nextReview = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  return nextReview.toISOString();
 }
 
 export function normalizeFeedbackAndDimensionScores(

@@ -1,1168 +1,314 @@
 <script setup lang="ts">
-/**
- * 知识点详情页面
- *
- * Phase 2 实现：
- * - 显示知识点详情
- * - 学习资料 Markdown 渲染
- * - 笔记编辑（摘要）
- * - 自评掌握功能
- */
-import { ref, computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
-import { ApiError, apiClient } from '@/api/client';
+import { apiClient, type KnowledgePointDetail, type KnowledgeNote, type LearningBranch } from '@/api/client';
 import { renderMarkdown } from '@/utils/markdown';
+import BaseDialog from '@/components/BaseDialog.vue';
+import PracticeWorkspace from '@/components/PracticeWorkspace.vue';
 
 const route = useRoute();
 const router = useRouter();
-const queryClient = useQueryClient();
+const point = ref<KnowledgePointDetail | null>(null);
+const note = ref<KnowledgeNote | null>(null);
+const branches = ref<LearningBranch[]>([]);
+const noteDraft = ref('');
+const loading = ref(true);
+const saving = ref(false);
+const organizing = ref(false);
+const message = ref('');
+const error = ref('');
+const activeTab = ref<'materials' | 'notes' | 'mastery'>('materials');
+const selectedStage = ref(1);
+const challengeMode = ref<'THEORY' | 'PRACTICE' | 'MIXED'>('THEORY');
+const launching = ref(false);
+const deferDialogOpen = ref(false);
+const deferReason = ref('');
+const deferring = ref(false);
+const activePracticeId = ref<string | null>(null);
 
-// 知识点编号
-const knowledgeCode = computed(() => route.params.code as string);
+const code = computed(() => String(route.params.code));
+const masteryCopy = computed(() => [
+  ['M0', '未评估', '还没有系统证据，不代表没有学过'],
+  ['M1', '初步理解', '能解释核心概念与边界'],
+  ['M2', '引导应用', '在提示或脚手架下完成应用'],
+  ['M3', '已掌握', '能够独立完成理论或实践挑战'],
+  ['M4', '稳定掌握', '至少 7 天后通过变式挑战'],
+]);
+const profileText = computed(() => ({
+  THEORY_ONLY: '理解辨析型：重在概念、边界和反例，不强行安排编码题。',
+  EXAMPLE_DRIVEN: '示例驱动型：先看最小例子，再回到文字解释机制。',
+  CODING: '编码验证型：理解机制后，用可运行的最小代码验证。',
+  DEBUGGING: '排错诊断型：从异常出发建立“假设—验证—修复”链路。',
+  TOOL_OPERATION: '工具操作型：沿真实工作流操作并保留产物。',
+  DESIGN_CASE: '方案设计型：围绕具体约束比较方案与代价。',
+} as Record<string, string>)[point.value?.challengeProfile ?? 'EXAMPLE_DRIVEN']);
 
-// 当前标签页
-const activeTab = ref<'study' | 'assessment' | 'criteria'>('study');
-
-// 编辑状态
-const isEditing = ref(false);
-const editedSummary = ref('');
-
-// 自评掌握对话框
-const showSelfMasterDialog = ref(false);
-const selfMasterSummary = ref('');
-
-// 查询知识点详情
-const { data: point, isLoading, error } = useQuery({
-  queryKey: ['knowledge', 'point', knowledgeCode],
-  queryFn: () => apiClient.getKnowledgePoint(knowledgeCode.value),
-  enabled: () => !!knowledgeCode.value,
-});
-
-const relationPointId = computed(() => point.value?.id ?? '');
-const { data: relations } = useQuery({
-  queryKey: ['knowledge', 'relations', relationPointId],
-  queryFn: () => apiClient.getKnowledgeRelations(relationPointId.value),
-  enabled: () => Boolean(relationPointId.value),
-});
-
-// 更新摘要 mutation
-const updateSummaryMutation = useMutation({
-  mutationFn: (summary: string) =>
-    apiClient.updateKnowledgePointSummary(knowledgeCode.value, summary),
-  onSuccess: () => {
-    // 刷新知识点详情
-    queryClient.invalidateQueries({ queryKey: ['knowledge', 'point', knowledgeCode] });
-    isEditing.value = false;
-  },
-});
-
-// 自评掌握 mutation
-const selfMasterMutation = useMutation({
-  mutationFn: (summary: string) =>
-    apiClient.selfMasterKnowledgePoint(knowledgeCode.value, summary),
-  onSuccess: () => {
-    // 刷新知识点详情
-    queryClient.invalidateQueries({ queryKey: ['knowledge', 'point', knowledgeCode] });
-    queryClient.invalidateQueries({ queryKey: ['knowledge', 'points'] });
-    showSelfMasterDialog.value = false;
-    selfMasterSummary.value = '';
-  },
-});
-
-const assessmentType = computed(() => {
-  if (point.value?.status === 'SELF_MASTERED') return 'FIRST' as const;
-  if (point.value?.status === 'FIRST_PASS_PENDING_RETEST') return 'RETEST' as const;
-  if (point.value?.status === 'MASTERED') return 'MONTHLY_REVIEW' as const;
-  return null;
-});
-
-const createAssessmentMutation = useMutation({
-  mutationFn: () => apiClient.createAssessment({
-    knowledgePointCode: knowledgeCode.value,
-    type: assessmentType.value!,
-    durationMinutes: 60,
-  }),
-  onSuccess: (session) => router.push(`/assessment/${session.id}`),
-  onError: (reason) => {
-    if (reason instanceof ApiError) {
-      const existingSession = reason.message.match(/Existing session in progress: ([0-9a-f-]+)/i)?.[1];
-      if (existingSession) router.push(`/assessment/${existingSession}`);
-    }
-  },
-});
-
-// 开始编辑摘要
-const startEditing = () => {
-  editedSummary.value = point.value?.summary || '';
-  isEditing.value = true;
-};
-
-// 保存摘要
-const saveSummary = () => {
-  if (editedSummary.value.trim()) {
-    updateSummaryMutation.mutate(editedSummary.value.trim());
+async function load() {
+  loading.value = true;
+  error.value = '';
+  try {
+    const [pointData, noteData, branchData] = await Promise.all([
+      apiClient.getKnowledgePoint(code.value), apiClient.getNote(code.value), apiClient.getNextBranches(code.value),
+    ]);
+    point.value = pointData;
+    note.value = noteData;
+    noteDraft.value = noteData?.originalMd ?? pointData.summary ?? '';
+    branches.value = branchData;
+    selectedStage.value = Math.min(4, Math.max(1, pointData.masteryLevel + 1));
+    challengeMode.value = pointData.challengeProfile === 'THEORY_ONLY' ? 'THEORY' : 'THEORY';
+    if (['materials', 'notes', 'mastery'].includes(String(route.query.tab))) activeTab.value = String(route.query.tab) as typeof activeTab.value;
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '知识点加载失败';
+  } finally {
+    loading.value = false;
   }
-};
+}
 
-// 取消编辑
-const cancelEditing = () => {
-  isEditing.value = false;
-  editedSummary.value = '';
-};
+async function saveNote(showMessage = true) {
+  if (saving.value) return;
+  saving.value = true;
+  try {
+    note.value = await apiClient.saveNote(code.value, noteDraft.value);
+    if (showMessage) message.value = '原始笔记已保存，并写入版本历史';
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '笔记保存失败';
+  } finally { saving.value = false; }
+}
 
-// 开始自评掌握
-const startSelfMaster = () => {
-  selfMasterSummary.value = point.value?.summary || '';
-  showSelfMasterDialog.value = true;
-};
+async function organizeNote() {
+  if (!noteDraft.value.trim()) { message.value = '请先写下一些原始笔记'; return; }
+  await saveNote(false);
+  organizing.value = true;
+  try {
+    note.value = await apiClient.organizeNote(code.value);
+    message.value = note.value.generationMode === 'LOCAL_FALLBACK'
+      ? '当前未配置 AI，已生成安全排版稿；尚未执行事实核验'
+      : 'AI 候选稿已生成。原始笔记未被覆盖，请核对后再接受';
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : 'AI 整理失败';
+  } finally { organizing.value = false; }
+}
 
-// 提交自评掌握
-const submitSelfMaster = () => {
-  if (selfMasterSummary.value.trim()) {
-    selfMasterMutation.mutate(selfMasterSummary.value.trim());
-  }
-};
+async function acceptOrganized() {
+  try {
+    note.value = await apiClient.acceptOrganizedNote(code.value);
+    message.value = '已将整理稿设为阅读版本；原始笔记和全部版本仍然保留';
+  } catch (reason) { error.value = reason instanceof Error ? reason.message : '接受整理稿失败'; }
+}
 
-// 返回列表
-const goBack = () => {
-  router.push('/knowledge');
-};
+async function focusCurrent() {
+  await apiClient.focusLearningPoint(code.value);
+  await load();
+  message.value = '已设为当前学习知识点';
+}
 
-// 状态颜色映射
-const statusColorMap: Record<string, string> = {
-  NOT_STARTED: 'var(--color-draft-ink)',
-  LEARNING: 'var(--color-blueprint)',
-  SELF_MASTERED: 'var(--color-moss-proof)',
-  FIRST_PASS_PENDING_RETEST: 'var(--color-amber-review)',
-  MASTERED: 'var(--color-moss-proof)',
-  NEEDS_RELEARNING: 'var(--color-redline)',
-};
+async function completeLearning() {
+  if (!noteDraft.value.trim()) { activeTab.value = 'notes'; message.value = '请先留下学习笔记，再确认已学完'; return; }
+  await saveNote(false);
+  await apiClient.completeLearningPoint(code.value);
+  await load();
+  message.value = '已记录“阅读资料并完成笔记”。掌握等级仍由可选挑战判定';
+}
 
-// 状态显示文本
-const statusLabelMap: Record<string, string> = {
-  NOT_STARTED: '未开始',
-  LEARNING: '学习中',
-  SELF_MASTERED: '自评已掌握',
-  FIRST_PASS_PENDING_RETEST: '待复测',
-  MASTERED: '已掌握',
-  NEEDS_RELEARNING: '需要重学',
-};
+async function deferCurrent() {
+  deferReason.value = '';
+  deferDialogOpen.value = true;
+}
 
-// 格式化状态
-const formatStatus = (status: string) => {
-  return statusLabelMap[status] || status;
-};
+async function confirmDefer() {
+  deferring.value = true;
+  try {
+    await apiClient.deferLearningPoint(code.value, deferReason.value || undefined);
+    deferDialogOpen.value = false;
+    await router.push('/');
+  } finally { deferring.value = false; }
+}
 
-// 是否可以自评掌握
-const canSelfMaster = computed(() => {
-  return point.value && ['NOT_STARTED', 'LEARNING'].includes(point.value.status);
-});
+async function chooseBranch(branch: LearningBranch) {
+  await apiClient.saveRouteChoice({ sourceCode: code.value, targetCode: branch.code, state: 'SELECTED', scope: 'POINT' });
+  await apiClient.focusLearningPoint(branch.code);
+  await router.push(`/knowledge/${branch.code}`);
+}
 
-const studyHtml = computed(() => renderMarkdown(point.value?.studyMaterialMd ?? ''));
-const assessmentHtml = computed(() => renderMarkdown(point.value?.assessmentSpecMd ?? ''));
-const criteriaHtml = computed(() => renderMarkdown(point.value?.passCriteriaMd ?? ''));
-const pendingPrerequisites = computed(() => relations.value?.prerequisites.filter((item) => item.status !== 'MASTERED').length ?? 0);
-const prerequisiteTotal = computed(() => relations.value?.prerequisites.length ?? 0);
-const dependentTotal = computed(() => relations.value?.dependents.length ?? 0);
-const relatedTotal = computed(() => relations.value?.related.length ?? 0);
-const formatMinutes = (minutes: number) => {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return hours ? `${hours} 小时${rest ? ` ${rest} 分` : ''}` : `${rest} 分钟`;
-};
-const effortStages = computed(() => point.value ? [
-  { key: 'study', label: '资料精读', minutes: point.value.studyMinutes },
-  { key: 'practice', label: '机制练习', minutes: point.value.practiceMinutes },
-  { key: 'project', label: '项目产出', minutes: point.value.projectMinutes },
-  { key: 'assessment', label: '严格首考', minutes: point.value.assessmentMinutes },
-  { key: 'retest', label: '7 天复测', minutes: point.value.retestMinutes },
-] : []);
-const primaryActionLabel = computed(() => {
-  if (assessmentType.value === 'RETEST') return '开始复测';
-  if (assessmentType.value === 'MONTHLY_REVIEW') return '开始月度抽测';
-  if (assessmentType.value === 'FIRST') return '开始首次严格考核';
-  if (canSelfMaster.value) return '自评已掌握';
-  return '查看关系图谱';
-});
-const triggerPrimaryAction = () => {
-  if (assessmentType.value) createAssessmentMutation.mutate();
-  else if (canSelfMaster.value) startSelfMaster();
-  else router.push('/knowledge/graph');
-};
+async function deferBranch(branch: LearningBranch, scope: 'POINT' | 'BRANCH') {
+  await apiClient.saveRouteChoice({ sourceCode: code.value, targetCode: branch.code, state: 'DEFERRED', scope });
+  branches.value = await apiClient.getNextBranches(code.value);
+  message.value = scope === 'BRANCH' ? '已暂缓这条支线，可随时从知识体系恢复' : '已把这个知识点放入稍后学习';
+}
+
+async function launchChallenge() {
+  if (!point.value || launching.value) return;
+  launching.value = true;
+  error.value = '';
+  try {
+    const type = selectedStage.value === 4 ? 'RETEST' : 'FIRST';
+    const session = await apiClient.createAssessment({
+      knowledgePointCode: point.value.code,
+      type,
+      durationMinutes: selectedStage.value <= 2 ? 35 : 60,
+      masteryStage: selectedStage.value,
+      challengeMode: challengeMode.value,
+      challengeProfile: point.value.challengeProfile,
+    });
+    await router.push({ path: `/assessment/${session.id}`, query: session.resumedExisting ? { resumed: '1', message: session.resumeMessage ?? '' } : {} });
+  } catch (reason) { error.value = reason instanceof Error ? reason.message : '无法创建掌握挑战'; }
+  finally { launching.value = false; }
+}
+
+function togglePractice(activityId: string) {
+  activePracticeId.value = activePracticeId.value === activityId ? null : activityId;
+}
+
+watch(code, load);
+onMounted(load);
 </script>
 
 <template>
-  <div class="knowledge-detail-page">
-    <!-- 加载状态 -->
-    <div v-if="isLoading" class="loading-state">
-      加载中...
-    </div>
-
-    <!-- 错误状态 -->
-    <div v-else-if="error" class="error-state">
-      加载失败：{{ (error as Error).message }}
-      <button @click="goBack" class="btn btn-secondary">返回列表</button>
-    </div>
-
-    <!-- 详情内容 -->
-    <div v-else-if="point" class="detail-content">
-      <!-- 头部信息 -->
-      <header class="detail-header">
-        <div class="header-top">
-          <button @click="goBack" class="back-btn" aria-label="返回">
-            ← 返回
-          </button>
-          <button class="graph-shortcut" @click="router.push('/knowledge/graph')">关系图谱</button>
+  <div class="knowledge-detail">
+    <div v-if="loading" class="state-card">正在打开学习内容…</div>
+    <div v-else-if="error && !point" class="state-card error">{{ error }}<button @click="load">重试</button></div>
+    <template v-else-if="point">
+      <header class="point-hero">
+        <button class="back" @click="router.back()">← 返回</button>
+        <div class="hero-copy">
+          <p>{{ point.domainCode }} · {{ point.domainTitle }}</p>
+          <h1><code>{{ point.code }}</code>{{ point.title }}</h1>
+          <div class="state-row">
+            <span :data-state="point.learningState">{{ { NOT_STARTED: '未开始', LEARNING: '学习中', LEARNED: '已学完', DEFERRED: '稍后再学' }[point.learningState] }}</span>
+            <span class="mastery">M{{ point.masteryLevel }} · {{ masteryCopy[point.masteryLevel]?.[1] }}</span>
+            <span>{{ profileText }}</span>
+          </div>
         </div>
-
-        <div class="header-main">
-          <div class="title-cluster">
-            <div class="title-row">
-              <span class="point-code">{{ point.code }}</span>
-              <h1 class="point-title">{{ point.title }}</h1>
-            </div>
-
-            <div class="meta-row">
-              <span class="domain-tag">{{ point.domainCode }} - {{ point.domainTitle }}</span>
-              <span class="difficulty-tag">{{ point.difficulty }}</span>
-              <span v-if="point.planWeek" class="week-tag">第{{ point.planWeek }}周</span>
-            </div>
-          </div>
-
-          <div class="hero-actions">
-            <span class="status-badge" :style="{ backgroundColor: statusColorMap[point.status] }">{{ formatStatus(point.status) }}</span>
-            <button class="btn btn-primary" :disabled="createAssessmentMutation.isPending.value" @click="triggerPrimaryAction">
-              {{ createAssessmentMutation.isPending.value ? '正在创建...' : primaryActionLabel }}
-            </button>
-          </div>
+        <div class="hero-actions">
+          <button v-if="point.learningState !== 'LEARNED'" class="primary" @click="focusCurrent">{{ point.currentFocus ? '正在学习' : '设为当前学习' }}</button>
+          <button v-if="point.learningState !== 'LEARNED'" @click="deferCurrent">暂时不学</button>
+          <button v-else @click="activeTab = 'mastery'">可选：掌握挑战</button>
         </div>
       </header>
 
-      <section class="effort-panel" aria-labelledby="effort-title">
-        <div class="effort-summary">
-          <p>TIME BUDGET</p>
-          <h2 id="effort-title">预计 {{ formatMinutes(point.estimatedTotalMinutes) }} 完成首次掌握</h2>
-          <span>按资料、练习、项目、考核推进；另预留 {{ formatMinutes(point.retestMinutes) }} 完成 7 天后严格复测。</span>
-        </div>
-        <div class="effort-stages">
-          <div v-for="stage in effortStages" :key="stage.key" :data-stage="stage.key">
-            <i></i><span>{{ stage.label }}</span><strong>{{ stage.minutes }}m</strong>
-          </div>
-        </div>
+      <p v-if="error" class="notice error">{{ error }}</p>
+      <p v-if="message" class="notice">{{ message }}</p>
+
+      <section class="learning-guide">
+        <div><small>推荐学习方式</small><strong>{{ profileText }}</strong></div>
+        <ol>
+          <li>读资料并结合示例形成自己的解释</li>
+          <li>随时记录原始笔记，可让 AI 生成独立整理稿</li>
+          <li>由你点击“已学完”；掌握挑战完全可选</li>
+        </ol>
+        <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
       </section>
 
-      <div class="detail-workbench">
-        <main class="detail-main">
-          <div class="tabs" role="tablist" aria-label="知识详情内容">
-            <button
-              v-for="tab in ['study', 'assessment', 'criteria']"
-              :key="tab"
-              @click="activeTab = tab as any"
-              class="tab-btn"
-              :class="{ active: activeTab === tab }"
-            >
-              {{ tab === 'study' ? '学习资料' : tab === 'assessment' ? '严格考核' : '通过标准' }}
-            </button>
-          </div>
+      <nav class="tabs">
+        <button :class="{ active: activeTab === 'materials' }" @click="activeTab = 'materials'">学习资料</button>
+        <button :class="{ active: activeTab === 'notes' }" @click="activeTab = 'notes'">我的笔记</button>
+        <button :class="{ active: activeTab === 'mastery' }" @click="activeTab = 'mastery'">掌握挑战 <em>可选</em></button>
+      </nav>
 
-          <div class="content-area">
-            <div v-if="activeTab === 'study'" class="tab-content">
-              <div class="content-heading"><span>01</span><div><h2>学习资料</h2><p>资料可以是文档、视频、实验、项目或规范，但必须覆盖当前知识点。</p></div></div>
-              <div class="markdown-content" v-html="studyHtml"></div>
+      <main v-if="activeTab === 'materials'" class="materials-layout">
+        <article class="content-card material-reader markdown-content" v-html="renderMarkdown(point.studyMaterialMd)"></article>
+        <aside class="content-card activity-panel" :class="{ expanded: activePracticeId }">
+          <header><small>LEARNING ACTIVITIES</small><h2>学完资料后，可以这样练</h2><p>每一项都给出实际任务，不再用没有入口的“项目时间”占位。</p></header>
+          <article v-for="(activity, index) in point.learningActivities" :key="activity.id" :class="{ required: !activity.optional }">
+            <span>{{ String(index + 1).padStart(2, '0') }}</span>
+            <div>
+              <h3>{{ activity.label }}<em>{{ activity.optional ? '可选' : '学习完成条件' }}</em></h3>
+              <p>{{ activity.task }}</p><small>建议 {{ activity.minutes }} 分钟，可按实际情况调整</small>
+              <button v-if="activity.deliveryMode === 'WORKSPACE'" class="practice-entry" @click="togglePractice(activity.id)">{{ activePracticeId === activity.id ? '收起练习区' : '在系统中开始并完成 →' }}</button>
             </div>
-
-            <div v-else-if="activeTab === 'assessment'" class="tab-content">
-              <div class="content-heading"><span>02</span><div><h2>严格考核</h2><p>用原理、实践、排障和表达验证掌握程度。</p></div></div>
-              <div class="markdown-content" v-html="assessmentHtml"></div>
-              <div class="assessment-launch">
-                <template v-if="assessmentType">
-                  <p>系统将生成一套 100 分严格考核，覆盖原理、实践、排障和项目表达。提交后由 DeepSeek 评分。</p>
-                  <button class="btn btn-primary" :disabled="createAssessmentMutation.isPending.value" @click="createAssessmentMutation.mutate()">
-                    {{ createAssessmentMutation.isPending.value ? '正在创建...' : assessmentType === 'RETEST' ? '开始复测' : assessmentType === 'MONTHLY_REVIEW' ? '开始月度抽测' : '开始首次严格考核' }}
-                  </button>
-                  <p v-if="createAssessmentMutation.error.value" class="launch-error">{{ createAssessmentMutation.error.value.message }}</p>
-                </template>
-                <p v-else>先完成学习并提交自评摘要，才能进入严格考核。</p>
-              </div>
-            </div>
-
-            <div v-else-if="activeTab === 'criteria'" class="tab-content">
-              <div class="content-heading"><span>03</span><div><h2>通过标准</h2><p>对照标准判断是否可以进入考核。</p></div></div>
-              <div class="markdown-content" v-html="criteriaHtml"></div>
-            </div>
-          </div>
-
-          <section class="notes-section">
-            <div class="notes-heading"><div><p>LOCAL NOTE</p><h2 class="section-title">我的笔记</h2></div><button v-if="!isEditing" @click="startEditing" class="btn btn-secondary btn-sm">编辑笔记</button></div>
-
-            <div v-if="isEditing" class="note-editor">
-              <textarea v-model="editedSummary" placeholder="记录一个能在项目中复用的结论..." rows="5" class="note-textarea"></textarea>
-
-              <div class="editor-actions">
-                <button @click="saveSummary" class="btn btn-primary" :disabled="!editedSummary.trim() || updateSummaryMutation.isPending.value">
-                  {{ updateSummaryMutation.isPending.value ? '保存中...' : '保存' }}
-                </button>
-                <button @click="cancelEditing" class="btn btn-secondary" :disabled="updateSummaryMutation.isPending.value">
-                  取消
-                </button>
-              </div>
-            </div>
-
-            <div v-else class="note-display">
-              <div v-if="point.summary" class="note-content">{{ point.summary }}</div>
-              <div v-else class="note-empty">记录一个能在项目中复用的结论</div>
-            </div>
-          </section>
-        </main>
-
-        <aside class="detail-rail">
-          <section class="quick-card">
-            <p>START</p>
-            <h2>从资料精读开始</h2>
-            <span>先读资料并写出关键机制，再完成练习和项目证据。不要先点“自评已掌握”。</span>
-            <div><button @click="activeTab = 'study'">看资料</button><button @click="activeTab = 'criteria'">看标准</button></div>
-          </section>
-
-          <section class="path-stats">
-            <div><strong>{{ prerequisiteTotal }}</strong><span>前置</span></div>
-            <div><strong>{{ dependentTotal }}</strong><span>后续</span></div>
-            <div><strong>{{ relatedTotal }}</strong><span>关联</span></div>
-          </section>
-
-          <section class="relation-route" aria-labelledby="relation-title">
-            <header>
-              <div><p>LEARNING PATH</p><h2 id="relation-title">知识前置与后续路径</h2></div>
-              <button @click="router.push('/knowledge/graph')">图谱 →</button>
-            </header>
-            <div class="relation-lanes">
-              <div class="relation-column prerequisite-column">
-                <span class="relation-label">学习之前</span>
-                <button v-for="item in relations?.prerequisites" :key="item.id" @click="router.push(`/knowledge/${item.code}`)">
-                  <code>{{ item.code }}</code><strong>{{ item.title }}</strong><small :data-status="item.status">{{ formatStatus(item.status) }}</small>
-                </button>
-                <p v-if="!relations?.prerequisites.length">这是当前路径的起点，无强制前置知识。</p>
-              </div>
-              <div class="current-relation-node">
-                <span :class="{ ready: pendingPrerequisites === 0 }">{{ pendingPrerequisites ? `${pendingPrerequisites} 项前置待掌握` : '前置已就绪' }}</span>
-                <code>{{ point.code }}</code><strong>{{ point.title }}</strong><small>当前知识点</small>
-              </div>
-              <div class="relation-column dependent-column">
-                <span class="relation-label">掌握之后</span>
-                <button v-for="item in relations?.dependents" :key="item.id" @click="router.push(`/knowledge/${item.code}`)">
-                  <code>{{ item.code }}</code><strong>{{ item.title }}</strong><small>解锁下一步</small>
-                </button>
-                <p v-if="!relations?.dependents.length">这是当前路径的终点，下一步可进入领域综合考核。</p>
-              </div>
-            </div>
-            <div v-if="relations?.related.length" class="related-points"><span>横向关联</span><button v-for="item in relations.related" :key="item.id" @click="router.push(`/knowledge/${item.code}`)"><code>{{ item.code }}</code>{{ item.title }}</button></div>
-          </section>
+            <PracticeWorkspace v-if="activePracticeId === activity.id" class="activity-workspace" :point-code="point.code" :point-title="point.title" :activity="activity" @completed="message = '练习已验证并保存，不会影响“已学完”或掌握等级。'" />
+          </article>
         </aside>
-      </div>
-    </div>
+      </main>
 
-    <!-- 自评掌握对话框 -->
-    <div v-if="showSelfMasterDialog" class="dialog-overlay" @click.self="showSelfMasterDialog = false">
-      <div class="dialog">
-        <h3 class="dialog-title">自评掌握</h3>
-        <p class="dialog-desc">请填写你对这个知识点的理解摘要：</p>
+      <main v-else-if="activeTab === 'notes'" class="notes-layout">
+        <section class="content-card note-editor">
+          <header><div><small>原始笔记</small><h2>你的记录永远保留</h2></div><span>{{ note?.versions.length ?? 0 }} 个可见版本</span></header>
+          <textarea v-model="noteDraft" placeholder="把理解、疑问、代码、零散想法都写在这里……"></textarea>
+          <footer><span>AI 不会直接改写这里</span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '保存原始笔记' }}</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? 'AI 正在核对资料…' : '用 AI 整理并核对' }}</button></footer>
+        </section>
+        <section class="content-card organized">
+          <header><div><small>AI 整理候选稿</small><h2>核对后由你决定是否采用</h2></div><button v-if="note?.organizedMd" @click="acceptOrganized">采用为阅读版本</button></header>
+          <div v-if="note?.organizedMd" class="markdown-content" v-html="renderMarkdown(note.organizedMd)"></div>
+          <p v-else class="empty">保存原始笔记后，可让 AI 按学习资料检查正确性、遗漏和结构。它只会生成新稿，不覆盖你的文字。</p>
+          <div v-if="note?.aiReview" class="ai-review">
+            <p v-for="item in note.aiReview.corrections" :key="item"><b>纠正</b>{{ item }}</p>
+            <p v-for="item in note.aiReview.additions" :key="item"><b>补充</b>{{ item }}</p>
+            <p v-for="item in note.aiReview.uncertainItems" :key="item"><b>待确认</b>{{ item }}</p>
+          </div>
+        </section>
+      </main>
 
-        <textarea
-          v-model="selfMasterSummary"
-          placeholder="总结你的理解..."
-          rows="5"
-          class="note-textarea"
-        ></textarea>
-
-        <div class="dialog-actions">
-          <button
-            @click="submitSelfMaster"
-            class="btn btn-primary"
-            :disabled="!selfMasterSummary.trim() || selfMasterMutation.isPending.value"
-          >
-            {{ selfMasterMutation.isPending.value ? '提交中...' : '确认掌握' }}
+      <main v-else class="mastery-layout">
+        <section class="content-card mastery-path">
+          <header><small>OPTIONAL MASTERY CHALLENGE</small><h2>从会做一点，到独立、稳定地掌握</h2><p>失败不会撤销“已学完”，也不会降低已有等级；提示不扣分，但会如实记录独立程度。</p></header>
+          <button v-for="(level, index) in masteryCopy.slice(1)" :key="level[0]" :class="{ selected: selectedStage === index + 1, achieved: point.masteryLevel >= index + 1 }" @click="selectedStage = index + 1">
+            <span>{{ level[0] }}</span><strong>{{ level[1] }}</strong><small>{{ level[2] }}</small><i>{{ point.masteryLevel >= index + 1 ? '已达到' : '选择' }}</i>
           </button>
-          <button
-            @click="showSelfMasterDialog = false"
-            class="btn btn-secondary"
-            :disabled="selfMasterMutation.isPending.value"
-          >
-            取消
-          </button>
+        </section>
+        <section class="content-card launch-card">
+          <small>挑战形式</small><h2>M{{ selectedStage }} · {{ masteryCopy[selectedStage]?.[1] }}</h2>
+          <p>默认先理论后实战，但不强制。系统已按这个知识点判定为“{{ point.challengeProfile }}”。</p>
+          <div class="mode-picker">
+            <button :class="{ active: challengeMode === 'THEORY' }" @click="challengeMode = 'THEORY'">先做理论</button>
+            <button v-if="point.challengeProfile !== 'THEORY_ONLY'" :class="{ active: challengeMode === 'PRACTICE' }" @click="challengeMode = 'PRACTICE'">先做实战</button>
+            <button v-if="point.challengeProfile !== 'THEORY_ONLY'" :class="{ active: challengeMode === 'MIXED' }" @click="challengeMode = 'MIXED'">理论 + 实战</button>
+          </div>
+          <button class="primary launch" :disabled="point.learningState !== 'LEARNED' || launching" @click="launchChallenge">{{ launching ? '正在准备…' : point.learningState !== 'LEARNED' ? '先标记为已学完' : '开始这一级挑战 →' }}</button>
+          <div class="criteria markdown-content" v-html="renderMarkdown(point.passCriteriaMd)"></div>
+        </section>
+      </main>
+
+      <section class="completion-card">
+        <div><small>LEARNING COMPLETION</small><h2>{{ point.learningState === 'LEARNED' ? '你已确认完成资料阅读与笔记' : '读完资料并写好笔记了吗？' }}</h2><p>这个按钮只记录学习完成，不声称已经掌握。</p></div>
+        <button v-if="point.learningState !== 'LEARNED'" class="primary" @click="completeLearning">我已阅读资料并完成笔记</button>
+        <span v-else>已学完 ✓</span>
+      </section>
+
+      <section class="branches-section">
+        <header><div><small>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? 'NEXT TRACK' : 'CONTINUE ROUTE' }}</small><h2>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '当前路线已完成，选择下一条学习方向' : '继续当前路线的下一个知识点' }}</h2><p>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '只有一条连续路线走完后才会出现选择；未选择的方向不会被放弃，完成所选路线后仍会再次出现。' : '系统沿当前路线连续推进，不在每个知识点后制造分支；暂缓时会跳过该点继续后面的内容。' }}</p></div></header>
+        <div v-if="branches.length" class="branch-grid">
+          <article v-for="branch in branches" :key="branch.code" :class="{ deferred: branch.routeChoice === 'DEFERRED' || branch.learningState === 'DEFERRED' }">
+            <div><code>{{ branch.code }}</code><span>{{ branch.navigationKind === 'CONTINUE' ? '唯一下一步' : '新路线入口' }}</span></div>
+            <h3>{{ branch.title }}</h3><p>{{ branch.relationDescription || branch.learningApproach }}</p>
+            <dl><div><dt>路线</dt><dd>{{ branch.trackName }}</dd></div><div><dt>剩余</dt><dd>{{ branch.trackRemaining }} 个知识点</dd></div><div><dt>预计投入</dt><dd>当前点约 {{ branch.estimatedMinutes }} 分钟</dd></div><div><dt>暂缓影响</dt><dd>{{ branch.impactIfDeferred }}</dd></div></dl>
+            <footer><button class="primary" @click="chooseBranch(branch)">{{ branch.navigationKind === 'CONTINUE' ? '学习下一个 →' : '选择这条路线 →' }}</button><button @click="deferBranch(branch, 'POINT')">暂缓此知识点</button><button v-if="branch.navigationKind === 'TRACK_CHOICE'" @click="deferBranch(branch, 'BRANCH')">暂缓整条路线</button></footer>
+          </article>
         </div>
-      </div>
-    </div>
+        <div v-else class="content-card empty">所有可继续的路线都已完成或被你主动暂缓。你仍可在知识体系中恢复任意知识点。</div>
+      </section>
+    </template>
   </div>
+  <BaseDialog
+    :open="deferDialogOpen"
+    eyebrow="LEARN LATER"
+    title="暂时搁置这个知识点？"
+    description="它只会离开当前路线，不会删除知识点、笔记或掌握记录，你可以随时恢复。"
+    confirm-label="放到稍后学习"
+    :busy="deferring"
+    @cancel="deferDialogOpen = false"
+    @confirm="confirmDefer"
+  >
+    <textarea v-model="deferReason" maxlength="300" placeholder="为什么暂时不学？可以留空，例如：当前工作暂时用不到。"></textarea>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.knowledge-detail-page {
-  max-width: 900px;
-}
-
-/* 加载和错误状态 */
-.loading-state,
-.error-state {
-  padding: calc(var(--space-base) * 4);
-  text-align: center;
-  color: #888;
-  background-color: #fff;
-  border-radius: var(--radius-base);
-  border: 1px solid #eee;
-}
-
-.error-state {
-  color: var(--color-redline);
-}
-
-/* 头部 */
-.detail-header {
-  margin-bottom: calc(var(--space-base) * 3);
-}
-
-.header-top {
-  margin-bottom: var(--space-base);
-}
-
-.back-btn {
-  padding: calc(var(--space-base) * 0.5) var(--space-base);
-  border: none;
-  background: none;
-  color: var(--color-blueprint);
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-
-.back-btn:hover {
-  text-decoration: underline;
-}
-
-.header-main {
-  background-color: #fff;
-  padding: calc(var(--space-base) * 2);
-  border-radius: var(--radius-base);
-  border: 1px solid #eee;
-}
-
-.title-row {
-  display: flex;
-  align-items: baseline;
-  gap: calc(var(--space-base) * 0.75);
-  margin-bottom: var(--space-base);
-}
-
-.point-code {
-  font-family: var(--font-mono);
-  font-size: 1rem;
-  color: var(--color-blueprint);
-  font-weight: 600;
-}
-
-.point-title {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--color-draft-ink);
-}
-
-.meta-row {
-  display: flex;
-  gap: var(--space-base);
-  margin-bottom: calc(var(--space-base) * 1.5);
-  font-size: 0.75rem;
-  color: #888;
-}
-
-.domain-tag,
-.difficulty-tag,
-.week-tag {
-  padding: calc(var(--space-base) * 0.25) calc(var(--space-base) * 0.5);
-  background-color: var(--color-cool-sheet);
-  border-radius: calc(var(--radius-base) / 2);
-}
-
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--space-base) * 1.5);
-}
-
-.status-badge {
-  display: inline-block;
-  padding: calc(var(--space-base) * 0.5) var(--space-base);
-  border-radius: var(--radius-base);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.effort-panel { display: grid; grid-template-columns: minmax(230px,.8fr) minmax(0,1.2fr); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; color: #eaf2ff; background: linear-gradient(130deg,#152a45,#1d3d55); border: 1px solid rgba(119,169,239,.18); border-radius: 16px; box-shadow: 0 16px 38px rgba(17,43,72,.13); }
-.effort-summary p { margin: 0; color: #77a9ef; font: 750 .58rem var(--font-mono); letter-spacing: .14em; }.effort-summary h2 { margin: .28rem 0 .35rem; color: #fff; font-size: 1rem; }.effort-summary span { display: block; color: #9fb3ca; font-size: .62rem; line-height: 1.55; }
-.effort-stages { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: .35rem; align-content: center; }.effort-stages>div { display: grid; grid-template-columns: 7px 1fr; gap: .12rem .35rem; align-items: center; min-width: 0; padding: .55rem .45rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; }.effort-stages i { grid-row: 1 / 3; width: 7px; height: 28px; background: #73a7ef; border-radius: 99px; }.effort-stages [data-stage='practice'] i { background: #69d4b0; }.effort-stages [data-stage='project'] i { background: #f0bd62; }.effort-stages [data-stage='assessment'] i { background: #eb7e78; }.effort-stages [data-stage='retest'] i { background: #b395e8; }.effort-stages span { overflow: hidden; color: #9fb3ca; font-size: .52rem; text-overflow: ellipsis; white-space: nowrap; }.effort-stages strong { color: #fff; font: 720 .62rem var(--font-mono); }
-.relation-route { margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: var(--shadow-xs); }
-.relation-route>header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-end; padding-bottom: .8rem; border-bottom: 1px solid var(--color-border-subtle); }.relation-route>header p { margin: 0; color: var(--color-primary); font: 750 .62rem var(--font-mono); letter-spacing: .14em; }.relation-route>header h2 { margin: .15rem 0 0; font-size: 1rem; }.relation-route>header button { padding: 0; color: var(--color-primary); font-size: .65rem; background: transparent; border: 0; cursor: pointer; }
-.relation-lanes { display: grid; grid-template-columns: 1fr 180px 1fr; gap: .8rem; align-items: stretch; padding-top: .9rem; }.relation-column { position: relative; display: grid; align-content: start; gap: .4rem; }.relation-label { color: var(--color-text-tertiary); font: 650 .56rem var(--font-mono); }.relation-column button { display: grid; grid-template-columns: auto 1fr auto; gap: .45rem; align-items: center; min-height: 45px; padding: .45rem .55rem; text-align: left; color: var(--color-text); background: var(--color-surface-raised); border: 1px solid var(--color-border-subtle); border-radius: 9px; cursor: pointer; }.relation-column button:hover { border-color: var(--color-primary-border); }.relation-column code { color: var(--color-primary); font: 700 .56rem var(--font-mono); }.relation-column strong { overflow: hidden; font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }.relation-column small { color: var(--color-text-tertiary); font-size: .52rem; }.relation-column small[data-status='MASTERED'] { color: var(--color-success); }.relation-column>p { margin: 0; padding: .75rem; color: var(--color-text-tertiary); font-size: .61rem; background: var(--color-surface-raised); border-radius: 9px; }
-.current-relation-node { position: relative; display: flex; min-height: 112px; align-items: center; justify-content: center; padding: .7rem; flex-direction: column; text-align: center; background: var(--color-primary-soft); border: 1px solid var(--color-primary-border); border-radius: 14px; }.current-relation-node::before,.current-relation-node::after { position: absolute; top: 50%; width: .85rem; content: ''; border-top: 1px dashed var(--color-primary); }.current-relation-node::before { right: 100%; }.current-relation-node::after { left: 100%; }.current-relation-node>span { margin-bottom: .45rem; padding: .15rem .35rem; color: var(--color-warning); font-size: .52rem; background: #fff8e9; border-radius: 5px; }.current-relation-node>span.ready { color: var(--color-success); background: var(--color-success-soft); }.current-relation-node code { color: var(--color-primary); font: 750 .65rem var(--font-mono); }.current-relation-node strong { margin: .15rem 0; font-size: .7rem; line-height: 1.3; }.current-relation-node small { color: var(--color-text-tertiary); font-size: .52rem; }
-.related-points { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-top: .8rem; padding-top: .7rem; border-top: 1px solid var(--color-border-subtle); }.related-points>span { margin-right: .2rem; color: var(--color-text-tertiary); font-size: .57rem; }.related-points button { padding: .28rem .45rem; color: var(--color-text-secondary); font-size: .57rem; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: 7px; cursor: pointer; }.related-points code { margin-right: .3rem; color: var(--color-primary); font: 700 .54rem var(--font-mono); }
-
-/* 标签页 */
-.tabs {
-  display: flex;
-  gap: calc(var(--space-base) * 0.5);
-  margin-bottom: calc(var(--space-base) * 2);
-}
-
-.tab-btn {
-  padding: calc(var(--space-base) * 0.75) calc(var(--space-base) * 1.5);
-  border: 1px solid #ddd;
-  background-color: #fff;
-  color: var(--color-draft-ink);
-  font-size: 0.875rem;
-  cursor: pointer;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.tab-btn:hover {
-  background-color: var(--color-cool-sheet);
-}
-
-.tab-btn.active {
-  background-color: var(--color-blueprint);
-  border-color: var(--color-blueprint);
-  color: #fff;
-}
-
-/* 内容区 */
-.content-area {
-  background-color: #fff;
-  padding: calc(var(--space-base) * 2);
-  border-radius: var(--radius-base);
-  border: 1px solid #eee;
-  margin-bottom: calc(var(--space-base) * 3);
-}
-
-.tab-content {
-  min-height: 200px;
-}
-
-.markdown-content {
-  font-size: 0.9375rem;
-  line-height: 1.75;
-}
-
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3 {
-  margin-top: calc(var(--space-base) * 2);
-  margin-bottom: var(--space-base);
-  color: var(--color-draft-ink);
-}
-
-.markdown-content h1 {
-  font-size: 1.25rem;
-}
-
-.markdown-content h2 {
-  font-size: 1.125rem;
-}
-
-.markdown-content h3 {
-  font-size: 1rem;
-}
-
-.markdown-content p {
-  margin-bottom: var(--space-base);
-}
-
-.markdown-content ul,
-.markdown-content ol {
-  margin-bottom: var(--space-base);
-  padding-left: calc(var(--space-base) * 2);
-}
-
-.markdown-content li {
-  margin-bottom: calc(var(--space-base) * 0.5);
-}
-
-.markdown-content a {
-  color: var(--color-blueprint);
-  text-decoration: none;
-}
-
-.markdown-content a:hover {
-  text-decoration: underline;
-}
-
-.markdown-content :deep(a) {
-  display: inline-flex;
-  align-items: center;
-  gap: .3rem;
-  margin: .12rem .18rem .12rem 0;
-  padding: .42rem .65rem;
-  color: var(--color-primary-strong);
-  font-weight: 650;
-  text-decoration: none;
-  background: var(--color-primary-soft);
-  border: 1px solid var(--color-primary-border);
-  border-radius: 999px;
-  transition: transform .18s ease, border-color .18s ease, background .18s ease;
-}
-
-.markdown-content :deep(a:hover) {
-  transform: translateY(-1px);
-  border-color: var(--color-primary);
-  background: #fff;
-}
-
-.markdown-content code {
-  font-family: var(--font-mono);
-  font-size: 0.875em;
-  background-color: var(--color-cool-sheet);
-  padding: calc(var(--space-base) * 0.125) calc(var(--space-base) * 0.25);
-  border-radius: calc(var(--radius-base) / 4);
-}
-
-.markdown-content pre {
-  background-color: var(--color-cool-sheet);
-  padding: calc(var(--space-base) * 1.5);
-  border-radius: var(--radius-base);
-  overflow-x: auto;
-  margin-bottom: var(--space-base);
-}
-
-.markdown-content pre code {
-  background: none;
-  padding: 0;
-}
-
-/* 笔记区 */
-.notes-section {
-  background-color: #fff;
-  padding: calc(var(--space-base) * 2);
-  border-radius: var(--radius-base);
-  border: 1px solid #eee;
-}
-
-.section-title {
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 calc(var(--space-base) * 1.5) 0;
-  color: var(--color-draft-ink);
-}
-
-.note-textarea {
-  width: 100%;
-  padding: var(--space-base);
-  border: 1px solid #ddd;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  line-height: 1.65;
-  resize: vertical;
-}
-
-.note-textarea:focus {
-  outline: 2px solid var(--color-blueprint);
-  outline-offset: 2px;
-}
-
-.note-display {
-  margin-bottom: var(--space-base);
-}
-
-.note-content {
-  padding: var(--space-base);
-  background-color: var(--color-cool-sheet);
-  border-radius: var(--radius-base);
-  margin-bottom: var(--space-base);
-  white-space: pre-wrap;
-  font-size: 0.875rem;
-  line-height: 1.65;
-}
-
-.note-empty {
-  padding: var(--space-base);
-  background-color: var(--color-cool-sheet);
-  border-radius: var(--radius-base);
-  margin-bottom: var(--space-base);
-  font-size: 0.875rem;
-  color: #888;
-}
-
-.editor-actions,
-.dialog-actions {
-  display: flex;
-  gap: var(--space-base);
-}
-
-/* 按钮 */
-.btn {
-  padding: calc(var(--space-base) * 0.75) calc(var(--space-base) * 1.5);
-  border: 1px solid #ddd;
-  border-radius: var(--radius-base);
-  font-size: 0.875rem;
-  font-family: var(--font-body);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: var(--color-blueprint);
-  border-color: var(--color-blueprint);
-  color: #fff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #2a4a70;
-}
-
-.btn-secondary {
-  background-color: #fff;
-  color: var(--color-draft-ink);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-cool-sheet);
-}
-
-.btn-sm {
-  padding: calc(var(--space-base) * 0.5) var(--space-base);
-  font-size: 0.75rem;
-}
-
-/* 对话框 */
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog {
-  background-color: #fff;
-  padding: calc(var(--space-base) * 2.5);
-  border-radius: var(--radius-base);
-  max-width: 500px;
-  width: 90%;
-}
-
-.dialog-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0 0 var(--space-base) 0;
-  color: var(--color-draft-ink);
-}
-
-.dialog-desc {
-  font-size: 0.875rem;
-  color: #666;
-  margin: 0 0 calc(var(--space-base) * 1.5) 0;
-}
-
-.assessment-launch {
-  margin-top: calc(var(--space-base) * 2);
-  padding: calc(var(--space-base) * 1.5);
-  border-left: 4px solid var(--color-blueprint);
-  background: #f3f6f2;
-}
-
-.assessment-launch p { line-height: 1.7; }
-.launch-error { color: var(--color-redline); }
-
-.knowledge-detail-page {
-  max-width: 1320px;
-  margin: 0 auto;
-}
-
-.detail-header {
-  margin-bottom: 1rem;
-}
-
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: .7rem;
-}
-
-.graph-shortcut {
-  min-height: 36px;
-  padding: 0 .75rem;
-  color: var(--color-primary);
-  font-size: .66rem;
-  font-weight: 700;
-  background: var(--color-primary-soft);
-  border: 1px solid var(--color-primary-border);
-  border-radius: 9px;
-  cursor: pointer;
-}
-
-.header-main {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) auto;
-  gap: 1rem;
-  align-items: center;
-  padding: 1.2rem;
-  background:
-    linear-gradient(90deg, rgba(50,104,199,.08) 0 1px, transparent 1px 100%),
-    linear-gradient(180deg, #fff, #f8fbff);
-  background-size: 32px 32px, auto;
-  border-color: var(--color-primary-border);
-  border-radius: 18px;
-  box-shadow: var(--shadow-xs);
-}
-
-.title-row {
-  gap: .7rem;
-  margin-bottom: .7rem;
-}
-
-.point-code {
-  display: inline-grid;
-  place-items: center;
-  height: 34px;
-  padding: 0 .7rem;
-  color: #fff;
-  background: var(--color-primary);
-  border-radius: 10px;
-}
-
-.point-title {
-  font-size: 2rem;
-  line-height: 1.15;
-  letter-spacing: 0;
-}
-
-.meta-row {
-  flex-wrap: wrap;
-  gap: .45rem;
-  margin-bottom: 0;
-}
-
-.domain-tag,
-.difficulty-tag,
-.week-tag {
-  color: var(--color-text-secondary);
-  background: #fff;
-  border: 1px solid var(--color-border);
-}
-
-.hero-actions {
-  display: grid;
-  justify-items: end;
-  gap: .55rem;
-}
-
-.status-badge {
-  border-radius: 999px;
-}
-
-.effort-panel {
-  grid-template-columns: minmax(280px,.75fr) minmax(0,1.25fr);
-  margin-bottom: .9rem;
-  border-radius: 18px;
-}
-
-.detail-workbench {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) 390px;
-  gap: .9rem;
-  align-items: start;
-}
-
-.detail-main {
-  min-width: 0;
-}
-
-.detail-rail {
-  position: sticky;
-  top: 1rem;
-  display: grid;
-  gap: .8rem;
-  min-width: 0;
-}
-
-.quick-card,
-.path-stats {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-xs);
-}
-
-.quick-card {
-  padding: 1rem;
-  background: linear-gradient(155deg,#142942,#1e3c52);
-  color: #dce9f7;
-}
-
-.quick-card p {
-  margin: 0;
-  color: #7fb0f0;
-  font: 760 .58rem var(--font-mono);
-  letter-spacing: .12em;
-}
-
-.quick-card h2 {
-  margin: .25rem 0 .35rem;
-  color: #fff;
-  font-size: 1.05rem;
-}
-
-.quick-card span {
-  display: block;
-  color: #adc0d4;
-  font-size: .65rem;
-  line-height: 1.65;
-}
-
-.quick-card div {
-  display: flex;
-  gap: .45rem;
-  margin-top: .8rem;
-}
-
-.quick-card button {
-  min-height: 34px;
-  padding: 0 .7rem;
-  color: #fff;
-  font-size: .62rem;
-  font-weight: 700;
-  background: rgba(255,255,255,.09);
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 9px;
-  cursor: pointer;
-}
-
-.path-stats {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  overflow: hidden;
-}
-
-.path-stats div {
-  display: flex;
-  min-height: 64px;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  border-right: 1px solid var(--color-border-subtle);
-}
-
-.path-stats div:last-child {
-  border-right: 0;
-}
-
-.path-stats strong {
-  color: var(--color-primary);
-  font: 760 1.2rem var(--font-mono);
-}
-
-.path-stats span {
-  color: var(--color-text-tertiary);
-  font-size: .58rem;
-}
-
-.detail-rail .relation-route {
-  margin-bottom: 0;
-}
-
-.detail-rail .relation-route>header {
-  align-items: flex-start;
-}
-
-.detail-rail .relation-lanes {
-  grid-template-columns: 1fr;
-}
-
-.detail-rail .current-relation-node {
-  grid-row: 1;
-  min-height: 96px;
-}
-
-.detail-rail .current-relation-node::before,
-.detail-rail .current-relation-node::after {
-  display: none;
-}
-
-.detail-rail .relation-column button {
-  grid-template-columns: auto minmax(0,1fr);
-}
-
-.detail-rail .relation-column small {
-  grid-column: 2;
-}
-
-.detail-rail .related-points {
-  max-height: 120px;
-  overflow: auto;
-}
-
-.tabs {
-  position: sticky;
-  z-index: 3;
-  top: 0;
-  gap: .4rem;
-  margin-bottom: .65rem;
-  padding: .35rem;
-  background: rgba(246,249,253,.92);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  backdrop-filter: blur(10px);
-}
-
-.tab-btn {
-  flex: 1;
-  min-height: 42px;
-  border-radius: 10px;
-  font-size: .72rem;
-  font-weight: 760;
-}
-
-.content-area,
-.notes-section {
-  border-color: var(--color-border);
-  border-radius: 18px;
-  box-shadow: var(--shadow-xs);
-}
-
-.content-area {
-  padding: 1.15rem;
-  margin-bottom: .9rem;
-}
-
-.content-heading {
-  display: grid;
-  grid-template-columns: 42px minmax(0,1fr);
-  gap: .75rem;
-  align-items: center;
-  margin-bottom: .85rem;
-  padding-bottom: .8rem;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.content-heading>span {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  color: #fff;
-  font: 760 .68rem var(--font-mono);
-  background: var(--color-primary);
-  border-radius: 12px;
-}
-
-.content-heading h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.content-heading p {
-  margin: .15rem 0 0;
-  color: var(--color-text-tertiary);
-  font-size: .66rem;
-}
-
-.markdown-content {
-  max-width: 860px;
-}
-
-.markdown-content :deep(h2) {
-  padding-top: .55rem;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.markdown-content :deep(li) {
-  line-height: 1.7;
-}
-
-.notes-section {
-  padding: 1rem;
-}
-
-.notes-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: .8rem;
-  align-items: center;
-  margin-bottom: .75rem;
-}
-
-.notes-heading p {
-  margin: 0;
-  color: var(--color-primary);
-  font: 740 .58rem var(--font-mono);
-  letter-spacing: .12em;
-}
-
-.notes-heading .section-title {
-  margin: .15rem 0 0;
-}
-
-.note-display {
-  margin-bottom: 0;
-}
-
-/* 响应式 */
-@media (max-width: 1080px) {
-  .detail-workbench { grid-template-columns: 1fr; }
-  .detail-rail { position: static; grid-template-columns: 1fr; }
-}
-
-@media (max-width: 768px) {
-  .header-main { grid-template-columns: 1fr; }
-  .hero-actions { justify-items: start; }
-  .effort-panel { grid-template-columns: 1fr; }
-  .effort-stages { grid-template-columns: repeat(5,minmax(72px,1fr)); overflow-x: auto; }
-  .title-row {
-    flex-direction: column;
-    gap: calc(var(--space-base) * 0.5);
-  }
-
-  .point-title {
-    font-size: 1.25rem;
-  }
-
-  .meta-row {
-    flex-wrap: wrap;
-  }
-
-  .status-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .tabs {
-    flex-wrap: wrap;
-  }
-
-  .tab-btn {
-    flex: 1;
-    min-width: 100px;
-  }
-
-  .relation-route>header { align-items: flex-start; flex-direction: column; }
-  .relation-lanes { grid-template-columns: 1fr; }
-  .current-relation-node { grid-row: 1; }
-  .current-relation-node::before,.current-relation-node::after { display: none; }
-}
+.knowledge-detail{max-width:1320px;margin:0 auto;padding:24px;display:grid;gap:18px}.point-hero,.learning-guide,.content-card,.completion-card,.branches-section{background:var(--color-bg-primary,#fff);border:1px solid var(--color-border-subtle,#dce2e8);border-radius:18px}.point-hero{padding:22px;display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:start}.back{border:0;background:transparent}.hero-copy p,.hero-copy h1{margin:0}.hero-copy h1{display:flex;gap:12px;align-items:baseline;margin-top:7px;font-size:clamp(1.6rem,3vw,2.5rem)}.hero-copy code{font-size:.78rem;color:var(--color-primary,#3157d5)}.state-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.state-row span{padding:7px 10px;border-radius:999px;background:#f1f4f8;font-size:.78rem}.state-row .mastery{background:#eef0ff;color:#453db5}.hero-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}button{cursor:pointer;border:1px solid #ccd3dd;background:#fff;border-radius:10px;padding:9px 13px;color:inherit}button.primary{background:#243a73;border-color:#243a73;color:#fff}.notice{margin:0;padding:10px 14px;border-radius:10px;background:#eaf7ef;color:#17613a}.notice.error,.state-card.error{background:#fff0ee;color:#9c2d25}.learning-guide{padding:18px;display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:20px}.learning-guide small,.content-card small,.branches-section small{display:block;color:#657086;font:700 .68rem ui-monospace;letter-spacing:.09em}.learning-guide strong{display:block;margin-top:7px;line-height:1.55}.learning-guide ol{margin:0;padding-left:20px;line-height:1.75}.effort{display:flex;flex-wrap:wrap;gap:7px;align-content:start}.effort span{background:#f2f4f8;border-radius:8px;padding:7px}.effort b{width:100%;font-size:.74rem;color:#727b8c}.tabs{display:flex;gap:8px}.tabs button{padding:11px 18px}.tabs button.active{background:#1d2636;color:#fff}.tabs em{font-style:normal;color:#9cb8ff}.content-card{padding:22px}.markdown-content{line-height:1.75;overflow-wrap:anywhere}.notes-layout,.mastery-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}.note-editor header,.organized header{display:flex;justify-content:space-between;gap:12px;align-items:start}.note-editor h2,.organized h2,.mastery-layout h2{margin:4px 0 14px}.note-editor textarea{width:100%;min-height:430px;box-sizing:border-box;border:1px solid #cbd3df;border-radius:12px;padding:14px;font:inherit;line-height:1.65;resize:vertical}.note-editor footer{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:10px}.note-editor footer span{margin-right:auto;color:#6d7686;font-size:.75rem}.organized{max-height:650px;overflow:auto}.empty{color:#697487;line-height:1.7}.ai-review{border-top:1px solid #e2e6ec;margin-top:16px;padding-top:10px}.ai-review p{display:flex;gap:8px;font-size:.84rem}.ai-review b{color:#385dc7}.mastery-path{display:grid;gap:8px}.mastery-path header{margin-bottom:5px}.mastery-path header p,.launch-card>p{color:#687286}.mastery-path>button{text-align:left;display:grid;grid-template-columns:44px 100px 1fr auto;align-items:center;gap:8px}.mastery-path>button span{font:800 1rem ui-monospace}.mastery-path>button small{letter-spacing:0;font-family:inherit}.mastery-path>button i{font-style:normal;font-size:.72rem}.mastery-path>button.selected{border-color:#324f9f;box-shadow:0 0 0 2px #dce5ff}.mastery-path>button.achieved{background:#eff8f2}.mode-picker{display:flex;gap:8px;margin:18px 0}.mode-picker button.active{background:#e8edff;border-color:#5773c3}.launch{width:100%;font-size:1rem;padding:12px}.criteria{border-top:1px solid #e1e6ed;margin-top:18px;padding-top:10px;font-size:.86rem}.completion-card{padding:20px;display:flex;justify-content:space-between;align-items:center;gap:18px}.completion-card h2{margin:4px 0}.completion-card p{margin:0;color:#6d7686}.completion-card>span{color:#177240;font-weight:700}.branches-section{padding:22px}.branches-section header h2{margin:4px 0}.branches-section header p{margin:0;color:#697487}.branch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:13px;margin-top:17px}.branch-grid article{border:1px solid #dce1e8;border-radius:13px;padding:16px;display:flex;flex-direction:column}.branch-grid article.deferred{opacity:.58}.branch-grid article>div:first-child{display:flex;gap:7px;align-items:center}.branch-grid article>div span{font-size:.68rem;background:#e8edff;color:#3852a1;padding:3px 6px;border-radius:5px}.branch-grid h3{margin:10px 0 5px}.branch-grid>article>p{color:#657084;line-height:1.6}.branch-grid dl{font-size:.78rem}.branch-grid dl div{display:grid;grid-template-columns:66px 1fr;gap:6px;margin:6px 0}.branch-grid dt{color:#7b8493}.branch-grid dd{margin:0}.branch-grid footer{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:10px}.state-card{padding:30px;border-radius:15px;background:#fff}.state-card button{margin-left:12px}@media(max-width:900px){.point-hero,.learning-guide{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.notes-layout,.mastery-layout{grid-template-columns:1fr}.mastery-path>button{grid-template-columns:40px 90px 1fr}.mastery-path>button i{display:none}.completion-card{align-items:flex-start;flex-direction:column}}@media(max-width:600px){.knowledge-detail{padding:12px}.point-hero,.content-card,.branches-section{padding:16px}.tabs{overflow:auto}.tabs button{white-space:nowrap}.note-editor footer{flex-wrap:wrap}.note-editor footer span{width:100%}}
+</style>
+
+<style scoped>
+.knowledge-detail{width:100%;max-width:1580px;padding:0;gap:16px}
+.point-hero,.learning-guide,.content-card,.completion-card,.branches-section{border-color:#dfe5ed;box-shadow:0 9px 30px rgba(26,48,79,.065)}
+.point-hero{position:relative;overflow:hidden;padding:25px 27px;background:linear-gradient(135deg,#fff 0%,#f7faff 72%,#edf5ff 100%)}
+.point-hero::after{position:absolute;right:-90px;bottom:-120px;width:280px;height:280px;content:'';background:radial-gradient(circle,rgba(61,116,211,.12),transparent 68%);pointer-events:none}
+.point-hero>*{position:relative;z-index:1}.hero-copy h1{font-size:clamp(1.8rem,3vw,3rem);letter-spacing:-.035em}.hero-copy h1 code{padding:5px 8px;color:#2d63b8;background:#eaf2ff;border-radius:8px}.state-row span{background:#fff;border:1px solid #e1e7ef;box-shadow:0 2px 7px rgba(27,48,78,.035)}
+.learning-guide{grid-template-columns:1.15fr 1fr 1.15fr;padding:20px 22px}.effort span{color:#33465f;background:#f2f6fc;border:1px solid #e0e7f0}.effort b{line-height:1.5}
+.tabs{position:sticky;top:12px;z-index:12;width:max-content;padding:5px;background:rgba(241,245,250,.9);border:1px solid #dce4ed;border-radius:14px;box-shadow:0 7px 24px rgba(27,50,80,.08);backdrop-filter:blur(14px)}.tabs button{border:0;background:transparent}.tabs button.active{background:linear-gradient(135deg,#1c3353,#245a83);box-shadow:0 7px 18px rgba(28,62,99,.2)}
+.materials-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(380px,.82fr);gap:16px;align-items:start}.material-reader{min-width:0;padding:27px 30px}.activity-panel{position:sticky;top:82px;padding:22px}.activity-panel header h2{margin:4px 0 5px}.activity-panel header p{margin:0 0 17px;color:#68768a;font-size:.84rem}.activity-panel>article{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:15px 0;border-top:1px solid #e6ebf1}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}
+.activity-panel.expanded{position:static;grid-column:1/-1}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{margin-top:11px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
+.content-card{padding:25px}.branch-grid{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}.branch-grid article{padding:18px;background:linear-gradient(145deg,#fff,#fafcff);border-radius:16px;box-shadow:0 5px 17px rgba(28,51,82,.04)}.branch-grid article:first-child{border-color:#9cb5df;box-shadow:0 9px 24px rgba(43,91,171,.09)}
+.completion-card{background:linear-gradient(135deg,#f9fffb,#f0f9f5)}
+@media(max-width:1100px){.materials-layout{grid-template-columns:1fr}.activity-panel{position:static}.learning-guide{grid-template-columns:1fr 1fr}.learning-guide .effort{grid-column:1/-1}}
+@media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide{grid-template-columns:1fr}.learning-guide .effort{grid-column:auto}.materials-layout{display:block}.activity-panel{margin-top:14px}.tabs{top:6px;width:100%;overflow:auto}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}}
 </style>

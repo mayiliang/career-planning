@@ -1,456 +1,100 @@
 <script setup lang="ts">
-/**
- * 日历页面
- *
- * Phase 3 实现：
- * - 月视图显示计划事件
- * - 创建计划事件
- * - 导入 64 周计划
- */
-import { ref, computed, onMounted, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiClient, type LeaveDay, type PlanEvent } from '@/api/client';
+import { apiClient, type KnowledgePointListItem } from '@/api/client';
 
-// ===== 状态 =====
-
-const loading = ref(true);
 const router = useRouter();
-const error = ref<string | null>(null);
-const events = ref<PlanEvent[]>([]);
-const BEIJING_TIME_ZONE = 'Asia/Shanghai';
-const currentDate = ref(beijingDateToDate(currentBeijingDateKey()));
-const viewMode = ref<'month' | 'week' | 'day'>('week');
-const leaves = ref<LeaveDay[]>([]);
-const showLeaveDialog = ref(false);
-const leaveDate = ref(currentBeijingDateKey());
-const leaveReason = ref('');
-const leaveSaving = ref(false);
-const notice = ref<string | null>(null);
+const points = ref<KnowledgePointListItem[]>([]);
+const loading = ref(true);
+const error = ref('');
+const search = ref('');
+const expandedWeeks = ref(new Set<number>());
 
-// ===== 计算属性 =====
+const CAPSTONE_WEEKS: Record<number, { theme: string; outcome: string }> = {
+  61: { theme: '作品集与项目证据', outcome: '从已学知识中挑选代表项目，整理架构、代码、测试与决策证据。' },
+  62: { theme: '生产部署与故障演练', outcome: '按真实生产标准练习部署、监控、故障定位、恢复与发布复盘。' },
+  63: { theme: 'AI 时代高级前端综合实作', outcome: '自由组合渲染、数据、AI、安全、性能与体验能力，完成跨领域作品。' },
+  64: { theme: '综合答辩与求职启动', outcome: '整理可运行产品、证据矩阵、作品集与简历；综合挑战仍由你决定是否参加。' },
+};
 
-const currentMonth = computed(() => {
-  if (viewMode.value === 'month') return currentDate.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', timeZone: BEIJING_TIME_ZONE });
-  if (viewMode.value === 'day') return currentDate.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: BEIJING_TIME_ZONE });
-  const days = activePeriodDays.value;
-  const first = days[0]?.date;
-  const last = days[6]?.date;
-  if (!first || !last) return '';
-  return `${formatBeijingMonthDay(first)} — ${formatBeijingMonthDay(last)}`;
-});
-
-const calendarDays = computed(() => {
-  const normalizedCurrentDate = normalizeBeijingDate(currentDate.value);
-  const year = normalizedCurrentDate.getUTCFullYear();
-  const month = normalizedCurrentDate.getUTCMonth();
-
-  // 使用北京时间对应的 UTC 中午时间，避免浏览器本地时区影响月视图边界。
-  const firstDay = new Date(Date.UTC(year, month, 1, 4, 0, 0));
-  const startDay = firstDay.getUTCDay();
-  const startDate = new Date(firstDay);
-  startDate.setUTCDate(startDate.getUTCDate() - (startDay === 0 ? 6 : startDay - 1));
-
-  // 生成 42 天（6 周）
-  const days: Array<{
-    date: Date;
-    isCurrentMonth: boolean;
-    events: PlanEvent[];
-  }> = [];
-
-  const current = new Date(startDate);
-  for (let i = 0; i < 42; i++) {
-    const dateStr = dateKey(current);
-    const dayEvents = events.value.filter(e => {
-      const eventDate = isoToBeijingDateKey(e.startAt);
-      return eventDate === dateStr;
-    });
-
-    days.push({
-      date: new Date(current),
-      isCurrentMonth: current.getUTCMonth() === month,
-      events: dayEvents,
-    });
-
-    current.setUTCDate(current.getUTCDate() + 1);
+const weeks = computed(() => {
+  const term = search.value.trim().toLowerCase();
+  const filtered = points.value.filter((point) => !term || `${point.code} ${point.title} ${point.domainTitle}`.toLowerCase().includes(term));
+  const map = new Map<number, KnowledgePointListItem[]>();
+  if (!term) for (let week = 1; week <= 64; week += 1) map.set(week, []);
+  for (const point of filtered) {
+    const week = point.planWeek ?? 64;
+    map.set(week, [...(map.get(week) ?? []), point]);
   }
-
-  return days;
+  if (term) {
+    for (const [week, content] of Object.entries(CAPSTONE_WEEKS)) {
+      if (`${content.theme} ${content.outcome}`.toLowerCase().includes(term)) map.set(Number(week), map.get(Number(week)) ?? []);
+    }
+  }
+  return [...map.entries()].sort((a, b) => a[0] - b[0]);
 });
+const stats = computed(() => ({
+  total: points.value.length,
+  learned: points.value.filter((item) => item.learningState === 'LEARNED').length,
+  mastered: points.value.filter((item) => item.masteryLevel >= 3).length,
+  optional: points.value.filter((item) => item.learningState === 'DEFERRED').length,
+}));
 
-const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-
-const leaveDates = computed(() => new Set(leaves.value.map((item) => item.leaveDate)));
-function buildAgendaDay(date: Date) {
-  const key = dateKey(date);
-  return {
-    date,
-    isCurrentMonth: normalizeBeijingDate(date).getUTCMonth() === normalizeBeijingDate(currentDate.value).getUTCMonth(),
-    events: events.value.filter((event) => isoToBeijingDateKey(event.startAt) === key),
-  };
-}
-
-const activePeriodDays = computed(() => {
-  if (viewMode.value === 'day') return [buildAgendaDay(normalizeBeijingDate(currentDate.value))];
-  const current = normalizeBeijingDate(currentDate.value);
-  const offset = current.getUTCDay() === 0 ? -6 : 1 - current.getUTCDay();
-  current.setUTCDate(current.getUTCDate() + offset);
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(current);
-    date.setUTCDate(current.getUTCDate() + index);
-    return buildAgendaDay(date);
-  });
-});
-
-const activeEvents = computed(() => activePeriodDays.value.flatMap((day) => day.events));
-const activeKnowledgeCodes = computed(() => new Set(activeEvents.value.flatMap((event) => event.learningBrief?.knowledgePoints.map((point) => point.code) ?? [])));
-const pendingPrerequisites = computed(() => activeEvents.value.reduce((sum, event) => sum + (event.learningBrief?.pendingPrerequisiteCount ?? 0), 0));
-const activeTasks = computed(() => activeEvents.value.reduce((sum, event) => sum + (event.learningBrief?.tasks.length ?? 0), 0));
-
-// ===== 方法 =====
-
-async function loadEvents() {
-  loading.value = true;
-  error.value = null;
-
+async function load() {
   try {
-    const normalizedCurrentDate = normalizeBeijingDate(currentDate.value);
-    const rangeStart = new Date(normalizedCurrentDate);
-    rangeStart.setUTCDate(1);
-    rangeStart.setUTCDate(rangeStart.getUTCDate() - 14);
-    const rangeEnd = new Date(normalizedCurrentDate);
-    rangeEnd.setUTCMonth(rangeEnd.getUTCMonth() + 2, 14);
-
-    const [eventResult, leaveResult] = await Promise.all([
-      apiClient.getCalendarEvents({ from: beijingDayStartIso(dateKey(rangeStart)), to: beijingDayEndIso(dateKey(rangeEnd)) }),
-      apiClient.getLeaveDays(dateKey(rangeStart), dateKey(rangeEnd)),
-    ]);
-    events.value = eventResult;
-    leaves.value = leaveResult;
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '加载失败';
-  } finally {
-    loading.value = false;
-  }
+    const result = await apiClient.getKnowledgePoints();
+    points.value = result.items;
+    const activeWeek = result.items.find((item) => item.currentFocus)?.planWeek ?? result.items.find((item) => item.learningState !== 'LEARNED' && item.learningState !== 'DEFERRED')?.planWeek;
+    if (activeWeek) expandedWeeks.value.add(activeWeek);
+  } catch (reason) { error.value = reason instanceof Error ? reason.message : '路线参考加载失败'; }
+  finally { loading.value = false; }
 }
 
-function dateKey(date: Date) {
-  return new Intl.DateTimeFormat('sv-SE', {
-    timeZone: BEIJING_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
+function toggleWeek(week: number) {
+  const next = new Set(expandedWeeks.value);
+  next.has(week) ? next.delete(week) : next.add(week);
+  expandedWeeks.value = next;
 }
-
-function currentBeijingDateKey() {
-  return dateKey(new Date());
+function weekTheme(week: number, items: KnowledgePointListItem[]) {
+  if (CAPSTONE_WEEKS[week]) return CAPSTONE_WEEKS[week].theme;
+  const domains = [...new Set(items.map((item) => item.domainTitle))];
+  return domains.length ? domains.slice(0, 2).join(' × ') + (domains.length > 2 ? ` 等 ${domains.length} 个领域` : '') : '自主复盘与机动学习';
 }
-
-function beijingDateToDate(date: string) {
-  return new Date(`${date}T12:00:00+08:00`);
+function stateLabel(item: KnowledgePointListItem) {
+  return item.learningState === 'LEARNED' ? `已学完 · M${item.masteryLevel}`
+    : item.learningState === 'LEARNING' ? '学习中'
+      : item.learningState === 'DEFERRED' ? '稍后学习' : '未开始';
 }
-
-// 统一把任意 Date 归一到“北京时间当天中午”，再使用 UTC 运算避免本地时区干扰。
-function normalizeBeijingDate(date: Date) {
-  return beijingDateToDate(dateKey(date));
-}
-
-function isoToBeijingDateKey(iso: string) {
-  return dateKey(new Date(iso));
-}
-
-function beijingDayStartIso(date: string) {
-  return new Date(`${date}T00:00:00+08:00`).toISOString();
-}
-
-function beijingDayEndIso(date: string) {
-  return new Date(`${date}T23:59:59+08:00`).toISOString();
-}
-
-function formatBeijingMonthDay(date: Date) {
-  const normalizedDate = normalizeBeijingDate(date);
-  return `${normalizedDate.getUTCMonth() + 1}月${normalizedDate.getUTCDate()}日`;
-}
-
-function shiftBeijingDate(date: Date, days: number) {
-  const nextDate = normalizeBeijingDate(date);
-  nextDate.setUTCDate(nextDate.getUTCDate() + days);
-  return nextDate;
-}
-
-function shiftBeijingMonth(date: Date, months: number) {
-  const nextDate = normalizeBeijingDate(date);
-  nextDate.setUTCMonth(nextDate.getUTCMonth() + months);
-  return nextDate;
-}
-
-function openLeave(date = currentDate.value) {
-  leaveDate.value = dateKey(date);
-  leaveReason.value = '';
-  showLeaveDialog.value = true;
-}
-
-async function submitLeave() {
-  leaveSaving.value = true;
-  error.value = null;
-  try {
-    const result = await apiClient.takeLeave(leaveDate.value, leaveReason.value.trim() || undefined);
-    notice.value = `已请假，${result.shiftedEventCount} 条未完成学习计划顺延 1 天`;
-    showLeaveDialog.value = false;
-    await loadEvents();
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '请假失败';
-  } finally {
-    leaveSaving.value = false;
-  }
-}
-
-function prevMonth() {
-  currentDate.value = viewMode.value === 'month'
-    ? shiftBeijingMonth(currentDate.value, -1)
-    : shiftBeijingDate(currentDate.value, viewMode.value === 'week' ? -7 : -1);
-}
-
-function nextMonth() {
-  currentDate.value = viewMode.value === 'month'
-    ? shiftBeijingMonth(currentDate.value, 1)
-    : shiftBeijingDate(currentDate.value, viewMode.value === 'week' ? 7 : 1);
-}
-
-function goToToday() {
-  currentDate.value = beijingDateToDate(currentBeijingDateKey());
-}
-
-function selectDay(date: Date) {
-  currentDate.value = beijingDateToDate(dateKey(date));
-  viewMode.value = 'day';
-}
-
-function getEventTypeLabel(type: string) {
-  const labels: Record<string, string> = {
-    LEARNING: '学',
-    ASSESSMENT: '考',
-    RETEST: '复',
-    PROJECT_OUTPUT: '项',
-    JOB_APPLICATION: '职',
-    INTERVIEW: '面',
-    REVIEW: '盘'
-  };
-  return labels[type] ?? type;
-}
-
-function getStatusClass(status: string) {
-  const classes: Record<string, string> = {
-    PLANNED: 'status-planned',
-    IN_PROGRESS: 'status-in-progress',
-    COMPLETED: 'status-completed',
-    PARTIAL: 'status-partial',
-    SKIPPED: 'status-skipped',
-    RESCHEDULED: 'status-rescheduled'
-  };
-  return classes[status] ?? '';
-}
-
-function getStatusLabel(status: string) {
-  return ({ PLANNED: '待开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', PARTIAL: '部分完成', SKIPPED: '已跳过', RESCHEDULED: '已顺延' } as Record<string, string>)[status] ?? status;
-}
-
-function knowledgeStatusLabel(status: string) {
-  return ({ NOT_STARTED: '未开始', LEARNING: '学习中', SELF_MASTERED: '待考核', FIRST_PASS_PENDING_RETEST: '待复测', MASTERED: '已掌握', NEEDS_RELEARNING: '需重学' } as Record<string, string>)[status] ?? status;
-}
-
-function eventMinutes(event: PlanEvent) {
-  return Math.max(0, Math.round((new Date(event.endAt).getTime() - new Date(event.startAt).getTime()) / 60000));
-}
-
-function eventStartTime(event: PlanEvent) {
-  return new Date(event.startAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: BEIJING_TIME_ZONE });
-}
-
-// ===== 生命周期 =====
-
-onMounted(() => {
-  loadEvents();
-});
-
-watch(currentDate, () => {
-  loadEvents();
-});
+onMounted(load);
 </script>
 
 <template>
-  <div class="calendar-page">
-    <header class="calendar-heading">
-      <div><p class="eyebrow">DAILY LEARNING CONTRACT</p><h1>学习计划</h1><p>每天都明确学什么、掌握到什么程度、完成什么任务，以及用什么产出证明。</p></div>
-      <div class="heading-actions"><span class="auto-plan-note">计划已由系统自动生成</span><button class="leave-button" @click="openLeave()">请假并顺延</button></div>
-    </header>
-    <p v-if="notice" class="notice" role="status">{{ notice }}</p>
-    <section class="plan-overview-strip" aria-label="当前计划概览">
-      <div><strong>64</strong><span>周完整路径</span></div>
-      <div><strong>219</strong><span>知识点全覆盖</span></div>
-      <div><strong>{{ activeKnowledgeCodes.size }}</strong><span>本{{ viewMode === 'day' ? '日' : viewMode === 'week' ? '周' : '期' }}知识点</span></div>
-      <div><strong>{{ activeTasks }}</strong><span>严格任务</span></div>
-      <div class="dependency-summary" :class="{ ready: pendingPrerequisites === 0 }"><i></i><span><strong>{{ pendingPrerequisites ? `${pendingPrerequisites} 项前置待补` : '前置路径已就绪' }}</strong><small>前置状态只做学习顺序提示，不会阻止打开任务</small></span></div>
-    </section>
-    <!-- 工具栏 -->
-    <div class="toolbar">
-      <div class="nav-controls">
-        <button @click="prevMonth" class="nav-button" aria-label="上一周期">←</button>
-        <span class="current-month">{{ currentMonth }}</span>
-        <button @click="nextMonth" class="nav-button" aria-label="下一周期">→</button>
-        <button @click="goToToday" class="today-button">今天</button>
-      </div>
-
-      <div class="view-controls">
-        <button
-          :class="['view-button', { active: viewMode === 'month' }]"
-          @click="viewMode = 'month'"
-        >
-          月
-        </button>
-        <button
-          :class="['view-button', { active: viewMode === 'week' }]"
-          @click="viewMode = 'week'"
-        >
-          周
-        </button>
-        <button
-          :class="['view-button', { active: viewMode === 'day' }]"
-          @click="viewMode = 'day'"
-        >
-          日
-        </button>
-      </div>
-
-      <span class="plan-density">{{ events.length }} 条计划 · {{ leaves.length }} 天请假</span>
-    </div>
-
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-state">
-      加载中...
-    </div>
-
-    <!-- 错误状态 -->
-    <div v-else-if="error" class="error-state">
-      {{ error }}
-      <button @click="loadEvents" class="retry-button">重试</button>
-    </div>
-
-    <!-- 月视图 -->
-    <div v-else-if="viewMode === 'month'" class="month-view">
-      <!-- 星期标题 -->
-      <div class="weekday-header">
-        <div v-for="day in weekDays" :key="day" class="weekday-cell">
-          {{ day }}
+  <div class="route-reference">
+    <header class="route-header"><div><p>OPTIONAL ROUTE REFERENCE</p><h1>64 周路线参考</h1><span>它只说明一种合理的先后顺序，不规定你哪一天必须学什么。</span></div><button @click="router.push('/')">回到学习台</button></header>
+    <section class="route-principles"><strong>按需使用</strong><span>可以跳周、换顺序、暂停知识点或暂缓整条支线。关键前置会解释影响，但不会制造逾期。</span><span>理论与实战是学习原则，不是每天必须凑齐的五个阶段。</span></section>
+    <section class="route-stats"><div><strong>{{ stats.total }}</strong><span>完整知识点</span></div><div><strong>{{ stats.learned }}</strong><span>已学完</span></div><div><strong>{{ stats.mastered }}</strong><span>M3+ 已掌握</span></div><div><strong>{{ stats.optional }}</strong><span>稍后学习</span></div></section>
+    <label class="route-search"><span>在路线中查找</span><input v-model="search" placeholder="知识点、编号或领域"></label>
+    <div v-if="loading" class="state">正在整理路线参考…</div><div v-else-if="error" class="state error">{{ error }}</div>
+    <section v-else class="week-list">
+      <article v-for="[week, items] in weeks" :key="week" :class="{ open: expandedWeeks.has(week) }">
+        <button class="week-summary" @click="toggleWeek(week)"><span>W{{ String(week).padStart(2, '0') }}</span><div><strong>{{ weekTheme(week, items) }}</strong><small v-if="CAPSTONE_WEEKS[week]">综合实践参考 · 可以提前、推后或跳过</small><small v-else>{{ items.length }} 个知识点 · 预计 {{ Math.round(items.reduce((sum, item) => sum + item.estimatedTotalMinutes, 0) / 60) }} 小时，仅供参考</small></div><div class="week-progress"><b>{{ CAPSTONE_WEEKS[week] ? '自选' : `${items.filter(item => item.learningState === 'LEARNED').length}/${items.length}` }}</b><i>{{ expandedWeeks.has(week) ? '收起' : '展开' }}</i></div></button>
+        <div v-if="expandedWeeks.has(week)" class="week-points">
+          <p v-if="CAPSTONE_WEEKS[week]" class="capstone-note">{{ CAPSTONE_WEEKS[week].outcome }}</p>
+          <button v-for="item in items" :key="item.code" @click="router.push(`/knowledge/${item.code}`)"><code>{{ item.code }}</code><span><strong>{{ item.title }}</strong><small>{{ item.domainTitle }} · {{ item.challengeProfile }}</small></span><b :data-state="item.learningState">{{ stateLabel(item) }}</b></button>
+          <p v-if="!items.length && !CAPSTONE_WEEKS[week]" class="capstone-note">这一周可用于自由复盘、补充笔记或直接跳过。</p>
         </div>
-      </div>
-
-      <!-- 日期网格 -->
-      <div class="month-grid">
-        <div
-          v-for="(day, index) in calendarDays"
-          :key="index"
-          :class="['day-cell', {
-            'other-month': !day.isCurrentMonth,
-            'is-today': dateKey(day.date) === currentBeijingDateKey(),
-            'is-leave': leaveDates.has(dateKey(day.date))
-          }]"
-          role="button"
-          tabindex="0"
-          @click="selectDay(day.date)"
-          @keydown.enter.prevent="selectDay(day.date)"
-          @dblclick="openLeave(day.date)"
-        >
-          <div class="day-number">
-            {{ day.date.getDate() }}
-          </div>
-
-          <div class="day-events">
-            <div v-if="leaveDates.has(dateKey(day.date))" class="leave-tag">休 · 计划已顺延</div>
-            <button
-              v-for="event in day.events.slice(0, 3)"
-              :key="event.id"
-              type="button"
-              :class="['event-tag', getStatusClass(event.status)]"
-              @click.stop="selectDay(day.date)"
-            >
-              <span class="event-type-badge">{{ getEventTypeLabel(event.eventType) }}</span>
-              <span class="event-title-short">{{ (event.learningBrief?.displayTitle ?? event.title).slice(0, 14) }}</span>
-            </button>
-            <div v-if="day.events.length > 3" class="more-events">
-              +{{ day.events.length - 3 }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="agenda-view" :class="`agenda-mode-${viewMode}`" :data-view-mode="viewMode">
-      <article v-for="day in activePeriodDays" :key="dateKey(day.date)" class="agenda-day" :data-date-key="dateKey(day.date)" :class="{ 'is-leave': leaveDates.has(dateKey(day.date)) }">
-        <header class="agenda-day-header"><div class="agenda-date"><span>{{ day.date.toLocaleDateString('zh-CN', { weekday: 'short', timeZone: BEIJING_TIME_ZONE }) }}</span><strong>{{ Number(dateKey(day.date).slice(8, 10)) }}</strong><small>{{ day.date.toLocaleDateString('zh-CN', { month: 'short', timeZone: BEIJING_TIME_ZONE }) }}</small></div><div class="day-load"><strong>{{ day.events.reduce((sum, event) => sum + (event.learningBrief?.knowledgePoints.length ?? 0), 0) }}</strong><span>知识点</span><i></i><strong>{{ day.events.reduce((sum, event) => sum + (event.learningBrief?.effort.estimatedTotalMinutes ?? eventMinutes(event)), 0) }}</strong><span>预计分钟</span></div><button @click="openLeave(day.date)">{{ leaveDates.has(dateKey(day.date)) ? '已请假' : '当天请假' }}</button></header>
-        <div v-if="day.events.length" class="agenda-events">
-          <article v-for="event in day.events" :key="event.id" class="learning-contract" :class="getStatusClass(event.status)">
-            <header class="contract-header">
-              <div class="contract-time"><time>{{ eventStartTime(event) }}</time><span>{{ eventMinutes(event) }} MIN</span></div>
-              <div class="contract-title"><p>{{ event.learningBrief?.weekTheme ?? getEventTypeLabel(event.eventType) }}</p><h2>{{ event.learningBrief?.displayTitle ?? event.title }}</h2></div>
-              <span class="contract-status">{{ getStatusLabel(event.status) }}</span>
-            </header>
-
-            <template v-if="event.learningBrief">
-              <section class="plan-context">
-                <div class="plan-context-main">
-                  <span>{{ event.learningBrief.phase }}</span>
-                  <strong>{{ event.learningBrief.dailyFocus }}</strong>
-                  <p>{{ event.learningBrief.weekOutcome }}</p>
-                </div>
-                <dl>
-                  <div><dt>PROJECT</dt><dd>{{ event.learningBrief.projectAnchor }}</dd></div>
-                  <div><dt>ASSESS</dt><dd>{{ event.learningBrief.assessmentMode }}</dd></div>
-                </dl>
-                <div class="review-cadence"><span>复测节奏</span><i v-for="item in event.learningBrief.reviewCadence" :key="item">{{ item }}</i></div>
-                <div class="effort-budget" :class="{ overloaded: event.learningBrief.effort.overloaded }">
-                  <header><span>预计投入 <strong>{{ event.learningBrief.effort.estimatedTotalMinutes }} 分钟</strong></span><em>{{ event.learningBrief.effort.utilizationPercent }}% / {{ event.learningBrief.effort.capacityMinutes }} 分钟容量</em></header>
-                  <div class="effort-track"><i :style="{ width: `${Math.min(100, event.learningBrief.effort.utilizationPercent)}%` }"></i></div>
-                  <footer><span>资料 {{ event.learningBrief.effort.studyMinutes }}m</span><span>练习 {{ event.learningBrief.effort.practiceMinutes }}m</span><span>项目 {{ event.learningBrief.effort.projectMinutes }}m</span><span>考核 {{ event.learningBrief.effort.assessmentMinutes }}m</span><b v-if="event.learningBrief.effort.overloaded">建议顺延低优先级任务</b></footer>
-                </div>
-              </section>
-
-              <div class="knowledge-binding">
-                <span>今日知识</span>
-                <button v-for="point in event.learningBrief.knowledgePoints" :key="point.id" @click="router.push(`/knowledge/${point.code}`)">
-                  <code>{{ point.code }}</code><strong>{{ point.title }}</strong><small :data-status="point.status">{{ knowledgeStatusLabel(point.status) }}</small>
-                </button>
-                <span class="prerequisite-state" :class="{ ready: event.learningBrief.prerequisitesReady }">{{ event.learningBrief.prerequisitesReady ? '前置已就绪' : `${event.learningBrief.pendingPrerequisiteCount} 项前置待补` }}</span>
-              </div>
-
-              <div class="contract-grid">
-                <section class="contract-section learn-section"><header><span>01</span><div><strong>需要学习</strong><small>明确今天的知识边界</small></div></header><ul><li v-for="content in event.learningBrief.learningContent" :key="content">{{ content }}</li></ul></section>
-                <section class="contract-section mastery-section"><header><span>02</span><div><strong>必须掌握</strong><small>达到这些标准才算完成</small></div></header><ul><li v-for="goal in event.learningBrief.masteryGoals" :key="goal.code"><code>{{ goal.code }}</code>{{ goal.text }}</li></ul></section>
-                <section class="contract-section task-section"><header><span>03</span><div><strong>必须完成</strong><small>面试难度的实践任务</small></div></header><ul><li v-for="task in event.learningBrief.tasks" :key="task.code"><code>{{ task.code }}</code>{{ task.text }}</li></ul></section>
-                <section class="contract-section output-section"><header><span>04</span><div><strong>验收产出</strong><small>留下可追溯学习证据</small></div></header><ul><li v-for="output in event.learningBrief.outputs" :key="output">{{ output }}</li></ul></section>
-              </div>
-
-              <footer class="contract-footer"><p><span>复盘问题</span>{{ event.learningBrief.reviewQuestion }}</p><div><button @click="router.push(`/knowledge/${event.learningBrief.knowledgePoints[0]?.code}`)">开始学习</button><button class="graph-link" @click="router.push('/knowledge/graph')">查看前置关系</button></div></footer>
-            </template>
-            <div v-else class="plain-event"><p>{{ event.description || '这是一个独立计划事件，暂未绑定知识点。' }}</p></div>
-          </article>
-        </div>
-        <div v-else class="agenda-empty"><span>NO PLAN</span><p>当天没有排期。重置学习进度后，系统会从北京时间今天开始连续生成每天同强度的学习计划。</p></div>
       </article>
-    </div>
+      <div v-if="!weeks.length" class="state">没有匹配的知识点。</div>
+    </section>
   </div>
-
-  <div v-if="showLeaveDialog" class="dialog-overlay" @click.self="showLeaveDialog = false">
-    <form class="dialog-content leave-dialog" @submit.prevent="submitLeave">
-      <p class="eyebrow">SHIFT THE ROUTE</p>
-      <h3>请假并顺延学习计划</h3>
-      <p>从请假当天开始，所有未完成的学习、考核、复测和项目任务整体后移一天。</p>
-      <div class="form-group"><label for="leave-date">请假日期</label><input id="leave-date" v-model="leaveDate" type="date" required /></div>
-      <div class="form-group"><label for="leave-reason">原因（可选）</label><input id="leave-reason" v-model="leaveReason" maxlength="300" placeholder="休息、出行或临时事务" /></div>
-      <div class="import-actions"><button class="import-confirm-button" :disabled="leaveSaving">{{ leaveSaving ? '顺延中...' : '确认请假并顺延' }}</button><button type="button" class="cancel-button" @click="showLeaveDialog = false">取消</button></div>
-    </form>
-  </div>
-
 </template>
 
-<style scoped src="./CalendarPage.styles.css"></style>
+<style scoped>
+.route-reference{max-width:1160px;margin:0 auto;padding:26px;display:grid;gap:18px}.route-header{display:flex;justify-content:space-between;align-items:end;gap:20px}.route-header p{font:700 .68rem ui-monospace;color:#536da6;letter-spacing:.13em}.route-header h1{font-size:clamp(2rem,4vw,3.2rem);margin:4px 0}.route-header span{color:#677284}.route-reference button{border:1px solid #ccd4df;background:#fff;border-radius:10px;padding:9px 13px;color:inherit;cursor:pointer}.route-principles{display:grid;grid-template-columns:auto 1fr 1fr;gap:16px;padding:17px;background:#edf2ff;border:1px solid #dae3fb;border-radius:13px}.route-principles span{color:#58677e}.route-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.route-stats div{background:#fff;border:1px solid #dce2e9;border-radius:13px;padding:16px}.route-stats strong,.route-stats span{display:block}.route-stats strong{font-size:1.8rem}.route-stats span{font-size:.76rem;color:#727c89}.route-search{display:grid;gap:6px}.route-search span{font-size:.72rem;color:#657084}.route-search input{width:100%;box-sizing:border-box;border:1px solid #cad3df;border-radius:10px;padding:12px;font:inherit}.week-list{display:grid;gap:9px}.week-list article{background:#fff;border:1px solid #dce2e9;border-radius:14px;overflow:hidden}.week-list article.open{border-color:#afbedf}.week-summary{width:100%;display:grid;grid-template-columns:75px 1fr auto;align-items:center;text-align:left;border:0!important;border-radius:0!important;padding:16px!important}.week-summary>span{font:800 1.05rem ui-monospace;color:#3657a3}.week-summary div strong,.week-summary div small{display:block}.week-summary div small{color:#7a8491;margin-top:4px}.week-progress{text-align:right}.week-progress b,.week-progress i{display:block}.week-progress i{font-style:normal;color:#7a8491;font-size:.72rem}.week-points{border-top:1px solid #e5e9ee;padding:0 16px}.week-points button{width:100%;display:grid;grid-template-columns:82px 1fr auto;align-items:center;text-align:left;border-width:0 0 1px!important;border-radius:0!important;padding:13px 3px!important}.week-points button:last-child{border-bottom:0!important}.week-points span strong,.week-points span small{display:block}.week-points span small{color:#7d8793;margin-top:3px}.week-points>button>b{font-size:.74rem;color:#687386}.week-points>button>b[data-state=LEARNED]{color:#187044}.week-points>button>b[data-state=DEFERRED]{color:#9a6a28}.capstone-note{margin:0;padding:15px 3px;color:#526278;line-height:1.65}.state{padding:28px;background:#fff;border-radius:13px;color:#687385}.state.error{background:#fff0ee;color:#9b3128}@media(max-width:760px){.route-reference{padding:13px}.route-header{align-items:flex-start;flex-direction:column}.route-principles{grid-template-columns:1fr}.route-stats{grid-template-columns:repeat(2,1fr)}.week-summary{grid-template-columns:52px 1fr}.week-progress{grid-column:2;display:flex;gap:8px;text-align:left}.week-points button{grid-template-columns:70px 1fr}.week-points>button>b{grid-column:2}}
+</style>
+
+<style scoped>
+.route-reference{width:100%;max-width:1560px;padding:0}.route-header{padding:4px 2px 10px}.route-principles,.route-stats div,.week-list article{box-shadow:0 8px 28px rgba(25,48,78,.055)}.route-principles{background:linear-gradient(110deg,#edf3ff,#f3f8ff);border-color:#d7e2f4}.route-stats div{padding:18px;background:linear-gradient(145deg,#fff,#fafcff)}.week-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.week-list article.open{grid-column:1/-1;box-shadow:0 14px 34px rgba(36,74,133,.09)}.week-summary{min-height:84px}.route-search input{background:#fff;box-shadow:0 5px 17px rgba(25,48,78,.04)}
+@media(max-width:950px){.week-list{grid-template-columns:1fr}.week-list article.open{grid-column:auto}}
+@media(max-width:760px){.route-reference{padding:0}}
+</style>

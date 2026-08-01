@@ -223,6 +223,9 @@ export const CreateAssessmentRequestSchema = z.object({
   knowledgePointCode: z.string(),
   type: AssessmentTypeSchema,
   durationMinutes: z.number().int().min(10).max(180),
+  masteryStage: z.number().int().min(1).max(4).default(1),
+  challengeMode: z.enum(['THEORY', 'PRACTICE', 'MIXED']).default('THEORY'),
+  challengeProfile: z.enum(['AUTO', 'THEORY_ONLY', 'EXAMPLE_DRIVEN', 'CODING', 'DEBUGGING', 'TOOL_OPERATION', 'DESIGN_CASE']).default('AUTO'),
 });
 
 export type CreateAssessmentRequest = z.infer<typeof CreateAssessmentRequestSchema>;
@@ -234,6 +237,10 @@ export const AssessmentSessionSchema = z.object({
   assessmentType: AssessmentTypeSchema,
   status: AssessmentSessionStatusSchema,
   durationMinutes: z.number().int(),
+  masteryStage: z.number().int().min(1).max(4),
+  challengeMode: z.enum(['THEORY', 'PRACTICE', 'MIXED']),
+  challengeProfile: z.enum(['AUTO', 'THEORY_ONLY', 'EXAMPLE_DRIVEN', 'CODING', 'DEBUGGING', 'TOOL_OPERATION', 'DESIGN_CASE']),
+  assistanceLevel: z.number().int().min(0).max(7),
   startedAt: z.string().optional(),
   submittedAt: z.string().optional(),
   gradedAt: z.string().optional(),

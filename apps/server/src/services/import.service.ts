@@ -11,12 +11,11 @@ import { knowledgeDomains, knowledgePoints, type NewKnowledgeDomain, type NewKno
 import { parseAllKnowledgeFiles } from '@career-atlas/content-parser';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
-import { currentBeijingDate, planService } from './plan.service.js';
+import { currentBeijingDate } from './plan.service.js';
 import { projectRoot } from '../config/index.js';
 
 const PROJECT_ROOT = projectRoot;
 const KNOWLEDGE_BASE_DIR = 'docs/knowledge/knowledge-base';
-const LEARNING_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'templates', 'learning-tracker-template.csv');
 
 /**
  * 扫描知识文件
@@ -302,10 +301,11 @@ export interface ResetLearningProgressResult {
 }
 
 /**
- * 清空学习进度并按最新版 64 周模板重建计划。
+ * 清空学习进度，但不再创建每日计划。
  *
- * 保留知识内容、知识关系、岗位、项目、技能缺口和备份；只清除学习过程状态、
- * 考核证据、打卡复盘、请假顺延记录，以及模板/系统生成的学习计划。
+ * 完整保留原始笔记、AI 整理稿、笔记版本历史、知识内容、知识关系、岗位、项目、
+ * 技能缺口和备份；只清除学习过程状态、考核证据、打卡复盘、旧请假记录，
+ * 以及历史模板/系统生成的学习计划。
  */
 export async function resetLearningProgress(startDate = currentBeijingDate()): Promise<ResetLearningProgressResult> {
   const importResult = await executeImport();
@@ -315,9 +315,12 @@ export async function resetLearningProgress(startDate = currentBeijingDate()): P
     const deletedAssessmentAnswers = rawDb.prepare('DELETE FROM assessment_answers').run().changes;
     const deletedAssessmentQuestions = rawDb.prepare('DELETE FROM assessment_questions').run().changes;
     const deletedAssessmentResults = rawDb.prepare('DELETE FROM assessment_results').run().changes;
+    rawDb.prepare('DELETE FROM assessment_hint_events').run();
     const deletedMasteryEvents = rawDb.prepare('DELETE FROM mastery_events').run().changes;
     const deletedAssessmentSessions = rawDb.prepare('DELETE FROM assessment_sessions').run().changes;
     const deletedCheckins = rawDb.prepare('DELETE FROM checkins').run().changes;
+    rawDb.prepare('DELETE FROM learning_checkins').run();
+    rawDb.prepare('DELETE FROM learning_route_choices').run();
     const deletedDailyReviews = rawDb.prepare('DELETE FROM daily_reviews').run().changes;
     const deletedWeeklyReviews = rawDb.prepare('DELETE FROM weekly_reviews').run().changes;
     const deletedLeaveDays = rawDb.prepare('DELETE FROM leave_days').run().changes;
@@ -330,7 +333,12 @@ export async function resetLearningProgress(startDate = currentBeijingDate()): P
     const resetKnowledgePoints = rawDb.prepare(`
       UPDATE knowledge_points
       SET status = 'NOT_STARTED',
-          summary = NULL,
+          learning_state = 'NOT_STARTED',
+          mastery_level = 0,
+          learned_at = NULL,
+          deferred_at = NULL,
+          defer_reason = NULL,
+          current_focus = 0,
           self_mastered_at = NULL,
           first_passed_at = NULL,
           mastered_at = NULL,
@@ -354,12 +362,9 @@ export async function resetLearningProgress(startDate = currentBeijingDate()): P
     };
   })();
 
-  const planResult = await planService.importFromTemplate(LEARNING_TEMPLATE_PATH, { startDate });
-  planService.normalizeTemplateSchedule();
-
   return {
     syncedKnowledgePoints: importResult.totalPoints,
-    importedPlanEvents: planResult.imported,
+    importedPlanEvents: 0,
     startDate,
     ...deleted,
   };
