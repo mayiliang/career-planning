@@ -25,6 +25,10 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByRole('heading', { name: '学完资料后，可以这样练' })).toBeVisible();
     await expect(page.getByRole('button', { name: '在系统中开始并完成 →' }).first()).toBeVisible();
     await expect(page.getByText(/不再用没有入口的“项目时间”占位/)).toBeVisible();
+    const panelWidths = await page.locator('.materials-layout > .content-card').evaluateAll((items) => items.map((item) => Math.round(item.getBoundingClientRect().width)));
+    expect(Math.abs((panelWidths[0] ?? 0) - (panelWidths[1] ?? 0))).toBeLessThanOrEqual(1);
+    const activityHeights = await page.locator('.activity-panel > article').evaluateAll((items) => items.map((item) => Math.round(item.getBoundingClientRect().height)));
+    expect(Math.max(...activityHeights) - Math.min(...activityHeights)).toBeLessThanOrEqual(1);
 
     await page.getByRole('button', { name: '我的笔记' }).click();
     await expect(page.getByRole('heading', { name: '边写边预览，你的原文永远保留' })).toBeVisible();
@@ -161,6 +165,13 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByLabel('Markdown 实时预览').locator('details.thinking-block')).toContainText('先核对引用边界');
     await page.getByRole('button', { name: '保存原始笔记' }).click();
 
+    await page.route('**/notes/JS-03/organize/stream', async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      const longThinking = Array.from({ length: 90 }, (_, index) => `第 ${index + 1} 步：核对原始笔记与学习资料的对应关系。`).join('\n\n');
+      const thinkingEvent = `event: thinking\ndata: ${JSON.stringify({ delta: longThinking })}\n\n`;
+      await route.fulfill({ response, body: body.replace('event: done', `${thinkingEvent}event: done`) });
+    });
     const streamResponse = page.waitForResponse((response) => response.url().includes('/notes/JS-03/organize/stream'));
     await page.getByRole('button', { name: '用 AI 整理并核对' }).click();
     const response = await streamResponse;
@@ -168,10 +179,18 @@ test.describe.serial('核心使用体验', () => {
     expect((await response.body()).toString()).toContain('event: progress');
     await expect(page.getByText(/已生成安全排版稿/)).toBeVisible();
     await expect(page.locator('.organized .markdown-content')).toContainText('类型与不可变更新');
+    const thinkingPanel = page.locator('.organized details.thinking-panel');
+    await expect(thinkingPanel).toHaveJSProperty('open', false);
+    await thinkingPanel.locator('summary').click();
+    const thinkingViewport = thinkingPanel.locator('.thinking-panel__content');
+    const thinkingMetrics = await thinkingViewport.evaluate((element) => ({ clientHeight: element.clientHeight, scrollHeight: element.scrollHeight }));
+    expect(thinkingMetrics.scrollHeight).toBeGreaterThan(thinkingMetrics.clientHeight);
+    expect(thinkingMetrics.clientHeight).toBeLessThanOrEqual(360);
     const noteCardHeights = await page.locator('.notes-layout > .content-card').evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
     expect(Math.abs((noteCardHeights[0] ?? 0) - (noteCardHeights[1] ?? 0))).toBeLessThanOrEqual(1);
 
     await page.goto('/notes');
+    expect(await page.locator('.notes-header').evaluate((element) => element.getBoundingClientRect().height)).toBeLessThan(100);
     const sort = page.getByLabel('笔记排序');
     await expect(sort).toHaveValue('knowledge');
     await expect(page.locator('.notes-index section button code').first()).toHaveText('JS-02');

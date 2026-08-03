@@ -112,6 +112,33 @@ describe('自主学习、笔记版本与打卡', () => {
     }
   });
 
+  it('思考完成但最终正文被截断时会清空残稿并自动重试最终正文', async () => {
+    const previousKey = config.DEEPSEEK_API_KEY;
+    config.DEEPSEEK_API_KEY = 'test-key';
+    const incompleteFrames = [
+      { choices: [{ delta: { reasoning_content: '核对后准备完整整理稿。' } }] },
+      { choices: [{ delta: { content: '{"organizedMarkdown":"# 未完成' } }] },
+    ].map((packet) => `data: ${JSON.stringify(packet)}\n\n`).join('') + 'data: [DONE]\n\n';
+    const completedFrames = `data: ${JSON.stringify({ choices: [{ delta: { content: '{"organizedMarkdown":"# 重试后的完整整理稿","review":{"sourceGrounded":true}}' } }] })}\n\ndata: [DONE]\n\n`;
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(incompleteFrames, { status: 200 }))
+      .mockResolvedValueOnce(new Response(completedFrames, { status: 200 }));
+    const content: string[] = [];
+    let resets = 0;
+    try {
+      const result = await organizePointNoteStream(code, (delta) => content.push(delta), undefined, () => {}, () => {}, () => { resets += 1; });
+      expect(resets).toBe(1);
+      expect(content.at(-1)).toContain('重试后的完整整理稿');
+      expect(result.organizedMd).toBe('# 重试后的完整整理稿');
+      expect(result.generationMode).toBe('AI');
+      const retryRequest = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as { thinking?: { type?: string } };
+      expect(retryRequest.thinking?.type).toBe('disabled');
+    } finally {
+      fetchMock.mockRestore();
+      config.DEEPSEEK_API_KEY = previousKey;
+    }
+  });
+
   it('能从尚未生成完的 JSON 中增量解码 Markdown 字符串', () => {
     const partial = extractPartialJsonString('{"organizedMarkdown":"# 标题\\n\\n第一段', 'organizedMarkdown');
     expect(partial).toEqual({ value: '# 标题\n\n第一段', complete: false });

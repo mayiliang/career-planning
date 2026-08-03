@@ -33,7 +33,7 @@ const deferring = ref(false);
 const activePracticeId = ref<string | null>(null);
 
 const code = computed(() => String(route.params.code));
-const organizedDisplayMd = computed(() => streamingOrganizedMd.value || note.value?.organizedMd || '');
+const organizedDisplayMd = computed(() => organizing.value ? streamingOrganizedMd.value : note.value?.organizedMd || '');
 const masteryCopy = computed(() => [
   ['M0', '未评估', '还没有系统证据，不代表没有学过'],
   ['M1', '初步理解', '能解释核心概念与边界'],
@@ -214,15 +214,17 @@ onBeforeUnmount(() => organizeController?.abort());
       <p v-if="error" class="notice error">{{ error }}</p>
       <p v-if="message" class="notice">{{ message }}</p>
 
-      <section class="learning-guide">
-        <div><small>推荐学习方式</small><strong>{{ profileText }}</strong></div>
-        <ol>
-          <li>读资料并结合示例形成自己的解释</li>
-          <li>随时记录原始笔记，可让 AI 生成独立整理稿</li>
-          <li>由你点击“已学完”；掌握挑战完全可选</li>
-        </ol>
-        <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
-      </section>
+      <details class="learning-guide">
+        <summary><span><small>推荐学习方式</small><strong>{{ profileText }}</strong></span><em>展开规则与预计投入</em><i aria-hidden="true"></i></summary>
+        <div class="learning-guide__body">
+          <ol>
+            <li>读资料并结合示例形成自己的解释</li>
+            <li>随时记录原始笔记，可让 AI 生成独立整理稿</li>
+            <li>由你点击“已学完”；掌握挑战完全可选</li>
+          </ol>
+          <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
+        </div>
+      </details>
 
       <nav class="tabs">
         <button :class="{ active: activeTab === 'materials' }" @click="activeTab = 'materials'">学习资料</button>
@@ -234,7 +236,7 @@ onBeforeUnmount(() => organizeController?.abort());
         <MarkdownRenderer class="content-card material-reader markdown-content" :source="point.studyMaterialMd" aria-label="学习资料" />
         <aside class="content-card activity-panel" :class="{ expanded: activePracticeId }">
           <header><small>LEARNING ACTIVITIES</small><h2>学完资料后，可以这样练</h2><p>每一项都给出实际任务，不再用没有入口的“项目时间”占位。</p></header>
-          <article v-for="(activity, index) in point.learningActivities" :key="activity.id" :class="{ required: !activity.optional }">
+          <article v-for="(activity, index) in point.learningActivities" :key="activity.id" :class="{ required: !activity.optional, active: activePracticeId === activity.id }">
             <span>{{ String(index + 1).padStart(2, '0') }}</span>
             <div>
               <h3>{{ activity.label }}<em>{{ activity.optional ? '可选' : '学习完成条件' }}</em></h3>
@@ -261,10 +263,11 @@ onBeforeUnmount(() => organizeController?.abort());
           <footer><span>支持标题、列表、任务清单、表格、引用、链接、粗体、行内代码和代码块</span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '保存原始笔记' }}</button><button v-if="organizing" @click="cancelOrganization">停止生成</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? `AI 整理中 · ${organizeElapsedSeconds} 秒 · ${streamingOrganizedMd.length} 字` : '用 AI 整理并核对' }}</button></footer>
         </section>
         <section class="content-card organized">
-          <header><div><small>AI 整理候选稿</small><h2>{{ organizing ? '正在逐段生成整理稿' : '核对后由你决定是否采用' }}</h2></div><button v-if="note?.organizedMd && !organizing" @click="acceptOrganized">采用为阅读版本</button></header>
-          <div v-if="organizing" class="stream-state" aria-live="polite"><i></i><span><b>{{ organizeProgress }}</b><small>{{ organizeElapsedSeconds }} 秒 · 已接收 {{ streamingOrganizedMd.length }} 字；连接会持续报告状态，超时会安全降级且不覆盖原笔记</small></span></div>
+          <header><div><small>AI 整理候选稿</small><h2>{{ organizing ? '正在生成可核对的最终正文' : note?.generationMode === 'LOCAL_FALLBACK' ? 'AI 未完成：这是安全排版稿' : '核对后由你决定是否采用' }}</h2></div><button v-if="note?.organizedMd && !organizing" @click="acceptOrganized">采用为阅读版本</button></header>
+          <div v-if="organizing" class="stream-state" aria-live="polite"><i></i><span><b>{{ organizeProgress }}</b><small>{{ organizeElapsedSeconds }} 秒 · 正文 {{ streamingOrganizedMd.length }} 字 · 思考 {{ streamingThinking.length }} 字；两条内容严格分离</small></span></div>
           <MarkdownRenderer v-if="organizedDisplayMd || streamingThinking" class="markdown-content streaming-markdown" :class="{ live: organizing }" :source="organizedDisplayMd" :thinking="streamingThinking" :streaming="organizing" aria-label="AI 整理候选稿" />
-          <p v-else class="empty">保存原始笔记后，可让 AI 按学习资料检查正确性、遗漏和结构。它只会生成新稿，不覆盖你的文字。</p>
+          <p v-if="organizing && !streamingOrganizedMd" class="awaiting-final">AI 正在核对资料。最终整理正文尚未开始输出，不会用原始笔记冒充整理结果。</p>
+          <p v-if="!organizing && !organizedDisplayMd && !streamingThinking" class="empty">保存原始笔记后，可让 AI 按学习资料检查正确性、遗漏和结构。它只会生成新稿，不覆盖你的文字。</p>
           <div v-if="note?.aiReview && !organizing" class="ai-review">
             <p v-for="item in note.aiReview.corrections" :key="item"><b>纠正</b>{{ item }}</p>
             <p v-for="item in note.aiReview.additions" :key="item"><b>补充</b>{{ item }}</p>
@@ -334,20 +337,19 @@ onBeforeUnmount(() => organizeController?.abort());
 <style scoped>
 .knowledge-detail{width:100%;max-width:1580px;padding:0;gap:16px}
 .point-hero,.learning-guide,.content-card,.completion-card,.branches-section{border-color:#dfe5ed;box-shadow:0 9px 30px rgba(26,48,79,.065)}
-.point-hero{position:relative;overflow:hidden;padding:25px 27px;background:linear-gradient(135deg,#fff 0%,#f7faff 72%,#edf5ff 100%)}
+.point-hero{position:relative;overflow:hidden;align-items:center;padding:16px 20px;background:linear-gradient(135deg,#fff 0%,#f7faff 72%,#edf5ff 100%)}
 .point-hero::after{position:absolute;right:-90px;bottom:-120px;width:280px;height:280px;content:'';background:radial-gradient(circle,rgba(61,116,211,.12),transparent 68%);pointer-events:none}
-.point-hero>*{position:relative;z-index:1}.hero-copy h1{font-size:clamp(1.8rem,3vw,3rem);letter-spacing:-.035em}.hero-copy h1 code{padding:5px 8px;color:#2d63b8;background:#eaf2ff;border-radius:8px}.state-row span{background:#fff;border:1px solid #e1e7ef;box-shadow:0 2px 7px rgba(27,48,78,.035)}
-.learning-guide{grid-template-columns:1.15fr 1fr 1.15fr;padding:20px 22px}.effort span{color:#33465f;background:#f2f6fc;border:1px solid #e0e7f0}.effort b{line-height:1.5}
+.point-hero>*{position:relative;z-index:1}.hero-copy h1{margin-top:3px;font-size:clamp(1.55rem,2.25vw,2.3rem);line-height:1.14;letter-spacing:-.035em}.hero-copy h1 code{padding:4px 7px;color:#2d63b8;background:#eaf2ff;border-radius:8px}.state-row{margin-top:9px}.state-row span{padding:5px 8px;background:#fff;border:1px solid #e1e7ef;box-shadow:0 2px 7px rgba(27,48,78,.035)}.hero-actions button{padding:8px 10px}
+.learning-guide{display:block;padding:0;overflow:hidden}.learning-guide>summary{display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:14px;align-items:center;min-height:62px;padding:10px 18px;cursor:pointer;list-style:none}.learning-guide>summary::-webkit-details-marker{display:none}.learning-guide>summary span{min-width:0}.learning-guide>summary strong{overflow:hidden;margin-top:2px;text-overflow:ellipsis;white-space:nowrap}.learning-guide>summary em{color:#617087;font-size:.72rem;font-style:normal;white-space:nowrap}.learning-guide>summary i{width:8px;height:8px;border-right:2px solid #718096;border-bottom:2px solid #718096;transform:rotate(45deg);transition:transform .18s ease}.learning-guide[open]>summary i{transform:rotate(225deg)}.learning-guide__body{display:grid;grid-template-columns:1fr 1.2fr;gap:18px;padding:15px 18px 18px;border-top:1px solid #e5eaf0}.learning-guide__body ol{margin:0}.effort span{color:#33465f;background:#f2f6fc;border:1px solid #e0e7f0}.effort b{line-height:1.5}
 .tabs{position:sticky;top:12px;z-index:12;width:max-content;padding:5px;background:rgba(241,245,250,.9);border:1px solid #dce4ed;border-radius:14px;box-shadow:0 7px 24px rgba(27,50,80,.08);backdrop-filter:blur(14px)}.tabs button{border:0;background:transparent}.tabs button.active{background:linear-gradient(135deg,#1c3353,#245a83);box-shadow:0 7px 18px rgba(28,62,99,.2)}
-.materials-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(380px,.82fr);gap:16px;align-items:start}.material-reader{min-width:0;padding:27px 30px}.activity-panel{position:sticky;top:82px;padding:22px}.activity-panel header h2{margin:4px 0 5px}.activity-panel header p{margin:0 0 17px;color:#68768a;font-size:.84rem}.activity-panel>article{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:15px 0;border-top:1px solid #e6ebf1}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}
-.activity-panel.expanded{position:static;grid-column:1/-1}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{margin-top:11px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
+.materials-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch}.material-reader{min-width:0;padding:24px 28px}.activity-panel{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:20px}.activity-panel>header{grid-column:1/-1}.activity-panel header h2{margin:3px 0}.activity-panel header p{margin:0 0 5px;color:#68768a;font-size:.82rem}.activity-panel>article{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;height:100%;padding:14px;border:1px solid #e1e7ef;border-radius:14px;background:linear-gradient(145deg,#fff,#f8fbff)}.activity-panel>article.active{grid-column:1/-1;height:auto;border-color:#9eb8dc;box-shadow:0 8px 24px rgba(41,84,139,.08)}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel>article>div{display:flex;min-width:0;flex-direction:column}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}.activity-panel.expanded{position:static}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{align-self:flex-start;margin-top:auto;padding:9px 13px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
 .content-card{padding:25px}.branch-grid{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}.branch-grid article{padding:18px;background:linear-gradient(145deg,#fff,#fafcff);border-radius:16px;box-shadow:0 5px 17px rgba(28,51,82,.04)}.branch-grid article:first-child{border-color:#9cb5df;box-shadow:0 9px 24px rgba(43,91,171,.09)}
 .notes-layout,.mastery-layout,.branch-grid{align-items:stretch}.notes-layout>.content-card,.mastery-layout>.content-card,.branch-grid>article{height:100%}.note-editor,.organized{display:flex;min-width:0;flex-direction:column}.note-editor footer{margin-top:auto;padding-top:10px}.organized{max-height:none}.organized>.empty{margin:auto 0}
 .completion-card{background:linear-gradient(135deg,#f9fffb,#f0f9f5)}
 .note-view-switch{display:flex;gap:5px;width:max-content;margin:0 0 12px;padding:4px;border:1px solid #dce4ed;border-radius:11px;background:#f2f6fa}.note-view-switch button{border:0;background:transparent;padding:7px 10px}.note-view-switch button.active{color:#fff;background:#234e77;box-shadow:0 4px 12px rgba(32,72,111,.18)}
 .markdown-workbench{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:430px}.markdown-workbench.mode-edit,.markdown-workbench.mode-preview{grid-template-columns:1fr}.markdown-source,.markdown-preview{display:flex;min-width:0;flex-direction:column;border:1px solid #d7e0e9;border-radius:13px;overflow:hidden;background:#fff}.markdown-source>span,.markdown-preview>span{padding:9px 12px;color:#617087;font-size:.7rem;font-weight:800;background:#f3f7fa;border-bottom:1px solid #dfe6ed}.note-editor .markdown-source textarea{min-height:430px;height:100%;border:0;border-radius:0;outline:0;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview>article,.markdown-preview>p{padding:4px 17px 20px;margin:0;overflow:auto}.markdown-preview>p{padding-top:20px;color:#7a8492}.markdown-preview pre,.organized pre{overflow:auto;padding:14px;color:#deebf8;background:#122033;border-radius:11px}.markdown-preview code,.organized code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview table,.organized table{width:100%;border-collapse:collapse}.markdown-preview th,.markdown-preview td,.organized th,.organized td{padding:8px;border:1px solid #dce3eb;text-align:left}.markdown-preview blockquote,.organized blockquote{margin-left:0;padding:2px 14px;color:#53677e;border-left:4px solid #81a4ce;background:#f4f8fc}.task-item{display:flex;gap:7px;align-items:flex-start}.task-item input{margin-top:6px}
-.stream-state{display:flex;gap:10px;align-items:center;margin-bottom:12px;padding:11px 12px;color:#31597e;background:#edf6ff;border:1px solid #d3e7f8;border-radius:10px;font-size:.8rem}.stream-state>span{display:grid;gap:3px}.stream-state b{font-size:.8rem}.stream-state small{color:#647b94;font-size:.7rem}.stream-state i{flex:0 0 auto;width:9px;height:9px;background:#2a75bc;border-radius:50%;box-shadow:0 0 0 0 rgba(42,117,188,.35);animation:stream-pulse 1.25s infinite}.streaming-markdown.live::after{display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:text-bottom;content:'';background:#2c70b1;animation:stream-caret .7s steps(1) infinite}@keyframes stream-pulse{70%{box-shadow:0 0 0 8px rgba(42,117,188,0)}}@keyframes stream-caret{50%{opacity:0}}
-@media(max-width:1100px){.materials-layout{grid-template-columns:1fr}.activity-panel{position:static}.learning-guide{grid-template-columns:1fr 1fr}.learning-guide .effort{grid-column:1/-1}}
+.stream-state{display:flex;gap:10px;align-items:center;margin-bottom:12px;padding:11px 12px;color:#31597e;background:#edf6ff;border:1px solid #d3e7f8;border-radius:10px;font-size:.8rem}.stream-state>span{display:grid;gap:3px}.stream-state b{font-size:.8rem}.stream-state small{color:#647b94;font-size:.7rem}.stream-state i{flex:0 0 auto;width:9px;height:9px;background:#2a75bc;border-radius:50%;box-shadow:0 0 0 0 rgba(42,117,188,.35);animation:stream-pulse 1.25s infinite}.awaiting-final{margin:.7rem 0 0;padding:12px;color:#64758a;font-size:.78rem;background:#f6f8fb;border:1px dashed #ccd7e3;border-radius:10px}.streaming-markdown.live::after{display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:text-bottom;content:'';background:#2c70b1;animation:stream-caret .7s steps(1) infinite}@keyframes stream-pulse{70%{box-shadow:0 0 0 8px rgba(42,117,188,0)}}@keyframes stream-caret{50%{opacity:0}}
+@media(max-width:1100px){.activity-panel{grid-template-columns:1fr 1fr}.activity-panel>article.active{grid-column:1/-1}.learning-guide__body{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.notes-layout>.content-card,.mastery-layout>.content-card{height:auto}}
-@media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide{grid-template-columns:1fr}.learning-guide .effort{grid-column:auto}.materials-layout{display:block}.activity-panel{margin-top:14px}.tabs{top:6px;width:100%;overflow:auto}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}.markdown-workbench{grid-template-columns:1fr}.note-view-switch{width:100%}.note-view-switch button{flex:1}.note-editor footer button{flex:1}}
+@media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide>summary{grid-template-columns:minmax(0,1fr) 12px}.learning-guide>summary em{display:none}.learning-guide__body{grid-template-columns:1fr}.materials-layout{display:block}.activity-panel{grid-template-columns:1fr;margin-top:14px}.activity-panel>article.active{grid-column:auto}.tabs{top:6px;width:100%;overflow:auto}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}.markdown-workbench{grid-template-columns:1fr}.note-view-switch{width:100%}.note-view-switch button{flex:1}.note-editor footer button{flex:1}}
 </style>

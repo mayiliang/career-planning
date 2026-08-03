@@ -39,11 +39,12 @@ event: start     data: { ...task identity }
 event: progress  data: { message, elapsedSeconds?, receivedChars? }
 event: thinking  data: { delta }
 event: delta     data: { delta }
+event: reset     data: { reason }
 event: done      data: { note|hint|attempt|grade }
 event: error     data: { message }
 ```
 
-SSE 必须包含 `no-cache, no-transform` 与 `X-Accel-Buffering: no`。客户端中止时路由中止上游；代理读取超时不少于 360 秒。
+SSE 必须包含 `no-cache, no-transform` 与 `X-Accel-Buffering: no`。`reset` 只清空未完成的正文累积，不清空 thinking 或已持久化内容，用于最终正文截断后的自动重试。客户端中止时路由中止上游；代理读取超时不少于 360 秒。
 
 ## 3. 学习状态机
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { renderMarkdown } from '@/utils/markdown';
 import 'katex/dist/katex.min.css';
 import 'highlight.js/styles/github-dark.css';
@@ -9,21 +9,28 @@ const props = withDefaults(defineProps<{
   thinking?: string;
   streaming?: boolean;
   thinkingOpen?: boolean;
+  thinkingAutoCollapse?: boolean;
   ariaLabel?: string;
 }>(), {
   thinking: '',
   streaming: false,
   thinkingOpen: true,
+  thinkingAutoCollapse: true,
   ariaLabel: 'Markdown 内容',
 });
 
 const contentRoot = ref<HTMLElement | null>(null);
 const thinkingRoot = ref<HTMLElement | null>(null);
+const thinkingDetails = ref<HTMLDetailsElement | null>(null);
 const rendered = ref('');
 const renderedThinking = ref('');
+const thinkingExpanded = ref(props.thinkingOpen);
+const followingThinking = ref(true);
+const thinkingCharacters = computed(() => props.thinking.trim().length.toLocaleString('zh-CN'));
 let timer: ReturnType<typeof setTimeout> | undefined;
 let frame: number | undefined;
 let revision = 0;
+let thinkingWasVisible = false;
 const diagramCache = new Map<string, string>();
 
 function scheduleRender() {
@@ -45,7 +52,40 @@ function flushRender() {
   rendered.value = renderMarkdown(props.source);
   renderedThinking.value = props.thinking ? renderMarkdown(props.thinking) : '';
   const currentRevision = ++revision;
-  void nextTick(() => renderDiagrams(currentRevision));
+  void nextTick(async () => {
+    await renderDiagrams(currentRevision);
+    syncThinkingViewport();
+  });
+}
+
+function syncThinkingViewport(force = false) {
+  const viewport = thinkingRoot.value;
+  if (!viewport || !thinkingExpanded.value || (!followingThinking.value && !force)) return;
+  viewport.scrollTop = viewport.scrollHeight;
+  followingThinking.value = true;
+  if (!thinkingWasVisible && props.streaming && props.thinking) {
+    thinkingWasVisible = true;
+    thinkingDetails.value?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function onThinkingScroll() {
+  const viewport = thinkingRoot.value;
+  if (!viewport) return;
+  followingThinking.value = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 36;
+}
+
+function onThinkingToggle(event: Event) {
+  thinkingExpanded.value = (event.currentTarget as HTMLDetailsElement).open;
+  if (thinkingExpanded.value) {
+    followingThinking.value = true;
+    void nextTick(() => syncThinkingViewport(true));
+  }
+}
+
+function jumpToLatestThinking() {
+  followingThinking.value = true;
+  syncThinkingViewport(true);
 }
 
 async function renderDiagrams(currentRevision: number) {
@@ -81,6 +121,16 @@ async function renderDiagrams(currentRevision: number) {
 }
 
 watch(() => [props.source, props.thinking, props.streaming], scheduleRender, { immediate: true });
+watch(() => props.thinkingOpen, (open) => { thinkingExpanded.value = open; });
+watch(() => props.streaming, (streaming, wasStreaming) => {
+  if (streaming) {
+    thinkingWasVisible = false;
+    followingThinking.value = true;
+    thinkingExpanded.value = props.thinkingOpen;
+  } else if (wasStreaming && props.thinkingAutoCollapse && props.thinking) {
+    thinkingExpanded.value = false;
+  }
+});
 onBeforeUnmount(() => {
   revision += 1;
   if (timer !== undefined) clearTimeout(timer);
@@ -90,9 +140,17 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="markdown-renderer" :class="{ 'is-streaming': streaming }">
-    <details v-if="thinking" class="thinking-panel" :open="thinkingOpen">
-      <summary><span>AI 思考过程</span><small>模型提供，可能不完整</small><i v-if="streaming"></i></summary>
-      <div ref="thinkingRoot" class="thinking-panel__content" v-html="renderedThinking"></div>
+    <details ref="thinkingDetails" v-if="thinking" class="thinking-panel" :open="thinkingExpanded" @toggle="onThinkingToggle">
+      <summary>
+        <i v-if="streaming" aria-hidden="true"></i>
+        <span class="thinking-panel__title"><b>AI 思考过程</b><small>模型提供，可能不完整 · {{ thinkingCharacters }} 字</small></span>
+        <span class="thinking-panel__state">{{ streaming ? '正在生成' : thinkingExpanded ? '收起' : '展开查看' }}</span>
+        <span class="thinking-panel__chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="thinking-panel__body">
+        <div ref="thinkingRoot" class="thinking-panel__content" aria-label="AI 思考过程" @scroll.passive="onThinkingScroll" v-html="renderedThinking"></div>
+        <button v-if="streaming && !followingThinking" type="button" class="thinking-panel__latest" @click="jumpToLatestThinking">回到最新 ↓</button>
+      </div>
     </details>
     <article ref="contentRoot" class="markdown-body" :aria-label="ariaLabel" v-html="rendered"></article>
   </div>
@@ -139,10 +197,19 @@ onBeforeUnmount(() => {
 .markdown-renderer :deep(.markdown-callout--warning) { border-color: #ead6a5; border-left-color: #bd841a; background: #fffaf0; }
 .markdown-renderer :deep(.markdown-callout--danger) { border-color: #ebc3b8; border-left-color: #b94e36; background: #fff5f1; }
 .markdown-renderer :deep(.thinking-block), .thinking-panel { margin: .8rem 0 1rem; border: 1px solid #cddcd7; border-radius: 12px; background: linear-gradient(135deg, #f5f9f7, #eef5f2); overflow: hidden; }
-.markdown-renderer :deep(.thinking-block summary), .thinking-panel > summary { display: flex; align-items: center; gap: .55rem; padding: .7rem .9rem; color: #2f5a4d; font-weight: 750; cursor: pointer; list-style: none; }
-.markdown-renderer :deep(.thinking-block summary small), .thinking-panel > summary small { color: #74857f; font-size: .75rem; font-weight: 500; }
-.markdown-renderer :deep(.thinking-block__content), .thinking-panel__content { padding: .15rem 1rem 1rem; color: #42564f; font-size: .92rem; }
-.thinking-panel > summary i { width: .45rem; height: .45rem; margin-left: auto; border-radius: 50%; background: #cf6a42; box-shadow: 0 0 0 .28rem rgba(207,106,66,.13); animation: pulse 1.1s ease-in-out infinite; }
+.markdown-renderer :deep(.thinking-block summary), .thinking-panel > summary { display: flex; align-items: center; gap: .65rem; min-height: 48px; padding: .55rem .8rem; color: #2f5a4d; font-weight: 750; cursor: pointer; list-style: none; user-select: none; }
+.markdown-renderer :deep(.thinking-block summary::-webkit-details-marker), .thinking-panel > summary::-webkit-details-marker { display: none; }
+.markdown-renderer :deep(.thinking-block summary small), .thinking-panel > summary small { color: #74857f; font-size: .7rem; font-weight: 500; }
+.markdown-renderer :deep(.thinking-block__content) { max-height: clamp(10rem, 32vh, 22rem); padding: .35rem 1rem 1rem; overflow: auto; color: #42564f; font-size: .92rem; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.thinking-panel__title { display: grid; min-width: 0; gap: .05rem; line-height: 1.35; }
+.thinking-panel__title b { font-size: .86rem; }
+.thinking-panel__state { margin-left: auto; color: #667a73; font-size: .68rem; font-weight: 650; white-space: nowrap; }
+.thinking-panel__chevron { width: .48rem; height: .48rem; border-right: 2px solid #668078; border-bottom: 2px solid #668078; transform: rotate(45deg); transition: transform .18s ease; }
+.thinking-panel[open] .thinking-panel__chevron { transform: rotate(225deg); }
+.thinking-panel > summary i { flex: 0 0 auto; width: .45rem; height: .45rem; border-radius: 50%; background: #cf6a42; box-shadow: 0 0 0 .28rem rgba(207,106,66,.13); animation: pulse 1.1s ease-in-out infinite; }
+.thinking-panel__body { position: relative; border-top: 1px solid rgba(150,177,168,.3); }
+.thinking-panel__content { max-height: clamp(10rem, 32vh, 22rem); padding: .75rem 1rem 1rem; overflow: auto; color: #42564f; font-size: .88rem; line-height: 1.7; scrollbar-gutter: stable; overscroll-behavior: contain; scroll-behavior: smooth; }
+.thinking-panel__latest { position: absolute; right: .8rem; bottom: .7rem; padding: .36rem .62rem; color: #fff; font-size: .68rem; font-weight: 700; background: #2f6858; border: 0; border-radius: 999px; box-shadow: 0 5px 16px rgba(38,86,71,.25); cursor: pointer; }
 .is-streaming .markdown-body:not(:empty)::after { content: ""; display: inline-block; width: .5em; height: 1em; margin-left: .2em; vertical-align: -.12em; background: #c85d37; border-radius: 2px; animation: pulse .85s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .25; } }
 @keyframes diagram-shimmer { to { background-position: -200% 0; } }

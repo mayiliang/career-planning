@@ -171,6 +171,7 @@ export async function learningRoutes(app: FastifyInstance) {
         controller.signal,
         (message) => send('progress', { message, elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) }),
         (delta) => send('thinking', { delta }),
+        () => send('reset', { reason: 'RETRY_FINAL_ANSWER' }),
       );
       send('done', { note });
     } catch (reason) {

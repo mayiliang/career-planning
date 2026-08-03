@@ -721,6 +721,9 @@ async function streamOrganizedNote(
     if (event === 'delta' && data.delta) {
       accumulated += data.delta;
       onDelta(data.delta, accumulated);
+    } else if (event === 'reset') {
+      accumulated = '';
+      onDelta('', '');
     } else if (event === 'thinking' && data.delta) {
       accumulatedThinking += data.delta;
       onThinking(data.delta, accumulatedThinking);

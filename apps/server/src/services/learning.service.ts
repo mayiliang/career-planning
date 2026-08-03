@@ -297,6 +297,7 @@ export async function organizePointNoteStream(
   signal?: AbortSignal,
   onStatus: (message: string) => void = () => {},
   onThinking: (delta: string) => void = () => {},
+  onReset: () => void = () => {},
 ) {
   const point = requirePoint(code, true);
   let note = getNoteByCode(code);
@@ -311,9 +312,23 @@ export async function organizePointNoteStream(
       generated = await requestOrganizedNoteStream(point, note.originalMd, onDelta, onStatus, onThinking, signal);
     } catch (reason) {
       if (signal?.aborted) throw new DOMException('已停止本次整理', 'AbortError');
-      generationNotice = reason instanceof Error ? reason.message : 'AI 暂时没有完成响应';
-      onStatus('AI 暂时不可用，正在生成不会覆盖原文的安全排版稿');
-      generated = localOrganizedDraft(point, note.originalMd, `${generationNotice}；本稿只做结构排版，没有执行 AI 事实核验。`);
+      if (isIncompleteAiFinalAnswer(reason)) {
+        try {
+          onReset();
+          onThinking('\n\n---\n\n最终正文未完整返回，正在重新生成最终整理稿。\n\n');
+          onStatus('思考已完成，但最终正文不完整；正在自动重新生成正文');
+          generated = await requestOrganizedNoteStream(point, note.originalMd, onDelta, onStatus, onThinking, signal, true);
+        } catch (retryReason) {
+          if (signal?.aborted) throw new DOMException('已停止本次整理', 'AbortError');
+          generationNotice = retryReason instanceof Error ? retryReason.message : 'AI 暂时没有完成最终正文';
+          onStatus('AI 最终正文仍未完成，正在生成明确标注的安全排版稿');
+          generated = localOrganizedDraft(point, note.originalMd, `${generationNotice}；本稿只做结构排版，没有执行 AI 事实核验。`);
+        }
+      } else {
+        generationNotice = reason instanceof Error ? reason.message : 'AI 暂时没有完成响应';
+        onStatus('AI 暂时不可用，正在生成明确标注的安全排版稿');
+        generated = localOrganizedDraft(point, note.originalMd, `${generationNotice}；本稿只做结构排版，没有执行 AI 事实核验。`);
+      }
     }
   } else {
     generationNotice = '当前未配置 AI，本稿只做结构排版，没有执行事实核验。';
@@ -497,6 +512,7 @@ async function requestOrganizedNoteStream(
   onStatus: (message: string) => void,
   onThinking: (delta: string) => void,
   externalSignal?: AbortSignal,
+  finalOnly = false,
 ) {
   const controller = new AbortController();
   const totalTimeoutMs = Math.max(config.DEEPSEEK_TIMEOUT_MS, 300_000);
@@ -514,13 +530,14 @@ async function requestOrganizedNoteStream(
       body: JSON.stringify({
         model: config.DEEPSEEK_MODEL,
         temperature: 0.1,
-        max_tokens: 6000,
+        max_tokens: 8000,
         response_format: { type: 'json_object' },
         stream: true,
-        ...aiThinkingRequestOption(),
+        ...(finalOnly ? { thinking: { type: 'disabled' } } : aiThinkingRequestOption()),
+        reasoning_effort: 'low',
         stream_options: { include_usage: true },
         messages: [
-          { role: 'system', content: '你是严谨的中文前端学习笔记编辑。只能依据用户原笔记和给定学习资料核对；不得把不确定内容伪装成事实。原文永不被你覆盖。只返回 JSON，并且必须先输出 organizedMarkdown 字段，以便界面流式展示。' },
+          { role: 'system', content: '你是严谨的中文前端学习笔记编辑。只能依据用户原笔记和给定学习资料核对；不得把不确定内容伪装成事实。原文永不被你覆盖。只返回 JSON，并且必须先输出 organizedMarkdown 字段，以便界面流式展示。如果模型支持独立思考通道，思考通道只写核对计划、证据和取舍，不要在思考通道撰写完整整理稿；完整整理稿必须出现在最终 content 的 organizedMarkdown 中。' },
           { role: 'user', content: `请整理下面知识点笔记。要求：使用规范 Markdown；结构清晰、中文表达、纠正有资料依据的错误、补齐资料明确覆盖的重要遗漏；任何无法由资料确认的内容放入 uncertainItems。\n\n知识点：${point.code} ${point.title}\n\n用户原笔记：\n${originalMd.slice(0, 12000)}\n\n学习资料：\n${point.studyMaterialMd?.slice(0, 12000) || ''}\n\n通过标准：\n${point.passCriteriaMd?.slice(0, 3000) || ''}\n\n严格按字段顺序返回：{"organizedMarkdown":"...","review":{"corrections":["..."],"additions":["..."],"uncertainItems":["..."],"sourceGrounded":true}}` },
         ],
       }),
@@ -553,8 +570,9 @@ async function requestOrganizedNoteStream(
       for (const frame of frames) {
         const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
         if (!data || data === '[DONE]') continue;
-        const packet = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string } }> };
-        const delta = packet.choices?.[0]?.delta;
+        const packet = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string }; finish_reason?: string | null }> };
+        const choice = packet.choices?.[0];
+        const delta = choice?.delta;
         const thinkingDelta = delta?.reasoning_content ?? delta?.reasoning ?? '';
         const contentDelta = delta?.content ?? '';
         if (thinkingDelta) {
@@ -572,6 +590,7 @@ async function requestOrganizedNoteStream(
           onDelta(partial.value.slice(emittedLength));
           emittedLength = partial.value.length;
         }
+        if (choice?.finish_reason === 'length') throw new Error('AI 最终正文达到输出上限，内容不完整');
       }
     }
     if (!content.trim()) throw new Error('AI 没有返回整理结果');
@@ -592,6 +611,11 @@ async function requestOrganizedNoteStream(
     if (idleTimer) clearInterval(idleTimer);
     externalSignal?.removeEventListener('abort', abort);
   }
+}
+
+function isIncompleteAiFinalAnswer(reason: unknown) {
+  if (reason instanceof SyntaxError) return true;
+  return reason instanceof Error && /没有返回整理结果|缺少正文|达到输出上限|结果过长|JSON|Unexpected end/i.test(reason.message);
 }
 
 /** 从仍在生成的 JSON 字符串字段中安全提取已完整解码的部分。 */
