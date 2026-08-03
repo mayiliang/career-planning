@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiClient, type KnowledgeNote, type NoteSortMode } from '@/api/client';
-import { renderMarkdown } from '@/utils/markdown';
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 
 const router = useRouter();
 const notes = ref<KnowledgeNote[]>([]);
@@ -68,7 +68,7 @@ onMounted(() => {
       <main v-if="selected" class="note-reader">
         <header><div><small>{{ selected.domainCode }} · {{ selected.domainTitle }}</small><h2>{{ selected.knowledgePointCode }} · {{ selected.pointTitle }}</h2><p>{{ selected.versions.length }} 个最近版本 · 当前阅读版本：{{ selected.activeVersionSource === 'ORGANIZED' ? 'AI 整理稿' : '原始笔记' }}</p></div><button @click="router.push(`/knowledge/${selected.knowledgePointCode}`)">回到知识点编辑 →</button></header>
         <nav><button :class="{ active: view === 'active' }" @click="view = 'active'">当前阅读版</button><button :class="{ active: view === 'original' }" @click="view = 'original'">原始笔记</button><button :disabled="!selected.organizedMd" :class="{ active: view === 'organized' }" @click="view = 'organized'">AI 整理稿</button></nav>
-        <article class="markdown" v-html="renderMarkdown(displayedMd)"></article>
+        <MarkdownRenderer class="markdown" :source="displayedMd" aria-label="笔记内容" />
         <section v-if="selected.aiReview" class="review"><h3>AI 核对记录</h3><p v-for="item in selected.aiReview.corrections" :key="item"><b>纠正</b>{{ item }}</p><p v-for="item in selected.aiReview.additions" :key="item"><b>补充</b>{{ item }}</p><p v-for="item in selected.aiReview.uncertainItems" :key="item"><b>待确认</b>{{ item }}</p></section>
         <details><summary>查看版本历史</summary><ol><li v-for="version in selected.versions" :key="version.id"><code>v{{ version.versionNo }}</code><strong>{{ { USER: '用户保存', MIGRATED: '旧版迁移', AI_DRAFT: 'AI 候选稿', AI_ACCEPTED: '用户采用 AI 稿' }[version.source] ?? version.source }}</strong><span>{{ version.changeSummary }}</span><time>{{ new Date(version.createdAt).toLocaleString('zh-CN') }}</time></li></ol></details>
       </main>

@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { apiClient, type LearningActivity, type PracticeAttempt } from '@/api/client';
 import { runBrowserCode, type BrowserExecutionStatus } from '@/utils/browser-code-runner';
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 
 const props = defineProps<{ pointCode: string; pointTitle: string; activity: LearningActivity }>();
 const emit = defineEmits<{ completed: [activityId: string] }>();
@@ -19,6 +20,7 @@ const message = ref('');
 const error = ref('');
 const validationProgress = ref('');
 const validationReceivedChars = ref(0);
+const validationThinking = ref('');
 let validationController: AbortController | null = null;
 
 onMounted(async () => {
@@ -83,6 +85,7 @@ async function validate() {
   message.value = '';
   validationProgress.value = '正在建立流式验证连接';
   validationReceivedChars.value = 0;
+  validationThinking.value = '';
   validationController = new AbortController();
   try {
     attempt.value = await apiClient.validatePracticeAttemptStream(
@@ -94,6 +97,7 @@ async function validate() {
         validationReceivedChars.value = receivedChars ?? validationReceivedChars.value;
       },
       validationController.signal,
+      (_delta, accumulated) => { validationThinking.value = accumulated; },
     );
     if (attempt.value.validation?.passed) {
       message.value = '练习已通过系统验证并保存为完成证据。';
@@ -150,6 +154,7 @@ onBeforeUnmount(() => validationController?.abort());
       <p v-else-if="validating" class="workspace-message stream-progress" aria-live="polite">
         <span class="stream-dot" />{{ validationProgress }}<small v-if="validationReceivedChars">已接收 {{ validationReceivedChars }} 字符</small>
       </p>
+      <MarkdownRenderer v-if="validationThinking" class="validation-thinking" source="" :thinking="validationThinking" :streaming="validating" :thinking-open="false" aria-label="AI 练习验证思考过程" />
 
       <article v-if="attempt?.validation" class="validation-result" :class="{ passed: attempt.validation.passed }">
         <header><strong>{{ attempt.validation.passed ? '验证通过' : '还需要补充' }}</strong><span>{{ attempt.validation.mode === 'AI' ? 'AI 依据资料验证' : '本地规则验证' }}</span></header>

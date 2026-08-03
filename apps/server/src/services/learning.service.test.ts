@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { executeImport } from './import.service.js';
 import { rawDb } from '../db/index.js';
 import { config } from '../config/index.js';
@@ -72,6 +72,44 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.join('')).toBe(result.organizedMd);
     expect(result.originalMd).toContain('第二版');
+  });
+
+  it('AI 上游被中止时自动安全降级，不向用户暴露英文 AbortError', async () => {
+    const previousKey = config.DEEPSEEK_API_KEY;
+    config.DEEPSEEK_API_KEY = 'test-key';
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new DOMException('This operation was aborted', 'AbortError'));
+    const statuses: string[] = [];
+    try {
+      const result = await organizePointNoteStream(code, () => {}, undefined, (status) => statuses.push(status));
+      expect(result.generationMode).toBe('LOCAL_FALLBACK');
+      expect(result.generationNotice).toContain('AI 请求被意外中止');
+      expect(result.organizedMd).not.toContain('This operation was aborted');
+      expect(statuses.at(-1)).toContain('安全排版稿');
+    } finally {
+      fetchMock.mockRestore();
+      config.DEEPSEEK_API_KEY = previousKey;
+    }
+  });
+
+  it('AI 支持推理流时会把 reasoning_content 与最终 Markdown 分开输出', async () => {
+    const previousKey = config.DEEPSEEK_API_KEY;
+    config.DEEPSEEK_API_KEY = 'test-key';
+    const frames = [
+      { choices: [{ delta: { reasoning_content: '先核对学习资料。' } }] },
+      { choices: [{ delta: { content: '{"organizedMarkdown":"# 整理稿","review":{"sourceGrounded":true}}' } }] },
+    ].map((packet) => `data: ${JSON.stringify(packet)}\n\n`).join('') + 'data: [DONE]\n\n';
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(frames, { status: 200 }));
+    const thinking: string[] = [];
+    const content: string[] = [];
+    try {
+      const result = await organizePointNoteStream(code, (delta) => content.push(delta), undefined, () => {}, (delta) => thinking.push(delta));
+      expect(thinking.join('')).toBe('先核对学习资料。');
+      expect(content.join('')).toBe('# 整理稿');
+      expect(result.generationMode).toBe('AI');
+    } finally {
+      fetchMock.mockRestore();
+      config.DEEPSEEK_API_KEY = previousKey;
+    }
   });
 
   it('能从尚未生成完的 JSON 中增量解码 Markdown 字符串', () => {

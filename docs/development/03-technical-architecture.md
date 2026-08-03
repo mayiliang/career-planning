@@ -1,210 +1,80 @@
 # 技术架构
 
-## 1. 总体架构
+更新时间：2026-08-03
 
-采用本地 Web 应用而不是纯浏览器应用。原因是 SQLite、文件备份、Markdown 导入和模型密钥都需要可信的本地服务边界。
-
-```mermaid
-flowchart LR
-  Browser["Vue 3 Web UI"] -->|REST / SSE| Server["Fastify Local Server"]
-  Server --> Domain["Domain Services"]
-  Domain --> DB[("SQLite")]
-  Domain --> Files["Local evidence / backup files"]
-  Domain --> Importer["Markdown / CSV importer"]
-  Domain --> AI["AI Provider Adapter"]
-  AI -->|HTTPS only when grading| DeepSeek["DeepSeek API"]
-  Domain --> Runner["Optional isolated code runner"]
-```
-
-核心约束：
-
-- 服务只监听 `127.0.0.1`，默认端口 `41730`。
-- 浏览器不能直接调用 DeepSeek，也不能获取 API Key。
-- 领域服务是唯一能修改知识状态的代码层。
-- AI 返回结果必须经过 schema、确定性规则和状态机校验。
-- 断网只影响 AI 评分和外部资料，其他功能保持可用。
-
-## 2. 推荐技术栈
-
-| 层 | 技术 | 说明 |
-| --- | --- | --- |
-| 工作区 | pnpm workspace | Web、Server、Shared 分包，单仓维护 |
-| Web | Vue 3、TypeScript、Vite | Composition API、`<script setup>` 与严格类型检查 |
-| UI | Element Plus、CSS Modules/CSS Variables | 复用成熟交互，但遵循自定义视觉 Token |
-| 路由 | Vue Router | 本地 SPA 路由、路由级懒加载与守卫 |
-| 请求 | `@tanstack/vue-query` | 服务端状态、缓存和失效管理 |
-| 本地 UI 状态 | Pinia | 只存布局、筛选、偏好和跨页面临时状态 |
-| Vue 工具 | VueUse | 复用可靠的组合式函数，不重复造轮子 |
-| 图谱 | `@vue-flow/core` | 节点、边、聚焦路径和自定义双环节点 |
-| 日历 | `@fullcalendar/vue3` | 月、周、日、议程和拖拽 |
-| Markdown | unified + remark/rehype | 安全渲染、代码块、任务清单 |
-| 编辑器 | CodeMirror 6 | Markdown 与代码答题 |
-| Server | Node.js、Fastify、TypeScript | REST、SSE、校验和本地文件操作 |
-| Schema | Zod | API、导入和 DeepSeek 输出统一校验 |
-| DB | SQLite + Drizzle ORM | 本地关系数据和迁移 |
-| 测试 | Vitest、Vue Test Utils、Testing Library Vue、Playwright | 单元、组件和关键路径 |
-
-不要引入 Vuex 或其他第二套状态方案。Vue Query 管服务端数据，组件 `ref/reactive/computed` 管本地状态，只有跨页面 UI 状态和用户偏好进入 Pinia。
-
-Vue 代码统一采用 Composition API 和 `<script setup lang="ts">`，不混用 Options API。可复用逻辑优先抽成 `useXxx` composable，但不得把业务对象、服务端缓存和组件状态全部塞进全局 store。
-
-## 3. 仓库结构
+## 1. 工作区
 
 ```text
-career-planning/
-├── apps/
-│   ├── web/
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── router/
-│   │   │   ├── stores/
-│   │   │   ├── composables/
-│   │   │   ├── features/
-│   │   │   │   ├── today/
-│   │   │   │   ├── knowledge/
-│   │   │   │   ├── learning/
-│   │   │   │   ├── assessment/
-│   │   │   │   ├── calendar/
-│   │   │   │   ├── jobs/
-│   │   │   │   └── settings/
-│   │   │   ├── components/
-│   │   │   ├── api/
-│   │   │   └── styles/
-│   │   └── tests/
-│   └── server/
-│       ├── src/
-│       │   ├── modules/
-│       │   │   ├── content/
-│       │   │   ├── knowledge/
-│       │   │   ├── assessment/
-│       │   │   ├── planning/
-│       │   │   ├── jobs/
-│       │   │   ├── ai/
-│       │   │   └── backup/
-│       │   ├── db/
-│       │   ├── http/
-│       │   └── config/
-│       └── tests/
-├── packages/
-│   ├── shared/              # DTO、Zod schema、枚举、状态机
-│   └── content-parser/      # Markdown/CSV 解析，无数据库依赖
-├── docs/                    # 现有内容与开发文档
-├── templates/               # 现有 CSV
-├── data/                    # 本地数据库、附件、备份；不提交 Git
-├── drizzle/
-├── pnpm-workspace.yaml
-└── package.json
+apps/web              Vue 3 浏览器应用
+apps/server           Fastify API、AI 适配、SQLite
+packages/shared       跨端 Schema 与类型
+packages/content-parser  Markdown/CSV 内容解析与门禁
+docs/                 产品、知识、部署和开发文档
+templates/            内容导入兼容模板
+data/                 用户数据库、备份和运行数据（不提交）
 ```
 
-## 4. 模块边界
+浏览器只调用 `/api/v1`，不读取 `.env.local`。Fastify 负责数据写入、AI 密钥、状态机和最终校验；SQLite 是单用户事务真源。
 
-### content
+## 2. Web 架构
 
-- 读取 Markdown/CSV。
-- 生成导入预览和 source hash。
-- 解析显式五阶段耗时；未填写时依据知识编号前缀生成稳定默认估算。
-- 不直接写用户状态。
+- Vue 3 Composition API + TypeScript strict。
+- Vue Router 负责功能页面；页面按路由分块。
+- Vue Query 管理服务端状态；局部编辑和流式缓冲使用组件状态。
+- Element Plus 提供基础组件，业务对话框和学习组件保持统一视觉。
+- `MarkdownRenderer.vue` 是所有 Markdown/AI 内容的唯一渲染入口。
+- 站内 JavaScript/TypeScript 练习由受限浏览器运行区执行；服务器绝不直接 `eval` 用户答案。
 
-### knowledge
+## 3. Markdown 渲染流水线
 
-- 管理领域、知识点、资料、关系、笔记和掌握状态。
-- 状态只能通过领域命令修改，不允许通用 PATCH 任意改状态。
-
-### assessment
-
-- 创建试卷、保存答案、运行确定性评分、请求 AI 评分。
-- 根据统一规则计算最终结果并发出领域事件。
-
-### planning
-
-- 管理计划事件、重复规则、打卡、日/周复盘。
-- 将知识点投入拆成 15 分钟粒度的资料、练习、项目和考核阶段，按每日容量重排；复测预算独立保留。
-- 接收考核模块发出的复测安排。
-
-### jobs
-
-- 管理岗位、求职活动、项目资产、技能缺口。
-- 技能缺口引用 knowledge ID，不复制知识点文本。
-
-### ai
-
-- 封装 Provider、重试、超时、结构化输出、token 使用和脱敏日志。
-- 不拥有业务状态，也不能直接访问数据库表。
-
-## 5. 数据流
-
-### 内容导入
-
-```mermaid
-sequenceDiagram
-  participant UI
-  participant Importer
-  participant DB
-  UI->>Importer: scan source files
-  Importer-->>UI: preview(new/update/conflict)
-  UI->>Importer: confirm import
-  Importer->>DB: transaction upsert content
-  Importer->>DB: preserve user progress and history
-  DB-->>UI: import summary
+```text
+Markdown 源文
+  -> think 标签规范化
+  -> markdown-it + 插件
+  -> KaTeX / Highlight HTML、Mermaid 占位
+  -> DOMPurify
+  -> Vue v-html
+  -> 按需 import Mermaid 并以 strict 模式生成 SVG
 ```
 
-耗时数据流遵循单一来源：Markdown 显式值优先，否则由 `packages/content-parser/src/effort.ts` 按知识编号前缀估算；导入后持久化到 `knowledge_points`，知识详情与计划服务只读取数据库值，不在前端重复估算。
+流式模式使用 72ms 合并窗口、`requestAnimationFrame`、120 项 Markdown LRU、40 项图形缓存和修订号防竞态。Mermaid 不进入初始同步依赖路径。详细协议见[现代 Markdown 与 AI 流式协议](10-modern-markdown-and-ai-streaming.md)。
 
-### AI 评分与状态更新
+## 4. Server 架构
 
-```mermaid
-sequenceDiagram
-  participant UI
-  participant Assessment
-  participant Runner
-  participant AI
-  participant Knowledge
-  UI->>Assessment: submit answers
-  Assessment->>Runner: grade objective/code tasks
-  Runner-->>Assessment: deterministic results
-  Assessment->>AI: rubric + answers + test results
-  AI-->>Assessment: validated JSON evaluation
-  Assessment->>Assessment: recompute final verdict
-  Assessment->>Knowledge: applyAssessmentResult(command)
-  Knowledge-->>UI: new status + audit event
+- 路由只负责参数校验、SSE 封装和响应映射。
+- 服务层负责学习、路线、笔记、练习、挑战、评分、打卡和备份规则。
+- Drizzle 管理主要表结构；部分高频/兼容逻辑使用参数化 SQLite 查询。
+- 内容导入以 Markdown 为知识真源，但保留用户字段和笔记版本。
+- AI Provider 只能返回建议和结构化评分；服务层用 Schema、确定性结果和状态机决定最终写入。
+
+## 5. AI 流
+
+```text
+浏览器发起任务 + AbortSignal
+  -> Fastify 建立 SSE
+  -> Provider 流式返回 reasoning/content
+  -> server 分发 thinking/delta/progress
+  -> browser 分别累积并节流渲染
+  -> server 完整解析与校验
+  -> 持久化最终候选稿/评分
+  -> done 返回最终 DTO
 ```
 
-## 6. 本地运行与配置
+网络中止、开始超时、空闲超时和总超时必须区分。笔记整理失败可生成明确标记的本地排版稿，但不能伪称完成事实核验。
 
-`.env.local` 示例：
+## 6. 安全
 
-```dotenv
-HOST=127.0.0.1
-PORT=41730
-DATABASE_URL=./data/career.db
-DATA_DIR=./data
-AI_PROVIDER=deepseek
-DEEPSEEK_API_KEY=
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-pro
-DEEPSEEK_TIMEOUT_MS=120000
-```
+- API 密钥只在服务端环境变量。
+- 所有 SQL 参数化；输入长度由 Zod 限制。
+- Markdown 关闭原始 HTML并清洗输出；外链和 Mermaid 使用安全策略。
+- AI 输入中的用户笔记、答案和执行输出一律视为不可信文本，系统提示明确防止其覆盖指令。
+- 生产服务器无内置公网身份认证，必须放到私网或认证网关之后。
+- 数据目录、备份、日志和 `.env.local` 按敏感个人数据处理。
 
-- `.env.local` 加入 `.gitignore`。
-- 启动时检查目录写权限、数据库迁移、内容版本和备份状态。
-- 开发环境 Web 使用 Vite proxy；生产本地模式由 Fastify 托管静态资源。
-- 提供 `pnpm dev`、`pnpm build`、`pnpm test`、`pnpm db:migrate`、`pnpm content:check`、`pnpm backup:create`。
+## 7. 构建与部署
 
-## 7. 安全边界
-
-- 仅允许同源 UI 访问本地 API；生产模式不启用宽泛 CORS。
-- 所有 API 输入、导入文件和模型输出通过 Zod 校验。
-- Markdown 禁止原始 HTML，链接添加安全属性，代码块只展示不执行。
-- 附件文件名与路径由服务生成，拒绝 `..`、绝对路径和符号链接逃逸。
-- 日志不记录 API Key、完整答卷、JD 私密信息或附件内容。
-- 模型输入中的 Markdown、JD、回答和项目内容都视为不可信文本，不能改变系统指令。
-- 代码执行只能进入隔离运行器；Node `vm`、`eval` 和普通 child process 不是安全沙箱。
-
-## 8. 性能要求
-
-- 首屏本地数据 1 秒内可交互。
-- 219 个知识点图谱首次布局小于 500ms；默认只展开当前领域。
-- 常用列表使用数据库分页和索引，不一次读取全部历史答卷。
-- 模型评分采用 SSE 展示阶段状态，但只在完整 JSON 校验后保存结果。
-- 数据库写入使用事务；日历拖拽采用乐观更新，失败时回滚并提示。
-- 学习计划生成必须保证前 60 周覆盖 219 个唯一知识点；模板计划从北京时间当天开始排布，每日容量上限 390 分钟，周一至周日连续推进，最后 4 周完成综合验证。
+- 开发：Node.js 20+、pnpm 11+，`pnpm dev`。
+- 生产：多阶段 Dockerfile；Node 22 Debian 运行 API，Nginx Alpine 提供静态 Web。
+- Compose 使用命名卷持久化 `/app/data`，Nginx 代理 `/api/` 并关闭 SSE 缓冲。
+- 健康检查：`GET /api/v1/system/health`。
+- 标准配置见[服务器支持与部署手册](../deployment/server-support.md)。

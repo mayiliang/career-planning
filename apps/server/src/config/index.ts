@@ -77,8 +77,18 @@ export const config = {
   DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
   DEEPSEEK_MODEL: process.env.DEEPSEEK_MODEL || 'deepseek-v4-pro',
   DEEPSEEK_TIMEOUT_MS: parseInt(process.env.DEEPSEEK_TIMEOUT_MS || '120000', 10),
+  DEEPSEEK_THINKING_MODE: (['auto', 'enabled', 'disabled'].includes(process.env.DEEPSEEK_THINKING_MODE || '')
+    ? process.env.DEEPSEEK_THINKING_MODE
+    : 'auto') as 'auto' | 'enabled' | 'disabled',
   isProduction: process.env.NODE_ENV === 'production',
 };
+
+/** auto 交由模型决定；enabled/disabled 用于兼容明确支持该参数的接口。 */
+export function aiThinkingRequestOption() {
+  return config.DEEPSEEK_THINKING_MODE === 'auto'
+    ? {}
+    : { thinking: { type: config.DEEPSEEK_THINKING_MODE } };
+}
 
 // AI 是否配置（用于健康检查，不暴露密钥）
 export function isAiConfigured(): boolean {

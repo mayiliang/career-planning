@@ -74,7 +74,7 @@ export interface GradeResult {
 
 export async function gradeAssessment(
   request: GradeRequest,
-  onProgress: (message: string, receivedChars?: number) => void = () => {},
+  onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
   signal?: AbortSignal,
 ): Promise<GradeResult> {
   onProgress('正在读取答卷、题目要求和对应学习资料');
@@ -335,7 +335,7 @@ export async function gradeAssessment(
  */
 export async function regradeAssessment(
   sessionId: string,
-  onProgress: (message: string, receivedChars?: number) => void = () => {},
+  onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
   signal?: AbortSignal,
 ): Promise<GradeResult> {
   const session = await db.query.assessmentSessions.findFirst({

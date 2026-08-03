@@ -1,80 +1,65 @@
-# Career Atlas：AI 时代高级前端成长工作台
+# Career Atlas
 
-更新时间：2026-07-29
+Career Atlas 是面向“AI 时代高级前端能力体系”的单用户、自主节奏学习工作台。系统内置 20 个能力领域和 219 个知识点，以中文学习资料、结构化笔记、站内练习、可选掌握挑战、知识路线与学习打卡构成闭环。
 
-Career Atlas 是一个本地优先的职业成长系统，把“AI 时代高级前端能力体系”落成可学习、可考核、可复测、可追踪的执行计划。
+## 当前学习方式
 
-当前基线：
+- 系统不规定每天必须学习什么。用户自行选择知识点，并可将一个知识点设为“当前学习”。
+- 阅读资料并完成笔记后，由用户点击“已学完”；这只表示完成学习，不等于已经掌握。
+- 掌握挑战完全可选，按 M1 初步理解、M2 引导应用、M3 已掌握、M4 稳定掌握逐级提供理论题、站内机试和渐进帮助。
+- 路线在存在唯一直接后续时自动连续推进；只有当前线路告一段落时才让用户选择新方向。暂缓和主动放弃是不同状态。
+- 每日打卡记录当天实际学习的知识点、时间和总结，不依赖固定日程。
+- 原始笔记始终保留。AI 只生成独立候选稿，支持流式正文和模型提供的思考过程，是否采用由用户决定。
 
-- 20 个能力领域、219 个唯一知识点。
-- 64 周、448 天计划；前 60 周覆盖全部知识点，后 4 周完成作品集、生产演练、综合项目和答辩。
-- 每日学习容量上限 390 分钟。系统按实际学习合同排期，不为凑时长虚增任务。
-- 每个知识点包含至少两份可交叉验证的资料，全部必读资料和独立首考题源均为中文；英文原文只能明确标注后用于版本核验。
-- 学习阶段为资料精读、机制练习、项目产出、严格首考、至少 7 天后的延迟复测。
-- 推荐阅读顺序与硬前置依赖分别建模，只有真实依赖会阻塞后续学习。
+Markdown 阅读与笔记支持表格、任务清单、脚注、标记、上下标、语法高亮、KaTeX 数学公式、Mermaid 图形、提示块和可折叠思考区。图形按需加载，流式预览使用节流、动画帧调度和有界缓存减少重复渲染。
 
-## 开始使用
+## 本地开发
 
-1. 阅读[64 周高级前端掌握计划](docs/plans/personalized-frontend-mastery-plan.md)。
-2. 查看[知识库入口与分层路线](docs/knowledge/knowledge-base/README.md)。
-3. 按[学习资料与耗时指南](docs/knowledge/learning-resource-guide.md)执行当天知识点。
-4. 在[项目经验资产库](docs/knowledge/project-assets.md)保存代码、测试、ADR、性能和部署证据。
-5. 求职阶段使用[杭州前端岗位追踪表](templates/hangzhou-frontend-jobs-template.csv)记录岗位差距。
-
-## 启动
+要求 Node.js 20 或更高版本、pnpm 11 或更高版本；推荐 Node.js 22 LTS 和仓库声明的 pnpm 11.15.1。
 
 ```bash
-cp .env.example .env.local
-pnpm install
+pnpm install --frozen-lockfile
+copy .env.example .env.local
 pnpm dev
 ```
 
-网站地址为 `http://127.0.0.1:41731`，本地 API 为 `http://127.0.0.1:41730`。首次启动会自动迁移数据库、导入 219 个知识点、生成 64 周计划并创建当天备份。
+打开 `http://127.0.0.1:41731`，API 默认为 `http://127.0.0.1:41730`。未配置 AI 密钥时，资料阅读、笔记、练习、路线和打卡仍可使用；AI 整理、动态提示与自动判题会安全降级或不可用。
 
-DeepSeek 自动评分需要在 `.env.local` 配置 `DEEPSEEK_API_KEY`。未配置时仍可学习、记录和答题，但不能自动判卷。
+Linux/macOS 可用 `cp .env.example .env.local`。不要提交 `.env.local`，也不要把 API 密钥写入前端代码。
 
-## Docker
+## 生产部署
+
+推荐使用 Docker Compose：
 
 ```bash
-docker compose up --build -d
+docker compose up -d --build
+docker compose ps
 ```
 
-本机访问 `http://127.0.0.1:41731`；可信内网设备可使用 `http://<本机内网 IP>:41731`。SQLite 数据和自动备份保存在 Docker 具名卷 `career-atlas-data` 中。不要执行 `docker compose down -v`，除非确定要删除数据卷。
+默认网站端口是 `41731`，API 只映射到服务器回环地址。完整的操作系统、硬件配置、反向代理、TLS、数据卷、备份、升级和安全要求见[服务器支持与部署手册](docs/deployment/server-support.md)。本系统没有多用户认证，不应直接暴露到公网；远程访问应放在 VPN、零信任访问网关或带身份认证的反向代理之后。
 
-知识体系重大更新后，可在“系统与数据 -> 学习进度重置”中清空学习证据并按最新版 64 周模板重建日历；岗位、项目资产和备份会保留。
-
-## 内容质量门禁
+## 质量检查
 
 ```bash
 pnpm content:check
 pnpm test
+pnpm lint
 pnpm build
+pnpm test:e2e
 ```
 
-内容门禁会验证领域和知识点数量、编号唯一性、资料数量、中文必读资料覆盖、中文讲义逐点对应、每条英文原文的可选核验标记、英文不得进入首考资料定位题、考核题源、耗时合同、陈旧链接黑名单和 Windows CRLF 兼容。服务端测试会验证导入、硬前置方向、64 周排期、每日容量和延迟复测。
+内容链接检查会访问网络，可单独运行 `pnpm content:links`。
 
-## 文档地图
+## 文档入口
 
-| 文档 | 作用 |
+| 文档 | 用途 |
 | --- | --- |
-| [64 周高级前端掌握计划](docs/plans/personalized-frontend-mastery-plan.md) | 周期、阶段、每日节奏与毕业闸门 |
-| [知识库入口](docs/knowledge/knowledge-base/README.md) | 20 个领域、219 个知识点和分层路线 |
-| [前端知识体系说明](docs/knowledge/frontend-knowledge-system.md) | 能力边界、关联方式和掌握定义 |
-| [学习资料与耗时指南](docs/knowledge/learning-resource-guide.md) | 中文资料优先级、证据协议和耗时口径 |
-| [高级与前沿主题中文核心讲义](docs/knowledge/chinese-guides/advanced-topics.md) | 无稳定中文版主题的中文概念框架、工程边界和实践验证 |
-| [核心与生态主题中文伴读](docs/knowledge/chinese-guides/core-and-ecosystem-topics.md) | 保留英文标准或项目原文知识点的逐点中文必读内容 |
-| [覆盖闭环审计](docs/knowledge/ai-era-frontend-gap-audit.md) | 原缺口到新知识点的映射和维护规则 |
-| [64 周执行蓝图](templates/learning-tracker-template.csv) | 64 周 × 7 天的计划模板 |
-| [每日 6 小时 30 分钟模板](templates/daily-6h30m-learning-schedule.csv) | 390 分钟容量的参考时间块 |
-| [开发文档](docs/development/README.md) | 产品、架构、数据、测试和运维说明 |
+| [自主学习路线](docs/plans/self-paced-learning-route.md) | 能力主线、分支选择和完成标准 |
+| [知识体系总览](docs/knowledge/frontend-knowledge-system.md) | 20 个领域与能力边界 |
+| [学习资料使用规则](docs/knowledge/learning-resource-guide.md) | 中文资料、笔记、练习与掌握证据规则 |
+| [产品与开发文档](docs/development/README.md) | 产品决策、架构、API、AI 与验收 |
+| [现代 Markdown 与 AI 流式协议](docs/development/10-modern-markdown-and-ai-streaming.md) | 语法、thinking、性能和安全设计 |
+| [服务器支持与部署手册](docs/deployment/server-support.md) | 生产环境标准 |
+| [Vue 实现学习指南](docs/vue-learning-guide.md) | 结合真实代码学习 Vue 3 项目开发 |
 
-## 能力范围
-
-本体系的“完整”是指覆盖高级前端在 AI 时代应具备的稳定能力，而不是罗列所有框架和厂商产品。它同时包含：
-
-- 核心必修：Web 平台、JavaScript/TypeScript、框架、业务建模、工程质量、安全、性能、数据与交付。
-- 岗位专精：中后台、H5/Hybrid、组件平台、实时协作、图形可视化、国际化、实验与增长。
-- AI 原生：AI 产品判断、流式交互、RAG、会话与长期记忆、生成式多媒体、Agent、MCP 2026、A2A、AG-UI/A2UI/MCP Apps、本地推理、WebNN、评估、安全、隐私和研发治理。
-- 高级影响力：架构决策、渐进迁移、成本与可靠性、后端/云基础设施素养、技术领导力和职业表达。
-
-每完成一个知识点，必须留下可复核证据；“读过”不等于“掌握”。
+用户数据默认位于 `data/` 或 Docker 命名卷 `career-atlas-data`。升级、重装或重建容器前先备份数据；删除代码文档不会删除 SQLite 中的学习记录和笔记。

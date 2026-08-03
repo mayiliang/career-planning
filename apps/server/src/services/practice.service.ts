@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { rawDb } from '../db/index.js';
-import { config } from '../config/index.js';
+import { aiThinkingRequestOption, config } from '../config/index.js';
 import { getKnowledgePointByCode } from './knowledge.service.js';
 
 export interface PracticeAttemptInput {
@@ -77,7 +77,7 @@ export async function validatePracticeAttempt(
   code: string,
   activityId: string,
   input: PracticeAttemptInput,
-  onProgress: (message: string, receivedChars?: number) => void = () => {},
+  onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
   signal?: AbortSignal,
 ) {
   onProgress('正在读取知识点、任务契约和提交内容');
@@ -140,7 +140,7 @@ async function requestAiPracticeReview(
   point: NonNullable<Awaited<ReturnType<typeof getKnowledgePointByCode>>>,
   activity: NonNullable<NonNullable<Awaited<ReturnType<typeof getKnowledgePointByCode>>>['learningActivities'][number]>,
   input: PracticeAttemptInput,
-  onProgress: (message: string, receivedChars?: number) => void,
+  onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void,
   signal?: AbortSignal,
 ): Promise<PracticeReview | null> {
   if (!config.DEEPSEEK_API_KEY) return null;
@@ -153,7 +153,7 @@ async function requestAiPracticeReview(
       method: 'POST', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.DEEPSEEK_API_KEY}` },
       body: JSON.stringify({
-        model: config.DEEPSEEK_MODEL, temperature: 0.1, max_tokens: 1200, thinking: { type: 'disabled' }, stream: true,
+        model: config.DEEPSEEK_MODEL, temperature: 0.1, max_tokens: 1200, ...aiThinkingRequestOption(), stream: true,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: '你是前端学习练习验证器。只依据给定学习资料、任务契约和通过标准验证提交，不补充资料外要求。只输出 JSON。' },
@@ -183,8 +183,11 @@ async function requestAiPracticeReview(
       const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
       if (!data || data === '[DONE]') return;
       try {
-        const payload = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
-        const delta = payload.choices?.[0]?.delta?.content;
+        const payload = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string } }> };
+        const packetDelta = payload.choices?.[0]?.delta;
+        const thinkingDelta = packetDelta?.reasoning_content ?? packetDelta?.reasoning;
+        if (thinkingDelta) onProgress('AI 正在分析提交与资料依据', undefined, thinkingDelta);
+        const delta = packetDelta?.content;
         if (delta) {
           content += delta;
           onProgress('AI 正在逐项核对资料依据与提交证据', content.length);

@@ -99,7 +99,7 @@ export interface AIProvider {
   // 执行评分
   grade(
     request: GradingRequest,
-    onProgress?: (message: string, receivedChars?: number) => void,
+    onProgress?: (message: string, receivedChars?: number, thinkingDelta?: string) => void,
     signal?: AbortSignal,
   ): Promise<AIResponse>;
   

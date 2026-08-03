@@ -313,7 +313,9 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       send('start', { id });
       const grade = await gradeAssessment(
         { sessionId: id, provider: 'deepseek' },
-        (message, receivedChars) => send('progress', { message, receivedChars }),
+        (message, receivedChars, thinkingDelta) => thinkingDelta
+          ? send('thinking', { delta: thinkingDelta })
+          : send('progress', { message, receivedChars }),
         controller.signal,
       );
       send('done', { grade });
@@ -372,7 +374,9 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       send('start', { id });
       const grade = await regradeAssessment(
         id,
-        (message, receivedChars) => send('progress', { message, receivedChars }),
+        (message, receivedChars, thinkingDelta) => thinkingDelta
+          ? send('thinking', { delta: thinkingDelta })
+          : send('progress', { message, receivedChars }),
         controller.signal,
       );
       send('done', { grade });
@@ -411,7 +415,14 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
     try {
       send('start', { questionId, kind: body.kind });
-      const hint = await revealAssessmentHintStream(id, questionId, body.kind, (delta) => send('delta', { delta }), controller.signal);
+      const hint = await revealAssessmentHintStream(
+        id,
+        questionId,
+        body.kind,
+        (delta) => send('delta', { delta }),
+        controller.signal,
+        (delta) => send('thinking', { delta }),
+      );
       send('done', { hint });
     } catch (reason) {
       if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '无法提供提示' });

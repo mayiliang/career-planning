@@ -1,98 +1,55 @@
-# AI 时代高级前端知识掌握清单
+# AI 时代高级前端知识库
 
-更新时间：2026-07-29
+更新时间：2026-08-03
 
-这里是职业成长计划的执行核心。体系包含 **20 个领域、219 个唯一知识点**，覆盖 Web 基础、Git 与协作、双框架应用、算法和前端大数据、复杂编辑器与输入法、本地优先数据与同步、数据与实时协作、工程质量、前端平台工程、Node HTTP/BFF 生产服务、嵌入式 SDK 与第三方宿主、部署云基础、跨平台运行时、专业媒体、AI 应用与长期记忆、Agent/MCP/A2A、Agent UI 协议、AI 浏览器调试、WebMCP、浏览器本地 AI、通用 WebAssembly、隐私安全、生成式媒体、可持续工程、产品实验、架构领导力和职业影响力。
+本目录是 20 个领域、219 个知识点的结构化内容真源。每个知识点有稳定编号、主题边界、中文必读资料、必要的一手版本核验、通过标准和适合自身特性的挑战说明。
 
-每个知识点都有稳定编号、中文必读资料、可交叉验证的一手依据、覆盖范围、严格考核、通过标准及“资料精读、机制练习、项目产出、严格首考、7 天复测”五阶段耗时。全部必读资料和独立首考题源均须中文；缺少稳定官方中文版时，由[高级与前沿主题中文核心讲义](../chinese-guides/advanced-topics.md)或[核心与生态主题中文伴读](../chinese-guides/core-and-ecosystem-topics.md)逐点补足。英文原文只允许明确标注后用于版本核验，不属于必读资料，也不得单独命题。完整规则见[学习资料与耗时使用指南](../learning-resource-guide.md)。
+## 文件索引
 
-## 完成状态
-
-- `[ ] 自评已掌握`：已完成资料与实践，不看资料也能解释机制、适用条件和失败边界。
-- `[ ] 已通过严格考核`：首次考核通过，至少 7 天后的闭卷复测仍通过，并留下可追溯证据。
-- “工作中用过”“看懂了”“AI 帮我写出来了”都不能直接视为掌握。
-- 证据可以是答卷、测试、代码、ADR、性能/安全报告、部署记录或录屏。
-
-## 20 个知识领域
-
-- [ ] [01 JavaScript、HTML/CSS、浏览器、网络与安全](01-javascript-browser.md)
-- [ ] [02 TypeScript 与业务类型建模](02-typescript.md)
-- [ ] [03 React 原理、状态、Hooks 与性能](03-react.md)
-- [ ] [04 Umi/Max、Ant Design 与中后台应用](04-umi-antd.md)
-- [ ] [05 业务建模、权限与接口契约](05-business-modeling.md)
-- [ ] [06 Git、工程化、测试、CI/CD 与发布质量](06-engineering-quality.md)
-- [ ] [07 Web 性能、H5 与 Hybrid](07-performance-h5.md)
-- [ ] [08 组件库、设计系统、体验与多运行时平台](08-components-platform.md)
-- [ ] [09 Node.js、OpenAPI、MCP 与 AI 工具化](09-node-api-ai.md)
-- [ ] [10 项目表达、技术方案与职业影响力](10-career-expression.md)
-- [ ] [11 Vue 3 与 Nuxt 项目开发](11-vue-development.md)
-- [ ] [12 AI 原生前端与模型应用工程](12-ai-native-frontend.md)
-- [ ] [13 Agent、MCP 2026 与 AI 工具协议](13-agents-mcp.md)
-- [ ] [14 浏览器 AI、本地推理与新 Web 平台](14-browser-ai-local-inference.md)
-- [ ] [15 AI 辅助研发、评审与工程治理](15-ai-assisted-engineering.md)
-- [ ] [16 Linux、Docker 与前端部署交付](16-linux-docker-deployment.md)
-- [ ] [17 现代渲染、数据层、实时协作与离线](17-rendering-data-realtime.md)
-- [ ] [18 图形可视化、产品实验、SEO、兼容性与国际化](18-graphics-experiment-i18n.md)
-- [ ] [19 身份、隐私、AI 产品判断与安全治理](19-identity-privacy-ai-safety.md)
-- [ ] [20 架构领导力、演进治理与后端基础设施素养](20-architecture-leadership-infrastructure.md)
-
-领域完成条件：文件内所有知识点通过首次考核和延迟复测，并完成领域综合考核。
-
-## 能力层级
-
-- 核心必修：01、02、03 或 11 至少一套主框架、05、06、07、09、12、15、17、19、20；其中 Node HTTP/BFF（`NODE-04`）、本地优先数据（`LOCALFIRST-01`）、前端平台工程（`DX-01`）和 AI 浏览器运行时证据调试（`AIDEV-11`）承担生产闭环。
-- 岗位必修：根据目标岗位选择 React/Vue、Umi/Ant Design、组件平台、H5/Hybrid、Node/BFF 等方向；富文本/AI 创作深化 `EDITOR-01`，对外组件/SDK 深化 `EMBED-01`，音视频业务深化 `MEDIA-01`。
-- 前沿专项：13、14 中的 MCP、Agent、浏览器本地推理、通用 WebAssembly（`WASM-01`）与 WebMCP。必须学习兼容和降级，不把实验 API 当作通用生产能力。
-- 第二框架和企业技术栈用于扩展边界，不应挤占核心工程、数据、安全和 AI 产品能力。
-
-“完整体系”指截至更新时间的能力地图覆盖完整，不意味着每个求职者必须以相同深度掌握全部专项。系统的完整路线会安排 219 点；个人可以通过岗位画像调整专项深度，但不能跳过其硬前置。
-
-## 推荐使用流程
-
-1. 从 64 周计划读取本周知识和到期复测；推荐路线只是学习编排，只有图谱中显式标为 `PREREQUISITE` 的关系才是硬前置。
-2. 精读资料并完成最小实验，写出机制、边界、反例和仍待验证的问题。
-3. 将知识迁移到真实项目，再完成严格首考。
-4. 使用[考核记录模板](assessment-record-template.md)保留逐题依据。未通过时进入补学，不修改评分标准。
-5. 首次通过至少 7 天后闭卷复测；复测通过才标为严格掌握。
-6. 每月随机抽取已掌握知识点复测；失败则进入重新学习状态。
-
-命题必须遵守资料强关联原则：考核内容应能由列出资料直接支持或一跳推导；若考核要求超出资料，先补资料再出题。
-
-## 时间与计划原则
-
-- 完整路线为 **64 周**：前 60 周覆盖全部知识合同，后 4 周用于证据整合、生产演练、综合项目和毕业答辩。
-- 每日学习容量上限为 390 分钟。计划不再为了“填满一天”伪造项目时间，也不通过压缩考核来赶进度。
-- 首考完成后，复测自动进入至少 7 天后的到期队列，并优先于新知识。
-- 219 点的显式学习与复测预算为 137,175 分钟；前 60 周容量为 163,800 分钟，基准利用率约 83.7%，保留 26,625 分钟用于补弱、请假顺延、复杂项目和版本变化。
-- 实际耗时用于后续校准；超载任务顺延，不降低通过标准。
-
-## 64 周路线概览
-
-| 周次 | 阶段 |
+| 文件 | 领域 |
 | --- | --- |
-| 1–4 | JavaScript、复杂度、常用算法、异步与浏览器机制 |
-| 5–8 | 语义、可访问性、CSS、Web Components、网络与安全 |
-| 9–12 | TypeScript、身份隐私、Git、系统调试与 Node.js HTTP/BFF |
-| 13–16 | 构建、依赖、测试、API 契约兼容、门禁、AI 规格验证与前端平台 Golden Path |
-| 17–20 | React、Vue、渲染、状态与性能 |
-| 21–24 | Vue 工程化、业务建模、权限与中后台 |
-| 25–28 | 接口契约、SSR、Server State、本地优先同步、实时协作、离线、安装与推送 |
-| 29–32 | 组件 API、设计系统、UX、平台化、嵌入式 SDK、扩展与桌面运行时 |
-| 33–36 | 供应链、Linux、Docker、CI/CD、可观测交付与平台开发体验 |
-| 37–40 | 性能、H5/Hybrid、专业 Web 音视频、跨平台原生、数据库、队列、对象存储与云 |
-| 41–44 | API/MCP、AI 产品判断、安全、流式 UI、会话状态、长期记忆与 RAG |
-| 45–48 | AG-UI/A2UI/MCP Apps、实时语音、生成式媒体、分层评估与 Agent |
-| 49–52 | A2A、Agent 安全与可观测、通用 WebAssembly、WebGPU/WebNN、WebMCP |
-| 53–56 | AI 辅助研发、浏览器运行时证据调试、图形可视化、埋点与实验 |
-| 57–60 | Temporal、AI 搜索、兼容、可持续工程、架构领导与职业表达 |
-| 61–64 | 作品集、生产演练、综合项目与毕业闸门 |
+| `01-javascript-browser.md` | JavaScript、浏览器与计算机基础 |
+| `02-typescript.md` | TypeScript |
+| `03-react.md` | React |
+| `04-umi-antd.md` | 中后台框架与组件生态 |
+| `05-business-modeling.md` | 复杂业务建模 |
+| `06-engineering-quality.md` | 工程、测试、Git 与质量 |
+| `07-performance-h5.md` | 性能、H5 与 Hybrid |
+| `08-components-platform.md` | 组件、设计系统与多运行时 |
+| `09-node-api-ai.md` | Node、API、数据与 AI 基础设施 |
+| `10-career-expression.md` | 项目证据、职业表达与影响力 |
+| `11-vue-development.md` | Vue 3 工程开发 |
+| `12-ai-native-frontend.md` | AI 原生前端应用 |
+| `13-agents-mcp.md` | Agent、MCP 与协议 |
+| `14-browser-ai-local-inference.md` | 浏览器 AI、本地推理与加速 |
+| `15-ai-assisted-engineering.md` | AI 辅助研发与平台工程 |
+| `16-linux-docker-deployment.md` | Linux、容器与生产交付 |
+| `17-rendering-data-realtime.md` | 渲染、数据、实时与离线 |
+| `18-graphics-experiment-i18n.md` | 图形、实验、搜索与国际化 |
+| `19-identity-privacy-ai-safety.md` | 身份、隐私、AI 安全与治理 |
+| `20-architecture-leadership-infrastructure.md` | 架构领导力与后端/云素养 |
 
-详细每日模板见 [`learning-tracker-template.csv`](../../../templates/learning-tracker-template.csv)。
+## 使用规则
 
-## 向 Codex 发起考核
+1. 由系统推荐或用户选择一个知识点作为当前学习点。
+2. 阅读资料并完成 Markdown 笔记后，由用户标记“已学完”。
+3. 有明确练习契约时可以在站内实践；它是理解工具，不是所有知识点的强制阶段。
+4. 掌握挑战完全可选。M3 表示独立掌握，M4 表示延迟变式后的稳定掌握。
+5. 唯一直接后续自动推进；连续线路结束才选择新方向。
+6. 每日打卡记录实际学习事实，不从固定周计划生成任务。
 
-```text
-请严格考核知识点 TS-03。先不要给答案，也不要提示。
-按统一考核规则逐题进行资料定位、机制解释、最小产出、
-受限排错和学习复述，最后按评分表打分并指出否决项。
-```
+## 资料规则
+
+- 必读和独立挑战题源优先使用官方中文或高质量中文文档。
+- 缺少稳定中文版时，由 `chinese-guides/` 中逐点中文讲义补足定义、机制、边界、示例与验证方法。
+- 英文一手资料只能明确标为“版本核验”，不得成为用户必须阅读才能回答的隐藏题源。
+- 提示必须能定位到具体资料和章节；需要举一反三时必须给出系统整理的依据与推导过程。
+
+## 状态规则
+
+- `learningState`：未开始、学习中、已学完、暂缓。
+- `masteryLevel`：M0～M4，与学习状态独立。
+- 只有显式 `PREREQUISITE` 是硬前置；文档相邻或推荐顺序不自动变成阻塞关系。
+- 未选择的支线仍可再次出现；暂缓/放弃只有用户明确操作才成立。
+
+详细规则见[学习资料与练习指南](../learning-resource-guide.md)和[自主学习路线](../../plans/self-paced-learning-route.md)。

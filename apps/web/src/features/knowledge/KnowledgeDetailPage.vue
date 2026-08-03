@@ -2,8 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiClient, type KnowledgePointDetail, type KnowledgeNote, type LearningBranch } from '@/api/client';
-import { renderMarkdown } from '@/utils/markdown';
 import BaseDialog from '@/components/BaseDialog.vue';
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import PracticeWorkspace from '@/components/PracticeWorkspace.vue';
 
 const route = useRoute();
@@ -16,6 +16,9 @@ const loading = ref(true);
 const saving = ref(false);
 const organizing = ref(false);
 const streamingOrganizedMd = ref('');
+const streamingThinking = ref('');
+const organizeProgress = ref('');
+const organizeElapsedSeconds = ref(0);
 const notePreviewMode = ref<'split' | 'edit' | 'preview'>('split');
 let organizeController: AbortController | null = null;
 const message = ref('');
@@ -84,18 +87,26 @@ async function organizeNote() {
   await saveNote(false);
   organizing.value = true;
   streamingOrganizedMd.value = '';
+  streamingThinking.value = '';
+  organizeProgress.value = '正在保存原始笔记并准备整理';
+  organizeElapsedSeconds.value = 0;
   organizeController = new AbortController();
   error.value = '';
   try {
     note.value = await apiClient.organizeNoteStream(code.value, (_delta, accumulated) => {
       streamingOrganizedMd.value = accumulated;
-    }, organizeController.signal);
+    }, organizeController.signal, (progress, elapsedSeconds) => {
+      organizeProgress.value = progress;
+      organizeElapsedSeconds.value = elapsedSeconds;
+    }, (_delta, accumulated) => {
+      streamingThinking.value = accumulated;
+    });
     streamingOrganizedMd.value = '';
     message.value = note.value.generationMode === 'LOCAL_FALLBACK'
-      ? '当前未配置 AI，已生成安全排版稿；尚未执行事实核验'
+      ? `已生成安全排版稿；${note.value.generationNotice ?? '尚未执行 AI 事实核验'}`
       : 'AI 候选稿已生成。原始笔记未被覆盖，请核对后再接受';
   } catch (reason) {
-    if (reason instanceof DOMException && reason.name === 'AbortError') message.value = '已停止本次整理，尚未完成的内容没有保存';
+    if ((reason instanceof DOMException && reason.name === 'AbortError') || (reason instanceof Error && /abort|中止|停止/i.test(reason.message))) message.value = '已停止本次整理，尚未完成的内容没有保存';
     else error.value = reason instanceof Error ? reason.message : 'AI 整理失败';
   } finally { organizing.value = false; organizeController = null; }
 }
@@ -220,7 +231,7 @@ onBeforeUnmount(() => organizeController?.abort());
       </nav>
 
       <main v-if="activeTab === 'materials'" class="materials-layout">
-        <article class="content-card material-reader markdown-content" v-html="renderMarkdown(point.studyMaterialMd)"></article>
+        <MarkdownRenderer class="content-card material-reader markdown-content" :source="point.studyMaterialMd" aria-label="学习资料" />
         <aside class="content-card activity-panel" :class="{ expanded: activePracticeId }">
           <header><small>LEARNING ACTIVITIES</small><h2>学完资料后，可以这样练</h2><p>每一项都给出实际任务，不再用没有入口的“项目时间”占位。</p></header>
           <article v-for="(activity, index) in point.learningActivities" :key="activity.id" :class="{ required: !activity.optional }">
@@ -245,14 +256,14 @@ onBeforeUnmount(() => organizeController?.abort());
           </nav>
           <div class="markdown-workbench" :class="`mode-${notePreviewMode}`">
             <label v-show="notePreviewMode !== 'preview'" class="markdown-source"><span>Markdown 源文本</span><textarea v-model="noteDraft" aria-label="Markdown 原始笔记" placeholder="# 标题&#10;&#10;记录理解、疑问、代码和示例……"></textarea></label>
-            <section v-show="notePreviewMode !== 'edit'" class="markdown-preview" aria-label="Markdown 实时预览"><span>实时预览</span><article v-if="noteDraft.trim()" class="markdown-content" v-html="renderMarkdown(noteDraft)"></article><p v-else>开始输入后，这里会实时显示标题、列表、表格、引用、链接和代码块。</p></section>
+            <section v-show="notePreviewMode !== 'edit'" class="markdown-preview" aria-label="Markdown 实时预览"><span>实时预览</span><MarkdownRenderer v-if="noteDraft.trim()" class="markdown-content" :source="noteDraft" :streaming="true" aria-label="笔记实时预览" /><p v-else>开始输入后，这里会实时显示标题、表格、公式、图形、任务清单、引用、链接和代码块。</p></section>
           </div>
-          <footer><span>支持标题、列表、任务清单、表格、引用、链接、粗体、行内代码和代码块</span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '保存原始笔记' }}</button><button v-if="organizing" @click="cancelOrganization">停止生成</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? `AI 流式整理中 · ${streamingOrganizedMd.length} 字` : '用 AI 整理并核对' }}</button></footer>
+          <footer><span>支持标题、列表、任务清单、表格、引用、链接、粗体、行内代码和代码块</span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '保存原始笔记' }}</button><button v-if="organizing" @click="cancelOrganization">停止生成</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? `AI 整理中 · ${organizeElapsedSeconds} 秒 · ${streamingOrganizedMd.length} 字` : '用 AI 整理并核对' }}</button></footer>
         </section>
         <section class="content-card organized">
           <header><div><small>AI 整理候选稿</small><h2>{{ organizing ? '正在逐段生成整理稿' : '核对后由你决定是否采用' }}</h2></div><button v-if="note?.organizedMd && !organizing" @click="acceptOrganized">采用为阅读版本</button></header>
-          <div v-if="organizing" class="stream-state"><i></i><span>内容正在实时到达；离开页面或点击停止不会覆盖原笔记</span></div>
-          <div v-if="organizedDisplayMd" class="markdown-content streaming-markdown" :class="{ live: organizing }" v-html="renderMarkdown(organizedDisplayMd)"></div>
+          <div v-if="organizing" class="stream-state" aria-live="polite"><i></i><span><b>{{ organizeProgress }}</b><small>{{ organizeElapsedSeconds }} 秒 · 已接收 {{ streamingOrganizedMd.length }} 字；连接会持续报告状态，超时会安全降级且不覆盖原笔记</small></span></div>
+          <MarkdownRenderer v-if="organizedDisplayMd || streamingThinking" class="markdown-content streaming-markdown" :class="{ live: organizing }" :source="organizedDisplayMd" :thinking="streamingThinking" :streaming="organizing" aria-label="AI 整理候选稿" />
           <p v-else class="empty">保存原始笔记后，可让 AI 按学习资料检查正确性、遗漏和结构。它只会生成新稿，不覆盖你的文字。</p>
           <div v-if="note?.aiReview && !organizing" class="ai-review">
             <p v-for="item in note.aiReview.corrections" :key="item"><b>纠正</b>{{ item }}</p>
@@ -278,7 +289,7 @@ onBeforeUnmount(() => organizeController?.abort());
             <button v-if="point.challengeProfile !== 'THEORY_ONLY'" :class="{ active: challengeMode === 'MIXED' }" @click="challengeMode = 'MIXED'">理论 + 实战</button>
           </div>
           <button class="primary launch" :disabled="point.learningState !== 'LEARNED' || launching" @click="launchChallenge">{{ launching ? '正在准备…' : point.learningState !== 'LEARNED' ? '先标记为已学完' : '开始这一级挑战 →' }}</button>
-          <div class="criteria markdown-content" v-html="renderMarkdown(point.passCriteriaMd)"></div>
+          <MarkdownRenderer class="criteria markdown-content" :source="point.passCriteriaMd" aria-label="通过标准" />
         </section>
       </main>
 
@@ -331,10 +342,12 @@ onBeforeUnmount(() => organizeController?.abort());
 .materials-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(380px,.82fr);gap:16px;align-items:start}.material-reader{min-width:0;padding:27px 30px}.activity-panel{position:sticky;top:82px;padding:22px}.activity-panel header h2{margin:4px 0 5px}.activity-panel header p{margin:0 0 17px;color:#68768a;font-size:.84rem}.activity-panel>article{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:15px 0;border-top:1px solid #e6ebf1}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}
 .activity-panel.expanded{position:static;grid-column:1/-1}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{margin-top:11px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
 .content-card{padding:25px}.branch-grid{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}.branch-grid article{padding:18px;background:linear-gradient(145deg,#fff,#fafcff);border-radius:16px;box-shadow:0 5px 17px rgba(28,51,82,.04)}.branch-grid article:first-child{border-color:#9cb5df;box-shadow:0 9px 24px rgba(43,91,171,.09)}
+.notes-layout,.mastery-layout,.branch-grid{align-items:stretch}.notes-layout>.content-card,.mastery-layout>.content-card,.branch-grid>article{height:100%}.note-editor,.organized{display:flex;min-width:0;flex-direction:column}.note-editor footer{margin-top:auto;padding-top:10px}.organized{max-height:none}.organized>.empty{margin:auto 0}
 .completion-card{background:linear-gradient(135deg,#f9fffb,#f0f9f5)}
 .note-view-switch{display:flex;gap:5px;width:max-content;margin:0 0 12px;padding:4px;border:1px solid #dce4ed;border-radius:11px;background:#f2f6fa}.note-view-switch button{border:0;background:transparent;padding:7px 10px}.note-view-switch button.active{color:#fff;background:#234e77;box-shadow:0 4px 12px rgba(32,72,111,.18)}
 .markdown-workbench{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:430px}.markdown-workbench.mode-edit,.markdown-workbench.mode-preview{grid-template-columns:1fr}.markdown-source,.markdown-preview{display:flex;min-width:0;flex-direction:column;border:1px solid #d7e0e9;border-radius:13px;overflow:hidden;background:#fff}.markdown-source>span,.markdown-preview>span{padding:9px 12px;color:#617087;font-size:.7rem;font-weight:800;background:#f3f7fa;border-bottom:1px solid #dfe6ed}.note-editor .markdown-source textarea{min-height:430px;height:100%;border:0;border-radius:0;outline:0;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview>article,.markdown-preview>p{padding:4px 17px 20px;margin:0;overflow:auto}.markdown-preview>p{padding-top:20px;color:#7a8492}.markdown-preview pre,.organized pre{overflow:auto;padding:14px;color:#deebf8;background:#122033;border-radius:11px}.markdown-preview code,.organized code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview table,.organized table{width:100%;border-collapse:collapse}.markdown-preview th,.markdown-preview td,.organized th,.organized td{padding:8px;border:1px solid #dce3eb;text-align:left}.markdown-preview blockquote,.organized blockquote{margin-left:0;padding:2px 14px;color:#53677e;border-left:4px solid #81a4ce;background:#f4f8fc}.task-item{display:flex;gap:7px;align-items:flex-start}.task-item input{margin-top:6px}
-.stream-state{display:flex;gap:10px;align-items:center;margin-bottom:12px;padding:10px 12px;color:#31597e;background:#edf6ff;border:1px solid #d3e7f8;border-radius:10px;font-size:.8rem}.stream-state i{width:9px;height:9px;background:#2a75bc;border-radius:50%;box-shadow:0 0 0 0 rgba(42,117,188,.35);animation:stream-pulse 1.25s infinite}.streaming-markdown.live::after{display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:text-bottom;content:'';background:#2c70b1;animation:stream-caret .7s steps(1) infinite}@keyframes stream-pulse{70%{box-shadow:0 0 0 8px rgba(42,117,188,0)}}@keyframes stream-caret{50%{opacity:0}}
+.stream-state{display:flex;gap:10px;align-items:center;margin-bottom:12px;padding:11px 12px;color:#31597e;background:#edf6ff;border:1px solid #d3e7f8;border-radius:10px;font-size:.8rem}.stream-state>span{display:grid;gap:3px}.stream-state b{font-size:.8rem}.stream-state small{color:#647b94;font-size:.7rem}.stream-state i{flex:0 0 auto;width:9px;height:9px;background:#2a75bc;border-radius:50%;box-shadow:0 0 0 0 rgba(42,117,188,.35);animation:stream-pulse 1.25s infinite}.streaming-markdown.live::after{display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:text-bottom;content:'';background:#2c70b1;animation:stream-caret .7s steps(1) infinite}@keyframes stream-pulse{70%{box-shadow:0 0 0 8px rgba(42,117,188,0)}}@keyframes stream-caret{50%{opacity:0}}
 @media(max-width:1100px){.materials-layout{grid-template-columns:1fr}.activity-panel{position:static}.learning-guide{grid-template-columns:1fr 1fr}.learning-guide .effort{grid-column:1/-1}}
+@media(max-width:900px){.notes-layout>.content-card,.mastery-layout>.content-card{height:auto}}
 @media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide{grid-template-columns:1fr}.learning-guide .effort{grid-column:auto}.materials-layout{display:block}.activity-panel{margin-top:14px}.tabs{top:6px;width:100%;overflow:auto}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}.markdown-workbench{grid-template-columns:1fr}.note-view-switch{width:100%}.note-view-switch button{flex:1}.note-editor footer button{flex:1}}
 </style>

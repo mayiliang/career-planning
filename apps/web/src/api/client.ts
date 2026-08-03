@@ -619,7 +619,8 @@ const KnowledgeNoteSchema = z.object({
   id: z.string(), knowledgePointCode: z.string(), pointTitle: z.string(), domainCode: z.string().nullable(), domainTitle: z.string().nullable(),
   originalMd: z.string(), organizedMd: z.string().nullable(), activeVersionSource: z.string(), activeMd: z.string(),
   aiReview: z.object({ corrections: z.array(z.string()).optional(), additions: z.array(z.string()).optional(), uncertainItems: z.array(z.string()).optional(), sourceGrounded: z.boolean().optional() }).passthrough().nullable(),
-  createdAt: z.string(), updatedAt: z.string(), versions: z.array(NoteVersionSchema), generationMode: z.string().optional(),
+  createdAt: z.string(), updatedAt: z.string(), versions: z.array(NoteVersionSchema),
+  generationMode: z.string().optional(), generationNotice: z.string().optional(),
   routeOrder: z.number(),
 });
 
@@ -700,6 +701,8 @@ async function streamOrganizedNote(
   code: string,
   onDelta: (delta: string, accumulated: string) => void,
   signal?: AbortSignal,
+  onProgress: (message: string, elapsedSeconds: number) => void = () => {},
+  onThinking: (delta: string, accumulated: string) => void = () => {},
 ) {
   const response = await fetch(`${API_BASE}/notes/${encodeURIComponent(code)}/organize/stream`, { method: 'POST', signal });
   if (!response.ok || !response.body) throw new Error(`无法开始 AI 流式整理（${response.status}）`);
@@ -707,18 +710,24 @@ async function streamOrganizedNote(
   const decoder = new TextDecoder();
   let buffer = '';
   let accumulated = '';
+  let accumulatedThinking = '';
   let finalNote: unknown = null;
 
   const processFrame = (frame: string) => {
     const event = frame.split(/\r?\n/).find((line) => line.startsWith('event:'))?.slice(6).trim() ?? 'message';
     const rawData = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
     if (!rawData) return;
-    const data = JSON.parse(rawData) as { delta?: string; message?: string; note?: unknown };
+    const data = JSON.parse(rawData) as { delta?: string; message?: string; elapsedSeconds?: number; note?: unknown };
     if (event === 'delta' && data.delta) {
       accumulated += data.delta;
       onDelta(data.delta, accumulated);
+    } else if (event === 'thinking' && data.delta) {
+      accumulatedThinking += data.delta;
+      onThinking(data.delta, accumulatedThinking);
     } else if (event === 'done') {
       finalNote = data.note;
+    } else if (event === 'progress' && data.message) {
+      onProgress(data.message, data.elapsedSeconds ?? 0);
     } else if (event === 'error') {
       throw new Error(data.message || 'AI 整理失败');
     }
@@ -772,8 +781,10 @@ async function streamHint(
   kind: 'EXPLAIN' | 'HINT' | 'DECOMPOSE' | 'OUTLINE' | 'STARTER' | 'SIMILAR_EXAMPLE' | 'FULL_ANSWER',
   onDelta: (delta: string, accumulated: string) => void,
   signal?: AbortSignal,
+  onThinking: (delta: string, accumulated: string) => void = () => {},
 ) {
   let accumulated = '';
+  let accumulatedThinking = '';
   let finalHint: unknown;
   await consumeSse(
     `/assessments/${encodeURIComponent(id)}/questions/${encodeURIComponent(questionId)}/hints/stream`,
@@ -782,6 +793,10 @@ async function streamHint(
       if (event === 'delta' && typeof data.delta === 'string') {
         accumulated += data.delta;
         onDelta(data.delta, accumulated);
+      }
+      if (event === 'thinking' && typeof data.delta === 'string') {
+        accumulatedThinking += data.delta;
+        onThinking(data.delta, accumulatedThinking);
       }
       if (event === 'done') finalHint = data.hint;
     },
@@ -794,11 +809,17 @@ async function streamStructuredResult<T>(
   schema: z.ZodType<T>,
   onProgress: (message: string, receivedChars?: number) => void,
   options: RequestInit = {},
+  onThinking: (delta: string, accumulated: string) => void = () => {},
 ) {
   let finalValue: unknown;
+  let accumulatedThinking = '';
   await consumeSse(path, { method: 'POST', ...options }, (event, data) => {
     if (event === 'progress' && typeof data.message === 'string') {
       onProgress(data.message, typeof data.receivedChars === 'number' ? data.receivedChars : undefined);
+    }
+    if (event === 'thinking' && typeof data.delta === 'string') {
+      accumulatedThinking += data.delta;
+      onThinking(data.delta, accumulatedThinking);
     }
     if (event === 'done') finalValue = data.attempt ?? data.grade;
   });
@@ -921,12 +942,13 @@ export const apiClient = {
   async validatePracticeAttemptStream(code: string, activityId: string, data: {
     submissionMd: string; code?: string; language?: 'javascript' | 'typescript';
     executionOutput?: string; executionStatus?: 'NOT_RUN' | 'SUCCESS' | 'ERROR' | 'TIMEOUT';
-  }, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal) {
+  }, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal, onThinking?: (delta: string, accumulated: string) => void) {
     return streamStructuredResult(
       `/learning/points/${encodeURIComponent(code)}/practice-attempts/${encodeURIComponent(activityId)}/validate/stream`,
       PracticeAttemptSchema,
       onProgress,
       { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal },
+      onThinking,
     );
   },
 
@@ -956,8 +978,8 @@ export const apiClient = {
     return request(`/notes/${encodeURIComponent(code)}/organize`, KnowledgeNoteSchema, { method: 'POST' });
   },
 
-  async organizeNoteStream(code: string, onDelta: (delta: string, accumulated: string) => void, signal?: AbortSignal) {
-    return streamOrganizedNote(code, onDelta, signal);
+  async organizeNoteStream(code: string, onDelta: (delta: string, accumulated: string) => void, signal?: AbortSignal, onProgress?: (message: string, elapsedSeconds: number) => void, onThinking?: (delta: string, accumulated: string) => void) {
+    return streamOrganizedNote(code, onDelta, signal, onProgress, onThinking);
   },
 
   async acceptOrganizedNote(code: string) {
@@ -1187,8 +1209,8 @@ export const apiClient = {
     });
   },
 
-  async revealAssessmentHintStream(id: string, questionId: string, kind: 'EXPLAIN' | 'HINT' | 'DECOMPOSE' | 'OUTLINE' | 'STARTER' | 'SIMILAR_EXAMPLE' | 'FULL_ANSWER', onDelta: (delta: string, accumulated: string) => void, signal?: AbortSignal) {
-    return streamHint(id, questionId, kind, onDelta, signal);
+  async revealAssessmentHintStream(id: string, questionId: string, kind: 'EXPLAIN' | 'HINT' | 'DECOMPOSE' | 'OUTLINE' | 'STARTER' | 'SIMILAR_EXAMPLE' | 'FULL_ANSWER', onDelta: (delta: string, accumulated: string) => void, signal?: AbortSignal, onThinking?: (delta: string, accumulated: string) => void) {
+    return streamHint(id, questionId, kind, onDelta, signal, onThinking);
   },
 
   async getAssessment(id: string) {
@@ -1217,16 +1239,16 @@ export const apiClient = {
     });
   },
 
-  async gradeAssessmentStream(id: string, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal) {
-    return streamStructuredResult(`/assessments/${encodeURIComponent(id)}/grade/stream`, AssessmentGradeResponseSchema, onProgress, { signal });
+  async gradeAssessmentStream(id: string, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal, onThinking?: (delta: string, accumulated: string) => void) {
+    return streamStructuredResult(`/assessments/${encodeURIComponent(id)}/grade/stream`, AssessmentGradeResponseSchema, onProgress, { signal }, onThinking);
   },
 
   async regradeAssessment(id: string) {
     return request(`/assessments/${id}/regrade`, AssessmentRegradeResponseSchema, { method: 'POST' });
   },
 
-  async regradeAssessmentStream(id: string, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal) {
-    return streamStructuredResult(`/assessments/${encodeURIComponent(id)}/regrade/stream`, AssessmentRegradeResponseSchema, onProgress, { signal });
+  async regradeAssessmentStream(id: string, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal, onThinking?: (delta: string, accumulated: string) => void) {
+    return streamStructuredResult(`/assessments/${encodeURIComponent(id)}/regrade/stream`, AssessmentRegradeResponseSchema, onProgress, { signal }, onThinking);
   },
 
   async getAssessmentResult(id: string) {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { rawDb } from '../db/index.js';
-import { config } from '../config/index.js';
+import { aiThinkingRequestOption, config } from '../config/index.js';
 import { KNOWLEDGE_PATHS, KNOWLEDGE_ROUTE_INDEX, RECOMMENDED_KNOWLEDGE_ROUTE } from './knowledge-relations.service.js';
 
 export type LearningState = 'NOT_STARTED' | 'LEARNING' | 'LEARNED' | 'DEFERRED';
@@ -291,20 +291,40 @@ export async function organizePointNote(code: string) {
   return organizePointNoteStream(code, () => undefined);
 }
 
-export async function organizePointNoteStream(code: string, onDelta: (delta: string) => void, signal?: AbortSignal) {
+export async function organizePointNoteStream(
+  code: string,
+  onDelta: (delta: string) => void,
+  signal?: AbortSignal,
+  onStatus: (message: string) => void = () => {},
+  onThinking: (delta: string) => void = () => {},
+) {
   const point = requirePoint(code, true);
   let note = getNoteByCode(code);
   if (!note) note = savePointNote(code, point.summary || '');
   if (!note.originalMd.trim()) throw new Error('请先写下一些原始笔记，再让 AI 整理。');
 
-  const generated = config.DEEPSEEK_API_KEY
-    ? await requestOrganizedNoteStream(point, note.originalMd, onDelta, signal)
-    : localOrganizedDraft(point, note.originalMd);
-  if (!config.DEEPSEEK_API_KEY) {
+  let generated;
+  let generationNotice: string | undefined;
+  if (config.DEEPSEEK_API_KEY) {
+    try {
+      onStatus('正在连接 AI 并准备资料上下文');
+      generated = await requestOrganizedNoteStream(point, note.originalMd, onDelta, onStatus, onThinking, signal);
+    } catch (reason) {
+      if (signal?.aborted) throw new DOMException('已停止本次整理', 'AbortError');
+      generationNotice = reason instanceof Error ? reason.message : 'AI 暂时没有完成响应';
+      onStatus('AI 暂时不可用，正在生成不会覆盖原文的安全排版稿');
+      generated = localOrganizedDraft(point, note.originalMd, `${generationNotice}；本稿只做结构排版，没有执行 AI 事实核验。`);
+    }
+  } else {
+    generationNotice = '当前未配置 AI，本稿只做结构排版，没有执行事实核验。';
+    onStatus('当前未配置 AI，正在生成安全排版稿');
+    generated = localOrganizedDraft(point, note.originalMd, generationNotice);
+  }
+  if (generated.mode === 'LOCAL_FALLBACK') {
     for (const chunk of generated.organizedMarkdown.match(/.{1,32}/gs) ?? []) onDelta(chunk);
   }
   if (signal?.aborted) throw new DOMException('生成已取消', 'AbortError');
-  return persistOrganizedNote(code, note.id, generated);
+  return { ...persistOrganizedNote(code, note.id, generated), generationNotice };
 }
 
 function persistOrganizedNote(
@@ -474,12 +494,18 @@ async function requestOrganizedNoteStream(
   point: PointRow,
   originalMd: string,
   onDelta: (delta: string) => void,
+  onStatus: (message: string) => void,
+  onThinking: (delta: string) => void,
   externalSignal?: AbortSignal,
 ) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.DEEPSEEK_TIMEOUT_MS);
+  const totalTimeoutMs = Math.max(config.DEEPSEEK_TIMEOUT_MS, 300_000);
+  let abortReason: 'START_TIMEOUT' | 'IDLE_TIMEOUT' | 'TOTAL_TIMEOUT' | null = null;
+  const startTimeout = setTimeout(() => { abortReason = 'START_TIMEOUT'; controller.abort(); }, 45_000);
+  const totalTimeout = setTimeout(() => { abortReason = 'TOTAL_TIMEOUT'; controller.abort(); }, totalTimeoutMs);
   const abort = () => controller.abort();
   externalSignal?.addEventListener('abort', abort, { once: true });
+  let idleTimer: ReturnType<typeof setInterval> | undefined;
   try {
     const response = await fetch(`${config.DEEPSEEK_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
@@ -488,34 +514,58 @@ async function requestOrganizedNoteStream(
       body: JSON.stringify({
         model: config.DEEPSEEK_MODEL,
         temperature: 0.1,
+        max_tokens: 6000,
         response_format: { type: 'json_object' },
         stream: true,
+        ...aiThinkingRequestOption(),
         stream_options: { include_usage: true },
         messages: [
           { role: 'system', content: '你是严谨的中文前端学习笔记编辑。只能依据用户原笔记和给定学习资料核对；不得把不确定内容伪装成事实。原文永不被你覆盖。只返回 JSON，并且必须先输出 organizedMarkdown 字段，以便界面流式展示。' },
-          { role: 'user', content: `请整理下面知识点笔记。要求：使用规范 Markdown；结构清晰、中文表达、纠正有资料依据的错误、补齐资料明确覆盖的重要遗漏；任何无法由资料确认的内容放入 uncertainItems。\n\n知识点：${point.code} ${point.title}\n\n用户原笔记：\n${originalMd.slice(0, 16000)}\n\n学习资料：\n${point.studyMaterialMd?.slice(0, 18000) || ''}\n\n通过标准：\n${point.passCriteriaMd?.slice(0, 6000) || ''}\n\n严格按字段顺序返回：{"organizedMarkdown":"...","review":{"corrections":["..."],"additions":["..."],"uncertainItems":["..."],"sourceGrounded":true}}` },
+          { role: 'user', content: `请整理下面知识点笔记。要求：使用规范 Markdown；结构清晰、中文表达、纠正有资料依据的错误、补齐资料明确覆盖的重要遗漏；任何无法由资料确认的内容放入 uncertainItems。\n\n知识点：${point.code} ${point.title}\n\n用户原笔记：\n${originalMd.slice(0, 12000)}\n\n学习资料：\n${point.studyMaterialMd?.slice(0, 12000) || ''}\n\n通过标准：\n${point.passCriteriaMd?.slice(0, 3000) || ''}\n\n严格按字段顺序返回：{"organizedMarkdown":"...","review":{"corrections":["..."],"additions":["..."],"uncertainItems":["..."],"sourceGrounded":true}}` },
         ],
       }),
     });
+    clearTimeout(startTimeout);
     if (!response.ok) throw new Error(`AI 服务返回 ${response.status}`);
     if (!response.body) throw new Error('AI 服务没有返回可读取的流');
+    onStatus('AI 已连接，正在分析笔记和对应学习资料');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let wireBuffer = '';
     let content = '';
     let emittedLength = 0;
     let done = false;
+    let lastActivityAt = Date.now();
+    let receivedFirstContent = false;
+    idleTimer = setInterval(() => {
+      if (Date.now() - lastActivityAt > 60_000) {
+        abortReason = 'IDLE_TIMEOUT';
+        controller.abort();
+      }
+    }, 5_000);
     while (!done) {
       const result = await reader.read();
       done = result.done;
+      if (result.value?.length) lastActivityAt = Date.now();
       wireBuffer += decoder.decode(result.value ?? new Uint8Array(), { stream: !done });
       const frames = wireBuffer.split(/\r?\n\r?\n/);
       wireBuffer = frames.pop() ?? '';
       for (const frame of frames) {
         const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
         if (!data || data === '[DONE]') continue;
-        const packet = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
-        content += packet.choices?.[0]?.delta?.content ?? '';
+        const packet = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string } }> };
+        const delta = packet.choices?.[0]?.delta;
+        const thinkingDelta = delta?.reasoning_content ?? delta?.reasoning ?? '';
+        const contentDelta = delta?.content ?? '';
+        if (thinkingDelta) {
+          onThinking(thinkingDelta);
+          onStatus('AI 正在分析资料、核对事实与组织结构');
+        }
+        content += contentDelta;
+        if (contentDelta && !receivedFirstContent) {
+          receivedFirstContent = true;
+          onStatus('AI 已开始输出，正在逐段整理 Markdown');
+        }
         if (content.length > 200_000) throw new Error('AI 整理结果过长，已停止生成');
         const partial = extractPartialJsonString(content, 'organizedMarkdown');
         if (partial.value.length > emittedLength) {
@@ -529,8 +579,17 @@ async function requestOrganizedNoteStream(
     if (!parsed.organizedMarkdown?.trim()) throw new Error('AI 整理结果缺少正文');
     if (parsed.organizedMarkdown.length > emittedLength) onDelta(parsed.organizedMarkdown.slice(emittedLength));
     return { organizedMarkdown: parsed.organizedMarkdown.trim(), review: parsed.review ?? {}, mode: 'AI' as const };
+  } catch (reason) {
+    if (externalSignal?.aborted) throw new DOMException('已停止本次整理', 'AbortError');
+    if (abortReason === 'START_TIMEOUT') throw new Error('AI 在 45 秒内没有建立响应');
+    if (abortReason === 'IDLE_TIMEOUT') throw new Error('AI 输出中断超过 60 秒');
+    if (abortReason === 'TOTAL_TIMEOUT') throw new Error('AI 整理超过最长处理时间');
+    if (reason instanceof Error && reason.name === 'AbortError') throw new Error('AI 请求被意外中止');
+    throw reason;
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(startTimeout);
+    clearTimeout(totalTimeout);
+    if (idleTimer) clearInterval(idleTimer);
     externalSignal?.removeEventListener('abort', abort);
   }
 }
@@ -560,10 +619,10 @@ export function extractPartialJsonString(source: string, field: string) {
   return { value, complete: false };
 }
 
-function localOrganizedDraft(point: PointRow, originalMd: string) {
+function localOrganizedDraft(point: PointRow, originalMd: string, reason = '当前未配置 AI，以上内容仅做结构化排版，尚未完成事实核验。') {
   return {
-    organizedMarkdown: `# ${point.title}\n\n## 我的原始记录\n\n${originalMd.trim()}\n\n## 待核对与补充\n\n- 当前未配置 AI，以上内容仅做结构化排版，尚未完成事实核验。`,
-    review: { corrections: [], additions: [], uncertainItems: ['未配置 AI，未执行资料依据核验。'], sourceGrounded: false },
+    organizedMarkdown: `# ${point.title}\n\n## 我的原始记录\n\n${originalMd.trim()}\n\n## 待核对与补充\n\n- ${reason}`,
+    review: { corrections: [], additions: [], uncertainItems: [reason], sourceGrounded: false },
     mode: 'LOCAL_FALLBACK' as const,
   };
 }

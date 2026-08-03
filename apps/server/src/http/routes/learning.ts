@@ -96,7 +96,9 @@ export async function learningRoutes(app: FastifyInstance) {
         code,
         activityId,
         input,
-        (message, receivedChars) => send('progress', { message, receivedChars }),
+        (message, receivedChars, thinkingDelta) => thinkingDelta
+          ? send('thinking', { delta: thinkingDelta })
+          : send('progress', { message, receivedChars }),
         controller.signal,
       );
       send('done', { attempt });
@@ -157,13 +159,24 @@ export async function learningRoutes(app: FastifyInstance) {
     reply.raw.on('close', () => {
       if (!reply.raw.writableEnded) controller.abort();
     });
+    const startedAt = Date.now();
+    const heartbeat = setInterval(() => {
+      send('progress', { message: 'AI 仍在处理，连接保持正常', elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) });
+    }, 5_000);
     try {
       send('start', { code });
-      const note = await organizePointNoteStream(code, (delta) => send('delta', { delta }), controller.signal);
+      const note = await organizePointNoteStream(
+        code,
+        (delta) => send('delta', { delta }),
+        controller.signal,
+        (message) => send('progress', { message, elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) }),
+        (delta) => send('thinking', { delta }),
+      );
       send('done', { note });
     } catch (reason) {
       if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 整理失败' });
     } finally {
+      clearInterval(heartbeat);
       if (!reply.raw.writableEnded) reply.raw.end();
     }
   });

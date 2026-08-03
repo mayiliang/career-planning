@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     BaseDialog: typeof import('./components/BaseDialog.vue')['default']
+    MarkdownRenderer: typeof import('./components/MarkdownRenderer.vue')['default']
     PracticeWorkspace: typeof import('./components/PracticeWorkspace.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

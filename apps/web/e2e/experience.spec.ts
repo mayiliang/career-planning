@@ -89,6 +89,8 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText(/不规定你哪一天必须学什么/)).toBeVisible();
     await expect(page.getByText(/不会制造逾期/)).toBeVisible();
     await expect(page.locator('.week-list article')).toHaveCount(64);
+    const pairedHeights = await page.locator('.week-list article:not(.open)').evaluateAll((items) => items.slice(0, 2).map((item) => item.getBoundingClientRect().height));
+    expect(Math.abs((pairedHeights[0] ?? 0) - (pairedHeights[1] ?? 0))).toBeLessThanOrEqual(1);
     const firstWeek = page.locator('.week-list article').filter({ has: page.locator('.week-points button') }).first();
     const firstPoint = firstWeek.locator('.week-points button').first();
     if (!(await firstPoint.isVisible())) await firstWeek.locator('.week-summary').click();
@@ -150,17 +152,24 @@ test.describe.serial('核心使用体验', () => {
   test('Markdown 笔记实时预览、AI 流式整理并可切换排序', async ({ page }) => {
     await page.goto('/knowledge/JS-03?tab=notes');
     const editor = page.getByRole('textbox', { name: 'Markdown 原始笔记' });
-    await editor.fill('# 类型与不可变更新\n\n- [x] 理解浅拷贝\n\n```js\nconst next = { ...state };\n```');
+    await editor.fill('# 类型与不可变更新\n\n- [x] 理解浅拷贝\n\n| 输入 | 输出 |\n| --- | --- |\n| state | next |\n\n$$T(n) = O(n)$$\n\n```js\nconst next = { ...state };\n```\n\n```mermaid\nflowchart LR\n  A[原对象] --> B[新对象]\n```\n\n::: thinking\n先核对引用边界。\n:::');
     await expect(page.getByLabel('Markdown 实时预览').getByRole('heading', { name: '类型与不可变更新' })).toBeVisible();
-    await expect(page.getByLabel('Markdown 实时预览').locator('pre code')).toContainText('const next');
+    await expect(page.getByLabel('Markdown 实时预览').locator('pre.hljs code')).toContainText('const next');
+    await expect(page.getByLabel('Markdown 实时预览').locator('table')).toBeVisible();
+    await expect(page.getByLabel('Markdown 实时预览').locator('.katex-display')).toBeVisible();
+    await expect(page.getByLabel('Markdown 实时预览').locator('.mermaid-diagram[data-mermaid-state="ready"] svg')).toBeVisible();
+    await expect(page.getByLabel('Markdown 实时预览').locator('details.thinking-block')).toContainText('先核对引用边界');
     await page.getByRole('button', { name: '保存原始笔记' }).click();
 
     const streamResponse = page.waitForResponse((response) => response.url().includes('/notes/JS-03/organize/stream'));
     await page.getByRole('button', { name: '用 AI 整理并核对' }).click();
     const response = await streamResponse;
     expect(response.headers()['content-type']).toContain('text/event-stream');
+    expect((await response.body()).toString()).toContain('event: progress');
     await expect(page.getByText(/已生成安全排版稿/)).toBeVisible();
     await expect(page.locator('.organized .markdown-content')).toContainText('类型与不可变更新');
+    const noteCardHeights = await page.locator('.notes-layout > .content-card').evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
+    expect(Math.abs((noteCardHeights[0] ?? 0) - (noteCardHeights[1] ?? 0))).toBeLessThanOrEqual(1);
 
     await page.goto('/notes');
     const sort = page.getByLabel('笔记排序');

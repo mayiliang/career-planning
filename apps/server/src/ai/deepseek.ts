@@ -6,6 +6,7 @@
 import type { AIProvider, AIProviderConfig, AIResponse, GradingRequest } from './provider.js';
 import { SYSTEM_PROMPT_TEMPLATE, buildGradingUserMessage } from './provider.js';
 import { AssessmentGradingOutputSchema, type AssessmentGradingOutput } from '@career-atlas/shared';
+import { aiThinkingRequestOption } from '../config/index.js';
 
 // ===== DeepSeek API 响应类型 =====
 
@@ -53,7 +54,7 @@ export class DeepSeekProvider implements AIProvider {
   
   async grade(
     request: GradingRequest,
-    onProgress: (message: string, receivedChars?: number) => void = () => {},
+    onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
     signal?: AbortSignal,
   ): Promise<AIResponse> {
     const startTime = Date.now();
@@ -73,8 +74,8 @@ export class DeepSeekProvider implements AIProvider {
       temperature: 0.1, // 低温度减少随机性
       response_format: { type: 'json_object' },
       max_tokens: 8000,
-      // DeepSeek 特有参数
-      thinking: { type: 'disabled' },
+      // auto 模式交由模型决定；供应商输出的 reasoning_content 会单独流式转发。
+      ...aiThinkingRequestOption(),
       reasoning_effort: 'low',
       stream: true,
       stream_options: { include_usage: true },
@@ -126,7 +127,7 @@ export class DeepSeekProvider implements AIProvider {
           content: `上一个 JSON 未通过结构校验：${parsed.parseError}\n请保留原评分结论，只修复字段结构。只返回完整 JSON 对象。`,
         },
       ];
-      response = await this.requestWithRetry({ ...body, messages: repairMessages, thinking: { type: 'disabled' } }, onProgress, signal);
+      response = await this.requestWithRetry({ ...body, messages: repairMessages }, onProgress, signal);
       rawContent = response.choices[0]?.message.content ?? '';
       parsed = parseGradingOutput(rawContent);
     }
@@ -163,7 +164,7 @@ export class DeepSeekProvider implements AIProvider {
   
   private async requestWithRetry(
     body: unknown,
-    onProgress: (message: string, receivedChars?: number) => void,
+    onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void,
     signal?: AbortSignal,
   ): Promise<DeepSeekResponse> {
     let lastError: Error | null = null;
@@ -230,7 +231,7 @@ export class DeepSeekProvider implements AIProvider {
 
   private async readStreamingResponse(
     response: Response,
-    onProgress: (message: string, receivedChars?: number) => void,
+    onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void,
   ): Promise<DeepSeekResponse> {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
@@ -243,10 +244,13 @@ export class DeepSeekProvider implements AIProvider {
       if (!data || data === '[DONE]') return;
       try {
         const chunk = JSON.parse(data) as {
-          choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
+          choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string }; finish_reason?: string | null }>;
           usage?: DeepSeekResponse['usage'];
         };
-        const delta = chunk.choices?.[0]?.delta?.content;
+        const packetDelta = chunk.choices?.[0]?.delta;
+        const thinkingDelta = packetDelta?.reasoning_content ?? packetDelta?.reasoning;
+        if (thinkingDelta) onProgress('AI 正在推理并核对评分依据', undefined, thinkingDelta);
+        const delta = packetDelta?.content;
         if (delta) {
           content += delta;
           onProgress('AI 正在逐题核对并生成结构化反馈', content.length);

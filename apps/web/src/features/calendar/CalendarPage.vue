@@ -94,7 +94,7 @@ onMounted(load);
 </style>
 
 <style scoped>
-.route-reference{width:100%;max-width:1560px;padding:0}.route-header{padding:4px 2px 10px}.route-principles,.route-stats div,.week-list article{box-shadow:0 8px 28px rgba(25,48,78,.055)}.route-principles{background:linear-gradient(110deg,#edf3ff,#f3f8ff);border-color:#d7e2f4}.route-stats div{padding:18px;background:linear-gradient(145deg,#fff,#fafcff)}.week-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.week-list article.open{grid-column:1/-1;box-shadow:0 14px 34px rgba(36,74,133,.09)}.week-summary{min-height:84px}.route-search input{background:#fff;box-shadow:0 5px 17px rgba(25,48,78,.04)}
+.route-reference{width:100%;max-width:1560px;padding:0}.route-header{padding:4px 2px 10px}.route-principles,.route-stats div,.week-list article{box-shadow:0 8px 28px rgba(25,48,78,.055)}.route-principles{background:linear-gradient(110deg,#edf3ff,#f3f8ff);border-color:#d7e2f4}.route-stats div{padding:18px;background:linear-gradient(145deg,#fff,#fafcff)}.week-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}.week-list article{height:100%}.week-list article:not(.open){display:flex}.week-list article:not(.open) .week-summary{height:100%}.week-list article.open{grid-column:1/-1;height:auto;box-shadow:0 14px 34px rgba(36,74,133,.09)}.week-summary{min-height:92px}.week-summary div strong{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}.route-search input{background:#fff;box-shadow:0 5px 17px rgba(25,48,78,.04)}
 @media(max-width:950px){.week-list{grid-template-columns:1fr}.week-list article.open{grid-column:auto}}
 @media(max-width:760px){.route-reference{padding:0}}
 </style>

@@ -1,3 +1,27 @@
+import MarkdownIt from 'markdown-it';
+import createDOMPurify from 'dompurify';
+import hljs from 'highlight.js/lib/core';
+import bash from 'highlight.js/lib/languages/bash';
+import css from 'highlight.js/lib/languages/css';
+import javascript from 'highlight.js/lib/languages/javascript';
+import json from 'highlight.js/lib/languages/json';
+import markdownLanguage from 'highlight.js/lib/languages/markdown';
+import sql from 'highlight.js/lib/languages/sql';
+import typescript from 'highlight.js/lib/languages/typescript';
+import xml from 'highlight.js/lib/languages/xml';
+import yaml from 'highlight.js/lib/languages/yaml';
+import { katex } from '@mdit/plugin-katex';
+import container from 'markdown-it-container';
+import footnote from 'markdown-it-footnote';
+import mark from 'markdown-it-mark';
+import sub from 'markdown-it-sub';
+import sup from 'markdown-it-sup';
+import taskLists from 'markdown-it-task-lists';
+
+const MAX_CACHE_ENTRIES = 120;
+type MarkdownInstance = InstanceType<typeof MarkdownIt>;
+type RenderRule = NonNullable<MarkdownInstance['renderer']['rules']['fence']>;
+const renderCache = new Map<string, string>();
 const escapeHtml = (value: string) => value
   .replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;')
@@ -5,122 +29,149 @@ const escapeHtml = (value: string) => value
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#039;');
 
-function safeExternalLink(label: string, href: string): string {
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('markdown', markdownLanguage);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('yaml', yaml);
+
+function remember(source: string, html: string) {
+  renderCache.delete(source);
+  renderCache.set(source, html);
+  if (renderCache.size > MAX_CACHE_ENTRIES) {
+    const oldest = renderCache.keys().next().value as string | undefined;
+    if (oldest !== undefined) renderCache.delete(oldest);
+  }
+}
+
+function normalizeThinkingBlocks(source: string) {
+  return source.replace(/<think>\s*([\s\S]*?)\s*<\/think>/gi, (_match, content: string) => `\n::: thinking\n${content}\n:::\n`);
+}
+
+function isSafeLink(href: string) {
+  if (href.startsWith('#') || href.startsWith('/')) return true;
   try {
-    const url = new URL(href);
-    if (!['http:', 'https:'].includes(url.protocol)) return escapeHtml(label);
-    return `<a href="${escapeHtml(url.toString())}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}<span aria-hidden="true">↗</span></a>`;
+    return ['http:', 'https:', 'mailto:'].includes(new URL(href).protocol);
   } catch {
-    return escapeHtml(label);
+    return false;
   }
 }
 
-function renderInline(source: string) {
-  const tokens: string[] = [];
-  const token = (html: string) => `@@CA_MD_${tokens.push(html) - 1}@@`;
-  let value = source
-    .replace(/`([^`\n]+)`/g, (_match, code: string) => token(`<code>${escapeHtml(code)}</code>`))
-    .replace(/\[([^\]]+)]\(([^)\s]+)\)/g, (_match, label: string, href: string) => token(safeExternalLink(label, href)))
-    .replace(/(^|\s)(https?:\/\/[^\s<]+)/g, (_match, prefix: string, href: string) => `${prefix}${token(safeExternalLink(href, href))}`);
+const markdown: MarkdownInstance = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+  breaks: false,
+  highlight(code, language): string {
+    const normalized = language.trim().toLowerCase();
+    if (normalized && hljs.getLanguage(normalized)) {
+      return `<pre class="hljs"><code>${hljs.highlight(code, { language: normalized, ignoreIllegals: true }).value}</code></pre>`;
+    }
+    return `<pre class="hljs"><code>${escapeHtml(code)}</code></pre>`;
+  },
+});
 
-  value = escapeHtml(value)
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
-    .replace(/(^|\s)\*([^*\n]+)\*(?=\s|$)/g, '$1<em>$2</em>')
-    .replace(/@@CA_MD_(\d+)@@/g, (_match, index: string) => tokens[Number(index)] ?? '');
-  return value;
+markdown.use(katex, {
+  delimiters: 'all',
+  mathFence: true,
+  throwOnError: false,
+  strict: 'warn',
+});
+markdown.use(footnote);
+markdown.use(mark);
+markdown.use(sub);
+markdown.use(sup);
+markdown.use(taskLists, { enabled: false, label: true, labelAfter: true });
+markdown.use(container, 'thinking', {
+  validate: (params: string) => /^thinking(?:\s|$)/.test(params.trim()),
+  render: (tokens: Array<{ nesting: number }>, index: number) => tokens[index]?.nesting === 1
+    ? '<details class="thinking-block" open><summary><span>AI 思考过程</span><small>模型提供，可能不完整</small></summary><div class="thinking-block__content">\n'
+    : '</div></details>\n',
+});
+for (const kind of ['tip', 'note', 'warning', 'danger']) {
+  markdown.use(container, kind, {
+    validate: (params: string) => new RegExp(`^${kind}(?:\\s|$)`).test(params.trim()),
+    render: (tokens: Array<{ nesting: number; info?: string }>, index: number) => {
+      if (tokens[index]?.nesting !== 1) return '</div>\n';
+      const title = tokens[index]?.info?.trim().slice(kind.length).trim() || ({ tip: '提示', note: '说明', warning: '注意', danger: '警告' }[kind] ?? kind);
+      return `<div class="markdown-callout markdown-callout--${kind}"><strong>${markdown.utils.escapeHtml(title)}</strong>\n`;
+    },
+  });
 }
 
-function renderTable(lines: string[]) {
-  const cells = (line: string) => line.replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
-  const [header, , ...body] = lines.map(cells);
-  return `<table><thead><tr>${(header ?? []).map((cell) => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead><tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-}
-
-/** 安全渲染学习笔记常用 Markdown；原始 HTML 会被转义，外链只允许 http/https。 */
-export function renderMarkdown(markdown: string): string {
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  const output: string[] = [];
-  let paragraph: string[] = [];
-  let listType: 'ul' | 'ol' | null = null;
-  let quote: string[] = [];
-
-  const closeParagraph = () => {
-    if (paragraph.length) output.push(`<p>${paragraph.map(renderInline).join('<br>')}</p>`);
-    paragraph = [];
-  };
-  const closeList = () => {
-    if (listType) output.push(`</${listType}>`);
-    listType = null;
-  };
-  const closeQuote = () => {
-    if (quote.length) output.push(`<blockquote><p>${quote.map(renderInline).join('<br>')}</p></blockquote>`);
-    quote = [];
-  };
-  const closeBlocks = () => { closeParagraph(); closeList(); closeQuote(); };
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const source = lines[index] ?? '';
-    const trimmed = source.trim();
-
-    const fence = trimmed.match(/^```([\w+-]*)$/);
-    if (fence) {
-      closeBlocks();
-      const code: string[] = [];
-      index += 1;
-      while (index < lines.length && !(lines[index] ?? '').trim().startsWith('```')) {
-        code.push(lines[index] ?? '');
-        index += 1;
-      }
-      const language = fence[1]?.replace(/[^\w+-]/g, '') || 'text';
-      output.push(`<pre><code class="language-${language}">${escapeHtml(code.join('\n'))}</code></pre>`);
-      continue;
-    }
-
-    if (trimmed.includes('|') && /^\s*\|?\s*:?-{3,}/.test(lines[index + 1] ?? '')) {
-      closeBlocks();
-      const tableLines = [source, lines[index + 1] ?? ''];
-      index += 2;
-      while (index < lines.length && (lines[index] ?? '').includes('|') && (lines[index] ?? '').trim()) {
-        tableLines.push(lines[index] ?? '');
-        index += 1;
-      }
-      index -= 1;
-      output.push(renderTable(tableLines));
-      continue;
-    }
-
-    if (!trimmed) { closeBlocks(); continue; }
-    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
-    if (heading) {
-      closeBlocks();
-      const level = heading[1]!.length;
-      output.push(`<h${level}>${renderInline(heading[2]!)}</h${level}>`);
-      continue;
-    }
-    if (/^(---+|___+|\*\*\*+)$/.test(trimmed)) { closeBlocks(); output.push('<hr>'); continue; }
-    if (trimmed.startsWith('>')) {
-      closeParagraph(); closeList();
-      quote.push(trimmed.replace(/^>\s?/, ''));
-      continue;
-    }
-    closeQuote();
-
-    const task = trimmed.match(/^[-*+]\s+\[([ xX])]\s+(.+)$/);
-    const unordered = trimmed.match(/^[-*+]\s+(.+)$/);
-    const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
-    if (task || unordered || ordered) {
-      closeParagraph();
-      const targetType = ordered ? 'ol' : 'ul';
-      if (listType !== targetType) { closeList(); listType = targetType; output.push(`<${targetType}>`); }
-      if (task) output.push(`<li class="task-item"><input type="checkbox" disabled${task[1]?.toLowerCase() === 'x' ? ' checked' : ''}> <span>${renderInline(task[2]!)}</span></li>`);
-      else output.push(`<li>${renderInline((ordered?.[1] ?? unordered?.[1])!)}</li>`);
-      continue;
-    }
-
-    closeList();
-    paragraph.push(source.trim());
+const defaultFence = markdown.renderer.rules.fence!;
+const fenceRule: RenderRule = (tokens, index, options, env, renderer) => {
+  const token = tokens[index];
+  if (token?.info.trim().split(/\s+/)[0]?.toLowerCase() === 'mermaid') {
+    return `<div class="mermaid-diagram" data-mermaid-state="pending"><pre class="mermaid-source"><code>${markdown.utils.escapeHtml(token.content)}</code></pre><p class="mermaid-status">正在绘制图形…</p></div>`;
   }
-  closeBlocks();
-  return output.join('');
+  return defaultFence(tokens, index, options, env, renderer);
+};
+markdown.renderer.rules.fence = fenceRule;
+
+const fallbackLinkOpen: RenderRule = (tokens, index, options, _env, renderer) => renderer.renderToken(tokens, index, options);
+const defaultLinkOpen = markdown.renderer.rules.link_open ?? fallbackLinkOpen;
+const linkOpenRule: RenderRule = (tokens, index, options, env, renderer) => {
+  const hrefIndex = tokens[index]?.attrIndex('href') ?? -1;
+  const href = String(hrefIndex >= 0 ? tokens[index]?.attrs?.[hrefIndex]?.[1] ?? '' : '');
+  if (!isSafeLink(href)) {
+    const token = tokens[index];
+    if (token) {
+      token.tag = 'span';
+      token.attrs = (token.attrs ?? []).filter(([name]) => name !== 'href');
+      token.attrJoin('class', 'unavailable-link');
+      for (let cursor = index + 1; cursor < tokens.length; cursor += 1) {
+        if (tokens[cursor]?.type === 'link_close') {
+          tokens[cursor]!.tag = 'span';
+          break;
+        }
+      }
+    }
+    return renderer.renderToken(tokens, index, options);
+  }
+  if (/^https?:/i.test(href)) {
+    tokens[index]?.attrSet('target', '_blank');
+    tokens[index]?.attrSet('rel', 'noopener noreferrer');
+  }
+  return defaultLinkOpen(tokens, index, options, env, renderer);
+};
+markdown.renderer.rules.link_open = linkOpenRule;
+
+const purifier = typeof window === 'undefined' ? null : createDOMPurify(window);
+
+/**
+ * 渲染现代 Markdown。原始 HTML 默认关闭，结果再经 DOMPurify 清洗。
+ * LRU 缓存避免流式输出中对相同快照重复解析。
+ */
+export function renderMarkdown(source: string): string {
+  const normalized = normalizeThinkingBlocks(source.replace(/\r\n/g, '\n'));
+  const cached = renderCache.get(normalized);
+  if (cached !== undefined) {
+    renderCache.delete(normalized);
+    renderCache.set(normalized, cached);
+    return cached;
+  }
+  const rendered = markdown.render(normalized);
+  const sanitized = purifier
+    ? purifier.sanitize(rendered, {
+      USE_PROFILES: { html: true, svg: true, mathMl: true },
+      FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+      FORBID_ATTR: ['onerror', 'onload'],
+      ADD_ATTR: ['target', 'rel'],
+    })
+    : rendered;
+  remember(normalized, sanitized);
+  return sanitized;
+}
+
+export function clearMarkdownRenderCache() {
+  renderCache.clear();
+}
+
+export function getMarkdownRenderCacheSize() {
+  return renderCache.size;
 }

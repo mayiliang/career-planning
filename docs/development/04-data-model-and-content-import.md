@@ -1,241 +1,61 @@
 # 数据模型与内容导入
 
-## 1. 数据原则
+更新时间：2026-08-03
 
-- Markdown/CSV 是内容种子，SQLite 是运行时事实来源。
-- 用户状态、笔记、答卷、打卡和求职记录只存数据库及附件目录。
-- 内容重新导入不能覆盖用户数据。
-- 所有关键状态变化记录审计事件。
-- 时间以 UTC ISO 字符串存储，界面按 `Asia/Shanghai` 展示。
-- 业务主键使用 UUID；知识点同时保留稳定业务编号，如 `TS-02`。
+## 1. 数据边界
 
-## 2. 主要实体关系
+- `docs/knowledge/`：领域、知识点、中文资料、挑战边界和通过标准的内容真源。
+- SQLite：学习状态、当前焦点、掌握等级、笔记版本、练习、挑战、打卡、路线选择、岗位和项目等用户数据真源。
+- 导入器可以更新知识内容与关系，不能覆盖用户笔记、练习、答案或已取得的掌握证据。
 
-```mermaid
-erDiagram
-  KNOWLEDGE_DOMAIN ||--o{ KNOWLEDGE_POINT : contains
-  KNOWLEDGE_POINT ||--o{ KNOWLEDGE_RESOURCE : has
-  KNOWLEDGE_POINT ||--o{ KNOWLEDGE_EDGE : source
-  KNOWLEDGE_POINT ||--o{ KNOWLEDGE_NOTE : has
-  KNOWLEDGE_POINT ||--o{ ASSESSMENT_DEFINITION : defines
-  ASSESSMENT_DEFINITION ||--o{ ASSESSMENT_SESSION : creates
-  ASSESSMENT_SESSION ||--o{ ASSESSMENT_ANSWER : contains
-  ASSESSMENT_SESSION ||--o| AI_EVALUATION : receives
-  KNOWLEDGE_POINT ||--o{ MASTERY_EVENT : changes
-  PLAN_EVENT ||--o{ CHECKIN : completed_by
-  PLAN_EVENT }o--o| KNOWLEDGE_POINT : targets
-  JOB ||--o{ JOB_ACTIVITY : has
-  JOB }o--o{ KNOWLEDGE_POINT : has_gap
-  PROJECT_ASSET }o--o{ KNOWLEDGE_POINT : demonstrates
-```
+## 2. 主要实体
 
-## 3. 知识表
-
-### knowledge_domains
-
-| 字段 | 类型 | 说明 |
+| 领域 | 主要实体 | 说明 |
 | --- | --- | --- |
-| id | text PK | UUID |
-| code | text unique | `01`、`02` 等稳定代码 |
-| title | text | 领域名称 |
-| description | text | 领域说明 |
-| order_index | integer | 排序 |
-| source_path | text | 来源文件 |
-| source_hash | text | 内容 hash |
-| created_at / updated_at | text | 时间 |
+| 知识 | domains、points、relations | 20 个领域、219 个稳定编号知识点及关系 |
+| 自主学习 | point learning fields、route choices、checkins | 学习状态、当前点、暂缓/恢复、真实打卡 |
+| 笔记 | notes、note versions | 原始稿、AI 候选稿、已采用来源、版本历史 |
+| 练习 | practice attempts | 任务、提交、代码、执行输出、验证结果 |
+| 掌握 | sessions、questions、answers、hint events、results | M1～M4、帮助等级、评分与逐题反馈 |
+| 日历/复盘 | plan events、checkins、leave、reviews | 保留记录与兼容能力，不再生成强制每日学习任务 |
+| 求职/项目 | jobs、job activities、project assets | 岗位反馈与可复核产出 |
+| 系统 | settings、audit、backup metadata | 配置、审计和恢复 |
 
-### knowledge_points
+## 3. 知识点字段口径
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| id | text PK | UUID |
-| code | text unique | `TS-02` 等稳定编号 |
-| domain_id | text FK | 所属领域 |
-| title | text | 标题 |
-| summary | text nullable | 用户补充摘要 |
-| study_material_md | text | 学习资料 Markdown |
-| assessment_spec_md | text | 严格考核 Markdown |
-| pass_criteria_md | text | 通过标准 Markdown |
-| difficulty | text | intermediate/senior/advanced |
-| plan_week | integer nullable | 推荐周次 |
-| study_minutes | integer | 资料精读预计分钟 |
-| practice_minutes | integer | 刻意练习预计分钟 |
-| project_minutes | integer | 项目产出预计分钟 |
-| assessment_minutes | integer | 首次严格考核预计分钟 |
-| retest_minutes | integer | 7 天复测预计分钟 |
-| status | text | 状态枚举 |
-| self_mastered_at | text nullable | 自评时间 |
-| first_passed_at | text nullable | 初试通过时间 |
-| mastered_at | text nullable | 复测通过时间 |
-| next_review_at | text nullable | 下次抽测 |
-| source_path / source_hash | text | 来源追踪 |
-| created_at / updated_at | text | 时间 |
+- `code`、`title`、`domain`、`routeOrder`：身份和默认顺序。
+- `studyMaterialMd`、`assessmentSpecMd`、`passCriteriaMd`：资料、题目边界、通过标准。
+- `learningState`：`NOT_STARTED | LEARNING | LEARNED | DEFERRED`。
+- `currentFocus`：全局最多一个当前学习点。
+- `masteryLevel`：0～4；与学习状态独立。
+- `challengeProfile`：由内容特性推导为理论、示例、编码、排错、工具或设计案例。
+- `study/practice/project/assessment/retest minutes`：为旧内容与统计兼容字段。UI 只展示有真实任务的活动时长，不再把五项解释成用户必须线下完成的阶段。
 
-状态枚举：
+旧的 `status`（如 `SELF_MASTERED`、`FIRST_PASS_PENDING_RETEST`、`MASTERED`）继续作为数据库兼容/统计字段；新产品语义以 `learningState + masteryLevel` 为准。
 
-```text
-NOT_STARTED
-LEARNING
-SELF_MASTERED
-FIRST_PASS_PENDING_RETEST
-MASTERED
-NEEDS_RELEARNING
-```
+## 4. 笔记版本
 
-### knowledge_resources
+每次保存原始笔记都新增版本。AI 整理完成后新增 `AI_DRAFT`，用户采用后新增 `AI_ACCEPTED`；采用只切换阅读来源，不删除或覆盖 `originalMd`。
 
-- `id`, `knowledge_point_id`, `type`, `title`, `url`, `local_path`, `notes`, `order_index`, `last_checked_at`。
-- type：`OFFICIAL_DOC`、`STANDARD`、`LOCAL_MARKDOWN`、`PROJECT_FILE`、`VIDEO`、`BOOK`、`OTHER`。
+AI 流式增量和 thinking 是临时 UI 状态，只有通过完整 JSON 解析和业务校验的最终候选稿才写入数据库。thinking 不持久化为用户笔记。
 
-### knowledge_edges
+## 5. 内容解析规则
 
-- `id`, `source_point_id`, `target_point_id`, `type`, `description`, `weight`。
-- type：`PREREQUISITE`、`RELATED`、`COMPARES_WITH`、`APPLIED_WITH`。
-- `(source_point_id, target_point_id, type)` 唯一。
+1. 知识点编号全局唯一，领域编号和路线顺序稳定。
+2. 每点必须包含足以覆盖主题的中文必读资料、学习边界和通过标准。
+3. 英文链接必须标注为版本核验，不得成为独立挑战题源。
+4. 本地中文核心讲义必须有精确锚点，并覆盖资料难以中文化的前沿主题。
+5. 学习活动只有在存在明确输入、输出、完成判定和站内交付方式时才生成。
+6. 关系类型区分硬前置、推荐顺序、相关和应用关系；只有硬前置允许阻塞。
+7. 导入必须支持 LF/CRLF 和 Windows/macOS/Linux 路径。
 
-### knowledge_notes
+## 6. 同步与迁移
 
-- `id`, `knowledge_point_id`, `content_md`, `note_type`, `created_at`, `updated_at`。
-- note_type：`LEARNING`、`SUMMARY`、`MISTAKE`、`PROJECT_EVIDENCE`、`INTERVIEW`。
+- 空库启动：迁移数据库、导入知识、同步关系、建立设置并创建备份。
+- 已有数据库：权威同步知识内容，清理已删除的知识定义与关系，但先保护有关联用户数据的迁移路径。
+- 重复启动和重复导入幂等。
+- 破坏性重置必须由用户明确触发并说明保留/删除范围；普通知识更新不得重置笔记。
 
-## 4. 考核表
+## 7. 数据验证
 
-### assessment_definitions
-
-- `id`, `knowledge_point_id`, `version`, `assessment_type`, `rubric_json`, `pass_rule_json`, `source_hash`, `active`。
-- assessment_type：`FIRST`、`RETEST`、`MONTHLY_REVIEW`、`DOMAIN_COMPREHENSIVE`。
-- 已产生会话的定义不可原地修改，必须创建新版本。
-
-### assessment_sessions
-
-| 字段 | 说明 |
-| --- | --- |
-| id | UUID |
-| assessment_definition_id | 固化的考核版本 |
-| knowledge_point_id | 冗余用于查询 |
-| type | FIRST/RETEST/MONTHLY_REVIEW |
-| status | DRAFT/IN_PROGRESS/SUBMITTED/GRADING/GRADED/ERROR |
-| question_set_json | 固化题目、rubric 和预期点 |
-| started_at / submitted_at / graded_at | 时间 |
-| duration_seconds | 实际用时 |
-| objective_score | 确定性分数 |
-| ai_score | 模型 rubric 分数 |
-| final_score | 服务端重算总分 |
-| verdict | PASS/FAIL/MANUAL_REVIEW |
-| model_provider / model_name | 模型追踪 |
-| prompt_version | 评分提示词版本 |
-
-### assessment_answers
-
-- `id`, `session_id`, `question_id`, `answer_type`, `content_text`, `content_json`, `attachment_path`, `saved_at`。
-- 答案每次保存递增 revision，交卷时生成不可变快照。
-
-### deterministic_results
-
-- `id`, `session_id`, `question_id`, `runner_type`, `passed`, `score`, `stdout`, `stderr`, `test_summary_json`, `duration_ms`。
-- stdout/stderr 限长并脱敏。
-
-### ai_evaluations
-
-- `id`, `session_id`, `schema_version`, `raw_response`, `parsed_json`, `valid`, `confidence`, `error_code`, `created_at`。
-- raw_response 用于本地诊断，界面默认不展示模型思考内容。
-
-### mastery_events
-
-- `id`, `knowledge_point_id`, `from_status`, `to_status`, `reason_type`, `reason_id`, `created_at`。
-- reason_type：`SELF_ASSESSMENT`、`ASSESSMENT_PASS`、`RETEST_PASS`、`REVIEW_FAIL`、`MANUAL_CORRECTION`、`IMPORT`。
-- 不允许删除，只允许追加更正事件。
-
-## 5. 计划与打卡表
-
-### plan_events
-
-- `id`, `event_type`, `title`, `description`, `start_at`, `end_at`, `all_day`, `status`, `priority`。
-- `knowledge_point_id`、`job_id`、`assessment_session_id` 均可为空，但一个事件至少关联一个业务对象或填写独立描述。
-- event_type：`LEARNING`、`ASSESSMENT`、`RETEST`、`PROJECT_OUTPUT`、`JOB_APPLICATION`、`INTERVIEW`、`REVIEW`。
-- status：`PLANNED`、`IN_PROGRESS`、`COMPLETED`、`PARTIAL`、`SKIPPED`、`RESCHEDULED`。
-- 重复事件使用 `recurrence_rule` 与 `recurrence_parent_id`。
-
-### checkins
-
-- `id`, `plan_event_id`, `result`, `actual_minutes`, `note_md`, `energy_level`, `difficulty_level`, `evidence_path`, `checked_at`。
-- 同一事件可以有多条记录，最终状态由最后一次有效记录决定。
-
-### daily_reviews / weekly_reviews
-
-- 保存日期范围、完成率、总结、困难、调整和下周期重点。
-- 周复盘生成后不自动改变未来计划，必须预览确认。
-
-## 6. 求职表
-
-### jobs
-
-- `id`, `company`, `title`, `salary_text`, `experience_text`, `location`, `source_url`, `direction`, `tech_stack_json`, `jd_text`, `status`, `next_action`, `next_action_at`, `notes`。
-- status：`SAVED`、`TO_APPLY`、`APPLIED`、`CONTACTING`、`ASSESSMENT`、`INTERVIEWING`、`OFFER`、`REJECTED`、`WITHDRAWN`。
-
-### job_knowledge_gaps
-
-- `job_id`, `knowledge_point_id`, `gap_level`, `note`, `resolved_at`。
-- gap_level：`HIGH`、`MEDIUM`、`LOW`。
-
-### job_activities
-
-- `id`, `job_id`, `type`, `occurred_at`, `summary`, `details_md`, `result`, `next_action`, `next_action_at`。
-- type：`APPLICATION`、`MESSAGE`、`WRITTEN_TEST`、`INTERVIEW`、`FOLLOW_UP`、`OFFER`、`REJECTION`。
-
-### project_assets
-
-- `id`, `name`, `project_type`, `background_md`, `responsibility_md`, `challenge_md`, `solution_md`, `result_md`, `reflection_md`, `evidence_json`。
-- 通过关联表连接知识点、岗位和不同简历版本。
-
-## 7. 内容导入协议
-
-### Markdown 知识点解析
-
-识别规则：
-
-1. `#` 是领域标题。
-2. `## <ID> <标题>` 开始一个知识点，ID 匹配 `[A-Z]+-[0-9]+`。
-3. `- [ ] 自评已掌握` 和 `- [ ] 已通过严格考核` 只作为初始状态提示；已有数据库时不得覆盖。
-4. `- 学习资料：`、`- 严格考核：`、`- 通过标准：` 分别解析成字段。
-5. 可选的 `- 预计耗时：资料 45 分钟；练习 90 分钟；项目 60 分钟；考核 45 分钟；复测 30 分钟` 解析成五个分钟字段；缺失时按知识编号前缀使用默认估算，任一显式值缺失、非整数或小于等于 0 都视为无效并回退默认值。
-6. `estimatedTotalMinutes = study_minutes + practice_minutes + project_minutes + assessment_minutes`，复测单独统计，不能重复计入首次掌握总时长。
-7. `## 领域综合考核` 解析成领域级考核定义，不作为普通知识点。
-
-### CSV 映射
-
-- `learning-tracker-template.csv` -> plan template items。
-- `daily-6h30m-learning-schedule.csv` -> daily time-block template。
-- `hangzhou-frontend-jobs-template.csv` -> jobs + job gaps 草稿。
-- CSV 使用真正的解析库，不允许用 `split(',')`。
-
-### 幂等与冲突
-
-- source hash 未变：跳过。
-- 内容变化、用户未编辑对应内容：自动更新预览为安全更新。
-- 内容变化、用户编辑过：标记冲突，显示本地/来源差异。
-- 用户状态、笔记、考核和打卡从不受内容导入覆盖。
-
-## 8. 索引与约束
-
-- `knowledge_points(code)` unique。
-- `knowledge_points(domain_id, status)` index。
-- `assessment_sessions(knowledge_point_id, submitted_at)` index。
-- `plan_events(start_at, event_type)` index。
-- `jobs(status, next_action_at)` index。
-- 所有外键开启 `PRAGMA foreign_keys = ON`。
-- 关键枚举使用数据库 check constraint 与 Zod 双重校验。
-- 五个耗时字段使用非空正整数约束；迁移 `0006_knowledge_effort.sql` 为既有数据库补齐默认值，增量导入再按当前内容刷新估算。
-
-## 9. 备份格式
-
-```text
-career-atlas-backup-YYYYMMDD-HHmmss.zip
-├── manifest.json          # 版本、校验和、记录数
-├── database.json          # 按表导出的可迁移 JSON
-├── notes/                 # Markdown 笔记
-├── evidence/              # 用户选择包含的证据
-└── source-snapshot/       # 导入内容版本摘要，不复制无关仓库
-```
-
-恢复前校验 manifest、版本和 checksum；恢复写入临时数据库，验证通过后原子替换正式数据库。
+导入事务提交前验证：领域/知识数量、编号唯一、资料数量、中文覆盖、链接协议、锚点存在、关系无自环、硬前置方向、活动契约、题目来源与估算字段合法。任一错误时整批回滚，不允许半导入。

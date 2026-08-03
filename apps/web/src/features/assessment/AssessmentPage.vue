@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiClient, type AssessmentDetail, type AssessmentResult } from '@/api/client';
 import BaseDialog from '@/components/BaseDialog.vue';
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -14,11 +15,12 @@ const loading = ref(true);
 const busy = ref(false);
 const error = ref<string | null>(null);
 const savedQuestionId = ref<string | null>(null);
-const revealedHints = ref<Record<string, Array<{ kind: string; level: number; text: string; source: 'AI' | 'RULE'; independenceImpact: string }>>>({});
+const revealedHints = ref<Record<string, Array<{ kind: string; level: number; text: string; source: 'AI' | 'RULE'; independenceImpact: string; thinking?: string }>>>({});
 const hintBusy = ref<string | null>(null);
-const streamingHints = ref<Record<string, { kind: string; text: string } | undefined>>({});
+const streamingHints = ref<Record<string, { kind: string; text: string; thinking: string } | undefined>>({});
 const aiProgress = ref('');
 const aiReceivedChars = ref(0);
+const gradingThinking = ref('');
 const pendingConfirmation = ref<'SUBMIT' | 'REGRADE' | null>(null);
 const resumedMessage = computed(() => route.query.resumed === '1'
   ? String(route.query.message || '已继续打开上次未完成的掌握挑战，原题目和答案均已保留。')
@@ -118,12 +120,14 @@ async function save(questionId: string) {
 async function revealHint(questionId: string, kind: typeof hintOptions[number][0]) {
   hintBusy.value = `${questionId}:${kind}`;
   hintController = new AbortController();
-  streamingHints.value[questionId] = { kind, text: '' };
+  streamingHints.value[questionId] = { kind, text: '', thinking: '' };
   try {
     const hint = await apiClient.revealAssessmentHintStream(sessionId, questionId, kind, (_delta, accumulated) => {
-      streamingHints.value[questionId] = { kind, text: accumulated };
-    }, hintController.signal);
-    revealedHints.value[questionId] = [...(revealedHints.value[questionId] ?? []), hint];
+      streamingHints.value[questionId] = { kind, text: accumulated, thinking: streamingHints.value[questionId]?.thinking ?? '' };
+    }, hintController.signal, (_delta, accumulated) => {
+      streamingHints.value[questionId] = { kind, text: streamingHints.value[questionId]?.text ?? '', thinking: accumulated };
+    });
+    revealedHints.value[questionId] = [...(revealedHints.value[questionId] ?? []), { ...hint, thinking: streamingHints.value[questionId]?.thinking }];
     if (detail.value) detail.value.session.assistanceLevel = Math.max(detail.value.session.assistanceLevel, hint.level);
   } catch (reason) { error.value = reason instanceof Error ? reason.message : '暂时无法提供提示'; }
   finally { hintBusy.value = null; hintController = null; delete streamingHints.value[questionId]; }
@@ -134,6 +138,7 @@ async function performSubmit() {
   error.value = null;
   aiProgress.value = '正在保存全部答案';
   aiReceivedChars.value = 0;
+  gradingThinking.value = '';
   gradingController = new AbortController();
   try {
     await Promise.all(questions.value.map((question) => save(question.id)));
@@ -141,7 +146,7 @@ async function performSubmit() {
     const graded = await apiClient.gradeAssessmentStream(sessionId, (progress, receivedChars) => {
       aiProgress.value = progress;
       aiReceivedChars.value = receivedChars ?? aiReceivedChars.value;
-    }, gradingController.signal);
+    }, gradingController.signal, (_delta, accumulated) => { gradingThinking.value = accumulated; });
     result.value = graded.result;
     await load();
   } catch (reason) {
@@ -158,12 +163,13 @@ async function performRegrade() {
   error.value = null;
   aiProgress.value = '正在准备重新判题';
   aiReceivedChars.value = 0;
+  gradingThinking.value = '';
   gradingController = new AbortController();
   try {
     const graded = await apiClient.regradeAssessmentStream(sessionId, (progress, receivedChars) => {
       aiProgress.value = progress;
       aiReceivedChars.value = receivedChars ?? aiReceivedChars.value;
-    }, gradingController.signal);
+    }, gradingController.signal, (_delta, accumulated) => { gradingThinking.value = accumulated; });
     result.value = graded.result;
     await load();
   } catch (reason) {
@@ -345,8 +351,8 @@ onBeforeUnmount(() => {
             <div class="assistance-ladder">
               <span>卡住了？选择恰好够用的帮助</span>
               <div><button v-for="option in hintOptions" :key="option[0]" :disabled="hintBusy === `${question.id}:${option[0]}`" @click="revealHint(question.id, option[0])">{{ option[1] }}</button></div>
-              <article v-if="streamingHints[question.id]" class="streaming-hint" aria-live="polite"><header><strong>{{ hintOptions.find(item => item[0] === streamingHints[question.id]?.kind)?.[1] }}</strong><em>AI 正在针对本题生成</em></header><p>{{ streamingHints[question.id]?.text || '正在读取题目与对应资料…' }}<i class="stream-caret" /></p></article>
-              <article v-for="hint in revealedHints[question.id] ?? []" :key="`${hint.kind}-${hint.level}`"><header><strong>{{ hintOptions.find(item => item[0] === hint.kind)?.[1] }}</strong><em>{{ hint.source === 'AI' ? 'AI 针对本题生成' : '题目规则提示' }}</em></header><p>{{ hint.text }}</p><small>{{ hint.independenceImpact }}</small></article>
+              <article v-if="streamingHints[question.id]" class="streaming-hint" aria-live="polite"><header><strong>{{ hintOptions.find(item => item[0] === streamingHints[question.id]?.kind)?.[1] }}</strong><em>AI 正在针对本题生成</em></header><MarkdownRenderer :source="streamingHints[question.id]?.text || '正在读取题目与对应资料…'" :thinking="streamingHints[question.id]?.thinking" :streaming="true" :thinking-open="false" aria-label="正在生成的题目提示" /></article>
+              <article v-for="hint in revealedHints[question.id] ?? []" :key="`${hint.kind}-${hint.level}`"><header><strong>{{ hintOptions.find(item => item[0] === hint.kind)?.[1] }}</strong><em>{{ hint.source === 'AI' ? 'AI 针对本题生成' : '题目规则提示' }}</em></header><MarkdownRenderer :source="hint.text" :thinking="hint.thinking" :thinking-open="false" aria-label="题目提示" /><small>{{ hint.independenceImpact }}</small></article>
             </div>
             <textarea
               v-model="answers[question.id]"
@@ -360,7 +366,7 @@ onBeforeUnmount(() => {
         </article>
 
         <footer v-if="detail.session.status === 'IN_PROGRESS'" class="submit-bar">
-          <span v-if="busy" aria-live="polite">{{ aiProgress }}<small v-if="aiReceivedChars"> · 已接收 {{ aiReceivedChars }} 字符</small></span>
+          <div v-if="busy" class="submit-progress" aria-live="polite"><span>{{ aiProgress }}<small v-if="aiReceivedChars"> · 已接收 {{ aiReceivedChars }} 字符</small></span><MarkdownRenderer v-if="gradingThinking" source="" :thinking="gradingThinking" :streaming="true" :thinking-open="false" aria-label="AI 判题思考过程" /></div>
           <span v-else>已完成 {{ answeredCount }} / {{ questions.length }}</span>
           <button class="primary-action" :disabled="busy" @click="requestSubmit">{{ busy ? '正在生成反馈…' : '提交并查看掌握反馈' }}</button>
         </footer>

@@ -42,7 +42,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#career-06)、[本知识掌握清单](README.md)、[求职执行计划](../../plans/frontend-career-plan.md)、[MDN Soft Skills Curriculum](https://developer.mozilla.org/en-US/curriculum/getting-started/soft-skills/)（英文原文，仅用于版本核验）、[Google Technical Writing 中文版](https://developers.google.com/tech-writing?hl=zh-cn)、[Technical Writing Two 中文版](https://developers.google.com/tech-writing/two?hl=zh-cn)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：面试表达、受众分析、技术教学、文档组织、图示、反馈与影响力；已通过考核证据只用于项目产出阶段的自证材料，不作为首考隐含题源。
+- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#career-06)、[本知识掌握清单](README.md)、[项目经验资产库](../project-assets.md)、[MDN Soft Skills Curriculum](https://developer.mozilla.org/en-US/curriculum/getting-started/soft-skills/)（英文原文，仅用于版本核验）、[Google Technical Writing 中文版](https://developers.google.com/tech-writing?hl=zh-cn)、[Technical Writing Two 中文版](https://developers.google.com/tech-writing/two?hl=zh-cn)。英文原文仅用于版本核验，不作为必读或独立首考题源。这里的“独立首考”是内容门禁旧字段，产品界面现称“独立掌握挑战”。覆盖范围：面试表达、受众分析、技术教学、文档组织、图示、反馈、跨团队评审与影响力；已通过挑战的证据只用于项目产出的自证材料，不作为隐藏题源。
 - 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「面试、教学与技术影响力」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：进行 60 分钟模拟面试，包含基础、React/TS、系统设计、项目和反问；随后用 20 分钟向他人讲授一个知识点并现场答疑；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：技术题总分至少 80；不会时明确边界并给出验证路径；项目表达有证据；听众能复述核心模型并完成一道迁移题。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
 - 预计耗时：资料 105 分钟；练习 150 分钟；项目 210 分钟；考核 105 分钟；复测 90 分钟
