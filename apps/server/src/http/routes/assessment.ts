@@ -16,6 +16,7 @@ import {
   submitAssessmentSession,
   cancelAssessmentSession,
   revealAssessmentHint,
+  revealAssessmentHintStream,
 } from '../../services/assessment.service.js';
 import { gradeAssessment, regradeAssessment } from '../../services/grading.service.js';
 import {
@@ -295,6 +296,34 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     }
   });
 
+  app.post('/api/v1/assessments/:id/grade/stream', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const controller = new AbortController();
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
+    });
+    reply.raw.flushHeaders();
+    const send = (event: string, data: unknown) => {
+      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    try {
+      send('start', { id });
+      const grade = await gradeAssessment(
+        { sessionId: id, provider: 'deepseek' },
+        (message, receivedChars) => send('progress', { message, receivedChars }),
+        controller.signal,
+      );
+      send('done', { grade });
+    } catch (reason) {
+      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 判题失败' });
+    } finally {
+      if (!reply.raw.writableEnded) reply.raw.end();
+    }
+  });
+
   app.post('/api/v1/assessments/:id/regrade', async (request, reply) => {
     const { id } = request.params as { id: string };
     try {
@@ -326,6 +355,34 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     }
   });
 
+  app.post('/api/v1/assessments/:id/regrade/stream', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const controller = new AbortController();
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
+    });
+    reply.raw.flushHeaders();
+    const send = (event: string, data: unknown) => {
+      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    try {
+      send('start', { id });
+      const grade = await regradeAssessment(
+        id,
+        (message, receivedChars) => send('progress', { message, receivedChars }),
+        controller.signal,
+      );
+      send('done', { grade });
+    } catch (reason) {
+      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '重新判题失败' });
+    } finally {
+      if (!reply.raw.writableEnded) reply.raw.end();
+    }
+  });
+
   app.post('/api/v1/assessments/:id/questions/:questionId/hints', async (request, reply) => {
     const { id, questionId } = request.params as { id: string; questionId: string };
     const body = z.object({ kind: z.enum(['EXPLAIN', 'HINT', 'DECOMPOSE', 'OUTLINE', 'STARTER', 'SIMILAR_EXAMPLE', 'FULL_ANSWER']) }).parse(request.body);
@@ -333,6 +390,33 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       return reply.ok(await revealAssessmentHint(id, questionId, body.kind));
     } catch (error) {
       return reply.error('HINT_UNAVAILABLE', error instanceof Error ? error.message : '无法提供提示');
+    }
+  });
+
+  app.post('/api/v1/assessments/:id/questions/:questionId/hints/stream', async (request, reply) => {
+    const { id, questionId } = request.params as { id: string; questionId: string };
+    const body = z.object({ kind: z.enum(['EXPLAIN', 'HINT', 'DECOMPOSE', 'OUTLINE', 'STARTER', 'SIMILAR_EXAMPLE', 'FULL_ANSWER']) }).parse(request.body);
+    const controller = new AbortController();
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    reply.raw.flushHeaders();
+    const send = (event: string, data: unknown) => {
+      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    try {
+      send('start', { questionId, kind: body.kind });
+      const hint = await revealAssessmentHintStream(id, questionId, body.kind, (delta) => send('delta', { delta }), controller.signal);
+      send('done', { hint });
+    } catch (reason) {
+      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '无法提供提示' });
+    } finally {
+      if (!reply.raw.writableEnded) reply.raw.end();
     }
   });
   

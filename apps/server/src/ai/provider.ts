@@ -97,7 +97,11 @@ export interface AIProvider {
   readonly model: string;
   
   // 执行评分
-  grade(request: GradingRequest): Promise<AIResponse>;
+  grade(
+    request: GradingRequest,
+    onProgress?: (message: string, receivedChars?: number) => void,
+    signal?: AbortSignal,
+  ): Promise<AIResponse>;
   
   // 测试连接
   testConnection(): Promise<boolean>;

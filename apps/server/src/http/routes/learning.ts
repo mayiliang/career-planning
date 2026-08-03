@@ -9,6 +9,7 @@ import {
   listNotes,
   markPointLearned,
   organizePointNote,
+  organizePointNoteStream,
   restorePoint,
   saveCheckin,
   savePointNote,
@@ -75,6 +76,37 @@ export async function learningRoutes(app: FastifyInstance) {
     return reply.ok(await validatePracticeAttempt(code, activityId, practiceInput.parse(request.body)));
   });
 
+  app.post('/api/v1/learning/points/:code/practice-attempts/:activityId/validate/stream', async (request, reply) => {
+    const { code, activityId } = z.object({ code: z.string().min(1), activityId: z.string().min(1) }).parse(request.params);
+    const input = practiceInput.parse(request.body);
+    const controller = new AbortController();
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
+    });
+    reply.raw.flushHeaders();
+    const send = (event: string, data: unknown) => {
+      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    try {
+      send('start', { code, activityId });
+      const attempt = await validatePracticeAttempt(
+        code,
+        activityId,
+        input,
+        (message, receivedChars) => send('progress', { message, receivedChars }),
+        controller.signal,
+      );
+      send('done', { attempt });
+    } catch (reason) {
+      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '练习验证失败' });
+    } finally {
+      if (!reply.raw.writableEnded) reply.raw.end();
+    }
+  });
+
   app.put('/api/v1/learning/route-choices', async (request, reply) => {
     const body = z.object({
       sourceCode: z.string().min(1), targetCode: z.string().min(1),
@@ -85,8 +117,11 @@ export async function learningRoutes(app: FastifyInstance) {
   });
 
   app.get('/api/v1/notes', async (request, reply) => {
-    const query = z.object({ search: z.string().optional(), domainCode: z.string().optional() }).parse(request.query);
-    return reply.ok(listNotes(query.search, query.domainCode));
+    const query = z.object({
+      search: z.string().optional(), domainCode: z.string().optional(),
+      sort: z.enum(['knowledge', 'updated_desc', 'updated_asc', 'title_asc', 'code_asc']).default('knowledge'),
+    }).parse(request.query);
+    return reply.ok(listNotes(query.search, query.domainCode, query.sort));
   });
 
   app.get('/api/v1/notes/:code', async (request, reply) => {
@@ -103,6 +138,34 @@ export async function learningRoutes(app: FastifyInstance) {
   app.post('/api/v1/notes/:code/organize', async (request, reply) => {
     const { code } = codeParams.parse(request.params);
     return reply.ok(await organizePointNote(code));
+  });
+
+  app.post('/api/v1/notes/:code/organize/stream', async (request, reply) => {
+    const { code } = codeParams.parse(request.params);
+    const controller = new AbortController();
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    reply.raw.flushHeaders();
+    const send = (event: string, data: unknown) => {
+      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    reply.raw.on('close', () => {
+      if (!reply.raw.writableEnded) controller.abort();
+    });
+    try {
+      send('start', { code });
+      const note = await organizePointNoteStream(code, (delta) => send('delta', { delta }), controller.signal);
+      send('done', { note });
+    } catch (reason) {
+      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 整理失败' });
+    } finally {
+      if (!reply.raw.writableEnded) reply.raw.end();
+    }
   });
 
   app.post('/api/v1/notes/:code/accept-organized', async (request, reply) => {

@@ -16,12 +16,17 @@ const error = ref<string | null>(null);
 const savedQuestionId = ref<string | null>(null);
 const revealedHints = ref<Record<string, Array<{ kind: string; level: number; text: string; source: 'AI' | 'RULE'; independenceImpact: string }>>>({});
 const hintBusy = ref<string | null>(null);
+const streamingHints = ref<Record<string, { kind: string; text: string } | undefined>>({});
+const aiProgress = ref('');
+const aiReceivedChars = ref(0);
 const pendingConfirmation = ref<'SUBMIT' | 'REGRADE' | null>(null);
 const resumedMessage = computed(() => route.query.resumed === '1'
   ? String(route.query.message || '已继续打开上次未完成的掌握挑战，原题目和答案均已保留。')
   : '');
 const now = ref(Date.now());
 let timer: number | undefined;
+let hintController: AbortController | null = null;
+let gradingController: AbortController | null = null;
 
 const questions = computed(() => (detail.value?.questions ?? []).map((question) => {
   try {
@@ -112,21 +117,31 @@ async function save(questionId: string) {
 
 async function revealHint(questionId: string, kind: typeof hintOptions[number][0]) {
   hintBusy.value = `${questionId}:${kind}`;
+  hintController = new AbortController();
+  streamingHints.value[questionId] = { kind, text: '' };
   try {
-    const hint = await apiClient.revealAssessmentHint(sessionId, questionId, kind);
+    const hint = await apiClient.revealAssessmentHintStream(sessionId, questionId, kind, (_delta, accumulated) => {
+      streamingHints.value[questionId] = { kind, text: accumulated };
+    }, hintController.signal);
     revealedHints.value[questionId] = [...(revealedHints.value[questionId] ?? []), hint];
     if (detail.value) detail.value.session.assistanceLevel = Math.max(detail.value.session.assistanceLevel, hint.level);
   } catch (reason) { error.value = reason instanceof Error ? reason.message : '暂时无法提供提示'; }
-  finally { hintBusy.value = null; }
+  finally { hintBusy.value = null; hintController = null; delete streamingHints.value[questionId]; }
 }
 
 async function performSubmit() {
   busy.value = true;
   error.value = null;
+  aiProgress.value = '正在保存全部答案';
+  aiReceivedChars.value = 0;
+  gradingController = new AbortController();
   try {
     await Promise.all(questions.value.map((question) => save(question.id)));
     await apiClient.submitAssessment(sessionId);
-    const graded = await apiClient.gradeAssessment(sessionId);
+    const graded = await apiClient.gradeAssessmentStream(sessionId, (progress, receivedChars) => {
+      aiProgress.value = progress;
+      aiReceivedChars.value = receivedChars ?? aiReceivedChars.value;
+    }, gradingController.signal);
     result.value = graded.result;
     await load();
   } catch (reason) {
@@ -134,20 +149,28 @@ async function performSubmit() {
     await load();
   } finally {
     busy.value = false;
+    gradingController = null;
   }
 }
 
 async function performRegrade() {
   busy.value = true;
   error.value = null;
+  aiProgress.value = '正在准备重新判题';
+  aiReceivedChars.value = 0;
+  gradingController = new AbortController();
   try {
-    const graded = await apiClient.regradeAssessment(sessionId);
+    const graded = await apiClient.regradeAssessmentStream(sessionId, (progress, receivedChars) => {
+      aiProgress.value = progress;
+      aiReceivedChars.value = receivedChars ?? aiReceivedChars.value;
+    }, gradingController.signal);
     result.value = graded.result;
     await load();
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '重新判题失败';
   } finally {
     busy.value = false;
+    gradingController = null;
   }
 }
 
@@ -199,7 +222,11 @@ onMounted(() => {
   load();
   timer = window.setInterval(() => { now.value = Date.now(); }, 1000);
 });
-onBeforeUnmount(() => { if (timer) window.clearInterval(timer); });
+onBeforeUnmount(() => {
+  if (timer) window.clearInterval(timer);
+  hintController?.abort();
+  gradingController?.abort();
+});
 </script>
 
 <template>
@@ -318,6 +345,7 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer); });
             <div class="assistance-ladder">
               <span>卡住了？选择恰好够用的帮助</span>
               <div><button v-for="option in hintOptions" :key="option[0]" :disabled="hintBusy === `${question.id}:${option[0]}`" @click="revealHint(question.id, option[0])">{{ option[1] }}</button></div>
+              <article v-if="streamingHints[question.id]" class="streaming-hint" aria-live="polite"><header><strong>{{ hintOptions.find(item => item[0] === streamingHints[question.id]?.kind)?.[1] }}</strong><em>AI 正在针对本题生成</em></header><p>{{ streamingHints[question.id]?.text || '正在读取题目与对应资料…' }}<i class="stream-caret" /></p></article>
               <article v-for="hint in revealedHints[question.id] ?? []" :key="`${hint.kind}-${hint.level}`"><header><strong>{{ hintOptions.find(item => item[0] === hint.kind)?.[1] }}</strong><em>{{ hint.source === 'AI' ? 'AI 针对本题生成' : '题目规则提示' }}</em></header><p>{{ hint.text }}</p><small>{{ hint.independenceImpact }}</small></article>
             </div>
             <textarea
@@ -332,7 +360,8 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer); });
         </article>
 
         <footer v-if="detail.session.status === 'IN_PROGRESS'" class="submit-bar">
-          <span>已完成 {{ answeredCount }} / {{ questions.length }}</span>
+          <span v-if="busy" aria-live="polite">{{ aiProgress }}<small v-if="aiReceivedChars"> · 已接收 {{ aiReceivedChars }} 字符</small></span>
+          <span v-else>已完成 {{ answeredCount }} / {{ questions.length }}</span>
           <button class="primary-action" :disabled="busy" @click="requestSubmit">{{ busy ? '正在生成反馈…' : '提交并查看掌握反馈' }}</button>
         </footer>
         <div v-else-if="['SUBMITTED', 'GRADING', 'ERROR'].includes(detail.session.status)" class="state-panel">

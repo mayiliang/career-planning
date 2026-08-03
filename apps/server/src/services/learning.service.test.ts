@@ -7,8 +7,11 @@ import {
   getNextBranches,
   getLearningWorkspace,
   getNoteByCode,
+  listNotes,
   markPointLearned,
+  organizePointNoteStream,
   organizePointNote,
+  extractPartialJsonString,
   saveCheckin,
   savePointNote,
   setCurrentLearningPoint,
@@ -60,6 +63,38 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(accepted.versions.some((item: { source: string }) => item.source === 'AI_ACCEPTED')).toBe(true);
   });
 
+  it('AI 整理流会逐段返回 Markdown，并只在完成后保存候选稿', async () => {
+    const previousKey = config.DEEPSEEK_API_KEY;
+    config.DEEPSEEK_API_KEY = '';
+    const chunks: string[] = [];
+    const result = await organizePointNoteStream(code, (delta) => chunks.push(delta));
+    config.DEEPSEEK_API_KEY = previousKey;
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.join('')).toBe(result.organizedMd);
+    expect(result.originalMd).toContain('第二版');
+  });
+
+  it('能从尚未生成完的 JSON 中增量解码 Markdown 字符串', () => {
+    const partial = extractPartialJsonString('{"organizedMarkdown":"# 标题\\n\\n第一段', 'organizedMarkdown');
+    expect(partial).toEqual({ value: '# 标题\n\n第一段', complete: false });
+    const complete = extractPartialJsonString('{"organizedMarkdown":"含有 \\"代码\\"","review":{}}', 'organizedMarkdown');
+    expect(complete).toEqual({ value: '含有 "代码"', complete: true });
+  });
+
+  it('笔记默认按知识体系顺序返回，并支持自定义排序方式', () => {
+    savePointNote('TS-01', 'TypeScript 笔记');
+    savePointNote('JS-02', 'JavaScript 笔记');
+    const defaultCodes = listNotes().map((item) => item.knowledgePointCode);
+    expect(defaultCodes.indexOf('JS-02')).toBeLessThan(defaultCodes.indexOf('TS-01'));
+    expect(listNotes().find((item) => item.knowledgePointCode === 'JS-02')?.versions).toHaveLength(1);
+    const codeCodes = listNotes(undefined, undefined, 'code_asc').map((item) => item.knowledgePointCode);
+    expect(codeCodes).toEqual([...codeCodes].sort((left, right) => left.localeCompare(right, 'zh-CN', { numeric: true })));
+    for (const target of ['TS-01', 'JS-02']) {
+      rawDb.prepare('DELETE FROM knowledge_note_versions WHERE note_id IN (SELECT id FROM knowledge_notes WHERE knowledge_point_code = ?)').run(target);
+      rawDb.prepare('DELETE FROM knowledge_notes WHERE knowledge_point_code = ?').run(target);
+    }
+  });
+
   it('学习完成与掌握等级互相独立', () => {
     setCurrentLearningPoint(code);
     let row = rawDb.prepare('SELECT learning_state AS learningState, mastery_level AS masteryLevel FROM knowledge_points WHERE code = ?').get(code) as { learningState: string; masteryLevel: number };
@@ -71,7 +106,8 @@ describe('自主学习、笔记版本与打卡', () => {
   });
 
   it('打卡独立于每日计划，并能关联多个知识点', () => {
-    const record = saveCheckin({ date: '2026-08-01', pointCodes: [code, 'JS-01'], summaryMd: '今天按实际进度学习。', actualMinutes: 75 });
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const record = saveCheckin({ date: today, pointCodes: [code, 'JS-01'], summaryMd: '今天按实际进度学习。', actualMinutes: 75 });
     expect(record.points.map((item: { code: string }) => item.code)).toEqual([code, 'JS-01']);
     expect(getLearningWorkspace().todayCheckin?.summaryMd).toBe('今天按实际进度学习。');
   });

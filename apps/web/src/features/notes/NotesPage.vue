@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiClient, type KnowledgeNote } from '@/api/client';
+import { apiClient, type KnowledgeNote, type NoteSortMode } from '@/api/client';
 import { renderMarkdown } from '@/utils/markdown';
 
 const router = useRouter();
@@ -11,6 +11,7 @@ const search = ref('');
 const loading = ref(true);
 const error = ref('');
 const view = ref<'active' | 'original' | 'organized'>('active');
+const sortMode = ref<NoteSortMode>('knowledge');
 let timer: number | undefined;
 
 const grouped = computed(() => {
@@ -31,7 +32,7 @@ const displayedMd = computed(() => {
 async function load() {
   loading.value = true;
   try {
-    notes.value = await apiClient.listNotes({ search: search.value || undefined });
+    notes.value = await apiClient.listNotes({ search: search.value || undefined, sort: sortMode.value });
     if (selected.value) selected.value = notes.value.find((item) => item.id === selected.value?.id) ?? notes.value[0] ?? null;
     else selected.value = notes.value[0] ?? null;
   } catch (reason) { error.value = reason instanceof Error ? reason.message : '笔记加载失败'; }
@@ -40,7 +41,15 @@ async function load() {
 
 function choose(note: KnowledgeNote) { selected.value = note; view.value = 'active'; }
 watch(search, () => { window.clearTimeout(timer); timer = window.setTimeout(load, 250); });
-onMounted(load);
+watch(sortMode, () => {
+  window.localStorage.setItem('career-atlas-note-sort', sortMode.value);
+  void load();
+});
+onMounted(() => {
+  const saved = window.localStorage.getItem('career-atlas-note-sort');
+  if (['knowledge', 'updated_desc', 'updated_asc', 'title_asc', 'code_asc'].includes(saved ?? '') && saved !== sortMode.value) sortMode.value = saved as NoteSortMode;
+  else void load();
+});
 </script>
 
 <template>
@@ -48,10 +57,10 @@ onMounted(load);
     <header class="notes-header"><div><p>KNOWLEDGE NOTES</p><h1>笔记中心</h1><span>知识点里写下的内容会自动同步到这里，并按知识体系归档。</span></div><button @click="router.push('/knowledge/map')">打开知识体系</button></header>
     <div class="notes-shell">
       <aside class="notes-index">
-        <label><span>搜索标题、编号或正文</span><input v-model="search" placeholder="例如：ES Modules"></label>
+        <div class="index-tools"><label><span>搜索标题、编号或正文</span><input v-model="search" placeholder="例如：ES Modules"></label><label><span>笔记排序</span><select v-model="sortMode" aria-label="笔记排序"><option value="knowledge">知识体系顺序（默认）</option><option value="updated_desc">最近修改优先</option><option value="updated_asc">最早修改优先</option><option value="title_asc">标题拼音顺序</option><option value="code_asc">知识点编号顺序</option></select></label></div>
         <div v-if="loading" class="empty">正在读取笔记…</div>
         <template v-else-if="grouped.length">
-          <section v-for="[domain, items] in grouped" :key="domain"><h2>{{ domain }} <span>{{ items.length }}</span></h2><button v-for="item in items" :key="item.id" :class="{ active: selected?.id === item.id }" @click="choose(item)"><code>{{ item.knowledgePointCode }}</code><strong>{{ item.pointTitle }}</strong><small>{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</small></button></section>
+          <section v-for="[domain, items] in grouped" :key="domain"><h2>{{ domain }} <span>{{ items.length }}</span></h2><button v-for="item in items" :key="item.id" :class="{ active: selected?.id === item.id }" @click="choose(item)"><code>{{ item.knowledgePointCode }}</code><strong>{{ item.pointTitle }}</strong><small>{{ sortMode === 'knowledge' ? `体系序号 ${item.routeOrder + 1}` : new Date(item.updatedAt).toLocaleString('zh-CN') }}</small></button></section>
         </template>
         <div v-else class="empty">还没有笔记。进入任意知识点写下第一条，保存后会自动出现在这里。</div>
       </aside>
@@ -70,7 +79,7 @@ onMounted(load);
 </template>
 
 <style scoped>
-.notes-page{max-width:1380px;margin:0 auto;padding:26px}.notes-header{display:flex;align-items:end;justify-content:space-between;margin-bottom:18px}.notes-header p{font:700 .68rem ui-monospace;color:#596fa1;letter-spacing:.13em}.notes-header h1{font-size:clamp(2rem,4vw,3rem);margin:4px 0}.notes-header span{color:#6a7483}.notes-page button{border:1px solid #ccd4df;background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;color:inherit}.notes-shell{display:grid;grid-template-columns:350px 1fr;min-height:690px;border:1px solid #dce1e8;border-radius:18px;overflow:hidden;background:#fff}.notes-index{background:#f5f7fa;border-right:1px solid #dce1e8;padding:17px;overflow:auto;max-height:calc(100vh - 155px)}.notes-index label span{display:block;font-size:.7rem;color:#6d7785;margin-bottom:6px}.notes-index input{width:100%;box-sizing:border-box;padding:11px;border:1px solid #ccd4df;border-radius:9px;font:inherit}.notes-index section h2{font-size:.76rem;margin:20px 5px 7px;color:#536078}.notes-index section h2 span{float:right}.notes-index section button{width:100%;border:0;background:transparent;text-align:left;display:grid;grid-template-columns:68px 1fr;padding:10px 8px}.notes-index section button.active{background:#fff;box-shadow:0 2px 10px #1c294214}.notes-index code{color:#3d58a2}.notes-index strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.notes-index small{grid-column:2;color:#88909b;margin-top:4px}.note-reader{padding:28px;overflow:auto;max-height:calc(100vh - 155px)}.note-reader>header{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid #e1e5eb;padding-bottom:18px}.note-reader>header small{color:#65718a}.note-reader>header h2{font-size:1.7rem;margin:5px 0}.note-reader>header p{margin:0;color:#7b8490}.note-reader nav{display:flex;gap:7px;margin:18px 0}.note-reader nav button.active{background:#1d2a43;color:#fff}.note-reader nav button:disabled{opacity:.4}.markdown{line-height:1.75;max-width:900px;overflow-wrap:anywhere}.review{border:1px solid #dce5ff;background:#f4f7ff;border-radius:12px;padding:15px;margin-top:20px}.review h3{margin-top:0}.review p{display:flex;gap:9px}.review b{color:#3a57a5}details{margin-top:22px;border-top:1px solid #e0e5eb;padding-top:14px}summary{cursor:pointer;font-weight:700}details ol{padding:0;list-style:none}details li{display:grid;grid-template-columns:50px 110px 1fr auto;gap:8px;border-bottom:1px solid #edf0f3;padding:9px 0;font-size:.78rem}details li span{color:#6e7887}details time{color:#89919c}.empty{padding:18px;color:#737d8b;line-height:1.65}.empty-reader{display:grid;place-items:center;text-align:center;color:#6f7987}.error{background:#fff0ee;color:#992f27;padding:10px;border-radius:9px}@media(max-width:850px){.notes-page{padding:13px}.notes-header{align-items:flex-start;flex-direction:column;gap:12px}.notes-shell{grid-template-columns:1fr}.notes-index{border-right:0;border-bottom:1px solid #dce1e8;max-height:320px}.note-reader{max-height:none;padding:18px}.note-reader>header{flex-direction:column}details li{grid-template-columns:45px 1fr}details li span,details time{grid-column:2}}
+.notes-page{max-width:1380px;margin:0 auto;padding:26px}.notes-header{display:flex;align-items:end;justify-content:space-between;margin-bottom:18px}.notes-header p{font:700 .68rem ui-monospace;color:#596fa1;letter-spacing:.13em}.notes-header h1{font-size:clamp(2rem,4vw,3rem);margin:4px 0}.notes-header span{color:#6a7483}.notes-page button{border:1px solid #ccd4df;background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;color:inherit}.notes-shell{display:grid;grid-template-columns:350px 1fr;min-height:690px;border:1px solid #dce1e8;border-radius:18px;overflow:hidden;background:#fff}.notes-index{background:#f5f7fa;border-right:1px solid #dce1e8;padding:17px;overflow:auto;max-height:calc(100vh - 155px)}.index-tools{display:grid;gap:10px}.notes-index label span{display:block;font-size:.7rem;color:#6d7785;margin-bottom:6px}.notes-index input,.notes-index select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #ccd4df;border-radius:9px;background:#fff;font:inherit}.notes-index section h2{font-size:.76rem;margin:20px 5px 7px;color:#536078}.notes-index section h2 span{float:right}.notes-index section button{width:100%;border:0;background:transparent;text-align:left;display:grid;grid-template-columns:68px 1fr;padding:10px 8px}.notes-index section button.active{background:#fff;box-shadow:0 2px 10px #1c294214}.notes-index code{color:#3d58a2}.notes-index strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.notes-index small{grid-column:2;color:#88909b;margin-top:4px}.note-reader{padding:28px;overflow:auto;max-height:calc(100vh - 155px)}.note-reader>header{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid #e1e5eb;padding-bottom:18px}.note-reader>header small{color:#65718a}.note-reader>header h2{font-size:1.7rem;margin:5px 0}.note-reader>header p{margin:0;color:#7b8490}.note-reader nav{display:flex;gap:7px;margin:18px 0}.note-reader nav button.active{background:#1d2a43;color:#fff}.note-reader nav button:disabled{opacity:.4}.markdown{line-height:1.75;max-width:900px;overflow-wrap:anywhere}.markdown pre{overflow:auto;padding:14px;color:#deebf8;background:#122033;border-radius:11px}.markdown table{width:100%;border-collapse:collapse}.markdown th,.markdown td{padding:8px;border:1px solid #dce3eb;text-align:left}.markdown blockquote{margin-left:0;padding:2px 14px;color:#53677e;border-left:4px solid #81a4ce;background:#f4f8fc}.review{border:1px solid #dce5ff;background:#f4f7ff;border-radius:12px;padding:15px;margin-top:20px}.review h3{margin-top:0}.review p{display:flex;gap:9px}.review b{color:#3a57a5}details{margin-top:22px;border-top:1px solid #e0e5eb;padding-top:14px}summary{cursor:pointer;font-weight:700}details ol{padding:0;list-style:none}details li{display:grid;grid-template-columns:50px 110px 1fr auto;gap:8px;border-bottom:1px solid #edf0f3;padding:9px 0;font-size:.78rem}details li span{color:#6e7887}details time{color:#89919c}.empty{padding:18px;color:#737d8b;line-height:1.65}.empty-reader{display:grid;place-items:center;text-align:center;color:#6f7987}.error{background:#fff0ee;color:#992f27;padding:10px;border-radius:9px}@media(max-width:850px){.notes-page{padding:13px}.notes-header{align-items:flex-start;flex-direction:column;gap:12px}.notes-shell{grid-template-columns:1fr}.notes-index{border-right:0;border-bottom:1px solid #dce1e8;max-height:320px}.note-reader{max-height:none;padding:18px}.note-reader>header{flex-direction:column}details li{grid-template-columns:45px 1fr}details li span,details time{grid-column:2}}
 </style>
 
 <style scoped>

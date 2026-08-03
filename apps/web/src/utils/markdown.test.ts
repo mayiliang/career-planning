@@ -15,4 +15,14 @@ describe('学习资料 Markdown 渲染', () => {
     expect(html).not.toContain('href="javascript:');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  it('支持笔记常用的标题、强调、任务清单、表格、引用和代码块', () => {
+    const html = renderMarkdown('# 标题\n\n**重点** 与 `const`\n\n- [x] 已完成\n\n> 边界说明\n\n| 输入 | 输出 |\n| --- | --- |\n| 1 | 2 |\n\n```js\nconst result = 2;\n```');
+    expect(html).toContain('<h1>标题</h1>');
+    expect(html).toContain('<strong>重点</strong>');
+    expect(html).toContain('type="checkbox" disabled checked');
+    expect(html).toContain('<blockquote>');
+    expect(html).toContain('<table>');
+    expect(html).toContain('class="language-js"');
+  });
 });

@@ -560,6 +560,16 @@ const BackupMetadataSchema = z.object({
   note: z.string().optional(),
 });
 
+const AssessmentGradeResponseSchema = z.object({
+  session: AssessmentSessionSchema,
+  result: AssessmentResultSchema,
+  knowledgePointUpdated: z.boolean(),
+  retestEventCreated: z.boolean(),
+  reviewEventCreated: z.boolean(),
+});
+
+const AssessmentRegradeResponseSchema = AssessmentGradeResponseSchema.omit({ session: true });
+
 const WorkspacePointSchema = z.object({
   id: z.string(), code: z.string(), title: z.string(), domainCode: z.string(), domainTitle: z.string(),
   learningState: z.enum(['NOT_STARTED', 'LEARNING', 'LEARNED', 'DEFERRED']),
@@ -610,7 +620,10 @@ const KnowledgeNoteSchema = z.object({
   originalMd: z.string(), organizedMd: z.string().nullable(), activeVersionSource: z.string(), activeMd: z.string(),
   aiReview: z.object({ corrections: z.array(z.string()).optional(), additions: z.array(z.string()).optional(), uncertainItems: z.array(z.string()).optional(), sourceGrounded: z.boolean().optional() }).passthrough().nullable(),
   createdAt: z.string(), updatedAt: z.string(), versions: z.array(NoteVersionSchema), generationMode: z.string().optional(),
+  routeOrder: z.number(),
 });
+
+export type NoteSortMode = 'knowledge' | 'updated_desc' | 'updated_asc' | 'title_asc' | 'code_asc';
 
 const ResetLearningProgressSchema = z.object({
   syncedKnowledgePoints: z.number(),
@@ -681,6 +694,115 @@ async function request<T>(
 
   const parsed = ApiResponseSchema.parse(json);
   return schema.parse(parsed.data);
+}
+
+async function streamOrganizedNote(
+  code: string,
+  onDelta: (delta: string, accumulated: string) => void,
+  signal?: AbortSignal,
+) {
+  const response = await fetch(`${API_BASE}/notes/${encodeURIComponent(code)}/organize/stream`, { method: 'POST', signal });
+  if (!response.ok || !response.body) throw new Error(`无法开始 AI 流式整理（${response.status}）`);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let accumulated = '';
+  let finalNote: unknown = null;
+
+  const processFrame = (frame: string) => {
+    const event = frame.split(/\r?\n/).find((line) => line.startsWith('event:'))?.slice(6).trim() ?? 'message';
+    const rawData = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+    if (!rawData) return;
+    const data = JSON.parse(rawData) as { delta?: string; message?: string; note?: unknown };
+    if (event === 'delta' && data.delta) {
+      accumulated += data.delta;
+      onDelta(data.delta, accumulated);
+    } else if (event === 'done') {
+      finalNote = data.note;
+    } else if (event === 'error') {
+      throw new Error(data.message || 'AI 整理失败');
+    }
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+    const frames = buffer.split(/\r?\n\r?\n/);
+    buffer = frames.pop() ?? '';
+    for (const frame of frames) processFrame(frame);
+    if (done) break;
+  }
+  if (buffer.trim()) processFrame(buffer);
+  if (!finalNote) throw new Error('AI 整理流已结束，但没有收到完整结果');
+  return KnowledgeNoteSchema.parse(finalNote);
+}
+
+async function consumeSse(
+  path: string,
+  options: RequestInit,
+  onEvent: (event: string, data: Record<string, unknown>) => void,
+) {
+  const response = await fetch(`${API_BASE}${path}`, options);
+  if (!response.ok || !response.body) throw new Error(`无法开始流式请求（${response.status}）`);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const processFrame = (frame: string) => {
+    const event = frame.split(/\r?\n/).find((line) => line.startsWith('event:'))?.slice(6).trim() ?? 'message';
+    const rawData = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+    if (!rawData) return;
+    const data = JSON.parse(rawData) as Record<string, unknown>;
+    if (event === 'error') throw new Error(typeof data.message === 'string' ? data.message : '流式请求失败');
+    onEvent(event, data);
+  };
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+    const frames = buffer.split(/\r?\n\r?\n/);
+    buffer = frames.pop() ?? '';
+    for (const frame of frames) processFrame(frame);
+    if (done) break;
+  }
+  if (buffer.trim()) processFrame(buffer);
+}
+
+async function streamHint(
+  id: string,
+  questionId: string,
+  kind: 'EXPLAIN' | 'HINT' | 'DECOMPOSE' | 'OUTLINE' | 'STARTER' | 'SIMILAR_EXAMPLE' | 'FULL_ANSWER',
+  onDelta: (delta: string, accumulated: string) => void,
+  signal?: AbortSignal,
+) {
+  let accumulated = '';
+  let finalHint: unknown;
+  await consumeSse(
+    `/assessments/${encodeURIComponent(id)}/questions/${encodeURIComponent(questionId)}/hints/stream`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }), signal },
+    (event, data) => {
+      if (event === 'delta' && typeof data.delta === 'string') {
+        accumulated += data.delta;
+        onDelta(data.delta, accumulated);
+      }
+      if (event === 'done') finalHint = data.hint;
+    },
+  );
+  return z.object({ kind: z.string(), level: z.number(), text: z.string(), source: z.enum(['AI', 'RULE']), independenceImpact: z.string() }).parse(finalHint);
+}
+
+async function streamStructuredResult<T>(
+  path: string,
+  schema: z.ZodType<T>,
+  onProgress: (message: string, receivedChars?: number) => void,
+  options: RequestInit = {},
+) {
+  let finalValue: unknown;
+  await consumeSse(path, { method: 'POST', ...options }, (event, data) => {
+    if (event === 'progress' && typeof data.message === 'string') {
+      onProgress(data.message, typeof data.receivedChars === 'number' ? data.receivedChars : undefined);
+    }
+    if (event === 'done') finalValue = data.attempt ?? data.grade;
+  });
+  return schema.parse(finalValue);
 }
 
 // API Client 对象
@@ -796,16 +918,29 @@ export const apiClient = {
     });
   },
 
+  async validatePracticeAttemptStream(code: string, activityId: string, data: {
+    submissionMd: string; code?: string; language?: 'javascript' | 'typescript';
+    executionOutput?: string; executionStatus?: 'NOT_RUN' | 'SUCCESS' | 'ERROR' | 'TIMEOUT';
+  }, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal) {
+    return streamStructuredResult(
+      `/learning/points/${encodeURIComponent(code)}/practice-attempts/${encodeURIComponent(activityId)}/validate/stream`,
+      PracticeAttemptSchema,
+      onProgress,
+      { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal },
+    );
+  },
+
   async saveRouteChoice(data: { sourceCode: string; targetCode: string; state: 'SELECTED' | 'DEFERRED'; scope: 'POINT' | 'BRANCH'; reason?: string }) {
     return request('/learning/route-choices', z.object({ sourceCode: z.string(), targetCode: z.string(), state: z.string(), scope: z.string(), updatedAt: z.string() }), {
       method: 'PUT', body: JSON.stringify(data),
     });
   },
 
-  async listNotes(params?: { search?: string; domainCode?: string }) {
+  async listNotes(params?: { search?: string; domainCode?: string; sort?: NoteSortMode }) {
     const query = new URLSearchParams();
     if (params?.search) query.set('search', params.search);
     if (params?.domainCode) query.set('domainCode', params.domainCode);
+    if (params?.sort) query.set('sort', params.sort);
     return request(`/notes${query.size ? `?${query}` : ''}`, z.array(KnowledgeNoteSchema));
   },
 
@@ -819,6 +954,10 @@ export const apiClient = {
 
   async organizeNote(code: string) {
     return request(`/notes/${encodeURIComponent(code)}/organize`, KnowledgeNoteSchema, { method: 'POST' });
+  },
+
+  async organizeNoteStream(code: string, onDelta: (delta: string, accumulated: string) => void, signal?: AbortSignal) {
+    return streamOrganizedNote(code, onDelta, signal);
   },
 
   async acceptOrganizedNote(code: string) {
@@ -1048,6 +1187,10 @@ export const apiClient = {
     });
   },
 
+  async revealAssessmentHintStream(id: string, questionId: string, kind: 'EXPLAIN' | 'HINT' | 'DECOMPOSE' | 'OUTLINE' | 'STARTER' | 'SIMILAR_EXAMPLE' | 'FULL_ANSWER', onDelta: (delta: string, accumulated: string) => void, signal?: AbortSignal) {
+    return streamHint(id, questionId, kind, onDelta, signal);
+  },
+
   async getAssessment(id: string) {
     return request(`/assessments/${id}`, AssessmentDetailSchema);
   },
@@ -1068,25 +1211,22 @@ export const apiClient = {
   },
 
   async gradeAssessment(id: string) {
-    return request(`/assessments/${id}/grade`, z.object({
-      session: AssessmentSessionSchema,
-      result: AssessmentResultSchema,
-      knowledgePointUpdated: z.boolean(),
-      retestEventCreated: z.boolean(),
-      reviewEventCreated: z.boolean(),
-    }), {
+    return request(`/assessments/${id}/grade`, AssessmentGradeResponseSchema, {
       method: 'POST',
       body: JSON.stringify({ provider: 'deepseek' }),
     });
   },
 
+  async gradeAssessmentStream(id: string, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal) {
+    return streamStructuredResult(`/assessments/${encodeURIComponent(id)}/grade/stream`, AssessmentGradeResponseSchema, onProgress, { signal });
+  },
+
   async regradeAssessment(id: string) {
-    return request(`/assessments/${id}/regrade`, z.object({
-      result: AssessmentResultSchema,
-      knowledgePointUpdated: z.boolean(),
-      retestEventCreated: z.boolean(),
-      reviewEventCreated: z.boolean(),
-    }), { method: 'POST' });
+    return request(`/assessments/${id}/regrade`, AssessmentRegradeResponseSchema, { method: 'POST' });
+  },
+
+  async regradeAssessmentStream(id: string, onProgress: (message: string, receivedChars?: number) => void, signal?: AbortSignal) {
+    return streamStructuredResult(`/assessments/${encodeURIComponent(id)}/regrade/stream`, AssessmentRegradeResponseSchema, onProgress, { signal });
   },
 
   async getAssessmentResult(id: string) {

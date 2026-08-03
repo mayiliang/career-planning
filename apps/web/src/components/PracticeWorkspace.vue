@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { apiClient, type LearningActivity, type PracticeAttempt } from '@/api/client';
 import { runBrowserCode, type BrowserExecutionStatus } from '@/utils/browser-code-runner';
 
@@ -17,6 +17,9 @@ const saving = ref(false);
 const validating = ref(false);
 const message = ref('');
 const error = ref('');
+const validationProgress = ref('');
+const validationReceivedChars = ref(0);
+let validationController: AbortController | null = null;
 
 onMounted(async () => {
   try {
@@ -78,8 +81,20 @@ async function validate() {
   validating.value = true;
   error.value = '';
   message.value = '';
+  validationProgress.value = '正在建立流式验证连接';
+  validationReceivedChars.value = 0;
+  validationController = new AbortController();
   try {
-    attempt.value = await apiClient.validatePracticeAttempt(props.pointCode, props.activity.id, payload());
+    attempt.value = await apiClient.validatePracticeAttemptStream(
+      props.pointCode,
+      props.activity.id,
+      payload(),
+      (progress, receivedChars) => {
+        validationProgress.value = progress;
+        validationReceivedChars.value = receivedChars ?? validationReceivedChars.value;
+      },
+      validationController.signal,
+    );
     if (attempt.value.validation?.passed) {
       message.value = '练习已通过系统验证并保存为完成证据。';
       emit('completed', props.activity.id);
@@ -88,8 +103,11 @@ async function validate() {
     error.value = reason instanceof Error ? reason.message : '练习验证失败';
   } finally {
     validating.value = false;
+    validationController = null;
   }
 }
+
+onBeforeUnmount(() => validationController?.abort());
 </script>
 
 <template>
@@ -129,6 +147,9 @@ async function validate() {
 
       <p v-if="error" class="workspace-message error" role="alert">{{ error }}</p>
       <p v-else-if="message" class="workspace-message">{{ message }}</p>
+      <p v-else-if="validating" class="workspace-message stream-progress" aria-live="polite">
+        <span class="stream-dot" />{{ validationProgress }}<small v-if="validationReceivedChars">已接收 {{ validationReceivedChars }} 字符</small>
+      </p>
 
       <article v-if="attempt?.validation" class="validation-result" :class="{ passed: attempt.validation.passed }">
         <header><strong>{{ attempt.validation.passed ? '验证通过' : '还需要补充' }}</strong><span>{{ attempt.validation.mode === 'AI' ? 'AI 依据资料验证' : '本地规则验证' }}</span></header>
@@ -152,6 +173,7 @@ async function validate() {
 .source-contract{padding:13px 15px;border:1px solid #d8e2ed;border-radius:13px;background:#fff}.source-contract summary{cursor:pointer;font-weight:800}.source-contract div{padding:10px 0;border-top:1px solid #edf0f4;margin-top:9px}.source-contract a,.source-contract strong{color:#2c5c9d;font-weight:800}.source-contract p{margin:4px 0 0;color:#68778a;font-size:.8rem}
 .code-lab{overflow:hidden;border:1px solid #202c3a;border-radius:15px;background:#111a24;color:#e8eef6}.code-lab>header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #2a3949}.code-lab>header span,.code-lab>header small{display:block}.code-lab>header small{margin-top:3px;color:#91a4ba}.code-lab button{border:1px solid #4c769e;background:#193d5b;color:#fff}.code-lab textarea{width:100%;min-height:330px;box-sizing:border-box;border:0;outline:0;resize:vertical;padding:18px;background:#101821;color:#dce8f5;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2}.execution-output{border-top:1px solid #2a3949;padding:13px}.execution-output>span{font:800 .68rem ui-monospace;color:#8fa7bd}.execution-output[data-status=SUCCESS]>span{color:#6bd49a}.execution-output[data-status=ERROR]>span,.execution-output[data-status=TIMEOUT]>span{color:#ff8f84}.execution-output pre{margin:9px 0 0;max-height:250px;overflow:auto;white-space:pre-wrap;color:#d4dfeb;font:12px/1.6 ui-monospace,monospace}
 .submission-editor{display:grid;gap:8px}.submission-editor>span{font-weight:850}.submission-editor textarea{width:100%;box-sizing:border-box;border:1px solid #c7d3df;border-radius:13px;padding:15px;background:#fff;font:inherit;line-height:1.65;resize:vertical}.workspace-message{margin:0;padding:11px 13px;border-radius:10px;background:#e7f5ec;color:#1b6540}.workspace-message.error{background:#fff0ee;color:#992f29}
+.stream-progress{display:flex;align-items:center;gap:9px;background:#eaf2ff;color:#274f83}.stream-progress small{margin-left:auto;color:#617691}.stream-dot{width:8px;height:8px;border-radius:50%;background:#3975bb;box-shadow:0 0 0 0 rgba(57,117,187,.4);animation:pulse 1.2s infinite}@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(57,117,187,0)}100%{box-shadow:0 0 0 0 rgba(57,117,187,0)}}
 .validation-result{padding:16px;border:1px solid #e0b3ae;border-radius:13px;background:#fff7f5}.validation-result.passed{border-color:#add9be;background:#f2fbf5}.validation-result header{display:flex;justify-content:space-between;gap:12px}.validation-result header span{font-size:.72rem;color:#647286}.validation-result p{line-height:1.6}.validation-result ul{display:grid;gap:5px;padding:0;list-style:none}.validation-result li{color:#a13b32}.validation-result li.passed{color:#17633b}.validation-result footer{color:#536579;font-weight:700}
 .workspace-actions{display:flex;justify-content:flex-end;gap:9px}.workspace-actions button{padding:10px 15px}.workspace-actions .primary{background:#193d68;border-color:#193d68;color:#fff}
 .workspace-state{padding:24px;color:#647388}@media(max-width:850px){.task-contract{grid-template-columns:1fr}.workspace-header{flex-direction:column}.practice-workspace{padding:15px}.code-lab>header{align-items:flex-start;flex-direction:column}.workspace-actions{justify-content:stretch}.workspace-actions button{flex:1}}

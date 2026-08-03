@@ -72,7 +72,12 @@ export interface GradeResult {
 
 // ===== 执行评分 =====
 
-export async function gradeAssessment(request: GradeRequest): Promise<GradeResult> {
+export async function gradeAssessment(
+  request: GradeRequest,
+  onProgress: (message: string, receivedChars?: number) => void = () => {},
+  signal?: AbortSignal,
+): Promise<GradeResult> {
+  onProgress('正在读取答卷、题目要求和对应学习资料');
   // 获取会话和答案
   const session = await db.query.assessmentSessions.findFirst({
     where: eq(assessmentSessions.id, request.sessionId),
@@ -168,7 +173,8 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
     };
     
     // 调用 AI 评分
-    const aiResponse = await aiProvider.grade(gradingRequest);
+    onProgress('答卷结构已确认，正在启动 AI 判题');
+    const aiResponse = await aiProvider.grade(gradingRequest, onProgress, signal);
     
     // 解析或处理 AI 响应
     let dimensionScores: DimensionScores;
@@ -327,7 +333,11 @@ export async function gradeAssessment(request: GradeRequest): Promise<GradeResul
  * 对已经进入人工复核或错误状态的会话重新调用评分器。
  * 原始答卷保持不变，只替换当前会话的机器评分结果。
  */
-export async function regradeAssessment(sessionId: string): Promise<GradeResult> {
+export async function regradeAssessment(
+  sessionId: string,
+  onProgress: (message: string, receivedChars?: number) => void = () => {},
+  signal?: AbortSignal,
+): Promise<GradeResult> {
   const session = await db.query.assessmentSessions.findFirst({
     where: eq(assessmentSessions.id, sessionId),
   });
@@ -351,7 +361,7 @@ export async function regradeAssessment(sessionId: string): Promise<GradeResult>
       .run();
   })();
 
-  return gradeAssessment({ sessionId, provider: 'deepseek' });
+  return gradeAssessment({ sessionId, provider: 'deepseek' }, onProgress, signal);
 }
 
 // ===== 更新知识点状态 =====

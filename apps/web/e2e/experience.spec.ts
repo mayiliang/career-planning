@@ -27,7 +27,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText(/不再用没有入口的“项目时间”占位/)).toBeVisible();
 
     await page.getByRole('button', { name: '我的笔记' }).click();
-    await expect(page.getByRole('heading', { name: '你的记录永远保留' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '边写边预览，你的原文永远保留' })).toBeVisible();
     await expect(page.getByText(/只会生成新稿，不覆盖你的文字/)).toBeVisible();
 
     await page.getByRole('button', { name: /掌握挑战/ }).last().click();
@@ -52,6 +52,10 @@ test.describe.serial('核心使用体验', () => {
     await page.locator('.submission-editor textarea').fill('# 固定输入\n输入为 2。\n# 预期输出\n预期为 3。\n# 实际输出\n脚本输出为 3。\n# 资料机制映射\n依据学习资料解释执行上下文、作用域与闭包机制。\n# 边界与异常验证\n补充边界输入、异常条件、验证动作和可复核证据。');
     await page.getByRole('button', { name: '保存草稿' }).click();
     await expect(page.getByText('练习草稿、代码和执行输出已经保存。')).toBeVisible();
+    const validationStream = page.waitForResponse((response) => response.url().includes('/validate/stream'));
+    await page.getByRole('button', { name: '提交并验证' }).click();
+    expect((await validationStream).headers()['content-type']).toContain('text/event-stream');
+    await expect(page.getByText('练习已通过系统验证并保存为完成证据。')).toBeVisible();
   });
 
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {
@@ -67,6 +71,10 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText('必须输出').first()).toBeVisible();
     await expect(page.getByText('指定格式').first()).toBeVisible();
     await expect(page.getByText('本题对应的学习资料与具体位置').first()).toBeVisible();
+    const hintStream = page.waitForResponse((response) => response.url().includes('/hints/stream'));
+    await page.getByRole('button', { name: '给一个提示' }).first().click();
+    expect((await hintStream).headers()['content-type']).toContain('text/event-stream');
+    await expect(page.getByText(/题目规则提示|AI 针对本题生成/).first()).toBeVisible();
     const firstSessionPath = new URL(page.url()).pathname;
 
     await page.goto('/knowledge/JS-02?tab=mastery');
@@ -137,6 +145,29 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/notes');
     await expect(page.getByRole('heading', { name: '笔记中心' })).toBeVisible();
     await expect(page.getByText(/知识点里写下的内容会自动同步到这里/)).toBeVisible();
+  });
+
+  test('Markdown 笔记实时预览、AI 流式整理并可切换排序', async ({ page }) => {
+    await page.goto('/knowledge/JS-03?tab=notes');
+    const editor = page.getByRole('textbox', { name: 'Markdown 原始笔记' });
+    await editor.fill('# 类型与不可变更新\n\n- [x] 理解浅拷贝\n\n```js\nconst next = { ...state };\n```');
+    await expect(page.getByLabel('Markdown 实时预览').getByRole('heading', { name: '类型与不可变更新' })).toBeVisible();
+    await expect(page.getByLabel('Markdown 实时预览').locator('pre code')).toContainText('const next');
+    await page.getByRole('button', { name: '保存原始笔记' }).click();
+
+    const streamResponse = page.waitForResponse((response) => response.url().includes('/notes/JS-03/organize/stream'));
+    await page.getByRole('button', { name: '用 AI 整理并核对' }).click();
+    const response = await streamResponse;
+    expect(response.headers()['content-type']).toContain('text/event-stream');
+    await expect(page.getByText(/已生成安全排版稿/)).toBeVisible();
+    await expect(page.locator('.organized .markdown-content')).toContainText('类型与不可变更新');
+
+    await page.goto('/notes');
+    const sort = page.getByLabel('笔记排序');
+    await expect(sort).toHaveValue('knowledge');
+    await expect(page.locator('.notes-index section button code').first()).toHaveText('JS-02');
+    await sort.selectOption('updated_desc');
+    await expect(page.locator('.notes-index section button code').first()).toHaveText('JS-03');
   });
 
   test('学习台不分配每日任务并支持回顾式打卡', async ({ page }) => {

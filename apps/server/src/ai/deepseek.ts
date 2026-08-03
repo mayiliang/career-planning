@@ -51,7 +51,11 @@ export class DeepSeekProvider implements AIProvider {
     this.maxRetries = config.maxRetries;
   }
   
-  async grade(request: GradingRequest): Promise<AIResponse> {
+  async grade(
+    request: GradingRequest,
+    onProgress: (message: string, receivedChars?: number) => void = () => {},
+    signal?: AbortSignal,
+  ): Promise<AIResponse> {
     const startTime = Date.now();
     
     const systemPrompt = SYSTEM_PROMPT_TEMPLATE;
@@ -72,10 +76,12 @@ export class DeepSeekProvider implements AIProvider {
       // DeepSeek 特有参数
       thinking: { type: 'disabled' },
       reasoning_effort: 'low',
+      stream: true,
+      stream_options: { include_usage: true },
     };
     
     // 发起请求（带重试）
-    let response = await this.requestWithRetry(body);
+    let response = await this.requestWithRetry(body, onProgress, signal);
     
     const responseTime = Date.now() - startTime;
     
@@ -104,7 +110,7 @@ export class DeepSeekProvider implements AIProvider {
         ...body,
         max_tokens: 8000,
         messages: buildCompactRetryMessages(messages),
-      });
+      }, onProgress, signal);
     }
     
     let rawContent = response.choices[0]?.message.content ?? '';
@@ -120,7 +126,7 @@ export class DeepSeekProvider implements AIProvider {
           content: `上一个 JSON 未通过结构校验：${parsed.parseError}\n请保留原评分结论，只修复字段结构。只返回完整 JSON 对象。`,
         },
       ];
-      response = await this.requestWithRetry({ ...body, messages: repairMessages, thinking: { type: 'disabled' } });
+      response = await this.requestWithRetry({ ...body, messages: repairMessages, thinking: { type: 'disabled' } }, onProgress, signal);
       rawContent = response.choices[0]?.message.content ?? '';
       parsed = parseGradingOutput(rawContent);
     }
@@ -155,14 +161,19 @@ export class DeepSeekProvider implements AIProvider {
     }
   }
   
-  private async requestWithRetry(body: unknown): Promise<DeepSeekResponse> {
+  private async requestWithRetry(
+    body: unknown,
+    onProgress: (message: string, receivedChars?: number) => void,
+    signal?: AbortSignal,
+  ): Promise<DeepSeekResponse> {
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      const controller = new AbortController();
+      const abortFromCaller = () => controller.abort();
+      signal?.addEventListener('abort', abortFromCaller, { once: true });
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-        
         const response = await fetch(`${this.baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -172,8 +183,6 @@ export class DeepSeekProvider implements AIProvider {
           body: JSON.stringify(body),
           signal: controller.signal,
         });
-        
-        clearTimeout(timeoutId);
         
         if (!response.ok) {
           const errorText = await response.text();
@@ -198,20 +207,67 @@ export class DeepSeekProvider implements AIProvider {
           
           throw new Error(`API error: ${response.status} - ${errorText}`);
         }
-        
-        return await response.json() as DeepSeekResponse;
+
+        if (!response.body) throw new Error('AI stream has no response body');
+        return await this.readStreamingResponse(response, onProgress);
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
+        if (signal?.aborted) throw lastError;
         
         // 超时或网络错误 - 重试
         if (attempt < this.maxRetries) {
           const waitTime = 1000 * Math.pow(2, attempt);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
+      } finally {
+        clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', abortFromCaller);
       }
     }
     
     throw lastError || new Error('Max retries exceeded');
+  }
+
+  private async readStreamingResponse(
+    response: Response,
+    onProgress: (message: string, receivedChars?: number) => void,
+  ): Promise<DeepSeekResponse> {
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let content = '';
+    let finishReason = 'stop';
+    let usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+    const consume = (frame: string) => {
+      const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+      if (!data || data === '[DONE]') return;
+      try {
+        const chunk = JSON.parse(data) as {
+          choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
+          usage?: DeepSeekResponse['usage'];
+        };
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) {
+          content += delta;
+          onProgress('AI 正在逐题核对并生成结构化反馈', content.length);
+        }
+        if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason!;
+        if (chunk.usage) usage = chunk.usage;
+      } catch { /* 忽略供应商心跳帧 */ }
+    };
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+      const frames = buffer.split(/\r?\n\r?\n/);
+      buffer = frames.pop() ?? '';
+      for (const frame of frames) consume(frame);
+      if (done) break;
+    }
+    if (buffer.trim()) consume(buffer);
+    return {
+      id: '', object: 'chat.completion', created: Math.floor(Date.now() / 1000), model: this.model,
+      choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: finishReason }], usage,
+    };
   }
 }
 

@@ -258,12 +258,12 @@ export function getNoteByCode(code: string) {
     FROM knowledge_notes kn LEFT JOIN knowledge_domains kd ON kd.code = kn.domain_code_snapshot
     WHERE kn.knowledge_point_code = ?`).get(code) as Record<string, unknown> | undefined;
   if (!note) return null;
-  const versions = rawDb.prepare(`SELECT id, version_no AS versionNo, source, change_summary AS changeSummary,
-    created_at AS createdAt FROM knowledge_note_versions WHERE note_id = ? ORDER BY version_no DESC LIMIT 20`).all(note.id);
-  return normalizeNote(note, versions);
+  return normalizeNote(note, getNoteVersions(String(note.id)));
 }
 
-export function listNotes(search?: string, domainCode?: string) {
+export type NoteSortMode = 'knowledge' | 'updated_desc' | 'updated_asc' | 'title_asc' | 'code_asc';
+
+export function listNotes(search?: string, domainCode?: string, sort: NoteSortMode = 'knowledge') {
   const clauses: string[] = [];
   const params: unknown[] = [];
   if (search?.trim()) {
@@ -275,21 +275,44 @@ export function listNotes(search?: string, domainCode?: string) {
   const rows = rawDb.prepare(`SELECT kn.*, kd.title AS domainTitle
     FROM knowledge_notes kn LEFT JOIN knowledge_domains kd ON kd.code = kn.domain_code_snapshot
     ${clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''}
-    ORDER BY kn.updated_at DESC`).all(...params) as Record<string, unknown>[];
-  return rows.map((row) => normalizeNote(row, []));
+    ORDER BY kn.knowledge_point_code`).all(...params) as Record<string, unknown>[];
+  const notes = rows.map((row) => normalizeNote(row, getNoteVersions(String(row.id))));
+  const compareText = (left: string, right: string) => left.localeCompare(right, 'zh-CN', { numeric: true });
+  return notes.sort((left, right) => {
+    if (sort === 'updated_desc') return right.updatedAt.localeCompare(left.updatedAt) || left.routeOrder - right.routeOrder;
+    if (sort === 'updated_asc') return left.updatedAt.localeCompare(right.updatedAt) || left.routeOrder - right.routeOrder;
+    if (sort === 'title_asc') return compareText(left.pointTitle, right.pointTitle) || left.routeOrder - right.routeOrder;
+    if (sort === 'code_asc') return compareText(left.knowledgePointCode, right.knowledgePointCode);
+    return left.routeOrder - right.routeOrder || compareText(left.knowledgePointCode, right.knowledgePointCode);
+  });
 }
 
 export async function organizePointNote(code: string) {
+  return organizePointNoteStream(code, () => undefined);
+}
+
+export async function organizePointNoteStream(code: string, onDelta: (delta: string) => void, signal?: AbortSignal) {
   const point = requirePoint(code, true);
   let note = getNoteByCode(code);
   if (!note) note = savePointNote(code, point.summary || '');
   if (!note.originalMd.trim()) throw new Error('请先写下一些原始笔记，再让 AI 整理。');
 
   const generated = config.DEEPSEEK_API_KEY
-    ? await requestOrganizedNote(point, note.originalMd)
+    ? await requestOrganizedNoteStream(point, note.originalMd, onDelta, signal)
     : localOrganizedDraft(point, note.originalMd);
+  if (!config.DEEPSEEK_API_KEY) {
+    for (const chunk of generated.organizedMarkdown.match(/.{1,32}/gs) ?? []) onDelta(chunk);
+  }
+  if (signal?.aborted) throw new DOMException('生成已取消', 'AbortError');
+  return persistOrganizedNote(code, note.id, generated);
+}
+
+function persistOrganizedNote(
+  code: string,
+  noteId: string,
+  generated: { organizedMarkdown: string; review: Record<string, unknown>; mode: 'AI' | 'LOCAL_FALLBACK' },
+) {
   const now = new Date().toISOString();
-  const noteId = note.id;
   rawDb.transaction(() => {
     rawDb.prepare(`UPDATE knowledge_notes SET organized_md = ?, ai_review_json = ?, updated_at = ? WHERE id = ?`)
       .run(generated.organizedMarkdown, JSON.stringify(generated.review), now, noteId);
@@ -421,6 +444,11 @@ function nextNoteVersion(noteId: string) {
   return row.version;
 }
 
+function getNoteVersions(noteId: string) {
+  return rawDb.prepare(`SELECT id, version_no AS versionNo, source, change_summary AS changeSummary,
+    created_at AS createdAt FROM knowledge_note_versions WHERE note_id = ? ORDER BY version_no DESC LIMIT 20`).all(noteId);
+}
+
 function normalizeNote(row: Record<string, unknown>, versions: unknown[]) {
   let review = null;
   try { review = row.ai_review_json ? JSON.parse(String(row.ai_review_json)) : null; } catch { review = null; }
@@ -437,13 +465,21 @@ function normalizeNote(row: Record<string, unknown>, versions: unknown[]) {
     aiReview: review,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+    routeOrder: KNOWLEDGE_ROUTE_INDEX.get(String(row.knowledge_point_code))?.order ?? Number.MAX_SAFE_INTEGER,
     versions,
   };
 }
 
-async function requestOrganizedNote(point: PointRow, originalMd: string) {
+async function requestOrganizedNoteStream(
+  point: PointRow,
+  originalMd: string,
+  onDelta: (delta: string) => void,
+  externalSignal?: AbortSignal,
+) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.DEEPSEEK_TIMEOUT_MS);
+  const abort = () => controller.abort();
+  externalSignal?.addEventListener('abort', abort, { once: true });
   try {
     const response = await fetch(`${config.DEEPSEEK_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
@@ -453,22 +489,75 @@ async function requestOrganizedNote(point: PointRow, originalMd: string) {
         model: config.DEEPSEEK_MODEL,
         temperature: 0.1,
         response_format: { type: 'json_object' },
+        stream: true,
+        stream_options: { include_usage: true },
         messages: [
-          { role: 'system', content: '你是严谨的中文前端学习笔记编辑。只能依据用户原笔记和给定学习资料核对；不得把不确定内容伪装成事实。原文永不被你覆盖。只返回 JSON。' },
-          { role: 'user', content: `请整理下面知识点笔记。要求：结构清晰、中文表达、纠正有资料依据的错误、补齐资料明确覆盖的重要遗漏；任何无法由资料确认的内容放入 uncertainItems。\n\n知识点：${point.code} ${point.title}\n\n用户原笔记：\n${originalMd.slice(0, 16000)}\n\n学习资料：\n${point.studyMaterialMd?.slice(0, 18000) || ''}\n\n通过标准：\n${point.passCriteriaMd?.slice(0, 6000) || ''}\n\n返回结构：{"organizedMarkdown":"...","review":{"corrections":["..."],"additions":["..."],"uncertainItems":["..."],"sourceGrounded":true}}` },
+          { role: 'system', content: '你是严谨的中文前端学习笔记编辑。只能依据用户原笔记和给定学习资料核对；不得把不确定内容伪装成事实。原文永不被你覆盖。只返回 JSON，并且必须先输出 organizedMarkdown 字段，以便界面流式展示。' },
+          { role: 'user', content: `请整理下面知识点笔记。要求：使用规范 Markdown；结构清晰、中文表达、纠正有资料依据的错误、补齐资料明确覆盖的重要遗漏；任何无法由资料确认的内容放入 uncertainItems。\n\n知识点：${point.code} ${point.title}\n\n用户原笔记：\n${originalMd.slice(0, 16000)}\n\n学习资料：\n${point.studyMaterialMd?.slice(0, 18000) || ''}\n\n通过标准：\n${point.passCriteriaMd?.slice(0, 6000) || ''}\n\n严格按字段顺序返回：{"organizedMarkdown":"...","review":{"corrections":["..."],"additions":["..."],"uncertainItems":["..."],"sourceGrounded":true}}` },
         ],
       }),
     });
     if (!response.ok) throw new Error(`AI 服务返回 ${response.status}`);
-    const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-    const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error('AI 没有返回整理结果');
-    const parsed = JSON.parse(content) as { organizedMarkdown?: string; review?: Record<string, unknown> };
+    if (!response.body) throw new Error('AI 服务没有返回可读取的流');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let wireBuffer = '';
+    let content = '';
+    let emittedLength = 0;
+    let done = false;
+    while (!done) {
+      const result = await reader.read();
+      done = result.done;
+      wireBuffer += decoder.decode(result.value ?? new Uint8Array(), { stream: !done });
+      const frames = wireBuffer.split(/\r?\n\r?\n/);
+      wireBuffer = frames.pop() ?? '';
+      for (const frame of frames) {
+        const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+        if (!data || data === '[DONE]') continue;
+        const packet = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+        content += packet.choices?.[0]?.delta?.content ?? '';
+        if (content.length > 200_000) throw new Error('AI 整理结果过长，已停止生成');
+        const partial = extractPartialJsonString(content, 'organizedMarkdown');
+        if (partial.value.length > emittedLength) {
+          onDelta(partial.value.slice(emittedLength));
+          emittedLength = partial.value.length;
+        }
+      }
+    }
+    if (!content.trim()) throw new Error('AI 没有返回整理结果');
+    const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, '')) as { organizedMarkdown?: string; review?: Record<string, unknown> };
     if (!parsed.organizedMarkdown?.trim()) throw new Error('AI 整理结果缺少正文');
+    if (parsed.organizedMarkdown.length > emittedLength) onDelta(parsed.organizedMarkdown.slice(emittedLength));
     return { organizedMarkdown: parsed.organizedMarkdown.trim(), review: parsed.review ?? {}, mode: 'AI' as const };
   } finally {
     clearTimeout(timeout);
+    externalSignal?.removeEventListener('abort', abort);
   }
+}
+
+/** 从仍在生成的 JSON 字符串字段中安全提取已完整解码的部分。 */
+export function extractPartialJsonString(source: string, field: string) {
+  const marker = new RegExp(`"${field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s*:\\s*"`).exec(source);
+  if (!marker) return { value: '', complete: false };
+  let value = '';
+  const start = marker.index + marker[0].length;
+  for (let index = start; index < source.length; index += 1) {
+    const char = source[index]!;
+    if (char === '"') return { value, complete: true };
+    if (char !== '\\') { value += char; continue; }
+    const escaped = source[index + 1];
+    if (escaped == null) break;
+    if (escaped === 'u') {
+      const hex = source.slice(index + 2, index + 6);
+      if (!/^[\da-fA-F]{4}$/.test(hex)) break;
+      value += String.fromCharCode(Number.parseInt(hex, 16));
+      index += 5;
+      continue;
+    }
+    value += ({ n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '"': '"', '\\': '\\', '/': '/' } as Record<string, string>)[escaped] ?? escaped;
+    index += 1;
+  }
+  return { value, complete: false };
 }
 
 function localOrganizedDraft(point: PointRow, originalMd: string) {

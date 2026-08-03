@@ -64,6 +64,7 @@ export default async function globalSetup(_config: FullConfig) {
       DATA_DIR: join(tmpdir(), `career-atlas-e2e-${process.pid}`),
       NODE_ENV: 'test',
       AUTO_BACKUP: 'false',
+      DEEPSEEK_API_KEY: '',
     },
   );
   let frontend: ReturnType<typeof startNodeProcess> | undefined;
