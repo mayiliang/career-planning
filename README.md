@@ -1,6 +1,6 @@
 # Career Atlas
 
-Career Atlas 是面向“AI 时代高级前端能力体系”的单用户、自主节奏学习工作台。系统内置 20 个能力领域和 219 个知识点，以中文学习资料、结构化笔记、站内练习、可选掌握挑战、知识路线与学习打卡构成闭环。
+Career Atlas 是面向“AI 时代高级前端能力体系”的单用户、自主节奏学习工作台。系统内置 20 个稳定能力组和 223 个知识点，以中文学习资料、结构化笔记、站内练习、可选掌握挑战、知识路线与学习打卡构成闭环。
 
 ## 当前学习方式
 
@@ -55,7 +55,7 @@ pnpm test:e2e
 | 文档 | 用途 |
 | --- | --- |
 | [自主学习路线](docs/plans/self-paced-learning-route.md) | 能力主线、分支选择和完成标准 |
-| [知识体系总览](docs/knowledge/frontend-knowledge-system.md) | 20 个领域与能力边界 |
+| [知识体系总览](docs/knowledge/frontend-knowledge-system.md) | 20 个能力组、二级主题与知识点边界 |
 | [学习资料使用规则](docs/knowledge/learning-resource-guide.md) | 中文资料、笔记、练习与掌握证据规则 |
 | [产品与开发文档](docs/development/README.md) | 产品决策、架构、API、AI 与验收 |
 | [现代 Markdown 与 AI 流式协议](docs/development/10-modern-markdown-and-ai-streaming.md) | 语法、thinking、性能和安全设计 |

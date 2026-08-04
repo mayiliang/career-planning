@@ -26,6 +26,14 @@ import {
 export const KnowledgeListQuerySchema = z.object({
   domainId: z.string().optional(), // 领域 ID
   status: z.enum(['NOT_STARTED', 'LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'MASTERED', 'NEEDS_RELEARNING']).optional(),
+  capabilityLayer: z.enum(['CORE', 'APPLICATION', 'SPECIALTY', 'LEADERSHIP']).optional(),
+  requirementLevel: z.enum(['REQUIRED', 'TRACK_REQUIRED', 'ELECTIVE']).optional(),
+  maturity: z.enum(['STABLE', 'EVOLVING', 'EXPERIMENTAL']).optional(),
+  aiRelation: z.enum(['NONE', 'AI_ASSISTED', 'AI_NATIVE', 'AGENTIC']).optional(),
+  portability: z.enum(['PORTABLE', 'FRAMEWORK_SPECIFIC', 'VENDOR_SPECIFIC', 'PLATFORM_SPECIFIC', 'JURISDICTION_SPECIFIC']).optional(),
+  secondaryTopic: z.string().optional(),
+  trackId: z.enum(['react', 'vue', 'umi-antd', 'agent-mcp']).optional(),
+  topicTag: z.enum(['component-platform', 'api-engineering', 'tooling', 'platform-engineering', 'realtime-ai', 'ai-tooling', 'engineering-leadership', 'web-platform', 'accessibility', 'security-privacy', 'performance-mobile', 'media', 'runtime-cross-platform', 'node-bff', 'data-realtime', 'browser-ai', 'graphics-viz', 'growth-content-i18n', 'deployment', 'visual-testing']).optional(),
   search: z.string().optional(), // 搜索关键词（标题、code）
 });
 
@@ -36,7 +44,19 @@ export interface KnowledgePointListItem {
   id: string;
   code: string;
   title: string;
+  secondaryTopic: string;
+  topicOrder: number;
   difficulty: string;
+  capabilityLayer: 'CORE' | 'APPLICATION' | 'SPECIALTY' | 'LEADERSHIP';
+  requirementLevel: 'REQUIRED' | 'TRACK_REQUIRED' | 'ELECTIVE';
+  maturity: 'STABLE' | 'EVOLVING' | 'EXPERIMENTAL';
+  aiRelation: 'NONE' | 'AI_ASSISTED' | 'AI_NATIVE' | 'AGENTIC';
+  portability: 'PORTABLE' | 'FRAMEWORK_SPECIFIC' | 'VENDOR_SPECIFIC' | 'PLATFORM_SPECIFIC' | 'JURISDICTION_SPECIFIC';
+  applicabilityTags: string[];
+  topicTags: string[];
+  trackIds: string[];
+  verifiedAt: string;
+  fallbackStrategy: string;
   planWeek: number | null;
   status: KnowledgeStatus;
   learningState: 'NOT_STARTED' | 'LEARNING' | 'LEARNED' | 'DEFERRED';
@@ -119,6 +139,38 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
   if (query.status) {
     conditions.push(eq(knowledgePoints.status, query.status));
   }
+
+  if (query.capabilityLayer) {
+    conditions.push(eq(knowledgePoints.capabilityLayer, query.capabilityLayer));
+  }
+
+  if (query.requirementLevel) {
+    conditions.push(eq(knowledgePoints.requirementLevel, query.requirementLevel));
+  }
+
+  if (query.maturity) {
+    conditions.push(eq(knowledgePoints.maturity, query.maturity));
+  }
+
+  if (query.aiRelation) {
+    conditions.push(eq(knowledgePoints.aiRelation, query.aiRelation));
+  }
+
+  if (query.portability) {
+    conditions.push(eq(knowledgePoints.portability, query.portability));
+  }
+
+  if (query.secondaryTopic) {
+    conditions.push(eq(knowledgePoints.secondaryTopic, query.secondaryTopic));
+  }
+
+  if (query.trackId) {
+    conditions.push(like(knowledgePoints.trackIds, `%"${query.trackId}"%`));
+  }
+
+  if (query.topicTag) {
+    conditions.push(like(knowledgePoints.topicTags, `%"${query.topicTag}"%`));
+  }
   
   // 搜索条件（标题或 code）
   if (query.search) {
@@ -126,7 +178,8 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
     conditions.push(
       or(
         like(knowledgePoints.title, searchPattern),
-        like(knowledgePoints.code, searchPattern)
+        like(knowledgePoints.code, searchPattern),
+        like(knowledgePoints.secondaryTopic, searchPattern)
       )
     );
   }
@@ -139,7 +192,19 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
       id: knowledgePoints.id,
       code: knowledgePoints.code,
       title: knowledgePoints.title,
+      secondaryTopic: knowledgePoints.secondaryTopic,
+      topicOrder: knowledgePoints.topicOrder,
       difficulty: knowledgePoints.difficulty,
+      capabilityLayer: knowledgePoints.capabilityLayer,
+      requirementLevel: knowledgePoints.requirementLevel,
+      maturity: knowledgePoints.maturity,
+      aiRelation: knowledgePoints.aiRelation,
+      portability: knowledgePoints.portability,
+      applicabilityTags: knowledgePoints.applicabilityTags,
+      topicTags: knowledgePoints.topicTags,
+      trackIds: knowledgePoints.trackIds,
+      verifiedAt: knowledgePoints.verifiedAt,
+      fallbackStrategy: knowledgePoints.fallbackStrategy,
       planWeek: knowledgePoints.planWeek,
       status: knowledgePoints.status,
       learningState: knowledgePoints.learningState,
@@ -199,11 +264,23 @@ export async function getKnowledgePointByCode(code: string): Promise<KnowledgePo
       id: knowledgePoints.id,
       code: knowledgePoints.code,
       title: knowledgePoints.title,
+      secondaryTopic: knowledgePoints.secondaryTopic,
+      topicOrder: knowledgePoints.topicOrder,
       summary: knowledgePoints.summary,
       studyMaterialMd: knowledgePoints.studyMaterialMd,
       assessmentSpecMd: knowledgePoints.assessmentSpecMd,
       passCriteriaMd: knowledgePoints.passCriteriaMd,
       difficulty: knowledgePoints.difficulty,
+      capabilityLayer: knowledgePoints.capabilityLayer,
+      requirementLevel: knowledgePoints.requirementLevel,
+      maturity: knowledgePoints.maturity,
+      aiRelation: knowledgePoints.aiRelation,
+      portability: knowledgePoints.portability,
+      applicabilityTags: knowledgePoints.applicabilityTags,
+      topicTags: knowledgePoints.topicTags,
+      trackIds: knowledgePoints.trackIds,
+      verifiedAt: knowledgePoints.verifiedAt,
+      fallbackStrategy: knowledgePoints.fallbackStrategy,
       planWeek: knowledgePoints.planWeek,
       status: knowledgePoints.status,
       learningState: knowledgePoints.learningState,

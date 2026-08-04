@@ -8,6 +8,7 @@ const KNOWLEDGE_ROOT = join(PROJECT_ROOT, 'docs', 'knowledge');
 const REMOTE_CONCURRENCY = Number(process.env.LINK_CHECK_CONCURRENCY ?? 48);
 const REQUEST_TIMEOUT_MS = Number(process.env.LINK_CHECK_TIMEOUT_MS ?? 8_000);
 const MAX_ATTEMPTS = 2;
+const STRICT = process.argv.includes('--strict');
 
 function walkMarkdownFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -180,6 +181,7 @@ console.log(`可访问：${remoteResults.length - brokenRemote.length - unresolv
 console.log(`站点限流/鉴权但地址存在：${limitedRemote.length} 个`);
 console.log(`明确失效（404/410）：${brokenRemote.length} 个`);
 console.log(`网络环境下暂无法确认：${unresolvedRemote.length} 个`);
+console.log(`校验模式：${STRICT ? '严格（无法确认也失败）' : '常规（只阻断明确失效）'}`);
 
 for (const result of brokenLocal) {
   console.error(`[本地失效] ${result.source} -> ${result.link}（${result.reason}）`);
@@ -192,4 +194,6 @@ for (const result of unresolvedRemote) {
   console.warn(`[暂无法确认] ${result.url}（${result.reason}）`);
 }
 
-if (brokenLocal.length > 0 || brokenRemote.length > 0) process.exitCode = 1;
+if (brokenLocal.length > 0 || brokenRemote.length > 0 || (STRICT && unresolvedRemote.length > 0)) {
+  process.exitCode = 1;
+}

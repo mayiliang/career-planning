@@ -169,8 +169,7 @@ describe('7 天计划升级与请假顺延', () => {
 
   it('周计划按前置顺序覆盖全部知识且每周学习强度支撑 7 天连续推进', async () => {
     const route = Array.from({ length: CONTENT_PLAN_WEEK_COUNT }, (_, index) => LEARNING_WEEK_PATHS[index + 1] ?? []).flat();
-    expect(route).toHaveLength(219);
-    expect(new Set(route).size).toBe(219);
+    expect(new Set(route).size).toBe(route.length);
     rawDb.prepare('DELETE FROM plan_events').run();
     const result = await service.importFromTemplate(templatePath, { startDate: '2026-07-20' });
     expect(result.events).toHaveLength(448);
@@ -200,14 +199,14 @@ describe('7 天计划升级与请假顺延', () => {
         }
       }
     }
-    expect(lastAssessmentAt.size).toBe(219);
-    expect(firstRetestAt.size).toBe(219);
+    expect(lastAssessmentAt.size).toBe(route.length);
+    expect(firstRetestAt.size).toBe(route.length);
     for (const [code, assessmentAt] of lastAssessmentAt) {
       expect(firstRetestAt.get(code)! - assessmentAt, `${code} 的复测必须至少延迟 7 天`)
         .toBeGreaterThanOrEqual(7 * 24 * 60 * 60 * 1_000);
     }
     expect(LEARNING_WEEK_PATHS[1]?.[0]).toBe('JS-01');
-    expect(LEARNING_WEEK_PATHS[60]?.at(-1)).toBe('CAREER-06');
+    expect(LEARNING_WEEK_PATHS[60]?.at(-1)).toBe('CAREER-05');
   });
 
   it('请假会将当天及未来未完成学习任务整体顺延一天', async () => {

@@ -17,7 +17,7 @@ import {
   setCurrentLearningPoint,
 } from './learning.service.js';
 import { syncKnowledgeRelations } from './knowledge-relations.service.js';
-import { getKnowledgePointByCode } from './knowledge.service.js';
+import { getKnowledgePointByCode, getKnowledgePoints } from './knowledge.service.js';
 import { buildQuestionAwareHint, createAssessmentSession, getAssessmentSession, startAssessmentSession } from './assessment.service.js';
 import { listPracticeAttempts, validatePracticeAttempt } from './practice.service.js';
 
@@ -206,6 +206,37 @@ describe('自主学习、笔记版本与打卡', () => {
     const theory = await getKnowledgePointByCode('AIGOV-01');
     expect(theory?.challengeProfile).toBe('THEORY_ONLY');
     expect(theory?.learningActivities.some((item) => item.type === 'APPLICATION')).toBe(false);
+  });
+
+  it('223 个知识点都生成与本点题源绑定的站内练习合同', async () => {
+    const { items, total } = await getKnowledgePoints({});
+    expect(total).toBe(223);
+    const problems: string[] = [];
+    for (const item of items) {
+      const detail = await getKnowledgePointByCode(item.code);
+      if (!detail) {
+        problems.push(`${item.code}:详情不存在`);
+        continue;
+      }
+      const reading = detail?.learningActivities.find((activity) => activity.type === 'READING');
+      const workspaces = detail?.learningActivities.filter((activity) => activity.deliveryMode === 'WORKSPACE') ?? [];
+      if (reading?.optional !== false) problems.push(`${item.code}:阅读活动被标为可选`);
+      if (!reading?.materialReferences.length) problems.push(`${item.code}:阅读活动缺少资料引用`);
+      if (!workspaces.length) problems.push(`${item.code}:缺少站内练习`);
+      for (const activity of workspaces) {
+        if (activity.task.length <= 20) problems.push(`${item.code}:练习任务仅${activity.task.length}字符`);
+        if (!detail.assessmentSpecMd.includes(activity.task)) problems.push(`${item.code}:练习未绑定本点最小产出`);
+        if (activity.outputRequirements.length < 4) problems.push(`${item.code}:练习输出合同不完整`);
+        if (activity.completionCriteria.length < 3) problems.push(`${item.code}:练习完成判定不完整`);
+        for (const source of activity.materialReferences) {
+          if (!source.url) continue;
+          if (!/^(?:https?:\/\/|\/knowledge\/materials\/)/.test(source.url)) {
+            problems.push(`${item.code}:练习资料无法打开 ${source.url}`);
+          }
+        }
+      }
+    }
+    expect(problems, '站内练习必须逐点绑定本点题源、最小产出与可验证合同').toEqual([]);
   });
 
   it('站内练习保存输入输出并由系统验证完成状态', async () => {

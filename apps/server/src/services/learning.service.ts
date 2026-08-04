@@ -446,7 +446,7 @@ export function inferChallengeProfile(code: string, title: string, domainTitle: 
   if (/git|docker|linux|ci\/cd|发布|部署|调试工具|mcp|openapi|工具链/.test(value)) return 'TOOL_OPERATION';
   if (/排错|调试|故障|监控|可观测|兼容|诊断/.test(value)) return 'DEBUGGING';
   if (/架构|设计系统|技术方案|权限模型|业务建模|安全模型|演进/.test(value)) return 'DESIGN_CASE';
-  if (/javascript|typescript|react|vue|css|html|node|算法|wasm|webgpu|组件|状态|hooks|数据层/.test(value)) return 'CODING';
+  if (/\bjs-\d+|javascript|typescript|react|vue|css|html|node|算法|wasm|webgpu|组件|状态|hooks|数据层/.test(value)) return 'CODING';
   return 'EXAMPLE_DRIVEN';
 }
 

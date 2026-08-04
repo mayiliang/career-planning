@@ -21,7 +21,17 @@ export interface GraphNode {
     status?: string;
     domainCode?: string;
     domainTitle?: string;
+    secondaryTopic?: string;
+    topicOrder?: number;
     difficulty?: string;
+    capabilityLayer?: string;
+    requirementLevel?: string;
+    maturity?: string;
+    aiRelation?: string;
+    portability?: string;
+    applicabilityTags?: string[];
+    topicTags?: string[];
+    trackIds?: string[];
     selfMastered?: boolean;
     strictPassed?: boolean;
     pointCount?: number;
@@ -54,6 +64,15 @@ export interface DomainStats {
   code: string;
   title: string;
   orderIndex: number;
+  capabilityLayer: string;
+  requirementLevel: string;
+  maturity: string;
+  aiRelation: string;
+  portability: string;
+  applicabilityTags: string[];
+  topicTags: string[];
+  trackIds: string[];
+  verifiedAt: string;
   pointCount: number;
   masteredCount: number;
   learningCount: number;
@@ -141,6 +160,15 @@ export async function getDomainStats(): Promise<DomainStats[]> {
       code: domain.code,
       title: domain.title,
       orderIndex: domain.orderIndex,
+      capabilityLayer: domain.capabilityLayer,
+      requirementLevel: domain.requirementLevel,
+      maturity: domain.maturity,
+      aiRelation: domain.aiRelation,
+      portability: domain.portability,
+      applicabilityTags: domain.applicabilityTags,
+      topicTags: domain.topicTags,
+      trackIds: domain.trackIds,
+      verifiedAt: domain.verifiedAt,
       ...stats,
     };
   });
@@ -166,9 +194,19 @@ export async function getGraphData(options?: {
     id: knowledgePoints.id,
     code: knowledgePoints.code,
     title: knowledgePoints.title,
+    secondaryTopic: knowledgePoints.secondaryTopic,
+    topicOrder: knowledgePoints.topicOrder,
     domainId: knowledgePoints.domainId,
     status: knowledgePoints.status,
     difficulty: knowledgePoints.difficulty,
+    capabilityLayer: knowledgePoints.capabilityLayer,
+    requirementLevel: knowledgePoints.requirementLevel,
+    maturity: knowledgePoints.maturity,
+    aiRelation: knowledgePoints.aiRelation,
+    portability: knowledgePoints.portability,
+    applicabilityTags: knowledgePoints.applicabilityTags,
+    topicTags: knowledgePoints.topicTags,
+    trackIds: knowledgePoints.trackIds,
     selfMasteredAt: knowledgePoints.selfMasteredAt,
     firstPassedAt: knowledgePoints.firstPassedAt,
     masteredAt: knowledgePoints.masteredAt,
@@ -204,6 +242,14 @@ export async function getGraphData(options?: {
           title: domain.title,
           pointCount: domainPoints.length,
           masteredCount: domainPoints.filter((point) => point.status === 'MASTERED').length,
+          capabilityLayer: domain.capabilityLayer,
+          requirementLevel: domain.requirementLevel,
+          maturity: domain.maturity,
+          aiRelation: domain.aiRelation,
+          portability: domain.portability,
+          applicabilityTags: domain.applicabilityTags,
+          topicTags: domain.topicTags,
+          trackIds: domain.trackIds,
         },
       });
     });
@@ -221,6 +267,14 @@ export async function getGraphData(options?: {
           title: domain.title,
           pointCount: domainPoints.length,
           masteredCount: domainPoints.filter((point) => point.status === 'MASTERED').length,
+          capabilityLayer: domain.capabilityLayer,
+          requirementLevel: domain.requirementLevel,
+          maturity: domain.maturity,
+          aiRelation: domain.aiRelation,
+          portability: domain.portability,
+          applicabilityTags: domain.applicabilityTags,
+          topicTags: domain.topicTags,
+          trackIds: domain.trackIds,
         },
       });
 
@@ -236,7 +290,17 @@ export async function getGraphData(options?: {
             status: point.status,
             domainCode: domainInfo?.code,
             domainTitle: domainInfo?.title,
+            secondaryTopic: point.secondaryTopic,
+            topicOrder: point.topicOrder,
             difficulty: point.difficulty,
+            capabilityLayer: point.capabilityLayer,
+            requirementLevel: point.requirementLevel,
+            maturity: point.maturity,
+            aiRelation: point.aiRelation,
+            portability: point.portability,
+            applicabilityTags: point.applicabilityTags,
+            topicTags: point.topicTags,
+            trackIds: point.trackIds,
             selfMastered: !!point.selfMasteredAt,
             strictPassed: !!point.firstPassedAt,
           },

@@ -59,7 +59,19 @@ const KnowledgePointListItemSchema = z.object({
   id: z.string(),
   code: z.string(),
   title: z.string(),
+  secondaryTopic: z.string(),
+  topicOrder: z.number().int().nonnegative(),
   difficulty: z.enum(['intermediate', 'senior', 'advanced']),
+  capabilityLayer: z.enum(['CORE', 'APPLICATION', 'SPECIALTY', 'LEADERSHIP']),
+  requirementLevel: z.enum(['REQUIRED', 'TRACK_REQUIRED', 'ELECTIVE']),
+  maturity: z.enum(['STABLE', 'EVOLVING', 'EXPERIMENTAL']),
+  aiRelation: z.enum(['NONE', 'AI_ASSISTED', 'AI_NATIVE', 'AGENTIC']),
+  portability: z.enum(['PORTABLE', 'FRAMEWORK_SPECIFIC', 'VENDOR_SPECIFIC', 'PLATFORM_SPECIFIC', 'JURISDICTION_SPECIFIC']),
+  applicabilityTags: z.array(z.enum(['FRAMEWORK_SPECIFIC', 'VENDOR_SPECIFIC', 'PLATFORM_SPECIFIC', 'JURISDICTION_SPECIFIC'])),
+  topicTags: z.array(z.string()),
+  trackIds: z.array(z.enum(['react', 'vue', 'umi-antd', 'agent-mcp'])),
+  verifiedAt: z.string(),
+  fallbackStrategy: z.string(),
   planWeek: z.number().nullable(),
   status: z.enum(['NOT_STARTED', 'LEARNING', 'SELF_MASTERED', 'FIRST_PASS_PENDING_RETEST', 'MASTERED', 'NEEDS_RELEARNING']),
   learningState: z.enum(['NOT_STARTED', 'LEARNING', 'LEARNED', 'DEFERRED']),
@@ -116,6 +128,13 @@ const KnowledgePointDetailSchema = KnowledgePointListItemSchema.extend({
     language: z.enum(['javascript', 'typescript']).nullable(), starterCode: z.string().nullable(), submissionTemplate: z.string().nullable(),
     materialReferences: z.array(z.object({ title: z.string(), url: z.string().nullable(), locator: z.string(), focus: z.string() })),
   })),
+});
+
+const KnowledgeMaterialSchema = z.object({
+  guide: z.string(),
+  anchor: z.string(),
+  title: z.string(),
+  markdown: z.string(),
 });
 
 // 知识点列表响应 Schema
@@ -280,6 +299,16 @@ const GraphNodeSchema = z.object({
     domainCode: z.string().optional(),
     domainTitle: z.string().optional(),
     difficulty: z.string().optional(),
+    capabilityLayer: z.string().optional(),
+    requirementLevel: z.string().optional(),
+    maturity: z.string().optional(),
+    aiRelation: z.string().optional(),
+    portability: z.string().optional(),
+    applicabilityTags: z.array(z.string()).optional(),
+    topicTags: z.array(z.string()).optional(),
+    trackIds: z.array(z.string()).optional(),
+    secondaryTopic: z.string().optional(),
+    topicOrder: z.number().optional(),
     selfMastered: z.boolean().optional(),
     strictPassed: z.boolean().optional(),
     pointCount: z.number().optional(),
@@ -312,6 +341,15 @@ const DomainStatsSchema = z.object({
   code: z.string(),
   title: z.string(),
   orderIndex: z.number(),
+  capabilityLayer: z.string(),
+  requirementLevel: z.string(),
+  maturity: z.string(),
+  aiRelation: z.string(),
+  portability: z.string(),
+  applicabilityTags: z.array(z.string()),
+  topicTags: z.array(z.string()),
+  trackIds: z.array(z.string()),
+  verifiedAt: z.string(),
   pointCount: z.number(),
   masteredCount: z.number(),
   learningCount: z.number(),
@@ -844,11 +882,27 @@ export const apiClient = {
   async getKnowledgePoints(params?: {
     domainId?: string;
     status?: string;
+    capabilityLayer?: 'CORE' | 'APPLICATION' | 'SPECIALTY' | 'LEADERSHIP';
+    requirementLevel?: 'REQUIRED' | 'TRACK_REQUIRED' | 'ELECTIVE';
+    maturity?: 'STABLE' | 'EVOLVING' | 'EXPERIMENTAL';
+    aiRelation?: 'NONE' | 'AI_ASSISTED' | 'AI_NATIVE' | 'AGENTIC';
+    portability?: 'PORTABLE' | 'FRAMEWORK_SPECIFIC' | 'VENDOR_SPECIFIC' | 'PLATFORM_SPECIFIC' | 'JURISDICTION_SPECIFIC';
+    secondaryTopic?: string;
+    trackId?: 'react' | 'vue' | 'umi-antd' | 'agent-mcp';
+    topicTag?: string;
     search?: string;
   }) {
     const query = new URLSearchParams();
     if (params?.domainId) query.set('domainId', params.domainId);
     if (params?.status) query.set('status', params.status);
+    if (params?.capabilityLayer) query.set('capabilityLayer', params.capabilityLayer);
+    if (params?.requirementLevel) query.set('requirementLevel', params.requirementLevel);
+    if (params?.maturity) query.set('maturity', params.maturity);
+    if (params?.aiRelation) query.set('aiRelation', params.aiRelation);
+    if (params?.portability) query.set('portability', params.portability);
+    if (params?.secondaryTopic) query.set('secondaryTopic', params.secondaryTopic);
+    if (params?.trackId) query.set('trackId', params.trackId);
+    if (params?.topicTag) query.set('topicTag', params.topicTag);
     if (params?.search) query.set('search', params.search);
 
     const queryString = query.toString();
@@ -866,6 +920,13 @@ export const apiClient = {
    */
   async getKnowledgePoint(code: string) {
     return request(`/knowledge/points/${code}`, KnowledgePointDetailSchema);
+  },
+
+  async getKnowledgeMaterial(guide: string, anchor: string) {
+    return request(
+      `/knowledge/materials/${encodeURIComponent(guide)}/${encodeURIComponent(anchor)}`,
+      KnowledgeMaterialSchema,
+    );
   },
 
   /**

@@ -2,57 +2,52 @@
 
 这一领域关注 AI 能力向浏览器和边缘设备迁移后的前端职责：算力检测、模型下载、WebGPU、Worker、隐私、离线与云端回退。
 
-## WEBAI-01 Chrome Built-in AI API 与能力检测
+### 浏览器 AI 能力与推理后端
+
+## WEBAI-01 Chrome Built-in AI API、分级可用性与能力检测
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Built-in AI 入门](https://developer.chrome.com/docs/ai/get-started?hl=zh-cn)、[Built-in AI API 状态](https://developer.chrome.com/docs/ai/built-in-apis?hl=zh-cn)、[Prompt API](https://developer.chrome.com/docs/ai/prompt-api?hl=zh-cn)。覆盖范围：Prompt 及其他内置 AI API 的 Stable/Origin Trial/Developer Trial/停用状态；`availability()`、模型下载、用户激活、硬件/存储条件、语言能力、会话创建/销毁、流式/取消和错误；Chrome/桌面限制、状态随版本变化、版本冻结、遥测、隐私以及云端或非 AI 渐进降级；全部必读资料均为中文。
+- 学习资料：[校订中文讲义（WEBAI-01）](../chinese-guides/content-audit-13-14.md#webai-01)、[Chrome Built-in AI 入门](https://developer.chrome.com/docs/ai/get-started?hl=zh-cn)、[Built-in AI API 状态](https://developer.chrome.com/docs/ai/built-in-apis?hl=zh-cn)、[Prompt API](https://developer.chrome.com/docs/ai/prompt-api?hl=zh-cn)。覆盖范围：Prompt 及其他内置 AI API 的 Stable/Origin Trial/Developer Trial/停用状态；`availability()`、模型下载、用户激活、硬件/存储条件、语言能力、会话创建/销毁、流式/取消和错误；Chrome/桌面限制、状态随版本变化、版本冻结、遥测、隐私以及云端或非 AI 渐进降级；全部必读资料均为中文。
 - 严格考核：首考题 1（资料定位）：只允许使用《Chrome Built-in AI 入门》《Built-in AI API 状态》《Prompt API》，制作带核验日期、Chrome 版本、平台和状态的能力矩阵；首考题 2（机制解释）：闭卷解释安装/首次下载、模型可用性、会话和 API 成熟度如何共同决定功能，而不是只检查全局对象；首考题 3（最小产出）：调用 `availability()`，为各返回状态实现 UI，记录会话取消/销毁，并按冻结的 API 状态、浏览器、语言、硬件和用户授权提供云端或非 AI fallback；首考题 4（受限排错）：定位版本状态变化、模型未下载、用户激活缺失、语言不支持、空间不足、会话泄漏或错误把 Chrome 专属结果写入通用缓存；首考题 5（学习复述）：3 分钟说明如何维护随浏览器版本变化的能力合同。命题边界：每次命题必须重新核验官方状态页并记录日期；截至 2026-07-29，Prompt API 可按 Chrome 148 稳定能力核验，但不能据此推导其他 API 或其他浏览器稳定。
 - 通过标准：不把实验或 Chrome 专属 API 当全平台能力；状态矩阵带日期且与官方页面一致；模型下载需要用户激活；会话和资源可释放；移动端、其他浏览器、硬件/语言不支持时有清晰替代；遥测区分原生、云端和非 AI 路径。评估边界：只在当前开发机调用成功、硬编码一次状态表或没有 fallback 不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
-## WEBAI-02 WebGPU 核心模型与兼容边界
+## WEBAI-02 WebGPU 计算管线、张量与 AI 推理后端
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-02)、[MDN WebGPU](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGPU_API)、[WebGPU Specification](https://www.w3.org/TR/webgpu/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「WebGPU 核心模型与兼容边界」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：说明 adapter、device、buffer、pipeline、shader 和 command encoder 的职责，实现一次 compute shader，并展示兼容检测；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：理解 WebGPU 不是 Baseline；资源正确释放；错误和 device lost 可处理；能说明与 WebGL/WASM 的边界。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
-- 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
-
-## WASM-01 WebAssembly 通用运行时、宿主边界与工程化
-
-- [ ] 自评已掌握
-- [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#wasm-01)、[MDN WebAssembly](https://developer.mozilla.org/zh-CN/docs/WebAssembly)、[WebAssembly Core 3.0](https://webassembly.github.io/spec/core/)（英文原文，仅用于版本核验）、[WebAssembly JavaScript API](https://webassembly.github.io/spec/js-api/)（英文原文，仅用于版本核验）、[WebAssembly Component Model](https://component-model.bytecodealliance.org/)（英文原文，仅用于版本核验）、[WASI](https://wasi.dev/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：模块、实例、导入/导出、函数、线性内存和 Table；编译、流式实例化、缓存、错误与特性检测；JavaScript/Wasm ABI、字符串/结构体/数组编组、所有权、复制和跨边界调用成本；内存增长、资源释放、SIMD、线程/共享内存与跨源隔离；Rust/C/C++ 构建产物、加载、source map、调试、性能剖析和供应链；浏览器沙箱与宿主能力；Wasm 3.0 已标准化能力，以及 WASI/Component Model 尚需按运行时与成熟度选择的边界。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位核心执行模型、JavaScript 接口、内存/所有权、线程条件、调试和组件化成熟度边界；首考题 2（机制解释）：闭卷解释一个 Wasm 模块从获取、验证、编译、实例化、导入调用到内存交换的因果链，并说明沙箱不等于业务安全；首考题 3（最小产出）：用 Rust 或 C/C++ 实现含字符串和二进制缓冲区的计算模块，提供流式实例化、特性检测、错误传播、显式释放和 JavaScript fallback，对比少量大调用与大量小调用的加载、预热、执行、内存和包体；首考题 4（受限排错）：根据导入不匹配、内存越界、视图在 memory grow 后失效、对象未释放、线程隔离失败、source map 缺失或 ABI 编组错误定位修复；首考题 5（学习复述）：3 分钟说明何时选 JavaScript、Wasm、WebGPU、服务端原生模块或 Component Model。命题边界：WASI 与 Component Model 必须按具体运行时标注成熟度，不得当作所有浏览器原生能力；英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：接口和所有权合同明确；异常、取消与释放形成闭环；跨边界成本有基准而非想当然；线程路径满足 `crossOriginIsolated` 并有单线程降级；产物来源、体积、缓存和调试可验证；能够说明 Wasm 的沙箱、宿主导入和业务授权分别解决什么问题。评估边界：只把现成 `.wasm` 文件加载成功、只展示单次跑分或把 WASI/组件模型宣传为通用浏览器基线不能通过。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-02)、[MDN WebGPU](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGPU_API)、[WebGPU Specification](https://www.w3.org/TR/webgpu/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：WebGPU adapter/device、buffer/texture、bind group、pipeline、WGSL、提交与映射；覆盖设备丢失、特性限制、资源释放和稳定降级。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「WebGPU 计算管线、张量与 AI 推理后端」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷解释「WebGPU 计算管线、张量与 AI 推理后端」覆盖的输入、状态转换、运行边界与失败传播，并用首考题 3 的产出证明机制选择；首考题 3（最小产出）：说明 adapter、device、buffer、pipeline、shader 和 command encoder 的职责，实现一次 compute shader，并展示兼容检测；首考题 4（受限排错）：围绕「WebGPU 计算管线、张量与 AI 推理后端」的首考题 3 产出注入正常、边界和失败场景，提交预期/实际、三项资料假设、证伪证据、根因、修复与回归；首考题 5（学习复述）：3 分钟说明「WebGPU 计算管线、张量与 AI 推理后端」解决的问题、运行机制、选型条件、反例和验证证据，并回答边界变化追问。命题边界：只在「WebGPU 计算管线、张量与 AI 推理后端」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：理解 WebGPU 不是 Baseline；资源正确释放；错误和 device lost 可处理；能说明与 WebGL/WASM 的边界。评估边界：缺少与「WebGPU 计算管线、张量与 AI 推理后端」直接对应的可复核产出，或用资料外经验绕过通过标准，均不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-03 WebAssembly、SIMD 与推理性能
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-03)、[MDN WebAssembly](https://developer.mozilla.org/zh-CN/docs/WebAssembly)、[WebAssembly SIMD](https://github.com/WebAssembly/simd)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：在完成 `WASM-01` 的通用运行时与宿主边界后，聚焦本地 AI 推理的 Wasm/SIMD/线程后端、模型算子、张量布局、量化、预热、内存复用、跨边界数据搬运，以及与 JavaScript、WebGPU、WebNN 和云端推理的端到端性能/兼容/功耗代理比较；不再承担通用 WebAssembly 基础教学。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-03)、[MDN WebAssembly](https://developer.mozilla.org/zh-CN/docs/WebAssembly)、[WebAssembly SIMD](https://github.com/WebAssembly/simd)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：在完成 `WASM-01` 的通用运行时与宿主边界后，聚焦本地 AI 推理的 Wasm/SIMD/线程后端、模型算子、张量布局、量化、预热、内存复用、跨边界数据搬运，以及与 JavaScript、WebGPU、WebNN 和云端推理的端到端性能/兼容/功耗代理比较；不再承担通用 WebAssembly 基础教学。
 - 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位 SIMD、线程、量化、内存复用和推理后端比较边界；首考题 2（机制解释）：闭卷解释模型加载、预处理、Wasm 算子执行、后处理和 UI 之间的端到端成本，说明峰值算子更快为何不必然改善用户延迟；首考题 3（最小产出）：比较同一小模型的 JavaScript、Wasm 标量、Wasm SIMD/线程和可用的 WebGPU/WebNN 版本，记录下载、编译、预热、首 Token/首结果、稳态、内存、正确性和包体；首考题 4（受限排错）：定位 SIMD 未启用、线程隔离失败、重复内存复制、量化误差、预热污染或后处理阻塞；首考题 5（学习复述）：3 分钟说明设备、任务与隐私约束下的推理后端选择。命题边界：通用模块/ABI/调试能力由 `WASM-01` 考核；不支持实验后端时允许比较可用子集但必须说明缺口。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：基准方法可复现且区分冷启动/稳态；结果误差有阈值；不只给一次测量或单算子吞吐；能解释序列化、布局和跨边界调用成本；线程有单线程降级；按设备能力、隐私、功耗代理和用户延迟选择实现。评估边界：重复 `WASM-01` 的加载示例、只证明 SIMD 跑通或没有端到端推理正确性不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
-## WEBAI-11 WebNN 图计算、设备选择与推理后端
+## WEBAI-11 WebNN 图计算、抽象设备偏好与推理后端
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-11)、[Web Neural Network API](https://www.w3.org/TR/webnn/)（英文原文，仅用于版本核验）、[中文｜MDN WebGPU API](https://developer.mozilla.org/zh-CN/docs/Web/API/WebGPU_API)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：`MLContext`、操作数/常量、计算图构建与调度、张量数据类型和布局、NPU/GPU/CPU 设备偏好、ONNX Runtime Web 等运行时适配、支持检测、算子回退、内存复制、热身/缓存、WebNN 与 WebGPU/Wasm 的能力及成熟度边界。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-11)、[Web Neural Network API](https://www.w3.org/TR/webnn/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：WebNN Candidate Recommendation Draft 的 `MLContext`、操作数/常量、图构建、张量类型/布局、算子支持、运行时适配、回退、复制、热身和缓存；设备选择使用抽象 `powerPreference`、`accelerated` 偏好或显式 `GPUDevice`，不得教授已移除的 NPU/GPU/CPU 枚举。WebGPU 管线与资源机制直接复用前置 `WEBAI-02`，不在本点重复列为资料。
 - 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位上下文、图构建、执行、设备偏好和降级规则；首考题 2（机制解释）：闭卷解释模型图如何映射到 WebNN 后端，以及设备、算子支持和数据搬运为何影响性能；首考题 3（最小产出）：为同一模型建立 WebNN/WebGPU/Wasm 三后端适配与能力探测，记录预热、延迟、吞吐、内存和正确性；首考题 4（受限排错）：定位不支持算子、布局错误、重复编译、隐式复制、设备选择失效或结果偏差；首考题 5（学习复述）：3 分钟说明何时选择 WebNN、WebGPU、Wasm 或云端推理。命题边界：不得假设设备偏好等于确定硬件，也不得把实验性能力承诺为全浏览器可用；英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：功能检测和降级可靠；三后端结果误差有阈值；测试区分冷启动与稳态；资源可释放；不支持时不阻断主功能；结论同时包含性能、兼容性、隐私和功耗证据。评估边界：只在单一设备跑通一次模型不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
-## WEBAI-04 Worker、并发与主线程响应
+### 本地 AI 应用工程
+
+## WEBAI-04 AI 推理 Worker、任务池与主线程响应
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-04)、[MDN Web Workers](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API)、[MDN SharedWorker](https://developer.mozilla.org/zh-CN/docs/Web/API/SharedWorker)、[MDN OffscreenCanvas](https://developer.mozilla.org/zh-CN/docs/Web/API/OffscreenCanvas)、[MDN Atomics.waitAsync](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Atomics/waitAsync)、[Comlink](https://github.com/GoogleChromeLabs/comlink)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：Dedicated/Shared/Service Worker 和 Worklet 的职责；结构化克隆、Transferable、SharedArrayBuffer/Atomics、`waitAsync`、OffscreenCanvas；所有权、消息协议、请求 ID、背压、取消、进度、错误、崩溃/重启和版本；线程池规模、任务切分、内存一致性、跨源隔离、主线程响应和无支持降级。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位 Worker 类型、复制/转移/共享、消息合同、共享内存同步和生命周期边界；首考题 2（机制解释）：闭卷比较结构化克隆、Transferable 与共享内存的所有权和正确性成本，并说明 Worker 为什么不自动提供更快或无竞态；首考题 3（最小产出）：把预处理、向量计算或推理移入可复用 Worker 池，使用版本化消息、Transferable、背压、进度、取消和异常传播；另选 OffscreenCanvas 或 SharedArrayBuffer/Atomics 实现一个受控共享路径，测量复制量、内存、吞吐和 INP；首考题 4（受限排错）：定位 detached buffer、双重所有权、消息乱序、未处理取消、Worker 崩溃、线程过量、Atomics 等待死锁/丢通知、跨源隔离失败或组件卸载后回调；首考题 5（学习复述）：3 分钟说明何时选择主线程分片、Dedicated/Shared Worker、Worklet、共享内存或 GPU。命题边界：共享内存只在能证明必要性和同步正确性时使用；Comlink 不能替代消息、取消和资源合同。英文原文仅用于版本核验，不作为独立首考题源。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-04)、[MDN Web Workers](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API)、[MDN SharedWorker](https://developer.mozilla.org/zh-CN/docs/Web/API/SharedWorker)、[MDN OffscreenCanvas](https://developer.mozilla.org/zh-CN/docs/Web/API/OffscreenCanvas)、[MDN Atomics.waitAsync](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Atomics/waitAsync)、[Comlink](https://github.com/GoogleChromeLabs/comlink)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：在 `CS-03` 的 Worker、结构化克隆和 Transferable 基础上，聚焦 AI 预处理、Embedding、推理与后处理任务池：版本化消息、张量所有权、批处理、背压、优先级、进度、取消、崩溃恢复、线程规模和主线程 INP。通用 Worker 基础不在本点重复考核。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位 AI 任务池中的张量所有权、批处理、背压、进度、取消、崩溃恢复和线程规模边界；首考题 2（机制解释）：闭卷解释一次预处理—推理—后处理任务如何排队、转移数据、取消和回收，并说明增加 Worker 为何可能降低吞吐或 INP；首考题 3（最小产出）：把预处理、向量计算或推理移入可复用 Worker 池，使用版本化消息、Transferable、优先级、批处理、背压、进度、取消和异常传播，测量复制量、内存、吞吐与 INP；首考题 4（受限排错）：定位 detached buffer、重复所有权、消息乱序、取消失效、Worker 崩溃、线程过量或组件卸载后回调；首考题 5（学习复述）：3 分钟说明如何根据模型、设备和交互预算配置 AI 任务池。命题边界：通用 Worker 类型、共享内存原语和 OffscreenCanvas 只作为 CS-03 前置，不在本点重复实现。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：主线程长任务/INP 改善且总成本有记录；大数据不重复复制；消息可关联、限流、取消和版本兼容；Worker 可终止/重启且错误不静默；共享状态有不变量和并发测试；Offscreen/SharedWorker/Atomics 不支持或跨源隔离缺失时有正确降级。评估边界：只把函数搬进 Worker、无限创建线程或以共享内存绕过所有权设计不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
@@ -60,7 +55,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-05)、[Cache API](https://developer.mozilla.org/zh-CN/docs/Web/API/Cache)、[StorageManager](https://developer.mozilla.org/zh-CN/docs/Web/API/StorageManager)、[MDN 源私有文件系统 OPFS](https://developer.mozilla.org/zh-CN/docs/Web/API/File_System_API/Origin_private_file_system)。覆盖范围：模型/分词器/配置清单、内容摘要与可选签名、版本兼容；Range/分片、断点、并发、进度、取消与临时文件；Cache API/IndexedDB/OPFS 选型、配额估算、持久化、驱逐和用户删除；下载到校验、预热、原子激活、旧版保留、回滚和垃圾清理的状态机；多标签协调、Service Worker 更新、离线与缓存投毒边界；全部必读资料均为中文。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-05)、[Cache API](https://developer.mozilla.org/zh-CN/docs/Web/API/Cache)、[StorageManager](https://developer.mozilla.org/zh-CN/docs/Web/API/StorageManager)、[MDN 源私有文件系统 OPFS](https://developer.mozilla.org/zh-CN/docs/Web/API/File_System_API/Origin_private_file_system)。覆盖范围：仅负责模型、分词器和配置等 AI 大型制品的清单、摘要/签名、Range/分片、断点、配额、OPFS 临时态、校验后原子激活、旧版回滚、多标签协调和垃圾清理。通用 Service Worker 生命周期与应用壳缓存归 `PWA-01`。
 - 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位模型清单、校验、存储选型、原子切换和回滚规则；首考题 2（机制解释）：闭卷解释为何 HTTP 请求成功、文件大小正确或缓存命中都不能单独证明模型可安全激活；首考题 3（最小产出）：实现带版本清单和摘要的分片下载器，支持断点、进度、取消、配额检测、OPFS 临时文件、校验后原子切换、旧版回滚、多标签协调和清理，并模拟中断、损坏、空间不足与更新竞态；首考题 4（受限排错）：根据 Range 不一致、摘要失败、清单/模型错配、驱逐、半激活、多标签双下载、旧 Service Worker 或回滚数据不兼容定位修复；首考题 5（学习复述）：3 分钟说明 Cache API、IndexedDB、OPFS 与重新下载的选择。命题边界：浏览器存储不是永久承诺或可信密钥库；摘要验证完整性，签名/受信清单才建立来源信任。
 - 通过标准：损坏、来源不明或版本不兼容模型不会激活；下载与激活状态可恢复且幂等；旧版本在兼容窗口可回滚；配额、驱逐、多标签和 Service Worker 更新有测试；不会无限占用磁盘；用户能看到体积、网络、版本和删除入口。评估边界：只放入 Cache API、没有临时态/原子切换或通过清空全部存储解决迁移不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
@@ -69,56 +64,61 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-06)、[Transformers.js](https://huggingface.co/docs/transformers.js/)（英文原文，仅用于版本核验）、[IndexedDB](https://developer.mozilla.org/zh-CN/docs/Web/API/IndexedDB_API)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「本地 Embedding 与语义搜索」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：在 Worker 中生成 embedding，把 1000 条文档向量持久化并实现 top-k 搜索，评估首载时间与相关性；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：UI 不冻结；索引版本与模型绑定；数据留在本地；有至少 20 条查询评估，不以“看起来相关”代替指标。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-06)、[Transformers.js](https://huggingface.co/docs/transformers.js/)（英文原文，仅用于版本核验）、[IndexedDB](https://developer.mozilla.org/zh-CN/docs/Web/API/IndexedDB_API)。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：浏览器内 Embedding、向量归一化、相似度、索引、增量更新、持久化和隐私；覆盖模型版本不一致、召回评估和数据删除。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「本地 Embedding 与语义搜索」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷解释「本地 Embedding 与语义搜索」覆盖的输入、状态转换、运行边界与失败传播，并用首考题 3 的产出证明机制选择；首考题 3（最小产出）：在 Worker 中生成 embedding，把 1000 条文档向量持久化并实现 top-k 搜索，评估首载时间与相关性；首考题 4（受限排错）：围绕「本地 Embedding 与语义搜索」的首考题 3 产出注入正常、边界和失败场景，提交预期/实际、三项资料假设、证伪证据、根因、修复与回归；首考题 5（学习复述）：3 分钟说明「本地 Embedding 与语义搜索」解决的问题、运行机制、选型条件、反例和验证证据，并回答边界变化追问。命题边界：只在「本地 Embedding 与语义搜索」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：UI 不冻结；索引版本与模型绑定；数据留在本地；有至少 20 条查询评估，不以“看起来相关”代替指标。评估边界：缺少与「本地 Embedding 与语义搜索」直接对应的可复核产出，或用资料外经验绕过通过标准，均不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-07 多模态输入、媒体管线与隐私
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-07)、[MediaDevices](https://developer.mozilla.org/zh-CN/docs/Web/API/MediaDevices)、[WebCodecs](https://developer.mozilla.org/zh-CN/docs/Web/API/WebCodecs_API)、[File API](https://developer.mozilla.org/zh-CN/docs/Web/API/File_API)。覆盖范围：在 `MEDIA-01` 的专业媒体管线基础上，聚焦图片、音频和视频作为模型输入时的授权、采集/选择、格式与尺寸标准化、抽帧/分段、降采样、预览、批处理、取消、元数据清理、本地/云端路由、数据最小化、留存和无障碍替代；WebCodecs 仅用于需要帧级预处理的路径，完整播放/编解码治理不在本点重复考核；全部必读资料均为中文。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-07)、[MediaDevices](https://developer.mozilla.org/zh-CN/docs/Web/API/MediaDevices)、[WebCodecs](https://developer.mozilla.org/zh-CN/docs/Web/API/WebCodecs_API)、[File API](https://developer.mozilla.org/zh-CN/docs/Web/API/File_API)。覆盖范围：在 `MEDIA-01` 的专业媒体管线基础上，聚焦图片、音频和视频作为模型输入时的授权、采集/选择、格式与尺寸标准化、抽帧/分段、降采样、预览、批处理、取消、元数据清理、本地/云端路由、数据最小化、留存和无障碍替代；WebCodecs 仅用于需要帧级预处理的路径，完整播放/编解码治理不在本点重复考核；全部必读资料均为中文。
 - 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《MediaDevices》《WebCodecs》《File API》，定位媒体输入、帧级预处理、文件与隐私边界；首考题 2（机制解释）：闭卷解释从用户授权到采集、预处理、推理/上传、结果呈现和删除的生命周期，以及本地处理何时仍可能泄露敏感数据；首考题 3（最小产出）：实现图片/音频/视频输入到本地或云端模型的流程，包含能力检测、抽帧/分段或降采样、预览、进度、取消、设备切换、元数据清理、明确上传确认和低端设备降级；首考题 4（受限排错）：定位权限永久拒绝、设备变化、帧队列增长、格式不支持、后台限流、重复上传、元数据残留或对象未释放；首考题 5（学习复述）：3 分钟说明普通文件上传、媒体采集、WebCodecs 预处理和专业媒体管线的分工。命题边界：不得重复要求 `MEDIA-01` 的 MSE/EME/DRM/ABR 实现，也不得默认上传原始媒体。
-- 通过标准：授权按需且用途透明；停止后关闭媒体轨和帧资源；输入格式、尺寸、时长和批次有上限；不默认上传原始内容；本地/云端路由和留存可解释；敏感元数据处理明确；低端或不支持 WebCodecs 的设备有可用降级。评估边界：只调用文件选择器、只在单设备采集成功或没有删除/取消/上传确认不能通过。
+- 通过标准：授权按需且用途透明；停止后关闭媒体轨和帧资源；输入格式、尺寸、时长和批次有上限；不默认上传原始内容；本地/云端路由和留存可解释；敏感元数据处理明确；提交权限、取消、资源释放和上传确认的验证记录；低端或不支持 WebCodecs 的设备有可用降级。评估边界：只调用文件选择器、只在单设备采集成功或没有删除/取消/上传确认不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-08 混合推理与端云路由
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Chrome Hybrid AI](https://developer.chrome.com/docs/ai/built-in?hl=zh-cn)、[Network Information API](https://developer.mozilla.org/zh-CN/docs/Web/API/Network_Information_API)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
-- 严格考核：首考题 1（资料定位）：只允许使用《Chrome Hybrid AI》《Network Information API》，分别摘出能支撑「混合推理与端云路由」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：根据能力、隐私、延迟、网络、成本和任务质量设计本地/云端路由器，并写出决策表和故障注入测试；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
-- 通过标准：路由决策可解释；本地失败能回退；敏感任务默认本地或显式确认；结果协议一致且可观测。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 学习资料：[校订中文讲义（WEBAI-08）](../chinese-guides/content-audit-13-14.md#webai-08)、[Network Information API](https://developer.mozilla.org/zh-CN/docs/Web/API/Network_Information_API)。覆盖范围：按设备能力、隐私、延迟、网络、成本、质量和功耗在本地/云端间路由；覆盖探测误差、权限变化、回退、结果协议一致性、可观测决策和用户告知。
+- 严格考核：首考题 1（资料定位）：只允许使用《Chrome Hybrid AI》《Network Information API》，分别摘出能支撑「混合推理与端云路由」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷解释「混合推理与端云路由」覆盖的输入、状态转换、运行边界与失败传播，并用首考题 3 的产出证明机制选择；首考题 3（最小产出）：根据能力、隐私、延迟、网络、成本和任务质量设计本地/云端路由器，并写出决策表和故障注入测试；首考题 4（受限排错）：围绕「混合推理与端云路由」的首考题 3 产出注入正常、边界和失败场景，提交预期/实际、三项资料假设、证伪证据、根因、修复与回归；首考题 5（学习复述）：3 分钟说明「混合推理与端云路由」解决的问题、运行机制、选型条件、反例和验证证据，并回答边界变化追问。命题边界：只在「混合推理与端云路由」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。
+- 通过标准：路由决策可解释；本地失败能回退；敏感任务默认本地或显式确认；结果协议一致且可观测。评估边界：缺少与「混合推理与端云路由」直接对应的可复核产出，或用资料外经验绕过通过标准，均不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
-## WEBAI-09 AI PWA、离线与后台同步
+## WEBAI-09 离线 AI 作业、Outbox 与恢复同步
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[web.dev PWA](https://web.dev/learn/pwa/?hl=zh-cn)、[Background Sync](https://developer.mozilla.org/zh-CN/docs/Web/API/Background_Synchronization_API)。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
-- 严格考核：首考题 1（资料定位）：只允许使用《web.dev PWA》《Background Sync》，分别摘出能支撑「AI PWA、离线与后台同步」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：实现可离线打开的 AI 笔记应用，本地排队任务、恢复网络后同步，并解决重复提交与冲突；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
-- 通过标准：离线壳和数据版本一致；同步幂等；冲突不静默覆盖；不支持 Background Sync 时仍可手动恢复。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 学习资料：[校订中文讲义（WEBAI-09）](../chinese-guides/content-audit-13-14.md#webai-09)、[Background Sync](https://developer.mozilla.org/zh-CN/docs/Web/API/Background_Synchronization_API)。覆盖范围：在 `PWA-01`、`LOCALFIRST-01` 与 `WEBAI-05` 基础上，处理离线 AI 作业队列、模型缺失/过期、只读或轻量模型降级、结果 outbox、恢复上传、幂等、冲突和用户可见状态；不重复 Service Worker、通用数据同步或模型下载基础。
+- 严格考核：首考题 1（资料定位）：只允许使用《web.dev PWA》《Background Sync》，分别摘出能支撑「离线 AI 作业、Outbox 与恢复同步」的定义、关键机制、边界/反例，并标明来源；首考题 2（机制解释）：闭卷解释「离线 AI 作业、Outbox 与恢复同步」覆盖的输入、状态转换、运行边界与失败传播，并用首考题 3 的产出证明机制选择；首考题 3（最小产出）：实现可离线打开的 AI 笔记应用，本地排队任务、恢复网络后同步，并解决重复提交与冲突；首考题 4（受限排错）：围绕「离线 AI 作业、Outbox 与恢复同步」的首考题 3 产出注入正常、边界和失败场景，提交预期/实际、三项资料假设、证伪证据、根因、修复与回归；首考题 5（学习复述）：3 分钟说明「离线 AI 作业、Outbox 与恢复同步」解决的问题、运行机制、选型条件、反例和验证证据，并回答边界变化追问。命题边界：只在「离线 AI 作业、Outbox 与恢复同步」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。
+- 通过标准：离线壳和数据版本一致；同步幂等；冲突不静默覆盖；不支持 Background Sync 时仍可手动恢复。评估边界：缺少与「离线 AI 作业、Outbox 与恢复同步」直接对应的可复核产出，或用资料外经验绕过通过标准，均不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## WEBAI-10 本地 AI 性能、能耗与可访问性
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webai-10)、[Performance API](https://developer.mozilla.org/zh-CN/docs/Web/API/Performance_API)、[WCAG](https://www.w3.org/WAI/standards-guidelines/wcag/)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：必须从列出资料建立主题术语表、运行时或数据流图、适用与不适用条件、常见反例，以及能由本知识点首考产出验证的正确性、安全、性能和兼容边界；不得只复述标题或框架用法。
-- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「本地 AI 性能、能耗与可访问性」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷用状态图、数据流、时序或类型推导解释关键机制、前置假设、失败传播与不适用条件，并以首考题 3 的具体产出举例；首考题 3（最小产出）：建立首 Token、tokens/s、内存、长任务、耗电代理指标和可访问性检查，比较三档设备的体验；首考题 4（受限排错）：对首考题 3 实施至少一个正常、一个边界和一个故障注入；提交预期与实际、最小复现、由资料支持的 3 项假设、逐项证伪证据、根因、最小修复与回归验证；首考题 5（学习复述）：3 分钟按问题、机制、选择、反例和验证证据五段复述，并回答一个边界追问。命题边界：参考答案必须逐题回指学习资料、题目依据或通过标准；评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
-- 通过标准：有真实测量与预算；高负载可暂停或降级；状态对读屏可理解；动画尊重 reduced-motion；不让“本地”掩盖糟糕性能。评估边界：评分只依据列出资料、题目给定输入和可复核产出；额外框架经验不得替代机制与证据。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webai-10)、[Performance API](https://developer.mozilla.org/zh-CN/docs/Web/API/Performance_API)。覆盖范围：本地 AI 的下载/预热/首结果/稳态延迟、内存、功耗代理和可访问体验；覆盖低端设备、热降频、reduced motion 与人工替代。
+- 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》，定位能支撑「本地 AI 性能、能耗与可访问性」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：闭卷解释「本地 AI 性能、能耗与可访问性」覆盖的输入、状态转换、运行边界与失败传播，并用首考题 3 的产出证明机制选择；首考题 3（最小产出）：建立首 Token、tokens/s、内存、长任务、耗电代理指标和可访问性检查，比较三档设备的体验；首考题 4（受限排错）：围绕「本地 AI 性能、能耗与可访问性」的首考题 3 产出注入正常、边界和失败场景，提交预期/实际、三项资料假设、证伪证据、根因、修复与回归；首考题 5（学习复述）：3 分钟说明「本地 AI 性能、能耗与可访问性」解决的问题、运行机制、选型条件、反例和验证证据，并回答边界变化追问。命题边界：只在「本地 AI 性能、能耗与可访问性」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
+- 通过标准：有真实测量与预算；高负载可暂停或降级；状态对读屏可理解；动画尊重 reduced-motion；不让“本地”掩盖糟糕性能。评估边界：缺少与「本地 AI 性能、能耗与可访问性」直接对应的可复核产出，或用资料外经验绕过通过标准，均不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
+
+### Agent 可操作 Web
 
 ## WEBAGENT-01 Agent 可操作 Web、WebMCP 与渐进增强
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#webagent-01)、[Chrome WebMCP 中文文档](https://developer.chrome.com/docs/ai/webmcp?hl=zh-cn)、[Chrome WebMCP 最佳实践](https://developer.chrome.com/docs/ai/webmcp/best-practices?hl=zh-cn)。覆盖范围：浏览器 Agent 的视觉/DOM 执行与结构化工具差异、WebMCP 命令式/声明式 API、工具发现、JSON Schema、页面状态、可见执行、用户确认、来源隔离、`tools` Permissions Policy、跨源 iframe、幂等、可访问性、MCP/MCP Apps/WebMCP 边界、能力检测和非支持浏览器降级；WebMCP 明确标注为 Chrome 149 Origin Trial/拟议标准。
+- 学习资料：[中文核心讲义](../chinese-guides/content-audit-13-14.md#webagent-01)、[Chrome WebMCP 中文文档](https://developer.chrome.com/docs/ai/webmcp?hl=zh-cn)、[Chrome WebMCP 最佳实践](https://developer.chrome.com/docs/ai/webmcp/best-practices?hl=zh-cn)。覆盖范围：浏览器 Agent 的视觉/DOM 执行与结构化工具差异、WebMCP 命令式/声明式 API、工具发现、JSON Schema、页面状态、可见执行、用户确认、来源隔离、`tools` Permissions Policy、跨源 iframe、幂等、可访问性、MCP/MCP Apps/WebMCP 边界、能力检测和非支持浏览器降级；WebMCP 明确标注为 Chrome 149 Origin Trial/拟议标准。
 - 严格考核：首考题 1（资料定位）：只允许使用《中文核心讲义》《Chrome WebMCP 中文文档》《Chrome WebMCP 最佳实践》，定位实验状态、两类 API、工具契约、安全和限制；首考题 2（机制解释）：比较 DOM/视觉执行、WebMCP 页面工具、远程 MCP Server 与 MCP App UI 的发现、执行上下文和信任边界；首考题 3（最小产出）：为搜索和结算流程分别实现声明式与命令式工具，校验 Schema、展示可见状态、要求高风险确认，并在无 WebMCP 时保持人工流程完整；首考题 4（受限排错）：处理陈旧页面状态、重复购买、隐藏副作用、跨源 iframe 越权、工具描述注入、页面关闭和 API 不可用；首考题 5（学习复述）：3 分钟说明如何把 WebMCP 作为渐进增强而非产品唯一入口。命题边界：不得把拟议标准描述为跨浏览器稳定能力，不得让 Agent 绕过正常授权和用户确认。
-- 通过标准：工具输入/输出可版本化且运行时校验；副作用幂等并按风险确认；操作在页面中可见、可取消、可恢复；来源隔离和 Permissions Policy 最小化；键盘/屏幕阅读器与人工操作路径不退化；特性不可用时正确降级。评估边界：只在实验 Flag 下调用成功、隐藏自动操作或把 MCP Apps 等同 WebMCP 不能通过。
+- 通过标准：工具输入/输出可版本化且运行时校验；副作用幂等并按风险确认；操作在页面中可见、可取消、可恢复；来源隔离和 Permissions Policy 最小化；提交状态、取消、越权与降级的验证证据；键盘/屏幕阅读器与人工操作路径不退化；特性不可用时正确降级。评估边界：只在实验 Flag 下调用成功、隐藏自动操作或把 MCP Apps 等同 WebMCP 不能通过。
 - 预计耗时：资料 135 分钟；练习 195 分钟；项目 180 分钟；考核 105 分钟；复测 90 分钟
 
 ## 领域综合考核
 
-实现一个离线可用的浏览器语义搜索 Demo：Worker + 本地 embedding + IndexedDB + 能力检测 + 云端回退，并提交性能、隐私和兼容性报告。
+- [ ] 已通过领域综合考核
+- 任务：实现一个离线可用的浏览器语义搜索 Demo：Worker + 本地 embedding + 版本化存储 + 能力检测 + 云端回退，并提交性能、隐私和兼容性报告。
+- 通过标准：低能力、离线、配额不足、模型损坏、Worker 崩溃与回退场景可复现；主线程响应、冷启动、内存和正确性有数据；实验能力不阻断核心任务。评估边界：领域综合考核只依据本领域列出的资料、题目输入和可复核产出；不得用资料外经验替代跨知识点整合证据。
+- 预计耗时：准备 120 分钟；实现 420 分钟；故障注入 120 分钟；答辩 90 分钟

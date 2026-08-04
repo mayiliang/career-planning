@@ -15,6 +15,16 @@ export const knowledgeDomains = sqliteTable('knowledge_domains', {
 
   title: text('title').notNull(),
   description: text('description'),
+  capabilityLayer: text('capability_layer', { enum: ['CORE', 'APPLICATION', 'SPECIALTY', 'LEADERSHIP'] }).notNull().default('CORE'),
+  requirementLevel: text('requirement_level', { enum: ['REQUIRED', 'TRACK_REQUIRED', 'ELECTIVE'] }).notNull().default('REQUIRED'),
+  maturity: text('maturity', { enum: ['STABLE', 'EVOLVING', 'EXPERIMENTAL'] }).notNull().default('STABLE'),
+  aiRelation: text('ai_relation', { enum: ['NONE', 'AI_ASSISTED', 'AI_NATIVE', 'AGENTIC'] }).notNull().default('NONE'),
+  portability: text('portability', { enum: ['PORTABLE', 'FRAMEWORK_SPECIFIC', 'VENDOR_SPECIFIC', 'PLATFORM_SPECIFIC', 'JURISDICTION_SPECIFIC'] }).notNull().default('PORTABLE'),
+  applicabilityTags: text('applicability_tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  topicTags: text('topic_tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  trackIds: text('track_ids', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  verifiedAt: text('verified_at').notNull().default('2026-08-04'),
+  fallbackStrategy: text('fallback_strategy').notNull().default('按目标环境做能力检测并保留稳定降级路径。'),
 
   // 排序和来源
   orderIndex: integer('order_index').notNull(),
@@ -36,6 +46,8 @@ export const knowledgePoints = sqliteTable('knowledge_points', {
   // 内容
   title: text('title').notNull(),
   summary: text('summary'), // 用户补充摘要
+  secondaryTopic: text('secondary_topic').notNull().default('未分类'),
+  topicOrder: integer('topic_order').notNull().default(0),
 
   // 学习资料和考核（从 Markdown 导入）
   studyMaterialMd: text('study_material_md').notNull(),
@@ -44,6 +56,16 @@ export const knowledgePoints = sqliteTable('knowledge_points', {
 
   // 属性
   difficulty: text('difficulty', { enum: ['intermediate', 'senior', 'advanced'] }).notNull(),
+  capabilityLayer: text('capability_layer', { enum: ['CORE', 'APPLICATION', 'SPECIALTY', 'LEADERSHIP'] }).notNull().default('CORE'),
+  requirementLevel: text('requirement_level', { enum: ['REQUIRED', 'TRACK_REQUIRED', 'ELECTIVE'] }).notNull().default('REQUIRED'),
+  maturity: text('maturity', { enum: ['STABLE', 'EVOLVING', 'EXPERIMENTAL'] }).notNull().default('STABLE'),
+  aiRelation: text('ai_relation', { enum: ['NONE', 'AI_ASSISTED', 'AI_NATIVE', 'AGENTIC'] }).notNull().default('NONE'),
+  portability: text('portability', { enum: ['PORTABLE', 'FRAMEWORK_SPECIFIC', 'VENDOR_SPECIFIC', 'PLATFORM_SPECIFIC', 'JURISDICTION_SPECIFIC'] }).notNull().default('PORTABLE'),
+  applicabilityTags: text('applicability_tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  topicTags: text('topic_tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  trackIds: text('track_ids', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  verifiedAt: text('verified_at').notNull().default('2026-08-04'),
+  fallbackStrategy: text('fallback_strategy').notNull().default('按目标环境做能力检测并保留稳定降级路径。'),
   planWeek: integer('plan_week'), // 推荐周次
 
   // 首次掌握按阶段拆分，复测单列；均以分钟计，便于计划负载计算。

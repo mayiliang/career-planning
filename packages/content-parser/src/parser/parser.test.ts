@@ -10,6 +10,8 @@ describe('Markdown Parser', () => {
 
 所有"通过"均需满足统一考核规则。
 
+### JavaScript 语言模型
+
 ## JS-01 执行上下文、作用域与闭包
 
 - [ ] 自评已掌握
@@ -17,6 +19,8 @@ describe('Markdown Parser', () => {
 - 学习资料：[MDN 闭包](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Closures)。
 - 严格考核：闭卷画出 3 段嵌套函数的作用域链。
 - 通过标准：输出全对。
+
+### Web 标准与可访问性
 
 ## WEB-01 HTML 语义、表单与可访问性基础
 
@@ -39,6 +43,7 @@ describe('Markdown Parser', () => {
     
     expect(result.points[0].code).toBe('JS-01');
     expect(result.points[0].title).toBe('执行上下文、作用域与闭包');
+    expect(result.points[0].secondaryTopic).toBe('JavaScript 语言模型');
     expect(result.points[0].studyMaterial).toContain('MDN 闭包');
     
     expect(result.points[1].code).toBe('WEB-01');
@@ -49,6 +54,8 @@ describe('Markdown Parser', () => {
     const content = `# 01 测试领域
 
 这是领域描述。
+
+### 示例主题
 
 ## JS-01 测试知识点
 
@@ -64,6 +71,8 @@ describe('Markdown Parser', () => {
   it('应该解析包含数字的知识点前缀', () => {
     const content = `# 07 Web 性能、H5 与 Hybrid
 
+### 移动 Web
+
 ## H5-01 viewport 与响应式
 
 - [ ] 自评已掌握
@@ -76,5 +85,14 @@ describe('Markdown Parser', () => {
 
     expect(result.points).toHaveLength(1);
     expect(result.points[0]?.code).toBe('H5-01');
+  });
+
+  it('应该拒绝未归类、空主题和重复二级主题', () => {
+    expect(() => parseKnowledgeMarkdown('# 01 示例\n\n## JS-01 未归类', 'ungrouped.md'))
+      .toThrow('未归入任何二级主题');
+    expect(() => parseKnowledgeMarkdown('# 01 示例\n\n### 空主题\n\n## 领域综合考核', 'empty-topic.md'))
+      .toThrow('没有知识点');
+    expect(() => parseKnowledgeMarkdown('# 01 示例\n\n### 重复\n\n## JS-01 一\n\n### 重复\n\n## JS-02 二', 'duplicate-topic.md'))
+      .toThrow('二级主题标题重复');
   });
 });

@@ -131,7 +131,12 @@ export async function executeImport(): Promise<{
         .where(eq(knowledgeDomains.code, domain.code))
         .get();
 
-      const domainHash = calculateHash(domain.title + (domain.description || ''));
+      const domainHash = calculateHash(
+        domain.title + (domain.description || '')
+        + domain.capabilityLayer + domain.requirementLevel + domain.maturity + domain.aiRelation
+        + domain.portability + domain.applicabilityTags.join(',') + domain.topicTags.join(',') + domain.trackIds.join(',')
+        + domain.verifiedAt + domain.fallbackStrategy,
+      );
       const sourceFile = files.find((file) => path.basename(file).startsWith(`${domain.code}-`));
       const sourcePath = sourceFile ? path.relative(PROJECT_ROOT, sourceFile) : KNOWLEDGE_BASE_DIR;
       const now = new Date().toISOString();
@@ -144,6 +149,16 @@ export async function executeImport(): Promise<{
             .set({
               title: domain.title,
               description: domain.description,
+              capabilityLayer: domain.capabilityLayer,
+              requirementLevel: domain.requirementLevel,
+              maturity: domain.maturity,
+              aiRelation: domain.aiRelation,
+              portability: domain.portability,
+              applicabilityTags: domain.applicabilityTags,
+              topicTags: domain.topicTags,
+              trackIds: domain.trackIds,
+              verifiedAt: domain.verifiedAt,
+              fallbackStrategy: domain.fallbackStrategy,
               orderIndex: parseInt(domain.code, 10),
               sourcePath,
               sourceHash: domainHash,
@@ -160,6 +175,16 @@ export async function executeImport(): Promise<{
           code: domain.code,
           title: domain.title,
           description: domain.description,
+          capabilityLayer: domain.capabilityLayer,
+          requirementLevel: domain.requirementLevel,
+          maturity: domain.maturity,
+          aiRelation: domain.aiRelation,
+          portability: domain.portability,
+          applicabilityTags: domain.applicabilityTags,
+          topicTags: domain.topicTags,
+          trackIds: domain.trackIds,
+          verifiedAt: domain.verifiedAt,
+          fallbackStrategy: domain.fallbackStrategy,
           orderIndex: parseInt(domain.code, 10),
           sourcePath,
           sourceHash: domainHash,
@@ -179,9 +204,12 @@ export async function executeImport(): Promise<{
           .get();
 
         const pointHash = calculateHash(
-          point.title + point.studyMaterial + point.assessmentSpec + point.passCriteria
+          point.title + point.secondaryTopic + point.topicOrder + point.studyMaterial + point.assessmentSpec + point.passCriteria
           + point.studyMinutes + point.practiceMinutes + point.projectMinutes
           + point.assessmentMinutes + point.retestMinutes
+          + point.capabilityLayer + point.requirementLevel + point.maturity + point.aiRelation
+          + point.portability + point.applicabilityTags.join(',') + point.topicTags.join(',') + point.trackIds.join(',')
+          + point.verifiedAt + point.fallbackStrategy
         );
 
         if (existingPoint) {
@@ -195,10 +223,22 @@ export async function executeImport(): Promise<{
             .set({
               domainId,
               title: point.title,
+              secondaryTopic: point.secondaryTopic,
+              topicOrder: point.topicOrder,
               studyMaterialMd: point.studyMaterial,
               assessmentSpecMd: point.assessmentSpec,
               passCriteriaMd: point.passCriteria,
               difficulty: point.difficulty,
+              capabilityLayer: point.capabilityLayer,
+              requirementLevel: point.requirementLevel,
+              maturity: point.maturity,
+              aiRelation: point.aiRelation,
+              portability: point.portability,
+              applicabilityTags: point.applicabilityTags,
+              topicTags: point.topicTags,
+              trackIds: point.trackIds,
+              verifiedAt: point.verifiedAt,
+              fallbackStrategy: point.fallbackStrategy,
               studyMinutes: point.studyMinutes,
               practiceMinutes: point.practiceMinutes,
               projectMinutes: point.projectMinutes,
@@ -220,11 +260,23 @@ export async function executeImport(): Promise<{
           code: point.code,
           domainId,
           title: point.title,
+          secondaryTopic: point.secondaryTopic,
+          topicOrder: point.topicOrder,
           summary: null,
           studyMaterialMd: point.studyMaterial,
           assessmentSpecMd: point.assessmentSpec,
           passCriteriaMd: point.passCriteria,
           difficulty: point.difficulty,
+          capabilityLayer: point.capabilityLayer,
+          requirementLevel: point.requirementLevel,
+          maturity: point.maturity,
+          aiRelation: point.aiRelation,
+          portability: point.portability,
+          applicabilityTags: point.applicabilityTags,
+          topicTags: point.topicTags,
+          trackIds: point.trackIds,
+          verifiedAt: point.verifiedAt,
+          fallbackStrategy: point.fallbackStrategy,
           planWeek: null,
           studyMinutes: point.studyMinutes,
           practiceMinutes: point.practiceMinutes,

@@ -31,6 +31,11 @@ const deferDialogOpen = ref(false);
 const deferReason = ref('');
 const deferring = ref(false);
 const activePracticeId = ref<string | null>(null);
+const layerLabels = { CORE: '核心能力', APPLICATION: '应用能力', SPECIALTY: '岗位专精', LEADERSHIP: '技术领导力' } as const;
+const requirementLabels = { REQUIRED: '全员必修', TRACK_REQUIRED: '主修必修', ELECTIVE: '选修' } as const;
+const maturityLabels = { STABLE: '稳定', EVOLVING: '演进中', EXPERIMENTAL: '实验性' } as const;
+const aiRelationLabels = { NONE: '非 AI 专属', AI_ASSISTED: 'AI 辅助', AI_NATIVE: 'AI 原生', AGENTIC: 'Agentic' } as const;
+const portabilityLabels = { PORTABLE: '可迁移', FRAMEWORK_SPECIFIC: '框架特定', VENDOR_SPECIFIC: '厂商特定', PLATFORM_SPECIFIC: '平台特定', JURISDICTION_SPECIFIC: '地区规则' } as const;
 
 const code = computed(() => String(route.params.code));
 const organizedDisplayMd = computed(() => organizing.value ? streamingOrganizedMd.value : note.value?.organizedMd || '');
@@ -196,12 +201,18 @@ onBeforeUnmount(() => organizeController?.abort());
       <header class="point-hero">
         <button class="back" @click="router.back()">← 返回</button>
         <div class="hero-copy">
-          <p>{{ point.domainCode }} · {{ point.domainTitle }}</p>
+          <p>{{ point.domainCode }} · {{ point.domainTitle }} · {{ point.secondaryTopic }}</p>
           <h1><code>{{ point.code }}</code>{{ point.title }}</h1>
           <div class="state-row">
             <span :data-state="point.learningState">{{ { NOT_STARTED: '未开始', LEARNING: '学习中', LEARNED: '已学完', DEFERRED: '稍后再学' }[point.learningState] }}</span>
             <span class="mastery">M{{ point.masteryLevel }} · {{ masteryCopy[point.masteryLevel]?.[1] }}</span>
             <span>{{ profileText }}</span>
+            <span>{{ layerLabels[point.capabilityLayer] }} · {{ requirementLabels[point.requirementLevel] }}</span>
+            <span :title="point.fallbackStrategy">{{ maturityLabels[point.maturity] }} · {{ portabilityLabels[point.portability] }} · 核验 {{ point.verifiedAt }}</span>
+            <span v-if="point.aiRelation !== 'NONE'">{{ aiRelationLabels[point.aiRelation] }}</span>
+            <span v-if="point.applicabilityTags.length">约束 {{ point.applicabilityTags.map((tag) => portabilityLabels[tag]).join(' / ') }}</span>
+            <span v-if="point.trackIds.length">学习路线 {{ point.trackIds.join(' / ') }}</span>
+            <span v-if="point.topicTags.length">主题标签 {{ point.topicTags.join(' / ') }}</span>
           </div>
         </div>
         <div class="hero-actions">

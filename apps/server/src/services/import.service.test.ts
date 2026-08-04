@@ -70,6 +70,18 @@ describe('Import Service', () => {
 
   it('应该删除已经从 Markdown 权威目录移除的幽灵知识点和领域', async () => {
     await executeImport();
+    const uxPoint = rawDb.prepare(`
+      SELECT p.secondary_topic AS secondaryTopic, p.topic_tags AS topicTags, p.track_ids AS trackIds, d.code AS domainCode
+      FROM knowledge_points p
+      JOIN knowledge_domains d ON d.id = p.domain_id
+      WHERE p.code = 'UX-01'
+    `).get() as { secondaryTopic: string; topicTags: string; trackIds: string; domainCode: string };
+    expect(uxPoint).toEqual({
+      secondaryTopic: '产品交互与可用性',
+      topicTags: '[]',
+      trackIds: '[]',
+      domainCode: '05',
+    });
     const sourcePoint = rawDb.prepare("SELECT * FROM knowledge_points WHERE code = 'JS-01'").get() as Record<string, unknown>;
     const stalePoint = { ...sourcePoint, id: 'stale-import-point', code: 'STALE-01', title: '已移除知识点' };
     const pointColumns = Object.keys(stalePoint);
@@ -89,7 +101,7 @@ describe('Import Service', () => {
     const result = await executeImport();
     expect(result.deletedPoints).toBe(1);
     expect(result.deletedDomains).toBe(1);
-    expect((await checkImportStatus()).pointCount).toBe(219);
+    expect((await checkImportStatus()).pointCount).toBe(223);
   });
 
   it('应该能够重置学习进度并保留用户自建计划', async () => {
@@ -143,8 +155,8 @@ describe('Import Service', () => {
     const checkinCount = rawDb.prepare('SELECT count(*) AS count FROM checkins').get() as { count: number };
     const assessmentCount = rawDb.prepare('SELECT count(*) AS count FROM assessment_sessions').get() as { count: number };
 
-    expect(result.syncedKnowledgePoints).toBe(219);
-    expect(result.resetKnowledgePoints).toBe(219);
+    expect(result.syncedKnowledgePoints).toBe(223);
+    expect(result.resetKnowledgePoints).toBe(223);
     expect(result.deletedTemplateEvents).toBe(1);
     expect(result.deletedCheckins).toBe(1);
     expect(result.deletedAssessmentSessions).toBe(1);

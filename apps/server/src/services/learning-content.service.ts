@@ -20,18 +20,26 @@ export function extractKnowledgeTags(title: string): string[] {
     .slice(0, 6);
 }
 
+function learningMaterialUrl(url: string) {
+  const match = url.match(/^\.\.\/chinese-guides\/([a-z0-9][a-z0-9.-]*\.md)#([\p{L}\p{N}_-]+)$/iu);
+  const guide = match?.[1];
+  const anchor = match?.[2];
+  if (!guide || !anchor || guide.includes('..')) return url;
+  return `/knowledge/materials/${encodeURIComponent(guide)}/${encodeURIComponent(anchor)}`;
+}
+
 export function extractLearningMaterialReferences(markdown: string, pointTitle: string): LearningMaterialReference[] {
   const tags = extractKnowledgeTags(pointTitle);
   const fallbackFocus = tags[0] ?? pointTitle;
   const references: LearningMaterialReference[] = [];
   for (const match of markdown.matchAll(/\[([^\]]+)]\(([^)]+)\)/g)) {
     const title = match[1]?.replace(/^中文[｜|]\s*/, '').trim();
-    const url = match[2]?.trim();
-    if (!title || !url) continue;
-    const hash = url.includes('#') ? decodeURIComponent(url.split('#').pop() ?? '') : '';
+    const rawUrl = match[2]?.trim();
+    if (!title || !rawUrl) continue;
+    const hash = rawUrl.includes('#') ? decodeURIComponent(rawUrl.split('#').pop() ?? '') : '';
     references.push({
       title,
-      url,
+      url: learningMaterialUrl(rawUrl),
       locator: hash
         ? `打开后定位到“${hash.replace(/[-_]/g, ' ')}”章节`
         : `打开后使用页面查找定位“${fallbackFocus}”相关段落`,

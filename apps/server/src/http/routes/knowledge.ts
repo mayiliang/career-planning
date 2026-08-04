@@ -17,6 +17,10 @@ import {
   getKnowledgeRecommendation,
   KnowledgeListQuerySchema,
 } from '../../services/knowledge.service.js';
+import {
+  getKnowledgeMaterial,
+  KnowledgeMaterialError,
+} from '../../services/knowledge-material.service.js';
 
 // 请求参数 Schema
 const UpdateSummarySchema = z.object({
@@ -28,6 +32,31 @@ const SelfMasterSchema = z.object({
 });
 
 export async function knowledgeRoutes(app: FastifyInstance) {
+  // ===== GET /api/v1/knowledge/materials/:guide/:anchor - 站内中文讲义章节 =====
+  app.get('/materials/:guide/:anchor', async (request, reply) => {
+    try {
+      const { guide, anchor } = request.params as { guide: string; anchor: string };
+      const material = await getKnowledgeMaterial(guide, anchor);
+      return reply.status(200).send({ data: material, meta: { requestId: request.id } });
+    } catch (error) {
+      if (error instanceof KnowledgeMaterialError) {
+        return reply.status(error.code === 'INVALID_MATERIAL_PATH' ? 400 : 404).send({
+          error: {
+            code: error.code,
+            message: error.message,
+            retryable: false,
+          },
+          meta: { requestId: request.id },
+        });
+      }
+      request.log.error(error);
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: '无法读取学习资料', retryable: true },
+        meta: { requestId: request.id },
+      });
+    }
+  });
+
   // ===== GET /api/v1/knowledge/recommendation - 下一最佳行动 =====
   app.get('/recommendation', async (request, reply) => {
     try {

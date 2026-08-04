@@ -7,6 +7,13 @@ import { apiClient } from '@/api/client';
 const router = useRouter();
 const selectedDomain = ref('');
 const selectedStatus = ref('');
+const selectedLayer = ref<'' | 'CORE' | 'APPLICATION' | 'SPECIALTY' | 'LEADERSHIP'>('');
+const selectedRequirement = ref<'' | 'REQUIRED' | 'TRACK_REQUIRED' | 'ELECTIVE'>('');
+const selectedMaturity = ref<'' | 'STABLE' | 'EVOLVING' | 'EXPERIMENTAL'>('');
+const selectedAiRelation = ref<'' | 'NONE' | 'AI_ASSISTED' | 'AI_NATIVE' | 'AGENTIC'>('');
+const selectedPortability = ref<'' | 'PORTABLE' | 'FRAMEWORK_SPECIFIC' | 'VENDOR_SPECIFIC' | 'PLATFORM_SPECIFIC' | 'JURISDICTION_SPECIFIC'>('');
+const selectedTrack = ref<'' | 'react' | 'vue' | 'umi-antd' | 'agent-mcp'>('');
+const selectedTopicTag = ref('');
 const searchQuery = ref('');
 
 const statusOptions = [
@@ -23,6 +30,24 @@ const actionLabels = {
   LEARN: '开始学习', CONTINUE: '继续推进', ASSESS: '发起首考', RETEST: '完成复测',
   RELEARN: '重新学习', COMPLETE: '查看掌握成果',
 } as const;
+const layerLabels = { CORE: '核心', APPLICATION: '应用', SPECIALTY: '专精', LEADERSHIP: '领导力' } as const;
+const requirementLabels = { REQUIRED: '必修', TRACK_REQUIRED: '主修必修', ELECTIVE: '选修' } as const;
+const maturityLabels = { STABLE: '稳定', EVOLVING: '演进中', EXPERIMENTAL: '实验性' } as const;
+const aiRelationLabels = { NONE: '非 AI 专属', AI_ASSISTED: 'AI 辅助', AI_NATIVE: 'AI 原生', AGENTIC: 'Agentic' } as const;
+const portabilityLabels = { PORTABLE: '可迁移', FRAMEWORK_SPECIFIC: '框架特定', VENDOR_SPECIFIC: '厂商特定', PLATFORM_SPECIFIC: '平台特定', JURISDICTION_SPECIFIC: '地区规则' } as const;
+const trackOptions = [
+  { value: 'react', label: 'React 路线' }, { value: 'vue', label: 'Vue 路线' },
+  { value: 'umi-antd', label: 'Umi/Ant Design 路线' }, { value: 'agent-mcp', label: 'Agent/MCP 路线' },
+] as const;
+const topicTagOptions = [
+  ['component-platform', '组件平台'], ['api-engineering', '接口工程'], ['tooling', '工具链'],
+  ['platform-engineering', '平台工程'], ['realtime-ai', '实时 AI'], ['ai-tooling', 'AI 工具链'],
+  ['engineering-leadership', '工程领导力'], ['web-platform', 'Web 平台'], ['accessibility', '无障碍'],
+  ['security-privacy', '安全与隐私'], ['performance-mobile', '性能与移动端'], ['media', '媒体工程'],
+  ['runtime-cross-platform', '跨运行时'], ['node-bff', 'Node/BFF'], ['data-realtime', '数据与实时协作'],
+  ['browser-ai', '浏览器 AI'], ['graphics-viz', '图形可视化'], ['growth-content-i18n', '增长内容与全球化'],
+  ['deployment', '部署交付'], ['visual-testing', '视觉测试'],
+] as const;
 
 const { data: domainStats, isLoading: statsLoading } = useQuery({
   queryKey: ['knowledge', 'domains'],
@@ -33,10 +58,17 @@ const { data: recommendation, isLoading: recommendationLoading } = useQuery({
   queryFn: apiClient.getKnowledgeRecommendation,
 });
 const { data: knowledgeData, isLoading, error } = useQuery({
-  queryKey: ['knowledge', 'points', selectedDomain, selectedStatus, searchQuery],
+  queryKey: ['knowledge', 'points', selectedDomain, selectedStatus, selectedLayer, selectedRequirement, selectedMaturity, selectedAiRelation, selectedPortability, selectedTrack, selectedTopicTag, searchQuery],
   queryFn: () => apiClient.getKnowledgePoints({
     domainId: selectedDomain.value || undefined,
     status: selectedStatus.value || undefined,
+    capabilityLayer: selectedLayer.value || undefined,
+    requirementLevel: selectedRequirement.value || undefined,
+    maturity: selectedMaturity.value || undefined,
+    aiRelation: selectedAiRelation.value || undefined,
+    portability: selectedPortability.value || undefined,
+    trackId: selectedTrack.value || undefined,
+    topicTag: selectedTopicTag.value || undefined,
     search: searchQuery.value.trim() || undefined,
   }),
 });
@@ -46,7 +78,7 @@ const totalCount = computed(() => domainStats.value?.reduce((sum, domain) => sum
 const masteredCount = computed(() => domainStats.value?.reduce((sum, domain) => sum + domain.masteredCount, 0) ?? 0);
 const learningCount = computed(() => domainStats.value?.reduce((sum, domain) => sum + domain.learningCount, 0) ?? 0);
 const progress = computed(() => totalCount.value ? Math.round(masteredCount.value / totalCount.value * 100) : 0);
-const hasFilters = computed(() => Boolean(selectedDomain.value || selectedStatus.value || searchQuery.value.trim()));
+const hasFilters = computed(() => Boolean(selectedDomain.value || selectedStatus.value || selectedLayer.value || selectedRequirement.value || selectedMaturity.value || selectedAiRelation.value || selectedPortability.value || selectedTrack.value || selectedTopicTag.value || searchQuery.value.trim()));
 const currentCode = computed(() => recommendation.value?.point?.code);
 const routeStep = computed(() => {
   const action = recommendation.value?.action;
@@ -64,6 +96,13 @@ const openRecommendation = () => {
 const clearFilters = () => {
   selectedDomain.value = '';
   selectedStatus.value = '';
+  selectedLayer.value = '';
+  selectedRequirement.value = '';
+  selectedMaturity.value = '';
+  selectedAiRelation.value = '';
+  selectedPortability.value = '';
+  selectedTrack.value = '';
+  selectedTopicTag.value = '';
   searchQuery.value = '';
 };
 </script>
@@ -122,6 +161,13 @@ const clearFilters = () => {
       <label class="search-field"><span>⌕</span><input v-model="searchQuery" type="search" placeholder="搜索知识点、编号或能力关键词" /></label>
       <select v-model="selectedDomain" aria-label="按领域筛选"><option value="">全部领域</option><option v-for="domain in domainStats" :key="domain.id" :value="domain.id">{{ domain.code }} · {{ domain.title }}</option></select>
       <select v-model="selectedStatus" aria-label="按掌握状态筛选"><option v-for="status in statusOptions" :key="status.value" :value="status.value">{{ status.label }}</option></select>
+      <select v-model="selectedLayer" aria-label="按能力层筛选"><option value="">全部能力层</option><option value="CORE">核心</option><option value="APPLICATION">应用</option><option value="SPECIALTY">岗位专精</option><option value="LEADERSHIP">领导力</option></select>
+      <select v-model="selectedRequirement" aria-label="按要求级别筛选"><option value="">全部要求</option><option value="REQUIRED">全员必修</option><option value="TRACK_REQUIRED">主修必修</option><option value="ELECTIVE">选修</option></select>
+      <select v-model="selectedMaturity" aria-label="按成熟度筛选"><option value="">全部成熟度</option><option value="STABLE">稳定</option><option value="EVOLVING">演进中</option><option value="EXPERIMENTAL">实验性</option></select>
+      <select v-model="selectedAiRelation" aria-label="按 AI 关系筛选"><option value="">全部 AI 关系</option><option value="NONE">非 AI 专属</option><option value="AI_ASSISTED">AI 辅助</option><option value="AI_NATIVE">AI 原生</option><option value="AGENTIC">Agentic</option></select>
+      <select v-model="selectedPortability" aria-label="按可移植性筛选"><option value="">全部可移植性</option><option value="PORTABLE">可迁移</option><option value="FRAMEWORK_SPECIFIC">框架特定</option><option value="VENDOR_SPECIFIC">厂商特定</option><option value="PLATFORM_SPECIFIC">平台特定</option><option value="JURISDICTION_SPECIFIC">地区规则</option></select>
+      <select v-model="selectedTrack" aria-label="按学习路线筛选"><option value="">全部学习路线</option><option v-for="track in trackOptions" :key="track.value" :value="track.value">{{ track.label }}</option></select>
+      <select v-model="selectedTopicTag" aria-label="按主题标签筛选"><option value="">全部主题标签</option><option v-for="tag in topicTagOptions" :key="tag[0]" :value="tag[0]">{{ tag[1] }}</option></select>
       <button v-if="hasFilters" class="clear-filter" @click="clearFilters">清除</button>
       <span class="result-count">{{ isLoading ? '整理中' : `${knowledgeData?.total ?? 0} 项` }}</span>
     </section>
@@ -134,9 +180,9 @@ const clearFilters = () => {
       <button v-for="point in knowledgePoints" :key="point.id" class="knowledge-card" :class="{ recommended: point.code === currentCode }" @click="router.push(`/knowledge/${point.code}`)">
         <span class="mastery-orbit" :data-status="point.status"><i></i></span>
         <span class="card-copy">
-          <span class="card-kicker"><code>{{ point.code }}</code><small>{{ point.domainCode }}</small><em v-if="point.code === currentCode">推荐下一站</em></span>
+          <span class="card-kicker"><code>{{ point.code }}</code><small>{{ point.domainCode }}</small><small>{{ point.secondaryTopic }}</small><small>{{ layerLabels[point.capabilityLayer] }}</small><small>{{ requirementLabels[point.requirementLevel] }}</small><em v-if="point.code === currentCode">推荐下一站</em></span>
           <strong>{{ point.title }}</strong>
-          <span class="card-meta">第 {{ point.planWeek ?? '—' }} 周 · {{ point.difficulty }} · 预计 {{ formatMinutes(point.estimatedTotalMinutes) }}</span>
+          <span class="card-meta">{{ point.planWeek ? `第 ${point.planWeek} 周` : '分支路线' }} · {{ maturityLabels[point.maturity] }} · {{ portabilityLabels[point.portability] }}<template v-if="point.aiRelation !== 'NONE'"> · {{ aiRelationLabels[point.aiRelation] }}</template><template v-if="point.trackIds.length"> · 路线 {{ point.trackIds.join(' / ') }}</template><template v-if="point.topicTags.length"> · 主题 {{ point.topicTags.join(' / ') }}</template> · {{ point.difficulty }} · 预计 {{ formatMinutes(point.estimatedTotalMinutes) }}</span>
         </span>
         <span class="card-state">{{ formatStatus(point.status) }}<b>→</b></span>
       </button>
@@ -157,4 +203,4 @@ const clearFilters = () => {
 @media(max-width:760px){.knowledge-hero{align-items:flex-start}.hero-progress{width:88px;height:88px;flex-basis:88px}.hero-progress strong{font-size:1.15rem}.route-deck{grid-template-columns:minmax(0,1fr);padding:1.1rem}.route-rail{min-width:0;min-height:78px}.route-context{grid-column:auto;min-width:0}.filter-dock{position:relative;top:auto;flex-wrap:wrap}.search-field{flex-basis:100%;min-width:0}.filter-dock select{width:0;min-width:0;flex:1 1 42%}.result-count{margin-left:auto}.knowledge-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:520px){.knowledge-hero h1{font-size:2.45rem}.hero-copy>p:last-child{font-size:.75rem}.overview-strip{grid-template-columns:repeat(2,1fr)}.overview-strip nav{display:grid;grid-template-columns:1fr 1fr}.knowledge-card{grid-template-columns:42px 1fr}.card-state{grid-column:2;align-items:flex-start;flex-direction:row;gap:.35rem}.route-rail>div span{font-size:.5rem}}
 </style>
-<style scoped>.knowledge-page{width:100%;max-width:1600px}</style>
+<style scoped>.knowledge-page{width:100%;max-width:1600px}.filter-dock{flex-wrap:wrap}</style>

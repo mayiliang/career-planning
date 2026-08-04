@@ -61,6 +61,14 @@ function isSafeLink(href: string) {
   }
 }
 
+export function learningMaterialHref(href: string) {
+  const match = href.match(/^\.\.\/chinese-guides\/([a-z0-9][a-z0-9.-]*\.md)#([\p{L}\p{N}_-]+)$/iu);
+  const guide = match?.[1];
+  const anchor = match?.[2];
+  if (!guide || !anchor || guide.includes('..')) return href;
+  return `/knowledge/materials/${encodeURIComponent(guide)}/${encodeURIComponent(anchor)}`;
+}
+
 const markdown: MarkdownInstance = new MarkdownIt({
   html: false,
   linkify: true,
@@ -117,7 +125,9 @@ const fallbackLinkOpen: RenderRule = (tokens, index, options, _env, renderer) =>
 const defaultLinkOpen = markdown.renderer.rules.link_open ?? fallbackLinkOpen;
 const linkOpenRule: RenderRule = (tokens, index, options, env, renderer) => {
   const hrefIndex = tokens[index]?.attrIndex('href') ?? -1;
-  const href = String(hrefIndex >= 0 ? tokens[index]?.attrs?.[hrefIndex]?.[1] ?? '' : '');
+  const rawHref = String(hrefIndex >= 0 ? tokens[index]?.attrs?.[hrefIndex]?.[1] ?? '' : '');
+  const href = learningMaterialHref(rawHref);
+  if (hrefIndex >= 0 && href !== rawHref) tokens[index]?.attrSet('href', href);
   if (!isSafeLink(href)) {
     const token = tokens[index];
     if (token) {

@@ -4,7 +4,7 @@ test.describe.serial('核心使用体验', () => {
   test('知识脑图展示完整能力体系并可逐层展开', async ({ page }) => {
     await page.goto('/knowledge/map');
     await expect(page.getByRole('heading', { name: '把知识连成一张图' })).toBeVisible();
-    await expect(page.locator('.map-stats')).toContainText('219');
+    await expect(page.locator('.map-stats')).toContainText('223');
     await expect(page.locator('.map-stats')).toContainText('7');
     await expect(page.locator('.group-branch')).toHaveCount(7);
 
@@ -60,6 +60,17 @@ test.describe.serial('核心使用体验', () => {
     await page.getByRole('button', { name: '提交并验证' }).click();
     expect((await validationStream).headers()['content-type']).toContain('text/event-stream');
     await expect(page.getByText('练习已通过系统验证并保存为完成证据。')).toBeVisible();
+  });
+
+  test('自建中文讲义能从知识点、练习与挑战共用的站内地址打开', async ({ page }) => {
+    await page.goto('/knowledge/JS-04');
+    const materialLink = page.getByRole('link', { name: /中文补充讲义：JS-04/ }).first();
+    await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/content-audit-01-03.md/js-04');
+    await materialLink.click();
+    await expect(page).toHaveURL(/\/knowledge\/materials\/content-audit-01-03\.md\/js-04$/);
+    await expect(page.getByText('IN-SITE LEARNING MATERIAL · JS-04')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /JS-04/ }).first()).toBeVisible();
+    await expect(page.getByText(/任务、微任务|事件循环/).first()).toBeVisible();
   });
 
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {
@@ -228,7 +239,7 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '系统与数据' })).toBeVisible();
     await expect(page.getByText(/64 周内容只作为可选路线参考/)).toBeVisible();
-    await expect(page.getByText('219 个知识点')).toBeVisible();
+    await expect(page.getByText('223 个知识点')).toBeVisible();
     await expect(page.getByText('20 个领域已入库')).toBeVisible();
     await expect(page.getByText(/每天自动创建一次一致性快照/)).toBeVisible();
     await expect(page.getByText(/清空进度，但保留全部笔记/)).toBeVisible();

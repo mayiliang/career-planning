@@ -16,6 +16,13 @@ describe('学习资料 Markdown 渲染', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
+  it('把仓库中文讲义链接改写为可打开的站内资料页', () => {
+    const html = renderMarkdown('[中文补充讲义](../chinese-guides/content-audit-01-03.md#react-06)');
+    expect(html).toContain('href="/knowledge/materials/content-audit-01-03.md/react-06"');
+    expect(html).not.toContain('unavailable-link');
+    expect(html).not.toContain('target="_blank"');
+  });
+
   it('支持现代 Markdown 的表格、任务、脚注、标记、代码高亮、数学公式和图形', () => {
     const html = renderMarkdown('# 标题\n\n**重点** 与 `const` 以及 ==标记==[^1]\n\n- [x] 已完成\n\n> 边界说明\n\n| 输入 | 输出 |\n| --- | --- |\n| 1 | 2 |\n\n$$E = mc^2$$\n\n```js\nconst result = 2;\n```\n\n```mermaid\ngraph LR\n A --> B\n```\n\n[^1]: 脚注内容');
     expect(html).toContain('<h1>标题</h1>');

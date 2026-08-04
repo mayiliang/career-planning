@@ -71,6 +71,34 @@
       "when": 1785560400000,
       "tag": "0009_practice_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785801600000,
+      "tag": "0010_knowledge_taxonomy",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785888000000,
+      "tag": "0011_knowledge_portability_tracks",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785974400000,
+      "tag": "0012_taxonomy_axes",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786060800000,
+      "tag": "0013_knowledge_topics_and_tags",
+      "breakpoints": true
     }
   ]
 }

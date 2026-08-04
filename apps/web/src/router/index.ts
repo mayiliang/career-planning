@@ -40,6 +40,12 @@ const routes = [
     meta: { title: '知识图谱' },
   },
   {
+    path: '/knowledge/materials/:guide/:anchor',
+    name: 'KnowledgeMaterial',
+    component: () => import('@/features/knowledge/KnowledgeMaterialPage.vue'),
+    meta: { title: '中文学习资料' },
+  },
+  {
     path: '/knowledge/:code',
     name: 'KnowledgeDetail',
     component: () => import('@/features/knowledge/KnowledgeDetailPage.vue'),

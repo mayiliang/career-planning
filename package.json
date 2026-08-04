@@ -22,6 +22,7 @@
     "db:generate": "pnpm --filter @career-atlas/server db:generate",
     "content:check": "pnpm --filter @career-atlas/content-parser content:check",
     "content:links": "pnpm --filter @career-atlas/content-parser content:links",
+    "content:links:strict": "pnpm --filter @career-atlas/content-parser content:links:strict",
     "backup:create": "pnpm --filter @career-atlas/server backup:create",
     "start": "pnpm --filter @career-atlas/server start",
     "start:prod": "./start.sh",
