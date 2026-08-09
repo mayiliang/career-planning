@@ -16,11 +16,14 @@ test.describe.serial('核心使用体验', () => {
   test('资料学习、笔记和掌握状态彼此独立', async ({ page }) => {
     await page.goto('/knowledge/AIAPP-01');
     await expect(page.getByText('AIAPP-01', { exact: true }).first()).toBeVisible();
-    const resource = page.locator('.markdown-content a').first();
-    await expect(resource).toBeVisible();
-    await expect(resource).toHaveAttribute('href', /^https:\/\//);
-    await expect(resource).toHaveAttribute('target', '_blank');
-    await expect(resource).toHaveAttribute('rel', 'noopener noreferrer');
+    const localResource = page.locator('.markdown-content a[href^="/knowledge/materials/"]').first();
+    await expect(localResource).toBeVisible();
+    await expect(localResource).toHaveAttribute('href', '/knowledge/materials/core-and-ecosystem-topics.md/aiapp-01');
+    await expect(localResource).not.toHaveAttribute('target', '_blank');
+    const externalResource = page.locator('.markdown-content a[href^="https://"]').first();
+    await expect(externalResource).toBeVisible();
+    await expect(externalResource).toHaveAttribute('target', '_blank');
+    await expect(externalResource).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(page.getByText('推荐学习方式', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: '学完资料后，可以这样练' })).toBeVisible();
     await expect(page.getByRole('button', { name: '在系统中开始并完成 →' }).first()).toBeVisible();

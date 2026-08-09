@@ -76,7 +76,7 @@ export interface KnowledgeTaxonomy {
   fallbackStrategy: string;
 }
 
-export const TAXONOMY_VERIFIED_AT = '2026-08-04';
+export const TAXONOMY_VERIFIED_AT = '2026-08-09';
 
 const MATURITY_FALLBACKS: Record<MaturityLevel, string> = {
   STABLE: '按 Baseline、目标浏览器和运行环境做能力检测与渐进增强。',

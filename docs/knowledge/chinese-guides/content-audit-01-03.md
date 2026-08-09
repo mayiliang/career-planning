@@ -78,6 +78,40 @@ schema 的职责是解析和拒绝，不能只在开发环境打印警告后继�
 
 练习：为审核单定义 draft、reviewing、approved、rejected 状态及动作表；把“只有管理员可批准”同时写成 UI 可见性和服务端返回的运行时拒绝 fixture。验收：新增状态或动作会迫使映射补全；越权请求即便绕过前端也失败；DTO 增删字段通过边界转换而非扩散断言处理。
 
+下面是一个最小但完整的审核模型。品牌只由解析函数创建；它把“字符串格式正确”集中在边界，业务函数随后不再接受任意 `string`。`transitions` 是状态、可用动作、按钮文案和测试矩阵的唯一来源：新增 `State` 成员时，`satisfies Record<State, ...>` 会要求补齐该成员，而不是默默落入默认分支。
+
+```ts
+type Brand<T, Name extends string> = T & { readonly __brand: Name };
+type ReviewId = Brand<string, "ReviewId">;
+type Version = Brand<number, "Version">;
+type State = "draft" | "reviewing" | "approved" | "rejected";
+type Action = "submit" | "approve" | "reject" | "revise";
+type Actor = { id: string; role: "author" | "reviewer" | "admin" };
+
+function parseReviewId(value: unknown): ReviewId {
+  if (typeof value !== "string" || !/^rvw_[a-z0-9]+$/.test(value)) throw new Error("invalid review id");
+  return value as ReviewId; // 唯一的品牌构造边界
+}
+
+const transitions = {
+  draft: ["submit"],
+  reviewing: ["approve", "reject"],
+  approved: ["revise"],
+  rejected: ["revise"],
+} as const satisfies Record<State, readonly Action[]>;
+
+function mayAct(state: State, action: Action, actor: Actor): boolean {
+  return transitions[state].includes(action) &&
+    (action !== "approve" || actor.role === "admin");
+}
+```
+
+UI 只能以 `mayAct(review.state, "approve", viewer)` 决定是否显示或禁用按钮；它不能把 `false` 当作授权结果。服务端动作要重新读取当前记录、验证主体、检查版本和状态，再在同一个事务中提交。例如 `approve({ id, expectedVersion })` 的顺序应是：解析 `id`、载入记录、比较 `record.version === expectedVersion`、检查当前用户为管理员且 `record.state === "reviewing"`、写入 `approved` 与 `version + 1`、记录审计事件。任何一步不满足都返回可判别结果，如 `{ ok: false, kind: "forbidden" | "invalid-transition" | "conflict" }`；不要仅返回 `false`，否则客户端无法给出安全且可行动的提示。
+
+并发反例必须真实重放：管理员 A 与 B 都读取 `reviewing@4`；B 先批准，服务端写成 `approved@5`；A 再携带 `expectedVersion: 4` 提交，即使 A 也是管理员也必须得到 `conflict`，而不是覆盖 B 的决定。重复点击则使用请求幂等键；同一个 key 的第二次调用返回第一次的稳定结果，不能重复写审计事件。页面收到 `conflict` 后重新拉取，并保留用户尚未提交的修订说明；不能乐观地把本地状态永久显示为 `approved`。
+
+反证实验分四层执行。第一，类型测试中给 `transitions` 加入 `"escalated"` 状态，预期编译失败直到补齐映射；第二，状态表测试遍历全部 `(state, action)`，对不在表中的动作断言 `invalid-transition`；第三，直接调用服务端 approve fixture，分别传 author、非法 ID 和旧版本，断言 `forbidden`、解析失败和 `conflict`；第四，用浏览器测试确认 author 看不到批准按钮，但仍用直接 HTTP 请求证明服务端拒绝。验收记录应保存请求 ID、旧/新 version、动作、主体、结果和审计事件数，因而能证明“类型、UI、服务端、并发控制”各自负责的边界。
+
 ## TS-09
 
 定义：迁移是对编译、解析与运行契约的受控变更；机制/流程是先冻结基线、再逐项升级、验证三类产物、最后保留回滚。适用场景为 TypeScript、Node 或打包器版本升级。边界是编辑器通过不等于运行正确；验证要记录 module、target、解析和真实加载的 fixture 证据。
@@ -96,6 +130,10 @@ schema 的职责是解析和拒绝，不能只在开发环境打印警告后继�
 
 练习：给定一段同步日志、两个 `Promise.then`、一个 `await` 和一个 `setTimeout(0)`，提交输出顺序及上述四步队列记录；再将递归微任务改成每 50 项让出一次任务。验收：在 DevTools Performance 中能看到让出后的输入事件被处理，且输出顺序与记录一致。浏览器与 Node 的事件循环并非同一题目，禁止把 Node 专有顺序当作本节结论。
 
+并发上限和取消是另一层应用协议，不能从事件循环顺序“自动得到”。可复现的最小执行器应维护 `nextIndex`、`active`、结果槽位和一个已取消的 `AbortSignal`：只要 `active < 2` 且未取消，才启动下一个工厂函数；每个工厂完成时只写自己的槽位并使 `active--`，然后再次尝试启动；收到取消后停止补位，等待已启动任务自行观察 signal 并将尚未开始的槽位标为 `cancelled`。不要用 `Promise.race` 误把“最快一个完成”当作“全部停止”，也不要让后完成任务按完成顺序 `push` 结果。
+
+实验：准备五个工厂，延迟分别为 `40/5/25/10/30ms`，第三个拒绝；在第 12ms 取消。记录每个工厂的“启动、收到 abort、完成”时间戳，以及每一时刻的 `active` 值。验收证据是：任何时刻 `active ≤ 2`；编号 4、5 从未启动；结果槽位仍按输入编号；拒绝被汇总而非变成未处理拒绝。若底层工作不支持取消，报告必须明确它可能继续消耗资源，但 UI/后续任务不会再由它推进。
+
 ## JS-05
 
 Promise 的状态只会从 pending 进入 fulfilled 或 rejected 一次；链式 `then` 的返回值决定下一个 Promise，抛错或返回 rejected Promise 会沿链传播。`finally` 适合做无论成功失败都应执行的清理，但若它抛错或返回拒绝的 Promise，会覆盖原来的结果。`AbortController` 只传播“应当停止”的信号；被调用 API 是否立即停止、已经完成的响应能否被撤回，都必须由调用方和 API 契约分别保证。
@@ -103,6 +141,26 @@ Promise 的状态只会从 pending 进入 fulfilled 或 rejected 一次；链式
 搜索联想应维护“当前请求身份”：发起新查询时取消旧控制器并递增序号；响应抵达时只有序号仍等于当前值才可以提交 UI。网络故障、业务拒绝、用户取消和程序错误要使用不同呈现与日志路径。重试不是默认行为：仅对幂等或有幂等键、可安全重放的操作进行有限次数的指数退避与抖动；写操作在不知道服务端是否已成功时不能盲目重放。
 
 练习：实现 `allSettled` 等价聚合，输入三个“成功、失败、延迟成功”的任务，输出必须保留输入顺序。再以 `a → ab → abc` fixture 模拟搜索，延迟让 `a` 最后返回。验收：界面最终只有 `abc` 的结果；取消没有错误提示；`finally` 清理次数等于发起请求数；测试额外验证一个不可重放 POST 不被自动重试。
+
+下面的聚合器刻意只复现“等待全部 settled、按输入顺序返回”这一语义；它不取消任务，也不会把 rejection 变成未处理异常。`Promise.resolve` 还使普通值与 thenable 走同一条路径：
+
+```ts
+type Settled<T> =
+  | { status: "fulfilled"; value: T }
+  | { status: "rejected"; reason: unknown };
+
+async function settleInOrder<T>(items: Iterable<T | PromiseLike<T>>): Promise<Settled<T>[]> {
+  return Promise.all([...items].map(async (item): Promise<Settled<T>> => {
+    try {
+      return { status: "fulfilled", value: await item };
+    } catch (reason) {
+      return { status: "rejected", reason };
+    }
+  }));
+}
+```
+
+把 `[slowSuccess, fastFailure, fastSuccess]` 传入后，断言第 0 项仍是 `fulfilled`、第 1 项是 `rejected`，而不是按完成时刻排序；再传空 iterable，断言异步得到空数组。反例：把每项的 `catch` 删掉，`Promise.all` 会在第一个拒绝处提前拒绝，既不满足全量报告，也可能把后续错误留给调用者处理。搜索 fixture 则另外断言：旧请求即使底层无法立刻取消，因序号不匹配也不得调用任何“写入当前搜索结果”的函数。
 
 ## TS-06
 
@@ -118,6 +176,22 @@ Promise 的状态只会从 pending 进入 fulfilled 或 rejected 一次；链式
 
 练习：为 `load(id: string): Promise<Item>` 与 `load(ids: string[]): Promise<Item[]>` 写两条重载及一个不使用 `any` 的实现；为 `onSelect` 设计能接收 `Item` 或其父类型的回调。验收：窄回调（只接收 `SpecialItem`）不能被注册到可能传入普通 `Item` 的位置；数组输入推断为数组输出；空数组、拒绝和取消在结果类型中可区分。
 
+最小实现应把公开重载和宽于它们的实现签名分开，且把“取消/失败”建成结果而不是静默吞掉：
+
+```ts
+type Item = { id: string };
+type LoadResult<T> = { ok: true; value: T } | { ok: false; kind: "cancelled" | "not-found" };
+
+function load(id: string): Promise<LoadResult<Item>>;
+function load(ids: readonly string[]): Promise<LoadResult<Item[]>>;
+async function load(input: string | readonly string[]): Promise<LoadResult<Item | Item[]>> {
+  if (Array.isArray(input) && input.length === 0) return { ok: true, value: [] };
+  return { ok: false, kind: "not-found" }; // fixture 中替换为真实边界调用
+}
+```
+
+验证时将 `const acceptsItem = (value: Item) => value.id` 赋给需要 `Item` 的回调应通过；只接受 `SpecialItem` 的回调在 `strictFunctionTypes` 下必须被拒绝。若 API 只是在 `string | string[]` 两种输入间选择、调用者不需要不同返回形状，就删除重载，改成一个联合参数和可判别结果；重载不是为“看起来精确”而存在。
+
 ## REACT-06
 
 `useReducer` 把状态转换集中为纯函数：同样的旧状态和 action 必须得到同样的新状态，副作用放在事件处理、Effect 或数据层。Context 负责让子树读取某个值；Provider 的 value 身份变化会使使用该 Context 的消费者重新渲染。它不是自动选择器，也不是服务端缓存或跨页面事务系统。
@@ -126,6 +200,10 @@ Promise 的状态只会从 pending 进入 fulfilled 或 rejected 一次；链式
 
 练习：实现 `submit` 在非“可提交”状态返回原状态并记录诊断的 reducer。验收：表驱动测试覆盖每个允许和拒绝转换；在 Profiler 中证明只读摘要组件不会因 dispatch-only 变化重渲；卸载后不得再分发异步回调的结果。
 
+可复现状态表应同时驱动 reducer 与测试，而不是在组件分支和测试中复制规则。例如把允许转换写成 `const transitions = { draft: ["validate"], ready: ["submit"], submitting: ["resolve", "reject"] } as const`，reducer 先检查 `action.type` 是否在当前状态的允许集合中，再构造下一状态。对非法转换返回原状态时，必须携带可观测诊断（开发期抛错、测试回调或受控日志三选一），不能悄悄忽略；否则 UI 表面稳定却无法发现调用方违反了契约。
+
+实验分两组：第一组给每个 `(state, action)` 对生成测试，断言允许对得到预期 next state、其余对被拒绝；第二组将 `dispatch` 放入独立的 `DispatchContext`，让只读摘要只订阅 `StateContext`。在同一交互脚本下比较拆分前后 Profiler 的摘要 render 次数，并保存“操作、提交编号、次数”表。若 Provider value 每次都新建对象，或把整个服务端缓存塞进 Context，实验结果不应被宣称为 Context 已优化。
+
 ## REACT-07
 
 性能优化先测量：Profiler 的提交时间说明某次 React 渲染的成本，但不等同于用户交互延迟，也不证明浏览器布局、绘制或网络没有瓶颈。`memo` 只在 props 相等时跳过重渲；新的对象、数组和函数引用会使浅比较失败。`useMemo` 缓存计算结果，`useCallback` 缓存函数身份；它们本身有比较、内存和失效成本，不能作为“默认写法”。
@@ -133,6 +211,8 @@ Promise 的状态只会从 pending 进入 fulfilled 或 rejected 一次；链式
 大列表先减少工作量：稳定 key、避免在渲染中重复排序/格式化、按查询增量计算。若可视区域远小于总行数，再采用窗口化/虚拟化，只渲染视口和适量 overscan。虚拟化不是无代价：可访问性中的总数、焦点移动、动态行高、滚动定位和打印需要专门验证；短列表或频繁高度变化时可能不值得引入。
 
 练习：给定 10,000 行聊天 fixture，记录输入过滤前后的 Profiler 提交次数、最大提交耗时和可见行数；只在测量定位到的瓶颈处优化。验收：同一机器、同一脚本、三次运行的中位数有改进或书面证明无需优化；键盘能把焦点移到虚拟化后新出现的项；删除 `memo` 后若指标不变，必须撤销该缓存。
+
+测量记录至少固定：提交编号、交互脚本版本、数据量、查询词、Profiler `actualDuration`、浏览器 Performance 中的输入到绘制时间、是否发生 GC/网络活动和焦点结果。只凭一次 `actualDuration` 不能推出 30% 改善；同一脚本跑三次，分别报告中位数与离群值原因。优化后要执行一次“反证”实验：删除新增的 `memo`/`useMemo` 或关闭窗口化，若指标和交互无实质变化，就恢复更简单的实现；若变差，再保留优化并说明缓存失效和内存上限。
 
 ## REACT-10
 
@@ -147,3 +227,68 @@ Promise 的状态只会从 pending 进入 fulfilled 或 rejected 一次；链式
 框架模式还要把编译与服务端边界放进路由设计。React Compiler 只能在规则满足、构建工具已接入时优化组件渲染；它不会修复不纯渲染、错误的数据缓存、慢接口或错误授权。先保留能说明意图的 API，再用相同交互脚本比较编译器启用前后提交次数和耗时；若无可复现收益，不以删除全部 `memo` 作为目标。反例是把“已启用编译器”当作性能验收，或为迎合缓存而让路由 loader 返回可变全局对象。
 
 服务端组件（RSC）和 Server Function 的序列化边界也不是信任边界。服务器可以把允许序列化的值传给客户端，但每个写入请求仍要在服务端重新鉴权、校验参数、限制副作用和记录关联 ID；不能把客户端路由守卫、隐藏按钮或组件名称当作权限控制。例子：订单编辑页可在服务端读取订单摘要，却必须在提交动作中再次核对当前用户是否拥有该订单；反例是只凭页面已加载就接受任意订单 ID。升级 React、路由器或编译器时，先在一个可回滚路由切片验证构建、SSR/hydration、序列化失败、403/404、错误边界和未保存表单，再扩大范围。验收记录至少包含版本、输入、预期输出、网络/渲染证据和回滚触发条件。
+
+## REACT-08
+
+定义：错误边界是在子树渲染出错时隔离并替换该子树的恢复 UI；Suspense 是组件在渲染期间等待 React 已知异步资源时展示 fallback 的边界。机制不是“所有 Promise 自动被接住”：渲染时由 `lazy`、`use` 或框架缓存读取抛出的 pending Promise 才会被最近 Suspense 处理；渲染错误由 Error Boundary 处理。事件处理器、定时器、普通 `useEffect` 回调和任意 `fetch()` 的 rejection 不会自动进入这两类边界，必须在其调用路径显式捕获并转换为状态。
+
+适用场景是可以局部恢复的详情、侧栏或数据卡片：每个区域分别呈现 loading、empty、forbidden、error、partial 与 ready，避免一个页面的次要推荐列表失败就抹掉编辑中的表单。不要为每个很小组件包一个边界（会让恢复入口和观测碎片化），也不要只放一个全屏边界（会扩大故障半径）。错误边界的 reset key 或 retry 回调只能重试该数据域；无关的草稿状态应保留在边界外或由受控输入持有。写操作失败要区分“请求未送达”“服务器拒绝”“可能已提交但响应丢失”，最后一种不能自动重复提交。
+
+下面的 fixture 用受控资源模拟三条渲染期路径：`read()` 返回值代表 ready、抛 Promise 代表 pending、抛 Error 代表失败。它只用于测试 Suspense/边界协议，生产中应换为框架或数据层支持的缓存，而不是从 Effect 里现造 Promise。
+
+```tsx
+type Entry<T> = { state: "pending"; promise: Promise<void> } | { state: "ready"; value: T } | { state: "error"; error: Error };
+function readEntry<T>(entry: Entry<T>): T {
+  if (entry.state === "pending") throw entry.promise;
+  if (entry.state === "error") throw entry.error;
+  return entry.value;
+}
+
+class CardBoundary extends React.Component<{ resetKey: string; onRetry(): void; children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidUpdate(prev: Readonly<{ resetKey: string }>) {
+    if (prev.resetKey !== this.props.resetKey && this.state.error) this.setState({ error: null });
+  }
+  render() {
+    return this.state.error
+      ? <button onClick={this.props.onRetry}>重新加载此卡片</button>
+      : this.props.children;
+  }
+}
+```
+
+实验使用订单详情、审计日志和仍可编辑的备注框。先让审计日志 `readEntry` 抛 pending Promise，断言只有日志显示 skeleton；改为抛 Error，断言只显示日志重试按钮且备注值不变；让 `fetch` 在 Effect 中拒绝，断言错误先被 `catch` 映射到普通 error state，而不是错误地期待 Suspense 显示 fallback。再分别注入 403、空数组、两张卡片中一张失败、取消导航和连续三次 retry，记录每次的请求 ID、边界名称、用户可见状态和提交次数。无限 retry、在 fallback 内发起新的同一请求、或通过重置整页 key 清空草稿，都是必须失败的反例。
+
+恢复 UI 也需要测量，但性能优化不是本点的默认目标。为 `onRetry` 使用 `useCallback`、为纯错误展示组件使用 `memo`、为昂贵且确定的错误摘要使用 `useMemo` 前，先在同一错误—重试脚本下用 Profiler 记录提交次数与 `actualDuration`；然后分别删除三个优化，若中位数、焦点和请求次数没有变好，就撤销这些缓存。验收同时检查 retry 按钮在 reset 后仍可聚焦、旧 promise 兑现不会覆盖新请求、日志不暴露敏感 cause；这样 `memo`/`useMemo`/`useCallback` 是可反证的恢复体验证据，而不是掩盖错误状态设计的装饰。
+
+## SEC-05
+
+定义：Web Crypto 提供浏览器中的密码原语和 `CryptoKey` 句柄，不提供“前端天然可信”的业务安全。AES-GCM 是带认证的对称加密：同一密钥下每次加密必须使用新的 IV/nonce，解密会同时验证密文与可选的附加认证数据（AAD）。适用场景是明确威胁模型下的本地数据保护、端到端协议的一部分或对服务端签名的验证；不适用于把混淆当加密、在 XSS 已失守的同一页面保护密钥，或替代服务端授权、KMS/HSM、备份与撤销。
+
+`CryptoKey` 的 `algorithm`、`type`、`extractable` 与 `usages` 是契约的一部分。加密数据的 key 应只给 `encrypt`/`decrypt`；验证公钥只给 `verify`；不要生成一个同时能 sign、verify、encrypt、decrypt 的万能 key。`extractable: false` 会拒绝 `exportKey`，但不等于密钥在被 XSS 控制的页面里不可被调用，也不等于它自动拥有安全的跨设备恢复方案。导入 JWK/raw/PKCS#8/SPKI 前必须记录来源、算法、用途和 key version；把一个用途或算法不同的字节硬塞给 `importKey`，即使偶尔能运行，也是在破坏生命周期边界。
+
+下面的浏览器安全上下文 fixture 使用 96-bit 随机 IV、不可导出的 AES-GCM key 和 AAD 绑定记录身份/版本。每次加密都重新生成 IV；持久化信封必须同时保存 `keyVersion`、`iv`、`ciphertext` 和 AAD 的可重建输入，绝不能只保存密文或复用固定 IV。
+
+```ts
+const utf8 = new TextEncoder();
+const key = await crypto.subtle.generateKey(
+  { name: "AES-GCM", length: 256 },
+  false,
+  ["encrypt", "decrypt"],
+);
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const aad = utf8.encode("note:rvw_42:v3");
+const ciphertext = await crypto.subtle.encrypt(
+  { name: "AES-GCM", iv, additionalData: aad, tagLength: 128 },
+  key,
+  utf8.encode("confidential draft"),
+);
+await crypto.subtle.exportKey("raw", key); // 预期拒绝：extractable 为 false
+```
+
+实验先在 HTTPS/`isSecureContext === true` 的浏览器中运行；在不安全上下文里 API 缺失或调用失败应被明确展示为“不支持”，而不是静默降级到明文。解密成功后分别翻转一位 ciphertext、替换 AAD、重用已记录的 IV 和使用错误 version 的 key，前三者均应拒绝且不得把部分明文提交给 UI；IV 重用检测至少在 fixture 中维护每个 key version 的已用 IV 集合。再尝试导出该 key，断言拒绝；另生成 `extractable: true` 的迁移 key，仅在受控迁移测试里导出并立即销毁字节副本，不能把它作为日常存储方案。
+
+轮换是数据迁移协议：服务端或受控密钥域发布 `v4` 后，新写入用 v4；读取旧 v3 信封时先用其标记的 key 解密、验证 AAD，再在可恢复的后台步骤重加密为 v4；任何一步失败都保留原信封并记录关联 ID，不能删除旧数据或假设“新 key 一定能解开”。撤销/设备丢失/登出分别意味着停止新用、移除本地 key handle 与服务端拒绝对应凭证；它们不是仅清空一个 JavaScript 变量。证据至少包含 key version、算法参数、IV 长度、key usages、导入/导出结果、篡改失败、轮换前后可读性和失败原因。
+
+反例包括：把 password 字符串直接当 AES key、重用全零 IV、为了备份把生产私钥设为 `extractable: true`、把 Base64 当加密、只靠客户端“加密成功”决定服务器接受数据，或把 error.message 与密文/密钥材料写进日志。最后以威胁模型复核：若攻击者能执行同源脚本，他通常也能调用可用的 `CryptoKey` 和读取明文；浏览器加密只能缩小特定存储/传输暴露面，不能修复 XSS、错误授权或服务端密钥治理。

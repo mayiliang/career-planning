@@ -17,6 +17,31 @@ function extractMarkdownLinks(markdown: string): Array<{ markup: string; url: st
   }));
 }
 
+function learningResourceLabels(markdown: string): Set<string> {
+  return new Set(
+    [...markdown.matchAll(/\[([^\]]+)\]\([^)]+\)/g)]
+      .map((match) => match[1]?.trim() ?? '')
+      .filter(Boolean),
+  );
+}
+
+function strictAssessmentSourceTitles(assessmentSpec: string): string[] {
+  const sourceQuestion = assessmentSpec.match(
+    /首考题\s*1（资料定位）：(.+?)(?:；首考题\s*2（机制解释）：|$)/,
+  )?.[1] ?? '';
+  const allowedSources = sourceQuestion.match(/只允许使用(.+?)(?:，|；|$)/)?.[1] ?? '';
+  return [...allowedSources.matchAll(/《([^》]+)》/g)]
+    .map((match) => match[1]?.trim() ?? '')
+    .filter(Boolean);
+}
+
+function strictAssessmentDeclaredSourceTitles(assessmentSpec: string): string[] {
+  const declaredSources = assessmentSpec.match(/题源包含(.+?)(?:；|。|$)/)?.[1] ?? '';
+  return [...declaredSources.matchAll(/《([^》]+)》/g)]
+    .map((match) => match[1]?.trim() ?? '')
+    .filter(Boolean);
+}
+
 function isChineseResource(markup: string): boolean {
   if (/https?:\/\/nodejs\.cn\/en\//i.test(markup)) {
     return false;
@@ -293,6 +318,10 @@ const LOCAL_GUIDE_SEMANTIC_SIGNALS = [
     pattern: /适用(?:条件|场景|范围)?|应用场景|使用场景|前提条件|成立条件|何时(?:使用|采用)|什么时候(?:使用|采用)|在.{0,30}(?:情况下|场景下)|只有.{0,30}才|例如|举例|例子|例[：:]/,
   },
   {
+    dimension: '具体示例/实验',
+    pattern: /示例|案例|例子|例如|举例|样例|夹具|fixture|练习|实验|演练|故障注入|最小实现|最小产出/,
+  },
+  {
     dimension: '边界/失败/反例',
     pattern: /边界|限制|局限|失败|异常|反例|风险|不适用|误区|陷阱|失效|降级|不得|不能|不可/,
   },
@@ -355,7 +384,7 @@ describe('知识库内容完整性', () => {
       expect(point.studyMaterial, `${point.code} 缺少学习资料`).not.toBe('');
       expect(point.assessmentSpec, `${point.code} 缺少严格考核`).not.toBe('');
       expect(point.passCriteria, `${point.code} 缺少通过标准`).not.toBe('');
-      expect(point.verifiedAt, `${point.code} 缺少版本核验日期`).toBe('2026-08-04');
+      expect(point.verifiedAt, `${point.code} 缺少版本核验日期`).toBe('2026-08-09');
       expect(point.fallbackStrategy, `${point.code} 缺少降级策略`).not.toBe('');
       expect(['CORE', 'APPLICATION', 'SPECIALTY', 'LEADERSHIP']).toContain(point.capabilityLayer);
       expect(['REQUIRED', 'TRACK_REQUIRED', 'ELECTIVE']).toContain(point.requirementLevel);
@@ -565,6 +594,7 @@ describe('知识资源审计防线', () => {
         .map((file) => [path.join(knowledgeDirectory, file), fs.readFileSync(path.join(knowledgeDirectory, file), 'utf8')]),
     );
     const points = parseAllKnowledgeFiles(contents).flatMap((domain) => domain.points);
+    const staleEnglishVersionDeclarations: string[] = [];
 
     for (const point of points) {
       expect(point.studyMaterial.trim(), `${point.code} 缺少学习资料`).not.toBe('');
@@ -604,6 +634,10 @@ describe('知识资源审计防线', () => {
           point.assessmentSpec,
           `${point.code} 的严格考核必须限制英文资料不得独立命题`,
         ).toMatch(/英文(?:原文|资料)[\s\S]{0,100}(?:不作为|不属于|不得作为|不能作为|不得)[\s\S]{0,40}(?:独立首考|独立命题|独立题源)/);
+      } else {
+        if (/英文(?:原文|资料)[\s\S]{0,100}仅用于版本核验/.test(`${point.studyMaterial}\n${point.assessmentSpec}`)) {
+          staleEnglishVersionDeclarations.push(point.code);
+        }
       }
       expect(point.assessmentSpec.trim(), `${point.code} 缺少严格考核`).not.toBe('');
       expect(point.passCriteria.trim(), `${point.code} 缺少通过标准`).not.toBe('');
@@ -628,6 +662,10 @@ describe('知识资源审计防线', () => {
         `${point.code} 通过标准必须限定在本点资料、题目输入和可复核产出内`,
       ).toMatch(/评估边界|资料|题目输入|可复核/);
     }
+    expect(
+      staleEnglishVersionDeclarations,
+      '没有非中文外链的知识点不得保留英文版本核验声明',
+    ).toEqual([]);
   });
 
   it('逐点限制所有非中文外链只能用于版本核验', () => {
@@ -666,6 +704,104 @@ describe('知识资源审计防线', () => {
     expect(failures, '非中文外链边界必须逐链接、逐知识点完整声明').toEqual([]);
   });
 
+  it('严格考核的资料定位题不得引用已移除或重复题源', () => {
+    const root = findProjectRoot();
+    const knowledgeDirectory = path.join(root, 'docs', 'knowledge', 'knowledge-base');
+    const contents = new Map(
+      fs.readdirSync(knowledgeDirectory)
+        .filter((file) => /^(0[1-9]|1[0-9]|20)-.*\.md$/.test(file))
+        .map((file) => [path.join(knowledgeDirectory, file), fs.readFileSync(path.join(knowledgeDirectory, file), 'utf8')]),
+    );
+    const failures: string[] = [];
+
+    for (const point of parseAllKnowledgeFiles(contents).flatMap((domain) => domain.points)) {
+      const labels = learningResourceLabels(point.studyMaterial);
+      const sourceTitles = strictAssessmentSourceTitles(point.assessmentSpec);
+      const declaredTitles = strictAssessmentDeclaredSourceTitles(point.assessmentSpec);
+      const assessableCurrentTitles = extractMarkdownLinks(point.studyMaterial)
+        .filter(({ markup, url }) => (
+          /^\.\.\/chinese-guides\/[^#]+\.md#[^#\s]+$/i.test(url)
+          || (/^https?:\/\//i.test(url) && isChineseResource(markup))
+        ))
+        .map(({ markup }) => markup.match(/^\[([^\]]+)\]/)?.[1]?.trim() ?? '')
+        .filter(Boolean);
+      const declaredCurrentTitles = new Set([...sourceTitles, ...declaredTitles]);
+      const sourceQuestion = point.assessmentSpec.match(
+        /首考题\s*1（资料定位）：(.+?)(?:；首考题\s*2（机制解释）：|$)/,
+      )?.[1] ?? '';
+      const staleTitles = [...sourceTitles, ...declaredTitles].filter((title) => !labels.has(title));
+      const omittedCurrentTitles = assessableCurrentTitles.filter(
+        (title) => !declaredCurrentTitles.has(title),
+      );
+      const duplicateTitles = sourceTitles.filter((title, index) => sourceTitles.indexOf(title) !== index);
+      const duplicateDeclaredTitles = declaredTitles.filter(
+        (title, index) => declaredTitles.indexOf(title) !== index,
+      );
+      if (sourceTitles.length === 0) {
+        failures.push(`${point.code}:资料定位题未用《资料名》明确限制当前题源`);
+      }
+      if (/[一二三四五六七八九十\d]+份(?:中文|英文)?(?:资料|文档|页面|链接)/.test(sourceQuestion)) {
+        failures.push(`${point.code}:资料定位题使用数量代称而非逐项列出当前题源`);
+      }
+      if (staleTitles.length > 0) {
+        failures.push(`${point.code}:首考题引用非当前资料 ${[...new Set(staleTitles)].join('、')}`);
+      }
+      if (omittedCurrentTitles.length > 0) {
+        failures.push(`${point.code}:首考题遗漏当前中文资料 ${[...new Set(omittedCurrentTitles)].join('、')}`);
+      }
+      if (duplicateTitles.length > 0) {
+        failures.push(`${point.code}:首考题重复列出资料 ${[...new Set(duplicateTitles)].join('、')}`);
+      }
+      if (duplicateDeclaredTitles.length > 0) {
+        failures.push(`${point.code}:题源声明重复列出资料 ${[...new Set(duplicateDeclaredTitles)].join('、')}`);
+      }
+    }
+
+    expect(
+      failures,
+      '资料定位题中的《资料名》必须与当前中文学习资料链接标签精确一致、完整列出，历史删除项不得残留',
+    ).toEqual([]);
+  });
+
+  it('本地中文讲义必须进入学习资料字段而不是游离在知识点正文中', () => {
+    const root = findProjectRoot();
+    const knowledgeDirectory = path.join(root, 'docs', 'knowledge', 'knowledge-base');
+    const failures: string[] = [];
+
+    for (const file of fs.readdirSync(knowledgeDirectory).filter((name) => /^(0[1-9]|1[0-9]|20)-.*\.md$/.test(name))) {
+      const markdown = fs.readFileSync(path.join(knowledgeDirectory, file), 'utf8');
+      const points = new Map(
+        parseAllKnowledgeFiles(new Map([[path.join(knowledgeDirectory, file), markdown]]))
+          .flatMap((domain) => domain.points)
+          .map((point) => [point.code, point]),
+      );
+
+      for (const match of markdown.matchAll(
+        /^##\s+([A-Z][A-Z0-9]*-\d+)\b[^\n]*\n([\s\S]*?)(?=^##\s+[A-Z][A-Z0-9]*-\d+\b|(?![\s\S]))/gm,
+      )) {
+        const code = match[1] ?? '';
+        const section = match[2] ?? '';
+        const point = points.get(code);
+        if (!point) continue;
+        const rawLocalLinks = extractMarkdownLinks(section)
+          .map(({ url }) => url)
+          .filter((url) => /^\.\.\/chinese-guides\/[^#]+\.md#[^#\s]+$/i.test(url))
+          .map(normalizeLearningResourceUrl)
+          .sort();
+        const parsedLocalLinks = extractMarkdownLinks(point.studyMaterial)
+          .map(({ url }) => url)
+          .filter((url) => /^\.\.\/chinese-guides\/[^#]+\.md#[^#\s]+$/i.test(url))
+          .map(normalizeLearningResourceUrl)
+          .sort();
+        if (rawLocalLinks.join('\n') !== parsedLocalLinks.join('\n')) {
+          failures.push(`${code}:知识点正文中的本地讲义链接必须全部且仅由“学习资料”字段承载`);
+        }
+      }
+    }
+
+    expect(failures, '不得用游离的“本地强化讲义”行或跨点附录绕过学习资料解析').toEqual([]);
+  });
+
   it('仅依赖本地中文讲义时只累计实际链接锚点的有效正文与显式语义信号', () => {
     const root = findProjectRoot();
     const knowledgeDirectory = path.join(root, 'docs', 'knowledge', 'knowledge-base');
@@ -699,7 +835,7 @@ describe('知识资源审计防线', () => {
 
     expect(
       failures,
-      '本地-only 中文讲义必须达到结构长度下限，并显式覆盖定义、机制、场景、失败边界与验证证据；报告声明不能替代正文',
+      '本地-only 中文讲义必须达到结构长度下限，并显式覆盖定义、机制、场景、具体示例/实验、失败边界与验证证据；报告声明不能替代正文',
     ).toEqual([]);
   });
 
@@ -764,7 +900,7 @@ describe('知识资源审计防线', () => {
       expect(actualCodes.length, `${report.file} 没有可解析的知识点表格行`).toBeGreaterThan(0);
       expect(new Set(actualCodes).size, `${report.file} 存在重复知识点行`).toBe(actualCodes.length);
       expect(new Set(actualCodes), `${report.file} 缺少、错放或多报知识点`).toEqual(new Set(expectedCodes));
-      expect(reportText, `${report.file} 缺少本次核验日期`).toMatch(/2026-08-04/);
+      expect(reportText, `${report.file} 缺少本次核验日期`).toMatch(/2026-08-09/);
       expect(reportText, `${report.file} 缺少逐点审计结论`).toMatch(/通过|有条件通过|需修订|阻塞/);
 
       for (const code of actualCodes) {
