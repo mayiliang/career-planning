@@ -19,7 +19,8 @@ import {
 import { syncKnowledgeRelations } from './knowledge-relations.service.js';
 import { getKnowledgePointByCode, getKnowledgePoints } from './knowledge.service.js';
 import { buildQuestionAwareHint, createAssessmentSession, getAssessmentSession, startAssessmentSession } from './assessment.service.js';
-import { listPracticeAttempts, validatePracticeAttempt } from './practice.service.js';
+import { listPracticeAttempts, mergePracticeChecks, validatePracticeAttempt } from './practice.service.js';
+import { extractStrictAssessmentTasks, PRACTICE_SECTION_HEADINGS } from './learning-content.service.js';
 
 const code = 'WEB-01';
 
@@ -196,22 +197,23 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(trackChoices.every((item) => item.navigationKind === 'TRACK_CHOICE')).toBe(true);
   });
 
-  it('学习时间只展示有实际任务的活动，纯理论知识不再虚构项目', async () => {
+  it('学习时间只展示有实际任务的活动，纯理论知识不再虚构第二份项目', async () => {
     const coding = await getKnowledgePointByCode('JS-01');
-    expect(coding?.learningActivities.some((item) => item.type === 'APPLICATION' && item.task.includes('闭包'))).toBe(true);
+    expect(coding?.learningActivities.filter((item) => item.deliveryMode === 'WORKSPACE')).toHaveLength(1);
     const codeActivity = coding?.learningActivities.find((item) => item.workspaceMode === 'CODE');
     expect(codeActivity?.deliveryMode).toBe('WORKSPACE');
-    expect(codeActivity?.outputRequirements.length).toBeGreaterThanOrEqual(4);
+    expect(codeActivity?.outputRequirements.length).toBeGreaterThanOrEqual(3);
     expect(codeActivity?.materialReferences.length).toBeGreaterThan(0);
-    const theory = await getKnowledgePointByCode('AIGOV-01');
-    expect(theory?.challengeProfile).toBe('THEORY_ONLY');
-    expect(theory?.learningActivities.some((item) => item.type === 'APPLICATION')).toBe(false);
+    const governance = await getKnowledgePointByCode('AIGOV-01');
+    expect(governance?.learningActivities.filter((item) => item.deliveryMode === 'WORKSPACE')).toHaveLength(1);
+    expect(governance?.challengeProfile).toBe('DESIGN_CASE');
   });
 
-  it('223 个知识点都生成与本点题源绑定的站内练习合同', async () => {
+  it('223 个知识点均有唯一、profile 特异且精确复用首考题 3/4 的站内练习合同', async () => {
     const { items, total } = await getKnowledgePoints({});
     expect(total).toBe(223);
     const problems: string[] = [];
+    const explicitProfileProblems: string[] = [];
     for (const item of items) {
       const detail = await getKnowledgePointByCode(item.code);
       if (!detail) {
@@ -222,12 +224,21 @@ describe('自主学习、笔记版本与打卡', () => {
       const workspaces = detail?.learningActivities.filter((activity) => activity.deliveryMode === 'WORKSPACE') ?? [];
       if (reading?.optional !== false) problems.push(`${item.code}:阅读活动被标为可选`);
       if (!reading?.materialReferences.length) problems.push(`${item.code}:阅读活动缺少资料引用`);
-      if (!workspaces.length) problems.push(`${item.code}:缺少站内练习`);
+      if (workspaces.length !== 1) problems.push(`${item.code}:可提交练习数量为${workspaces.length}，必须唯一`);
+      const strictTasks = extractStrictAssessmentTasks(detail.assessmentSpecMd);
+      if (!strictTasks) problems.push(`${item.code}:严格考核未解析出题3/题4`);
+      if (!/(?:^|\n)\s*(?:[-*]\s*)?挑战类型\s*[：:]\s*(?:THEORY_ONLY|EXAMPLE_DRIVEN|CODING|DEBUGGING|TOOL_OPERATION|DESIGN_CASE)\s*[；;]?/.test(detail.assessmentSpecMd)) {
+        explicitProfileProblems.push(item.code);
+      }
       for (const activity of workspaces) {
         if (activity.task.length <= 20) problems.push(`${item.code}:练习任务仅${activity.task.length}字符`);
-        if (!detail.assessmentSpecMd.includes(activity.task)) problems.push(`${item.code}:练习未绑定本点最小产出`);
-        if (activity.outputRequirements.length < 4) problems.push(`${item.code}:练习输出合同不完整`);
-        if (activity.completionCriteria.length < 3) problems.push(`${item.code}:练习完成判定不完整`);
+        if (activity.task !== strictTasks?.minimumOutput) problems.push(`${item.code}:练习未精确复用本点首考题3`);
+        if (activity.failureFixture !== strictTasks?.constrainedDebugging) problems.push(`${item.code}:练习未精确复用本点首考题4`);
+        if (activity.outputRequirements.length < 3) problems.push(`${item.code}:练习输出合同不完整`);
+        if (activity.verificationChecklist.length < 5 || activity.vetoItems.length < 2) problems.push(`${item.code}:练习验证或否决合同不完整`);
+        const headings = PRACTICE_SECTION_HEADINGS[detail.challengeProfile];
+        if (!headings.every((heading) => activity.submissionTemplate?.includes(`# ${heading}`))) problems.push(`${item.code}:未使用${detail.challengeProfile}的固定提交栏目`);
+        if (detail.challengeProfile === 'CODING' && (!activity.starterCode?.includes('fixedInput') || activity.starterCode.includes("'PASS'"))) problems.push(`${item.code}:编码合同仍含通用状态模板`);
         for (const source of activity.materialReferences) {
           if (!source.url) continue;
           if (!/^(?:https?:\/\/|\/knowledge\/materials\/)/.test(source.url)) {
@@ -237,18 +248,48 @@ describe('自主学习、笔记版本与打卡', () => {
       }
     }
     expect(problems, '站内练习必须逐点绑定本点题源、最小产出与可验证合同').toEqual([]);
+    expect(explicitProfileProblems, '223 个知识点必须显式声明挑战类型，不能只依赖标题启发式').toEqual([]);
   });
 
-  it('站内练习保存输入输出并由系统验证完成状态', async () => {
+  it('无 AI 时只能通过固定合同的结构验证，不能声称语义正确', async () => {
     const previousKey = config.DEEPSEEK_API_KEY;
     config.DEEPSEEK_API_KEY = '';
-    const submissionMd = '# 结论\n资料依据和具体定位已经写明，并说明该规则解决的问题。\n# 推导过程\n先列出资料规则，再映射题目条件、固定输入和约束，写明中间推导、预期输出、实际输出与验证过程。\n# 边界或反例\n说明规则不成立的条件、一个具体反例、验证动作和实际判断证据，避免把结论扩展到资料没有覆盖的场景。';
-    const result = await validatePracticeAttempt('AIGOV-01', 'case-study', { submissionMd });
+    const detail = await getKnowledgePointByCode('AIGOV-01');
+    const activity = detail!.learningActivities.find((item) => item.deliveryMode === 'WORKSPACE')!;
+    const submissionMd = (activity.submissionTemplate ?? '').replace(/# ([^\n]+)\n/g, (_all, heading) => `# ${heading}\n已填写 ${heading} 的具体、可复核证据。\n`);
+    const result = await validatePracticeAttempt('AIGOV-01', activity.id, { submissionMd });
     config.DEEPSEEK_API_KEY = previousKey;
     expect(result.status).toBe('COMPLETED');
     expect(result.validation?.passed).toBe(true);
+    expect(result.validation?.validationLevel).toBe('STRUCTURE_ONLY');
+    expect(result.validation?.summary).not.toContain('语义正确');
     expect(listPracticeAttempts('AIGOV-01')).toHaveLength(1);
     rawDb.prepare("DELETE FROM learning_practice_attempts WHERE knowledge_point_code = 'AIGOV-01'").run();
+  });
+
+  it('本地规则拒绝空栏目和未执行的编码证据，AI 不得覆盖本地失败', async () => {
+    const previousKey = config.DEEPSEEK_API_KEY;
+    config.DEEPSEEK_API_KEY = '';
+    const detail = await getKnowledgePointByCode('JS-01');
+    const activity = detail!.learningActivities.find((item) => item.deliveryMode === 'WORKSPACE')!;
+    const result = await validatePracticeAttempt('JS-01', activity.id, {
+      submissionMd: activity.submissionTemplate ?? '', code: activity.starterCode ?? '', executionStatus: 'NOT_RUN', executionOutput: '',
+    });
+    config.DEEPSEEK_API_KEY = previousKey;
+    expect(result.status).toBe('DRAFT');
+    expect(result.validation?.passed).toBe(false);
+    expect(result.validation?.checks.some((check: { label: string; passed: boolean }) => check.label.includes('已填写固定栏目') && !check.passed)).toBe(true);
+    rawDb.prepare("DELETE FROM learning_practice_attempts WHERE knowledge_point_code = 'JS-01'").run();
+  });
+
+  it('AI 的同名通过项不能覆盖本地门禁失败', () => {
+    expect(mergePracticeChecks(
+      [{ label: '脚本已在站内执行成功', passed: false }],
+      [{ label: '脚本已在站内执行成功', passed: true }, { label: 'AI 语义核对', passed: true }],
+    )).toEqual([
+      { label: '脚本已在站内执行成功', passed: false },
+      { label: 'AI 语义核对', passed: true },
+    ]);
   });
 
   it('重复开始掌握挑战会恢复既有会话而不是抛出英文错误', async () => {

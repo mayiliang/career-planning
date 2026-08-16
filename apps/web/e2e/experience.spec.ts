@@ -47,9 +47,13 @@ test.describe.serial('核心使用体验', () => {
   test('代码练习在站内执行、保存输出并提供明确任务契约', async ({ page }) => {
     await page.goto('/knowledge/JS-01');
     await page.getByRole('button', { name: '在系统中开始并完成 →' }).first().click();
-    await expect(page.getByText('01 · 明确输入')).toBeVisible();
+    await expect(page.getByText('00 · 具体任务题干')).toBeVisible();
+    await expect(page.getByText('01 · 固定输入与约束')).toBeVisible();
     await expect(page.getByText('02 · 必须提交')).toBeVisible();
-    await expect(page.getByText('03 · 完成判定')).toBeVisible();
+    await expect(page.getByText('03 · 验证清单')).toBeVisible();
+    await expect(page.getByText('本地结构检查')).toBeVisible();
+    await expect(page.getByText('AI 语义复核')).toBeVisible();
+    await expect(page.getByText('完全通过', { exact: true })).toBeVisible();
     const codeEditor = page.getByRole('textbox', { name: '练习代码' });
     await expect(codeEditor).toBeVisible();
     await codeEditor.fill("const input = 2;\nconst expected = 3;\nconst actual = input + 1;\nconsole.log({ input, expected, actual });\nconsole.assert(actual === expected, '固定样例通过');");
@@ -62,7 +66,31 @@ test.describe.serial('核心使用体验', () => {
     const validationStream = page.waitForResponse((response) => response.url().includes('/validate/stream'));
     await page.getByRole('button', { name: '提交并验证' }).click();
     expect((await validationStream).headers()['content-type']).toContain('text/event-stream');
-    await expect(page.getByText('练习已通过系统验证并保存为完成证据。')).toBeVisible();
+    await expect(page.locator('.validation-result')).toBeVisible();
+    await expect(page.locator('.validation-result')).toContainText(/本地结构检查|AI 语义复核|完全通过/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+
+  test('本地结构失败不能被未参与的 AI 复核伪装为完全通过', async ({ page }) => {
+    await page.goto('/knowledge/TS-01');
+    await page.getByRole('button', { name: '在系统中开始并完成 →' }).click();
+
+    // 故意保留空模板和未执行代码：服务端只能返回本地结构失败，不能把它升级为 AI 通过。
+    const validationStream = page.waitForResponse((response) => response.url().includes('/validate/stream'));
+    await page.getByRole('button', { name: '提交并验证' }).click();
+    expect((await validationStream).headers()['content-type']).toContain('text/event-stream');
+
+    const result = page.locator('.validation-result');
+    await expect(result).toBeVisible();
+    await expect(result.locator('header strong')).toHaveText('本地结构检查待补充');
+    await expect(result.locator('header span')).toHaveText('仅本地结构检查');
+    await expect(result).not.toHaveClass(/passed/);
+    await expect(result.locator('li:not(.passed)')).not.toHaveCount(0);
+    await expect(page.locator('.validation-rail li').nth(1)).toContainText('未参与；不能替代为完全通过。');
+    await expect(page.locator('.validation-rail li').nth(2)).toHaveClass(/pending/);
+    await expect(page.locator('.workspace-header > span')).not.toHaveText('完全通过');
   });
 
   test('自建中文讲义能从知识点、练习与挑战共用的站内地址打开', async ({ page }) => {
@@ -88,6 +116,11 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText('题目输入').first()).toBeVisible();
     await expect(page.getByText('必须输出').first()).toBeVisible();
     await expect(page.getByText('指定格式').first()).toBeVisible();
+    await expect(page.getByText(/原题任务 · 首考题/).first()).toBeVisible();
+    await expect(page.getByText('M 阶段 / 复测').first()).toBeVisible();
+    await expect(page.getByText('本地 Worker 自检（非安全沙箱 / 非服务端证明）').first()).toBeVisible();
+    await expect(page.getByText('本题不启用本地自检；将按题目合同和语义评分复核。').first()).toBeVisible();
+    await expect(page.getByText('否决项').first()).toBeVisible();
     await expect(page.getByText('本题对应的学习资料与具体位置').first()).toBeVisible();
     const hintStream = page.waitForResponse((response) => response.url().includes('/hints/stream'));
     await page.getByRole('button', { name: '给一个提示' }).first().click();
@@ -99,6 +132,87 @@ test.describe.serial('核心使用体验', () => {
     await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
     await expect(page).toHaveURL(new RegExp(`${firstSessionPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?resumed=1`));
     await expect(page.getByText(/已找到正在进行的 M1 掌握挑战/)).toBeVisible();
+  });
+
+  test('取消挑战保留旧答卷，并允许按当前合同新建会话', async ({ page }) => {
+    await page.goto('/knowledge/JS-02?tab=mastery');
+    await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
+    await expect(page).toHaveURL(/\/assessment\//);
+    const cancelledSessionPath = new URL(page.url()).pathname;
+    const cancelledSessionId = cancelledSessionPath.split('/').at(-1);
+    expect(cancelledSessionId).toBeTruthy();
+
+    const firstAnswer = page.locator('.question-list textarea').first();
+    await firstAnswer.fill('取消前保留的首题作答：原型链、调用形式与 this 绑定均已逐项说明。');
+    await firstAnswer.blur();
+    await expect(page.getByText('已保存到本地')).toBeVisible();
+
+    await page.getByRole('button', { name: '取消本次挑战' }).click();
+    await page.getByRole('dialog', { name: '取消本次挑战？' }).getByRole('button', { name: '确认取消' }).click();
+    await expect(page.getByText('本次掌握挑战已中止。')).toBeVisible();
+    await expect(page.getByText(/题目和已保存的答案不会被删除/)).toBeVisible();
+
+    const cancelled = await page.evaluate(async (id) => {
+      const response = await fetch(`/api/v1/assessments/${id}`);
+      return response.json() as Promise<{ data: { session: { status: string }; answers: Array<{ answerContent: string }> } }>;
+    }, cancelledSessionId!);
+    expect(cancelled.data.session.status).toBe('CANCELLED');
+    expect(cancelled.data.answers.some((answer) => answer.answerContent.includes('取消前保留的首题作答'))).toBe(true);
+
+    await page.goto('/knowledge/JS-02?tab=mastery');
+    await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
+    await expect(page).toHaveURL(/\/assessment\//);
+    expect(new URL(page.url()).pathname).not.toBe(cancelledSessionPath);
+    await expect(page.getByText('待开始', { exact: true })).toBeVisible();
+  });
+
+  test('M4 明示七天稳定性门槛，并以真实变式取代旧题附录', async ({ page }) => {
+    await page.goto('/knowledge/JS-01?tab=mastery');
+    await expect(page.getByRole('button', { name: /M4.*稳定掌握.*至少 7 天后通过变式挑战/ })).toBeVisible();
+
+    await page.route('**/api/v1/assessments/m4-variant-session', async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            session: {
+              id: 'm4-variant-session', knowledgePointCode: 'JS-01', assessmentType: 'RETEST', status: 'IN_PROGRESS',
+              durationMinutes: 60, masteryStage: 4, challengeMode: 'MIXED', challengeProfile: 'CODING', assistanceLevel: 0,
+              startedAt: '2026-08-16T00:00:00.000Z', submittedAt: null, gradedAt: null, resultId: null,
+              provider: 'fake', model: 'fake', createdAt: '2026-08-16T00:00:00.000Z', updatedAt: '2026-08-16T00:00:00.000Z',
+            },
+            questions: [{
+              id: 'm4-q3', sessionId: 'm4-variant-session', questionType: 'CODE_WRITE', dimension: 'practice', maxScore: 35, orderIndex: 2,
+              createdAt: '2026-08-16T00:00:00.000Z',
+              questionContent: JSON.stringify({
+                level: '最小产出', sourceQuestion: '首考题 3（最小产出）',
+                question: '针对复测变式完成最小实现或操作产出，并在固定输入和边界输入下各验证一次。复测变式依据：仅将循环声明从 `var` 改为 `let`，保持两个计数器 `A/B`、订阅/取消时机和其余 fixture 不变；预期循环输出为 `[0,1,2]`，取消后的 B 仍无通知。【M4 变式挑战合同】本题以变式为主任务，不要求重做首考题。',
+                stageContract: 'M4 稳定掌握：独立完成该点已配置的延迟复测变式，不提供题目帮助。',
+                retestVariant: '仅将循环声明从 `var` 改为 `let`，保持两个计数器 `A/B`、订阅/取消时机和其余 fixture 不变；预期循环输出为 `[0,1,2]`，取消后的 B 仍无通知；提交新的循环输出、隔离计数与取消断言作为新证据。',
+                givenInput: '固定输入：仅将循环声明从 `var` 改为 `let`。',
+                expectedOutput: '变式最小产出、固定输入结果、边界输入结果及两者差异解释。',
+                answerRequirements: ['只完成本题的变式动作，不复写首考作答'],
+                answerFormat: '## 变式最小产出',
+                failureFixture: 'M4 变式故障夹具：采用变式后，故意遗漏一个关键条件；不得改用首考故障。',
+                verificationChecklist: ['实际输出必须针对本题变式，且能与首考题干区分'],
+                vetoItems: ['不得以旧题答案代替变式产出。'],
+                deterministicRequired: true,
+                testCases: [{ id: 'contract-normal', input: 'let 循环', expectedOutput: '[ASSERT PASS] contract-normal', isHidden: false }],
+              }),
+            }],
+            answers: [],
+          },
+          meta: { requestId: 'm4-variant-e2e' },
+        }),
+      });
+    });
+
+    await page.goto('/assessment/m4-variant-session');
+    await expect(page.getByText('M4 稳定掌握：独立完成该点已配置的延迟复测变式，不提供题目帮助。')).toBeVisible();
+    await expect(page.getByText(/仅将循环声明从 `var` 改为 `let`/).first()).toBeVisible();
+    await expect(page.locator('.challenge-contract')).toContainText('M4 变式故障夹具');
+    await expect(page.locator('.question-body h2')).toContainText('本题以变式为主任务，不要求重做首考题。');
+    await expect(page.locator('.question-body h2')).not.toContainText('固定 fixture 为上述循环、两个独立计数器');
   });
 
   test('64 周内容是可展开的路线参考而非每日计划', async ({ page }) => {

@@ -30,6 +30,7 @@ import {
   type DerivationGuide,
   type LearningMaterialReference,
 } from './learning-content.service.js';
+import { extractLocalMaterialContext } from './learning-material-context.service.js';
 
 // ===== 创建考核会话 =====
 
@@ -70,7 +71,8 @@ export async function createAssessmentSession(
   
   // 如果已有完成的会话，检查是否可以创建新的
   if (existingSession) {
-    await upgradeExistingQuestionContracts(existingSession.id, knowledgePoint);
+    // 已保存的挑战是一次可审计的考试记录。绝不能为了升级题目合同而重写题干，
+    // 否则旧答案会与新题错位；用户可完成旧卷或取消后新建。
     const stageText = `M${existingSession.masteryStage}`;
     const statusText = existingSession.status === 'DRAFT'
       ? '尚未开始'
@@ -80,7 +82,9 @@ export async function createAssessmentSession(
     return {
       session: existingSession,
       resumedExisting: true,
-      resumeMessage: `已找到${statusText}的 ${stageText} 掌握挑战，系统已保留原题目和答案并为你继续打开。`,
+      resumeMessage: existingSession.promptVersion === '2.0-point-contract'
+        ? `已找到${statusText}的 ${stageText} 掌握挑战，系统已保留原题目和答案并为你继续打开。`
+        : `这是旧版掌握挑战；原题目和答案已保留，可继续完成，或取消后创建采用逐点首考合同的新版挑战。`,
     };
   }
   
@@ -97,7 +101,7 @@ export async function createAssessmentSession(
     assistanceLevel: 0,
     provider,
     model,
-    promptVersion: '1.0',
+    promptVersion: '2.0-point-contract',
     createdAt: now,
     updatedAt: now,
   };
@@ -109,37 +113,6 @@ export async function createAssessmentSession(
   await generateQuestions(createdSession.id, request, knowledgePoint);
   
   return { session: createdSession, resumedExisting: false, resumeMessage: null };
-}
-
-async function upgradeExistingQuestionContracts(
-  sessionId: string,
-  knowledgePoint: typeof knowledgePoints.$inferSelect,
-) {
-  const questions = await db.query.assessmentQuestions.findMany({ where: eq(assessmentQuestions.sessionId, sessionId) });
-  const knowledgeTags = extractKnowledgeTags(knowledgePoint.title);
-  const materialReferences = extractLearningMaterialReferences(knowledgePoint.studyMaterialMd, knowledgePoint.title);
-  for (const question of questions) {
-    let content: QuestionContent & { wordLimit?: number; level?: string };
-    try { content = JSON.parse(question.questionContent) as typeof content; }
-    catch { content = { question: question.questionContent }; }
-    if (content.answerRequirements?.length && content.materialReferences?.length) continue;
-    const requiresDerivation = question.orderIndex > 0 && question.orderIndex < 4;
-    const upgraded = {
-      ...content,
-      knowledgeTags,
-      givenInput: content.givenInput ?? `知识点：${knowledgePoint.code} ${knowledgePoint.title}；仅使用页面列出的学习资料和题目给定条件。`,
-      expectedOutput: content.expectedOutput ?? (question.questionType === 'CODE_WRITE'
-        ? '可复核的最小实现，以及固定输入、预期输出、实际验证和资料机制映射。'
-        : `按题目要求完成一份${content.wordLimit ? `不超过 ${content.wordLimit} 字的` : ''}结构化答案。`),
-      answerRequirements: content.answerRequirements ?? ['逐项回应题干', '明确写出输入或前提', '给出预期输出或结论', '标明资料名称和具体定位', '说明边界或验证方法'],
-      answerFormat: content.answerFormat ?? '## 输入或前提\n## 逐项回答\n## 预期输出或结论\n## 资料依据与定位\n## 边界与验证',
-      materialReferences,
-      derivationGuide: content.derivationGuide ?? buildDerivationGuide(knowledgePoint.title, materialReferences, requiresDerivation),
-      sourceHint: content.sourceHint ?? `打开《${materialReferences[0]?.title ?? knowledgePoint.title}》，${materialReferences[0]?.locator ?? '定位相关段落'}。`,
-    };
-    await db.update(assessmentQuestions).set({ questionContent: JSON.stringify(upgraded) })
-      .where(eq(assessmentQuestions.id, question.id));
-  }
 }
 
 const hintLevels = {
@@ -164,6 +137,27 @@ type QuestionContent = {
   expectedOutput?: string;
   materialReferences?: LearningMaterialReference[];
   derivationGuide?: DerivationGuide;
+  /** 严格考核 Markdown 中的原始题目合同；评分时不得被通用模板替换。 */
+  contractSource?: 'FIRST_ASSESSMENT' | 'RETEST_VARIANT';
+  contractQuestionNumber?: number;
+  contractLabel?: string;
+  profile?: string;
+  artifactType?: 'explanation' | 'example' | 'code' | 'debug-report' | 'tool-evidence' | 'design-case';
+  verificationEvidence?: string[];
+  referenceDirection?: string;
+  deductionRules?: string[];
+  vetoRules?: string[];
+  deterministicRequired?: boolean;
+  /** 仅表示浏览器自检执行记录，不能单独证明代码语义正确。 */
+  selfCheckEvidenceRequired?: boolean;
+  executionEvidenceKind?: 'BROWSER_SELF_CHECK';
+  testCases?: Array<{ id: string; input?: string; expectedOutput: string; isHidden: boolean }>;
+  sourceQuestion?: string;
+  stageContract?: string;
+  retestVariant?: string;
+  failureFixture?: string;
+  verificationChecklist?: string[];
+  vetoItems?: string[];
 };
 
 /** 渐进帮助不会扣分，但会成为“独立完成度”证据，决定本次最高可认证等级。 */
@@ -184,6 +178,12 @@ export async function revealAssessmentHintStream(
   const question = await db.query.assessmentQuestions.findFirst({ where: and(eq(assessmentQuestions.id, questionId), eq(assessmentQuestions.sessionId, sessionId)) });
   if (!question) throw new Error('题目不存在');
   const level = hintLevels[kind];
+  const maxLevel = maxHintLevel(session.masteryStage);
+  if (level > maxLevel) {
+    throw new Error(maxLevel === 0
+      ? `M${session.masteryStage} 是独立挑战，不提供题目帮助。`
+      : `M${session.masteryStage} 最多允许使用${hintKindForLevel(maxLevel)}级帮助，不能请求更高等级提示。`);
+  }
   const content = JSON.parse(question.questionContent) as QuestionContent;
   const point = await db.query.knowledgePoints.findFirst({ where: eq(knowledgePoints.code, session.knowledgePointCode) });
   if (!point) throw new Error('知识点不存在');
@@ -216,6 +216,16 @@ export async function revealAssessmentHintStream(
       ? '你仍可完成并获得反馈；由于使用了高阶帮助，本次证据最高记为 M2。之后独立完成一个变式即可升级。'
       : '提示不扣分；系统会记录帮助程度，并据此判断独立性。',
   };
+}
+
+function maxHintLevel(stage: number) {
+  if (stage === 1) return 4;
+  if (stage === 2) return 2;
+  return 0;
+}
+
+function hintKindForLevel(level: number) {
+  return (Object.entries(hintLevels).find(([, value]) => value === level)?.[0] ?? '允许') as string;
 }
 
 export function buildQuestionAwareHint(
@@ -339,149 +349,82 @@ async function generateQuestions(
   knowledgePoint: typeof knowledgePoints.$inferSelect
 ): Promise<AssessmentQuestionRecord[]> {
   const now = new Date().toISOString();
-  
+  const firstQuestions = extractFirstAssessmentQuestions(knowledgePoint.assessmentSpecMd);
+  if (firstQuestions.length !== 5) {
+    throw new Error(`${knowledgePoint.code} 的严格考核未提供完整的首考题 1–5，无法生成可审计的掌握挑战。`);
+  }
+  const retestVariant = extractRetestVariant(knowledgePoint.assessmentSpecMd);
+  if (request.masteryStage === 4 && !retestVariant) {
+    throw new Error(`${knowledgePoint.code} 尚未配置“复测变式”；M4 不会伪造通用变式，请先补充本点变式合同。`);
+  }
+
   const context = `${knowledgePoint.code} ${knowledgePoint.title}`;
   const studySource = compactMarkdown(knowledgePoint.studyMaterialMd, 1600);
-  const assessmentFocus = compactMarkdown(knowledgePoint.assessmentSpecMd, 900);
-  const passCriteria = compactMarkdown(knowledgePoint.passCriteriaMd, 900);
+  const passCriteria = compactMarkdown(knowledgePoint.passCriteriaMd, 1200);
   const knowledgeTags = extractKnowledgeTags(knowledgePoint.title);
   const materialReferences = extractLearningMaterialReferences(knowledgePoint.studyMaterialMd, knowledgePoint.title);
+  const localMaterialContext = extractLocalMaterialContext(knowledgePoint.studyMaterialMd)
+    .map((item) => `【${item.title}｜${item.source}】\n${item.content}`);
   const directGuide = buildDerivationGuide(knowledgePoint.title, materialReferences, false);
-  const derivedGuide = buildDerivationGuide(knowledgePoint.title, materialReferences, true);
-  const practiceBasis = request.masteryStage <= 2 ? passCriteria : (assessmentFocus || passCriteria);
-  const transferLevel = request.masteryStage <= 1
-    ? '只要求解释资料中的概念、边界和最小例子；可以使用系统提示。'
-    : request.masteryStage === 2
-    ? '只允许一跳推导：题目必须能从学习资料、考核要求或通过标准直接定位答案，不要求真实项目经历。'
-    : request.masteryStage === 3
-      ? '允许二跳迁移：可以换一个小场景验证同一机制，但必须保留资料中的核心概念和边界。'
-      : '延迟变式：使用与首次挑战不同的场景，验证 7 天后的稳定迁移能力。';
-
-  const theoryOnly = request.challengeProfile === 'THEORY_ONLY';
-  const practicalPrompt = theoryOnly
-    ? `比较两个关于 ${context} 的具体判断：一个符合适用边界，一个看似合理但越界。说明你的判定依据和反例。`
-    : request.challengeMode === 'PRACTICE'
-      ? `围绕 ${context} 完成一个最小实践：写出代码、操作步骤或方案，并说明输入、关键步骤、预期输出与验证方法。`
-      : `选择学习资料中的一个核心机制，写一个最小例子或伪代码来证明你理解 ${context}。说明输入、关键步骤、预期输出，以及为什么这个例子能验证该知识点。`;
-
-  const questionTemplates = [
-    {
-      questionType: 'ESSAY',
-      dimension: 'principlesAndBoundaries',
-      maxScore: 10,
+  const profile = resolveChallengeProfile(request.challengeProfile, request.challengeMode, firstQuestions[2]!.body);
+  const stageContract = buildStageContract(request.masteryStage, retestVariant);
+  const scores = [10, 15, 35, 25, 15];
+  const dimensions = ['principlesAndBoundaries', 'principlesAndBoundaries', 'practice', 'troubleshootingAndDesign', 'projectCommunication'] as const;
+  const questionTemplates = firstQuestions.map((source, index) => {
+    const sourceQuestion = `首考题 ${source.number}（${source.label}）`;
+    const isPractice = source.number === 3;
+    const artifact = artifactForQuestion(source.number, profile);
+    const coding = isPractice && artifact === 'code';
+    const contract = buildQuestionContract({
+      source, knowledgePoint, context, profile, stageContract, retestVariant,
+      materialReferences, passCriteria, isPractice, coding,
+    });
+    const effectiveContract = request.masteryStage === 4
+      ? buildM4VariantContract(source, retestVariant!, contract)
+      : contract;
+    return {
+      questionType: questionTypeForContract(source.number, artifact),
+      dimension: dimensions[index],
+      maxScore: scores[index],
       content: JSON.stringify({
-        level: '资料定位',
-        question: `请从指定学习资料中找出与“${context}”直接相关的 3 个关键概念或规则。每一项必须同时写明：①概念或规则；②它解决的问题；③资料名称和定位。`,
+        level: source.label,
+        question: effectiveContract.question,
+        prompt: effectiveContract.question,
+        sourceQuestion,
+        stageContract,
+        retestVariant: request.masteryStage === 4 ? retestVariant : undefined,
+        failureFixture: effectiveContract.failureFixture,
+        verificationChecklist: effectiveContract.verificationChecklist,
+        vetoItems: effectiveContract.vetoItems,
+        contractSource: request.masteryStage === 4 ? 'RETEST_VARIANT' : 'FIRST_ASSESSMENT',
+        contractQuestionNumber: source.number,
+        contractLabel: source.label,
+        profile,
+        artifactType: artifact,
         knowledgeTags,
-        givenInput: `知识点：${context}；可用资料：${materialReferences.map((item) => item.title).join('、')}。`,
-        expectedOutput: '严格输出 3 项，每项包含“概念/规则、解决的问题、资料定位”三个字段。',
-        answerRequirements: ['只能使用列出的学习资料', '恰好列出 3 项', '每项说明解决的问题', '每项标明资料名称和具体定位'],
-        answerFormat: '1. 概念/规则：……\n   解决的问题：……\n   资料定位：《资料名》—章节或页面查找关键词：……\n（共 3 项）',
+        givenInput: effectiveContract.givenInput,
+        expectedOutput: effectiveContract.expectedOutput,
+        answerRequirements: effectiveContract.answerRequirements,
+        answerFormat: effectiveContract.answerFormat,
         materialReferences,
-        derivationGuide: directGuide,
-        sourceHint: `直接查阅：${materialReferences[0]?.title ?? '当前学习资料'}；${materialReferences[0]?.locator ?? '定位相关段落'}。`,
-        sourceBasis: [studySource],
-        referenceAnswer: `答案应覆盖学习资料中与 ${context} 直接相关的关键概念、定义或规则；每个概念都要说明用途，而不是只抄标题。`,
-        wordLimit: 360,
+        derivationGuide: source.number === 1 || request.masteryStage <= 2 ? directGuide : buildDerivationGuide(knowledgePoint.title, materialReferences, true),
+        sourceHint: effectiveContract.sourceHint,
+        sourceBasis: [source.body, passCriteria, studySource, ...localMaterialContext],
+        referenceAnswer: effectiveContract.referenceDirection,
+        referenceDirection: effectiveContract.referenceDirection,
+        verificationEvidence: effectiveContract.verificationChecklist,
+        deductionRules: effectiveContract.deductionRules,
+        vetoRules: effectiveContract.vetoItems,
+        deterministicRequired: coding,
+        selfCheckEvidenceRequired: coding,
+        executionEvidenceKind: coding ? 'BROWSER_SELF_CHECK' : undefined,
+        language: coding ? 'typescript' : undefined,
+        starterCode: coding ? buildBrowserAssertionStarter(effectiveContract.testCases) : undefined,
+        testCases: coding ? effectiveContract.testCases : undefined,
+        wordLimit: source.number === 5 ? 520 : undefined,
       }),
-    },
-    {
-      questionType: 'ESSAY',
-      dimension: 'principlesAndBoundaries',
-      maxScore: 15,
-      content: JSON.stringify({
-        level: '概念解释',
-        question: `请用自己的话解释“${context}”。答案必须按“核心机制 → 成立条件 → 适用边界 → 常见误解 → 资料依据”五部分作答，并用一个由资料规则直接推导出的最小例子说明。`,
-        knowledgeTags,
-        givenInput: `给定知识点 ${context}，只讨论资料覆盖的机制和边界，不引入真实项目经验。`,
-        expectedOutput: '一份五段式解释，以及一个包含输入、过程和预期结果的最小例子。',
-        answerRequirements: ['解释核心机制', '写明成立条件', '写明适用边界', '纠正一个常见误解', '给出最小例子并标明资料依据'],
-        answerFormat: '## 核心机制\n## 成立条件\n## 适用边界\n## 常见误解\n## 最小例子（输入 / 过程 / 预期结果）\n## 资料依据与定位',
-        materialReferences,
-        derivationGuide: derivedGuide,
-        sourceHint: '答案必须能回到学习资料中的机制或通过标准。',
-        sourceBasis: [studySource, passCriteria],
-        referenceAnswer: `答案应说明：核心机制是什么、它在什么条件下成立、边界或误区是什么，并至少包含一个可从资料推导出的例子。`,
-        wordLimit: 520,
-      }),
-    },
-    {
-      questionType: request.challengeMode !== 'THEORY' && request.challengeProfile === 'CODING'
-        ? 'CODE_WRITE'
-        : request.challengeMode !== 'THEORY' && request.challengeProfile === 'TOOL_OPERATION'
-          ? 'OUTPUT' : 'ESSAY',
-      dimension: 'practice',
-      maxScore: 35,
-      content: JSON.stringify({
-        level: '小例子推导',
-        question: `${practicalPrompt}\n\n必须明确给出固定输入、关键步骤、预期输出、实际验证方式，并逐项说明它们对应学习资料中的哪条机制或边界。`,
-        prompt: `${practicalPrompt}\n\n必须明确给出固定输入、关键步骤、预期输出、实际验证方式，并逐项说明它们对应学习资料中的哪条机制或边界。`,
-        knowledgeTags,
-        givenInput: `任务主题：${context}。场景和规模必须保持最小；允许依据：${materialReferences.map((item) => item.title).join('、')}。`,
-        expectedOutput: request.challengeProfile === 'CODING'
-          ? '可独立阅读的 TypeScript 最小实现，并附固定输入、预期输出、实际输出/验证和资料机制映射。'
-          : '最小例子或方案，包含固定输入、关键步骤、预期输出、验证方法和资料机制映射。',
-        answerRequirements: ['声明固定输入与约束', '提交最小实现、示例或方案', '写出预期输出', '提供可复核验证步骤', '逐项回指资料机制或边界'],
-        answerFormat: '## 固定输入与约束\n## 最小实现 / 示例 / 方案\n## 预期输出\n## 实际验证步骤与结果\n## 资料机制映射\n## 边界或失败条件',
-        materialReferences,
-        derivationGuide: request.masteryStage <= 1 ? directGuide : derivedGuide,
-        language: 'typescript',
-        starterCode: request.challengeProfile === 'CODING'
-          ? `// 写一个可独立阅读和运行的最小示例，并用注释标明关键机制\n`
-          : undefined,
-        // 不为无法通用自动判定的知识点伪造测试；此类机试由 AI 按资料和通过标准逐项评审。
-        testCases: [],
-        sourceHint: request.masteryStage <= 2
-          ? '例子规模要小，只验证资料里的一个核心机制，不要求完整业务系统或真实项目经历。'
-          : '例子可以做小范围迁移，但必须明确对应学习资料中的机制。',
-        sourceBasis: [studySource, practiceBasis],
-        referenceAnswer: request.masteryStage <= 2
-          ? `答案应包含一个聚焦 ${context} 的最小例子或伪代码，解释输入、关键步骤、预期结果和验证理由；只需要证明学习资料中的一个核心机制，并满足通过标准中的可验证点：${passCriteria}`
-          : `答案应包含一个聚焦 ${context} 的最小例子或伪代码，解释关键步骤与预期结果，并能对应到考核要求：${practiceBasis}`,
-        outputType: 'reasoned-example',
-      }),
-    },
-    {
-      questionType: 'ESSAY',
-      dimension: 'troubleshootingAndDesign',
-      maxScore: 25,
-      content: JSON.stringify({
-        level: request.masteryStage <= 2 ? '受限排错' : '迁移排错',
-        question: `基于上一题的最小例子完成受限排错。先固定“输入、预期结果、实际异常结果”，再恰好列出 3 个候选原因；每个原因都必须包含“资料依据、验证动作、支持/否定证据、最小修复、回归验证”。\n\n迁移范围：${transferLevel}`,
-        knowledgeTags,
-        givenInput: '输入沿用上一题；只能改变一个条件来制造异常，禁止改成无关的完整线上事故。',
-        expectedOutput: '一个固定异常场景，加 3 条完整的“假设—验证—证据—修复—回归”记录。',
-        answerRequirements: ['固定输入、预期结果和异常结果', '恰好列出 3 个候选原因', '每个原因都有资料依据', '每个原因都有可执行验证动作和证据判定', '给出最小修复与回归验证'],
-        answerFormat: '## 固定场景（输入 / 预期 / 异常）\n## 原因 1（资料依据 / 验证动作 / 支持或否定证据 / 最小修复 / 回归）\n## 原因 2\n## 原因 3',
-        materialReferences,
-        derivationGuide: derivedGuide,
-        sourceHint: '只排查这个最小例子，不需要设计完整线上事故流程；原因必须来自学习资料覆盖的机制、边界或误区。',
-        sourceBasis: [studySource, passCriteria],
-        referenceAnswer: `答案应先给出与上一题一致的预期结果和一个可解释的异常结果，再从 ${context} 的机制、边界、误区中推导 3 个可能原因；每个原因都要有验证方式和修复方向，不能泛泛写“看日志/加监控”。`,
-        wordLimit: request.masteryStage <= 2 ? 520 : 700,
-      }),
-    },
-    {
-      questionType: 'ESSAY',
-      dimension: 'projectCommunication',
-      maxScore: 15,
-      content: JSON.stringify({
-        level: '学习复述',
-        question: `请写一份可以在 3 分钟内讲给同事听的“${context}”复述稿。必须依次回答：它是什么、解决什么问题、何时适用、何时不适用、如何用一个可复核证据证明没有用错。`,
-        knowledgeTags,
-        givenInput: `听众了解前端基础，但尚未学习 ${context}。只使用本知识点资料。`,
-        expectedOutput: '一份五段式、可在 3 分钟内讲完的复述稿，结尾包含资料定位。',
-        answerRequirements: ['定义', '解决的问题', '适用条件', '不适用边界或反例', '验证证据', '资料定位'],
-        answerFormat: '1. 它是什么\n2. 解决什么问题\n3. 何时适用\n4. 何时不适用 / 反例\n5. 如何验证\n6. 资料依据与定位',
-        materialReferences,
-        derivationGuide: directGuide,
-        sourceHint: '这是学习复述题，不要求真实项目履历；表达必须基于学习资料和通过标准。',
-        sourceBasis: [studySource, passCriteria],
-        referenceAnswer: `答案应结构化覆盖：定义/机制、使用条件、验证方法、常见误区或边界，并能被学习资料或通过标准支持。`,
-        wordLimit: 420,
-      }),
-    },
-  ];
+    };
+  });
   
   const questions: NewAssessmentQuestion[] = questionTemplates.map((q, index) => ({
     id: randomUUID(),
@@ -489,12 +432,198 @@ async function generateQuestions(
     questionType: q.questionType as 'CHOICE' | 'OUTPUT' | 'ESSAY' | 'CODE_READ' | 'CODE_WRITE',
     dimension: q.dimension as 'principlesAndBoundaries' | 'practice' | 'troubleshootingAndDesign' | 'projectCommunication',
     questionContent: q.content,
-    maxScore: q.maxScore,
+    maxScore: q.maxScore ?? 0,
     orderIndex: index,
     createdAt: now,
   }));
   
   return db.insert(assessmentQuestions).values(questions).returning();
+}
+
+type FirstAssessmentQuestion = { number: 1 | 2 | 3 | 4 | 5; label: string; body: string };
+
+/** 解析知识库唯一权威的“五段式首考”文本，绝不以共享模板重写题干。 */
+export function extractFirstAssessmentQuestions(spec: string): FirstAssessmentQuestion[] {
+  const questions: FirstAssessmentQuestion[] = [];
+  // 不假设各领域都用同一种分号、括号或换行写法；先按题号切段，再解析段首。
+  const starts = [...spec.matchAll(/首考题\s*[1-5](?:\s*[（(]|\s*[:：])/g)];
+  for (const [index, start] of starts.entries()) {
+    const segment = spec.slice(start.index, starts[index + 1]?.index ?? spec.length);
+    const match = /^首考题\s*([1-5])(?:\s*[（(]([^）)]+)[）)])?\s*[:：]\s*/.exec(segment);
+    if (!match) continue;
+    const number = Number(match[1]);
+    if (number < 1 || number > 5 || questions.some((item) => item.number === number)) continue;
+    questions.push({
+      number: number as FirstAssessmentQuestion['number'],
+      label: match[2]?.trim() || ['资料定位', '机制解释', '最小产出', '受限排错', '学习复述'][number - 1]!,
+      body: segment.slice(match[0].length)
+        .replace(/；\s*复测变式\s*[:：][\s\S]*$/, '')
+        .replace(/。?\s*命题边界\s*[:：][\s\S]*$/, '')
+        .trim(),
+    });
+  }
+  return questions.sort((a, b) => a.number - b.number);
+}
+
+export function extractRetestVariant(spec: string): string | undefined {
+  const match = spec.match(/(?:复测变式|M4\s*变式)\s*[:：]\s*([\s\S]*?)(?=。?\s*命题边界\s*[:：]|\n\s*-\s*(?:通过标准|预计耗时)|$)/);
+  return match?.[1]?.trim() || undefined;
+}
+
+function buildStageContract(stage: number, variant?: string): string {
+  if (stage === 1) return 'M1 理解：按首考合同完成；最多可请求“提纲”级帮助（等级 4），认证上限为 M1。';
+  if (stage === 2) return 'M2 引导应用：按首考合同完成；最多可请求“提示”级帮助（等级 2），认证上限为 M2。';
+  if (stage === 3) return 'M3 独立掌握：按首考合同独立完成，不提供题目帮助；缺少独立证据不得认证 M3。';
+  return `M4 稳定掌握：独立完成该点已配置的延迟复测变式，不提供题目帮助。变式：${variant}`;
+}
+
+function resolveChallengeProfile(profile: CreateAssessmentRequest['challengeProfile'], mode: CreateAssessmentRequest['challengeMode'], practice: string) {
+  if (profile !== 'AUTO' && profile !== 'CODING') return profile;
+  if (profile === 'CODING' && isCodingContract(practice)) return 'CODING';
+  if (/调试|排错|故障|异常|根因/.test(practice)) return 'DEBUGGING';
+  if (/配置|部署|DevTools|Lighthouse|Playwright|监控|日志|审计|测试矩阵|工具/.test(practice)) return 'TOOL_OPERATION';
+  if (/设计|方案|架构|策略|矩阵|流程|报告|图|预注册/.test(practice)) return 'DESIGN_CASE';
+  if (isCodingContract(practice) && mode !== 'THEORY') return 'CODING';
+  return mode === 'THEORY' ? 'THEORY_ONLY' : 'EXAMPLE_DRIVEN';
+}
+
+function isCodingContract(value: string) {
+  return /(?:实现|编写|重构|函数|组件|模块|脚本|代码|TypeScript|JavaScript|CSS|HTML|算法|接口)/i.test(value)
+    && !/^(?:建立|设计|制定).{0,18}(?:方案|策略|矩阵|流程|报告|清单)/.test(value);
+}
+
+function artifactForQuestion(number: number, profile: string): NonNullable<QuestionContent['artifactType']> {
+  if (number === 1 || number === 2 || number === 5) return 'explanation';
+  if (number === 4 || profile === 'DEBUGGING') return 'debug-report';
+  if (profile === 'CODING') return 'code';
+  if (profile === 'TOOL_OPERATION') return 'tool-evidence';
+  if (profile === 'DESIGN_CASE') return 'design-case';
+  return 'example';
+}
+
+function questionTypeForContract(number: number, artifact: NonNullable<QuestionContent['artifactType']>) {
+  if (artifact === 'code') return 'CODE_WRITE';
+  if (artifact === 'tool-evidence') return 'OUTPUT';
+  return 'ESSAY';
+}
+
+function buildQuestionContract(input: {
+  source: FirstAssessmentQuestion; knowledgePoint: typeof knowledgePoints.$inferSelect; context: string; profile: string;
+  stageContract: string; retestVariant?: string; materialReferences: LearningMaterialReference[]; passCriteria: string;
+  isPractice: boolean; coding: boolean;
+}) {
+  const { source, context, materialReferences, stageContract, retestVariant, coding, passCriteria } = input;
+  const materialText = materialReferences.map((item) => `《${item.title}》`).join('、') || '本知识点列出的学习资料';
+  const failureFixture = source.number === 4
+    ? `仅使用首考题 3 的产出；异常必须来自题干指定或该产出的一个可复现失败条件：${source.body}`
+    : undefined;
+  const verificationChecklist = source.number === 1
+    ? ['逐项给出资料名称和章节/关键词定位', '每项资料定位均支撑题干中的定义、机制或边界']
+    : source.number === 3
+      ? ['固定输入已写明', '实际产出与题干要求可逐项对应', '预期与实际结果或操作证据可复核', '明确资料机制、边界与验证结论']
+      : source.number === 4
+        ? ['固定正常/异常条件以及预期和实际', '每条假设有可证伪验证动作与证据', '修复后有回归验证']
+        : ['回答覆盖原题全部问题', '含适用边界或反例', '结论可回溯到本点资料定位'];
+  const vetoItems = [
+    '用资料外的框架、经验或泛化模板替代原题要求。',
+    ...(coding ? ['以自行打印断言标记、无条件断言或空壳代码冒充实现。代码语义仍由逐题合同与 AI 复核。'] : []),
+    ...(source.number === 4 ? ['没有异常复现、证伪证据或回归验证。'] : []),
+  ];
+  const testCases = coding ? [
+    { id: 'contract-normal', input: `首考题 3 的固定场景：${source.body}`, expectedOutput: '[ASSERT PASS] contract-normal', isHidden: false },
+    { id: 'contract-boundary', input: `首考题 3 或通过标准的边界场景：${passCriteria}`, expectedOutput: '[ASSERT PASS] contract-boundary', isHidden: false },
+  ] : [];
+  const retestPrefix = retestVariant ? `\n\n本次 M4 变式合同：${retestVariant}` : '';
+  return {
+    question: `${source.body}\n\n【本次挑战合同】知识点：${context}。${stageContract}${retestPrefix}\n只能使用：${materialText}。请保留给定输入、必须输出、资料定位、验证证据和边界说明；不得以泛化题替代本题。`,
+    givenInput: `原题给定条件：${source.body}\n可用资料：${materialText}。`,
+    expectedOutput: `完成原始${source.number}号首考题规定的交付物；同时提交可复核验证证据。`,
+    answerRequirements: ['逐项完成原始首考题题干', '保留题干给定输入与限制', '提交题干要求的产出或结论', '给出资料名称与具体定位', '提交验证证据及边界说明'],
+    answerFormat: '## 原题要求逐项回应\n## 给定输入与限制\n## 必须输出 / 实际产出\n## 验证证据\n## 资料依据与定位\n## 边界、扣分点与否决项',
+    sourceHint: `本题直接来自${source.number}号首考题。先按题干中的资料范围定位：${materialText}。`,
+    referenceDirection: `评分仅核对原题「${source.label}」的要求：${source.body}\n通过标准：${passCriteria}`,
+    verificationChecklist,
+    deductionRules: ['遗漏题干的给定输入、必须输出、资料定位或验证证据时逐项扣分。', '把本点题干改写成泛化题、扩展到资料外要求时不计相关得分。'],
+    vetoItems,
+    failureFixture,
+    testCases,
+  };
+}
+
+/**
+ * M4 的主体是延迟复测变式。五题分别验证定位、机制不变量、实施、排错和迁移；
+ * sourceQuestion 仍保留在持久化内容中，便于审计，但不会要求用户重做旧题。
+ */
+function buildM4VariantContract(
+  source: FirstAssessmentQuestion,
+  variant: string,
+  base: ReturnType<typeof buildQuestionContract>,
+) {
+  type VariantRole = { task: string; input: string; output: string; format: string; boundary?: string; failure?: string };
+  const trace = `原题能力追溯：首考题 ${source.number}（${source.label}），仅用于追溯，不得重做原题。`;
+  const shared = `复测变式依据：${variant}`;
+  const roles: VariantRole[] = [
+    {
+      task: `定位两条直接支持复测变式差异的资料位置，并说明各自证明的条件差异。${shared} ${trace}`,
+      input: `${shared}\n只定位本知识点资料中直接解释变式差异的两处内容。`,
+      output: '两条精确资料定位、各自对应的变式条件，以及一条不可替代性说明。',
+      format: '## 变式差异\n## 证据定位 1\n## 证据定位 2\n## 不可替代性与边界',
+    },
+    {
+      task: `解释复测变式下仍成立的一项核心机制与变化后的边界，并给出一个不能沿用首考结论的反例。${shared} ${trace}`,
+      input: `${shared}\n按“机制不变量 → 变式条件 → 新边界”组织答案。`,
+      output: '机制不变量、变化条件、新边界与可观察反例的因果链。',
+      format: '## 机制不变量\n## 变式条件\n## 新边界与反例\n## 因果链',
+    },
+    {
+      task: `针对复测变式完成最小实现或操作产出，并在固定输入和边界输入下各验证一次。${shared} ${trace}`,
+      input: `${shared}\n固定输入：只实现使变式成立所需的最小函数、配置、组件状态或操作步骤。`,
+      boundary: `${shared}\n边界输入：故意移除、反转或延后变式中的一个关键条件。`,
+      output: '变式最小产出、固定输入结果、边界输入结果及两者差异解释。',
+      format: '## 变式最小产出\n## 固定输入与结果\n## 边界输入与结果\n## 结果解释',
+    },
+    {
+      task: `在复测变式中复现受限失败；列出不超过三条假设并逐条证伪，最小修复后以同一变式回归。${shared} ${trace}`,
+      input: `${shared}\n故障夹具：故意遗漏、反转或延后变式中的一个关键条件。`,
+      output: '失败复现、最多三条假设和证伪证据、最小修复、同一变式回归结果。',
+      format: '## 失败复现\n## 假设与证伪\n## 最小修复\n## 变式回归',
+      failure: `M4 变式故障夹具：采用“${variant}”后，故意遗漏、反转或延后一个关键条件；不得改用首考故障。`,
+    },
+    {
+      task: `把复测变式写成给下一位实现者的迁移说明：什么可迁移、什么不可迁移，以及如何用一个可观察信号验证。${shared} ${trace}`,
+      input: `${shared}\n交接对象只知道首考结论，尚未看到本次变式。`,
+      output: '变式摘要、迁移与不迁移清单、验证信号和反向检查。',
+      format: '## 变式摘要\n## 可迁移 / 不可迁移\n## 验证信号\n## 反向检查',
+    },
+  ];
+  const role = roles[source.number - 1]!;
+  const testCases = source.number === 3
+    ? base.testCases.map((test, index) => ({
+      ...test,
+      input: index === 0 ? role.input : (role.boundary ?? `${shared}\n边界输入：反转一个关键条件。`),
+    }))
+    : base.testCases;
+  return {
+    ...base,
+    question: `${role.task}\n\n【M4 变式挑战合同】本题以变式为主任务，不要求重做首考题。`,
+    givenInput: role.input,
+    expectedOutput: role.output,
+    answerRequirements: ['只完成本题的变式动作，不复写首考作答', '保留变式给定输入与限制', '提交可复核的实际产出或结论', '给出资料定位与验证证据', '说明变式的适用边界'],
+    answerFormat: role.format,
+    sourceHint: `${shared}；本题仅验证变式动作，不提供首考题答案。`,
+    referenceDirection: `评分以本题 M4 变式交付为准。${trace}\n${shared}`,
+    failureFixture: role.failure ?? base.failureFixture,
+    verificationChecklist: [
+      ...base.verificationChecklist,
+      '实际输出必须针对本题变式，且能与首考题干区分',
+    ],
+    testCases,
+  };
+}
+
+function buildBrowserAssertionStarter(testCases: Array<{ id: string; input?: string; expectedOutput: string; isHidden: boolean }>) {
+  const assertions = testCases.map((test) => `// ${test.id}：把题干固定输入的实际结果与预期结果进行比较。\n// 浏览器执行器会在断言通过后记录 ${test.expectedOutput}；不要自行打印该标记。\nconsole.assert(/* TODO: 真实条件表达式，例如 observed === expected */ false, '${test.id}');`).join('\n\n');
+  return `// 浏览器自检执行证据，不是安全沙箱，也不能单独证明实现正确。\n// 请完成题干要求的最小实现，再以真实条件断言固定场景和边界场景。\n// 不得删除、改名或用无条件 true 替代断言；不得自行打印 [ASSERT PASS] 标记。\n\n// TODO: 在这里实现题干要求的最小代码（函数、状态、配置或转换逻辑）\n\n${assertions}\n`;
 }
 
 function compactMarkdown(value: string, maxLength: number): string {
@@ -572,6 +701,8 @@ export async function saveAnswer(
   deterministicResult?: string
 ): Promise<AssessmentAnswerRecord> {
   const now = new Date().toISOString();
+  if (answerContent.length > 120_000) throw new Error('答案内容超过 120000 个字符上限。');
+  const savedSelfCheck = sanitizeClientSelfCheck(deterministicResult);
   
   // 验证会话存在且状态正确
   const session = await db.query.assessmentSessions.findFirst({
@@ -612,7 +743,7 @@ export async function saveAnswer(
       .update(assessmentAnswers)
       .set({
         answerContent,
-        deterministicResult,
+        deterministicResult: savedSelfCheck,
         answeredAt: now,
         updatedAt: now,
       })
@@ -628,7 +759,7 @@ export async function saveAnswer(
     sessionId,
     questionId,
     answerContent,
-    deterministicResult,
+    deterministicResult: savedSelfCheck,
     answeredAt: now,
     createdAt: now,
     updatedAt: now,
@@ -654,6 +785,8 @@ export async function submitAssessmentSession(sessionId: string): Promise<Assess
   if (unansweredCount > 0) {
     throw new Error(`还有 ${unansweredCount} 道题未作答`);
   }
+  // 浏览器 Worker 只能提供本地自检记录：客户端能伪造 HTTP 请求，也不是安全沙箱。
+  // 因此它既不会阻止提交，也不能单独决定 PASS / FAIL；AI 仍按逐题合同评阅答案。
   
   const [updated] = await db
     .update(assessmentSessions)
@@ -666,6 +799,90 @@ export async function submitAssessmentSession(sessionId: string): Promise<Assess
     .returning();
   
   return requireRecord(updated, '提交考核');
+}
+
+function parseDeterministicResult(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as { passed?: boolean; output?: string };
+    return { passed: parsed.passed === true, output: typeof parsed.output === 'string' ? parsed.output : '' };
+  } catch { return null; }
+}
+
+const MAX_SELF_CHECK_JSON_CHARS = 16_000;
+const MAX_SELF_CHECK_OUTPUT_CHARS = 12_000;
+
+/** 将浏览器传来的结果收敛为有界的“不可信本地自检”，绝不把它升级为服务端回执。 */
+export function sanitizeClientSelfCheck(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value.length > MAX_SELF_CHECK_JSON_CHARS) throw new Error('本地 Worker 自检记录超过 16000 个字符上限。');
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.passed !== 'boolean') return undefined;
+    const output = typeof parsed.output === 'string' ? parsed.output.slice(0, MAX_SELF_CHECK_OUTPUT_CHARS) : '';
+    const error = typeof parsed.error === 'string' ? parsed.error.slice(0, 2_000) : undefined;
+    const runtimeMs = typeof parsed.runtimeMs === 'number' && Number.isFinite(parsed.runtimeMs)
+      ? Math.max(0, Math.min(Math.round(parsed.runtimeMs), 60_000)) : undefined;
+    const status = typeof parsed.status === 'string' && ['SUCCESS', 'ERROR', 'TIMEOUT'].includes(parsed.status)
+      ? parsed.status : undefined;
+    return JSON.stringify({
+      kind: 'LOCAL_WORKER_SELF_CHECK_UNTRUSTED',
+      passed: parsed.passed,
+      output,
+      ...(error ? { error } : {}),
+      ...(runtimeMs !== undefined ? { runtimeMs } : {}),
+      ...(status ? { status } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * 自检只能证明“浏览器在当时运行了这些可见断言”。它不是隐藏测试，也不能代替
+ * AI 基于逐题合同、代码和资料的语义评分。这里仅拒绝明显伪造或缺失的执行证据。
+ */
+export function validateCodingSelfCheckEvidence(
+  answerContent: string,
+  deterministicResult: string | null | undefined,
+  testCases: Array<{ id: string }>,
+) {
+  const failures: string[] = [];
+  const result = parseDeterministicResult(deterministicResult);
+  if (!result?.passed) failures.push('未保存通过的浏览器自检执行结果');
+  const output = result?.output ?? '';
+  for (const test of testCases) {
+    if (!output.includes(`[ASSERT PASS] ${test.id}`)) failures.push(`缺少 ${test.id} 的通过记录`);
+  }
+  if (/console\.(?:log|info|warn)\s*\(\s*(['"`])[^\n]*\[ASSERT PASS\][^\n]*\1\s*\)/i.test(answerContent)) {
+    failures.push('代码直接打印 ASSERT PASS 标记，不能作为执行证据');
+  }
+  const codeWithoutComments = answerContent
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/console\.assert\([\s\S]*?\);?/g, '')
+    .replace(/console\.(?:log|info|warn)\([\s\S]*?\);?/g, '')
+    .trim();
+  if (!/(?:\bfunction\b|=>|\bclass\b|\bconst\s+\w+\s*=|\blet\s+\w+\s*=|\bvar\s+\w+\s*=)/.test(codeWithoutComments)) {
+    failures.push('缺少可审阅的题干实现，不能只提交断言或标记');
+  }
+  for (const test of testCases) {
+    const assertion = new RegExp(`console\\.assert\\(\\s*([^,]+),\\s*(['\"])${escapeRegExp(test.id)}\\2\\s*\\)`, 's').exec(answerContent);
+    if (!assertion) {
+      failures.push(`缺少 ${test.id} 的条件断言`);
+      continue;
+    }
+    if (isObviousConstantTrue(assertion[1] ?? '')) failures.push(`${test.id} 使用无条件 true 断言`);
+  }
+  return { passed: failures.length === 0, failures };
+}
+
+function isObviousConstantTrue(expression: string) {
+  return /^(?:true|!false|1\s*===\s*1|['"](?:true|ok|pass)['"]\s*===\s*['"](?:true|ok|pass)['"])\s*$/i.test(expression.trim());
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // ===== 取消考核 =====

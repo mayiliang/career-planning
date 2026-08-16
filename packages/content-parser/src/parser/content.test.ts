@@ -337,6 +337,37 @@ function missingLocalGuideSemanticDimensions(body: string): string[] {
     .map(({ dimension }) => dimension);
 }
 
+type StrictAssessmentQuestion = { number: 1 | 2 | 3 | 4 | 5; label: string; body: string };
+
+/** 与掌握挑战共用同一五段题语法：内容门禁必须在导入前就拒绝不完整合同。 */
+function parseStrictAssessmentQuestions(spec: string): StrictAssessmentQuestion[] {
+  const questions: StrictAssessmentQuestion[] = [];
+  const pattern = /首考题\s*([1-5])(?:\s*[（(]([^）)]+)[）)])?\s*[:：]\s*([\s\S]*?)(?=；\s*首考题\s*[1-5](?:\s*[（(]|\s*[:：])|。?\s*(?:复测变式|M4\s*变式|命题边界)\s*[:：]|$)/g;
+  for (const match of spec.matchAll(pattern)) {
+    const number = Number(match[1]);
+    if (number < 1 || number > 5) continue;
+    questions.push({
+      number: number as StrictAssessmentQuestion['number'],
+      label: match[2]?.trim() || ['资料定位', '机制解释', '最小产出', '受限排错', '学习复述'][number - 1]!,
+      body: match[3]?.trim() ?? '',
+    });
+  }
+  return questions;
+}
+
+function extractRetestVariantContract(spec: string): string | null {
+  const match = spec.match(/(?:复测变式|M4\s*变式)\s*[:：]\s*([\s\S]*?)(?=。?\s*命题边界\s*[:：]|$)/);
+  return match?.[1]?.trim() || null;
+}
+
+function normalizeAssessmentTask(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[“”"'`，。；、：:（）()【】\[\]{}<>!！?？—–\-]/g, '');
+}
+
 describe('知识库内容完整性', () => {
   it('应解析 20 个领域和 223 个唯一知识点', () => {
     const root = findProjectRoot();
@@ -761,6 +792,99 @@ describe('知识资源审计防线', () => {
       failures,
       '资料定位题中的《资料名》必须与当前中文学习资料链接标签精确一致、完整列出，历史删除项不得残留',
     ).toEqual([]);
+  });
+
+  it('223 点严格考核必须是独立、可执行的五段挑战合同', () => {
+    const root = findProjectRoot();
+    const knowledgeDirectory = path.join(root, 'docs', 'knowledge', 'knowledge-base');
+    const contents = new Map(
+      fs.readdirSync(knowledgeDirectory)
+        .filter((file) => /^(0[1-9]|1[0-9]|20)-.*\.md$/.test(file))
+        .map((file) => [path.join(knowledgeDirectory, file), fs.readFileSync(path.join(knowledgeDirectory, file), 'utf8')]),
+    );
+    const points = parseAllKnowledgeFiles(contents).flatMap((domain) => domain.points);
+    expect(points).toHaveLength(223);
+    const failures: string[] = [];
+    const q2Owners = new Map<string, string[]>();
+    const q3Owners = new Map<string, string[]>();
+    const q4Owners = new Map<string, string[]>();
+    const q5Owners = new Map<string, string[]>();
+    const variantOwners = new Map<string, string[]>();
+
+    for (const point of points) {
+      const spec = point.assessmentSpec;
+      const criteria = point.passCriteria;
+      const questions = parseStrictAssessmentQuestions(spec);
+      const questionCounts = new Map<number, number>();
+      for (const question of questions) questionCounts.set(question.number, (questionCounts.get(question.number) ?? 0) + 1);
+      const missingOrDuplicate = [1, 2, 3, 4, 5]
+        .filter((number) => questionCounts.get(number) !== 1)
+        .map((number) => `${number}=${questionCounts.get(number) ?? 0}`);
+      if (missingOrDuplicate.length) failures.push(`${point.code}:首考题必须恰好各一题 (${missingOrDuplicate.join(', ')})`);
+
+      const profile = spec.match(/^挑战类型\s*[：:]\s*(THEORY_ONLY|EXAMPLE_DRIVEN|CODING|DEBUGGING|TOOL_OPERATION|DESIGN_CASE)\s*；?/);
+      if (!profile) failures.push(`${point.code}:缺少显式挑战类型`);
+      if (/题\s*[2-5]\s*[—–-]\s*[2-5]\s*[：:]/.test(spec)) failures.push(`${point.code}:不得把首考题 2–5 合并成泛化模板`);
+      if (/题外(?:执行)?卡|执行卡|<!--/.test(spec)) failures.push(`${point.code}:考核合同不得含题外执行卡或 HTML 注释`);
+      if (/围绕(?:「|“).+(?:」|”)(?:的)?(?:定义|机制|边界|反例)|围绕首考题\s*3\s*的产出给出一个失败现象|正常、边界和失败场景/.test(spec)) {
+        failures.push(`${point.code}:仍含旧泛化考核模板`);
+      }
+
+      const q2 = questions.find((question) => question.number === 2)?.body ?? '';
+      const q3 = questions.find((question) => question.number === 3)?.body ?? '';
+      const q4 = questions.find((question) => question.number === 4)?.body ?? '';
+      const q5 = questions.find((question) => question.number === 5)?.body ?? '';
+      const variant = extractRetestVariantContract(spec);
+      if (!variant || normalizeAssessmentTask(variant).length < 24) failures.push(`${point.code}:缺少独立且具体的复测变式`);
+      if (variant && [q3, q4].some((body) => normalizeAssessmentTask(body) === normalizeAssessmentTask(variant))) {
+        failures.push(`${point.code}:复测变式不得复用首考题 3 或 4 原文`);
+      }
+      if (variant && !/(?:仅|只|唯独)/.test(variant)) failures.push(`${point.code}:复测变式未限定只改变一个变量`);
+      if (variant && !/(?:不变量|保持|其余|其他|不变|固定|保留)/.test(variant)) {
+        failures.push(`${point.code}:复测变式缺少明确不变量`);
+      }
+
+      // 机制/边界的中文表达很多，自动门禁只拒绝明显过短与跨点完全重复；语义由逐点审读兜底。
+      if (normalizeAssessmentTask(q2).length < 28) failures.push(`${point.code}:题2过短，无法形成机制与边界解释`);
+
+      // 只检查题 3 自身，避免用题 4/通过标准中别处的“验证”词蒙混最小产出合同。
+      if (!/(?:固定|给定|夹具|fixture|输入|场景|样例)/i.test(q3)) failures.push(`${point.code}:题3缺少固定或给定输入`);
+      if (!/(?:实现|提交|输出|产出|交付|构造|建立|完成|编写|绘制|设计)/.test(q3)) failures.push(`${point.code}:题3缺少具体交付物`);
+      if (!/(?:验证|测试|断言|记录|比较|测量|证据|回归|检查)/.test(q3)) failures.push(`${point.code}:题3缺少验证合同`);
+
+      // 只检查题 4 自身：要有可复现的失败现象、排查边界和证伪/回归，不接受泛泛“排错”。
+      if (!/(?:失败|异常|故障|错误|超时|日志|响应|崩溃|卡顿|泄漏|偏差|冲突|拒绝|丢失|污染)/.test(q4)) failures.push(`${point.code}:题4缺少具体失败现象或日志`);
+      if (!/(?:仅|只|受限|限制|不得|不允许|不改|根据)/.test(q4)) failures.push(`${point.code}:题4缺少受限排查边界`);
+      if (!/(?:证伪|假设|排除|根因|修复|回归|复现)/.test(q4)) failures.push(`${point.code}:题4缺少证伪或回归闭环`);
+      if (/(?:5|五|6|六|7|七|8|八)(?:个|项)?(?:候选|根因|原因)/.test(q4)) failures.push(`${point.code}:题4单次排错候选超过4个`);
+
+      if (normalizeAssessmentTask(q5).length < 12) {
+        failures.push(`${point.code}:题5缺少本点特异的学习复述或追问`);
+      }
+
+      // 通过标准也必须独立成立，不能借用题干中任意一处的关键词。
+      if (!/(?:证据|日志|截图|指标|测试|断言|记录|回归|可复核|验收)/.test(criteria)) failures.push(`${point.code}:通过标准缺少可核验证据`);
+      if (!/否决项\s*[：:]/.test(criteria)) failures.push(`${point.code}:通过标准缺少明确否决项`);
+      if (!/评估边界\s*[：:]/.test(criteria)) failures.push(`${point.code}:通过标准缺少评估边界`);
+
+      const normalizedQ2 = normalizeAssessmentTask(q2);
+      const normalizedQ3 = normalizeAssessmentTask(q3);
+      const normalizedQ4 = normalizeAssessmentTask(q4);
+      const normalizedQ5 = normalizeAssessmentTask(q5);
+      const normalizedVariant = normalizeAssessmentTask(variant ?? '');
+      if (normalizedQ2) q2Owners.set(normalizedQ2, [...(q2Owners.get(normalizedQ2) ?? []), point.code]);
+      if (normalizedQ3) q3Owners.set(normalizedQ3, [...(q3Owners.get(normalizedQ3) ?? []), point.code]);
+      if (normalizedQ4) q4Owners.set(normalizedQ4, [...(q4Owners.get(normalizedQ4) ?? []), point.code]);
+      if (normalizedQ5) q5Owners.set(normalizedQ5, [...(q5Owners.get(normalizedQ5) ?? []), point.code]);
+      if (normalizedVariant) variantOwners.set(normalizedVariant, [...(variantOwners.get(normalizedVariant) ?? []), point.code]);
+    }
+
+    for (const [task, codes] of q2Owners) if (codes.length > 1) failures.push(`题2跨点完全重复: ${codes.join('、')} (${task.slice(0, 44)})`);
+    for (const [task, codes] of q3Owners) if (codes.length > 1) failures.push(`题3跨点完全重复: ${codes.join('、')} (${task.slice(0, 44)})`);
+    for (const [task, codes] of q4Owners) if (codes.length > 1) failures.push(`题4跨点完全重复: ${codes.join('、')} (${task.slice(0, 44)})`);
+    for (const [task, codes] of q5Owners) if (codes.length > 1) failures.push(`题5跨点完全重复: ${codes.join('、')} (${task.slice(0, 44)})`);
+    for (const [task, codes] of variantOwners) if (codes.length > 1) failures.push(`复测变式跨点完全重复: ${codes.join('、')} (${task.slice(0, 44)})`);
+    expect(failures, '严格考核必须逐点保留具体输入、产出、排错、变式和证据闭环').toEqual([]);
   });
 
   it('本地中文讲义必须进入学习资料字段而不是游离在知识点正文中', () => {

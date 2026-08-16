@@ -124,6 +124,9 @@ const KnowledgePointDetailSchema = KnowledgePointListItemSchema.extend({
     type: z.enum(['READING', 'GUIDED_PRACTICE', 'APPLICATION', 'CASE_STUDY']),
     label: z.string(), minutes: z.number(), optional: z.boolean(), task: z.string(),
     input: z.string(), outputRequirements: z.array(z.string()), completionCriteria: z.array(z.string()),
+    failureFixture: z.string().nullable(),
+    verificationChecklist: z.array(z.string()),
+    vetoItems: z.array(z.string()),
     deliveryMode: z.enum(['READ_ONLY', 'WORKSPACE']), workspaceMode: z.enum(['TEXT', 'CODE']).nullable(),
     language: z.enum(['javascript', 'typescript']).nullable(), starterCode: z.string().nullable(), submissionTemplate: z.string().nullable(),
     materialReferences: z.array(z.object({ title: z.string(), url: z.string().nullable(), locator: z.string(), focus: z.string() })),
@@ -640,6 +643,7 @@ const BranchSchema = WorkspacePointSchema.extend({
 const PracticeValidationSchema = z.object({
   passed: z.boolean(), summary: z.string(), checks: z.array(z.object({ label: z.string(), passed: z.boolean() })),
   nextAction: z.string(), mode: z.enum(['AI', 'RULE']),
+  validationLevel: z.enum(['STRUCTURE_ONLY', 'SEMANTIC']).optional(),
 });
 
 const PracticeAttemptSchema = z.object({
@@ -1285,15 +1289,19 @@ export const apiClient = {
     return request(`/assessments/${id}/start`, AssessmentSessionSchema, { method: 'POST' });
   },
 
-  async saveAssessmentAnswer(id: string, questionId: string, answerContent: string) {
+  async saveAssessmentAnswer(id: string, questionId: string, answerContent: string, deterministicResult?: string) {
     return request(`/assessments/${id}/answers/${questionId}`, AssessmentAnswerSchema, {
       method: 'PUT',
-      body: JSON.stringify({ answerContent }),
+      body: JSON.stringify({ answerContent, deterministicResult }),
     });
   },
 
   async submitAssessment(id: string) {
     return request(`/assessments/${id}/submit`, AssessmentSessionSchema, { method: 'POST' });
+  },
+
+  async cancelAssessment(id: string) {
+    return request(`/assessments/${id}/cancel`, AssessmentSessionSchema, { method: 'POST' });
   },
 
   async gradeAssessment(id: string) {

@@ -35,7 +35,7 @@ const pointSelect = `
     kp.defer_reason AS deferReason, kp.plan_week AS planWeek,
     kp.study_minutes AS studyMinutes, kp.practice_minutes AS practiceMinutes,
     kp.project_minutes AS projectMinutes, kp.assessment_minutes AS assessmentMinutes,
-    kp.summary
+    kp.summary, kp.assessment_spec_md AS assessmentSpecMd
   FROM knowledge_points kp JOIN knowledge_domains kd ON kd.id = kp.domain_id`;
 
 export function getLearningWorkspace() {
@@ -414,14 +414,14 @@ export function getCheckin(date: string) {
 }
 
 function requirePoint(code: string, withContent = false): PointRow {
-  const extra = withContent ? `, kp.study_material_md AS studyMaterialMd, kp.assessment_spec_md AS assessmentSpecMd, kp.pass_criteria_md AS passCriteriaMd` : '';
-  const row = rawDb.prepare(`${pointSelect.replace('kp.summary', `kp.summary${extra}`)} WHERE kp.code = ? LIMIT 1`).get(code) as PointRow | undefined;
+  const extra = withContent ? `, kp.study_material_md AS studyMaterialMd, kp.pass_criteria_md AS passCriteriaMd` : '';
+  const row = rawDb.prepare(`${pointSelect.replace('kp.summary, kp.assessment_spec_md AS assessmentSpecMd', `kp.summary, kp.assessment_spec_md AS assessmentSpecMd${extra}`)} WHERE kp.code = ? LIMIT 1`).get(code) as PointRow | undefined;
   if (!row) throw new Error(`知识点不存在：${code}`);
   return row;
 }
 
 function enrichPoint(point: PointRow) {
-  const profile = inferChallengeProfile(point.code, point.title, point.domainTitle);
+  const profile = inferChallengeProfile(point.code, point.title, point.domainTitle, point.assessmentSpecMd);
   return {
     ...point,
     currentFocus: Boolean(point.currentFocus),
@@ -440,7 +440,9 @@ function compareRouteOrder(left: PointRow, right: PointRow) {
     || left.code.localeCompare(right.code);
 }
 
-export function inferChallengeProfile(code: string, title: string, domainTitle: string): ChallengeProfile {
+export function inferChallengeProfile(code: string, title: string, domainTitle: string, assessmentSpecMd?: string): ChallengeProfile {
+  const explicit = assessmentSpecMd?.match(/(?:^|\n)\s*(?:[-*]\s*)?挑战类型\s*[：:]\s*(THEORY_ONLY|EXAMPLE_DRIVEN|CODING|DEBUGGING|TOOL_OPERATION|DESIGN_CASE)\s*[；;]?/);
+  if (explicit?.[1]) return explicit[1] as ChallengeProfile;
   const value = `${code} ${title} ${domainTitle}`.toLowerCase();
   if (/伦理|法规|合规|隐私原则|概念边界|职业|影响力|判断|治理/.test(value)) return 'THEORY_ONLY';
   if (/git|docker|linux|ci\/cd|发布|部署|调试工具|mcp|openapi|工具链/.test(value)) return 'TOOL_OPERATION';

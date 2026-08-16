@@ -25,6 +25,8 @@ import {
   calculateVerdict,
   type DimensionScores,
 } from '@career-atlas/shared';
+import { extractLocalMaterialContext } from './learning-material-context.service.js';
+import { validateCodingSelfCheckEvidence } from './assessment.service.js';
 
 type QuestionReview = {
   questionId: string;
@@ -51,6 +53,12 @@ type QuestionForReview = {
   dimension: string;
   maxScore: number;
   questionContent: string;
+};
+
+type DeterministicContractFailure = {
+  questionId: string;
+  evidence: string;
+  reason: string;
 };
 
 // ===== 评分请求 =====
@@ -141,6 +149,10 @@ export async function gradeAssessment(
     const aiProvider = createProvider(provider);
     
     // 构建 AI 评分请求
+    const localMaterialContext = extractLocalMaterialContext(knowledgePoint.studyMaterialMd);
+    const gradingMaterialContext = localMaterialContext.length
+      ? `${knowledgePoint.studyMaterialMd}\n\n以下是本知识点链接的本地中文讲义正文（仅这些章节可作为补充事实依据）：\n${localMaterialContext.map((item) => `【${item.title}｜${item.source}】\n${item.content}`).join('\n\n')}`
+      : knowledgePoint.studyMaterialMd;
     const gradingRequest = {
       knowledgePointCode: session.knowledgePointCode,
       knowledgePointTitle: knowledgePoint.title,
@@ -156,20 +168,22 @@ export async function gradeAssessment(
         questionId: a.questionId,
         content: a.answerContent,
       })),
+      // 这些仅是浏览器 Worker 的本地自检记录，客户端可伪造；只给 AI 作为补充上下文，
+      // 绝不能作为服务端硬门禁或独立通过证明。
       deterministicResults: answers
         .filter(a => a.deterministicResult)
         .map(a => {
-          const parsed = JSON.parse(a.deterministicResult!);
+          const parsed = parseUntrustedLocalSelfCheck(a.deterministicResult!);
           return {
             questionId: a.questionId,
-            passed: parsed.passed,
-            output: parsed.output,
-            error: parsed.error,
+            passed: parsed?.passed ?? false,
+            output: parsed?.output ?? '无有效本地自检记录',
+            error: parsed?.error,
           };
         }),
       rubric: knowledgePoint.assessmentSpecMd,
       passCriteria: knowledgePoint.passCriteriaMd,
-      studyMaterial: knowledgePoint.studyMaterialMd,
+      studyMaterial: gradingMaterialContext,
     };
     
     // 调用 AI 评分
@@ -216,24 +230,16 @@ export async function gradeAssessment(
           referenceAnswer: referenceAnswerFromQuestion(question.questionContent),
           sourceBasis: sourceBasisFromQuestion(question.questionContent),
           nextAction: '重新调用 DeepSeek 判题；若仍失败，按题目参考依据人工复核。',
-        })),
+      })),
       };
     }
-    
-    // 检查确定性测试是否全部通过
-    const deterministicTestsPassed = answers
-      .filter(a => a.deterministicResult)
-      .every(a => {
-        try {
-          const result = JSON.parse(a.deterministicResult!);
-          return result.passed === true;
-        } catch {
-          return false;
-        }
-      });
+
+    // 当前架构没有服务端执行回执。浏览器 Worker 不是安全沙箱，HTTP 也可被伪造，
+    // 因而本地自检缺失、失败或伪造都不能单独强制 FAIL / PASS；语义评分由 AI 与题目合同完成。
+    const deterministicTestsPassed = true;
     
     // 服务端重算判定结果
-    const serverCalculatedVerdict = calculateVerdict(
+    let serverCalculatedVerdict = calculateVerdict(
       dimensionScores,
       confidence,
       criticalFailures.length > 0,
@@ -607,6 +613,75 @@ function sourceBasisFromQuestion(questionContent: string): string[] {
       : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * 兼容旧导出，供历史结果展示/诊断使用。它只报告本地自检格式或可见断言缺失，
+ * 不再被 gradeAssessment 当作服务端确定性失败，也不能推导 PASS。
+ */
+export function collectDeterministicContractFailures(
+  questions: QuestionForReview[],
+  answers: Array<{ questionId: string; answerContent: string; deterministicResult: string | null }>,
+): DeterministicContractFailure[] {
+  const failures: DeterministicContractFailure[] = [];
+  for (const question of questions) {
+    const contract = parseQuestionContract(question.questionContent);
+    if (!contract.deterministicRequired) continue;
+    const answer = answers.find((item) => item.questionId === question.id);
+    const validation = validateCodingSelfCheckEvidence(answer?.answerContent ?? '', answer?.deterministicResult, contract.testCases);
+    if (!validation.passed) {
+      const result = parseDeterministicEvidence(answer?.deterministicResult);
+      failures.push({
+        questionId: question.id,
+        evidence: result.raw || '未提交浏览器隔离执行证据。',
+        reason: `未经服务端认证的本地 Worker 自检记录不完整：${validation.failures.join('；')}。仅供 AI 复核上下文，不能单独决定结果。`,
+      });
+    }
+  }
+  return failures;
+}
+
+function parseUntrustedLocalSelfCheck(value: string) {
+  if (value.length > 16_000) return null;
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (parsed.kind !== 'LOCAL_WORKER_SELF_CHECK_UNTRUSTED' || typeof parsed.passed !== 'boolean') return null;
+    return {
+      passed: parsed.passed,
+      output: typeof parsed.output === 'string' ? parsed.output.slice(0, 12_000) : '',
+      error: typeof parsed.error === 'string' ? parsed.error.slice(0, 2_000) : undefined,
+    };
+  } catch { return null; }
+}
+
+function parseQuestionContract(content: string) {
+  try {
+    const parsed = JSON.parse(content) as {
+      deterministicRequired?: boolean;
+      selfCheckEvidenceRequired?: boolean;
+      testCases?: Array<{ id?: string }>;
+    };
+    return {
+      deterministicRequired: parsed.deterministicRequired === true || parsed.selfCheckEvidenceRequired === true,
+      testCases: (parsed.testCases ?? []).filter((item): item is { id: string } => typeof item?.id === 'string' && item.id.length > 0),
+    };
+  } catch {
+    return { deterministicRequired: false, testCases: [] as Array<{ id: string }> };
+  }
+}
+
+function parseDeterministicEvidence(value: string | null | undefined) {
+  if (!value) return { passed: false, output: '', raw: '' };
+  try {
+    const parsed = JSON.parse(value) as { passed?: boolean; output?: string; error?: string };
+    return {
+      passed: parsed.passed === true,
+      output: typeof parsed.output === 'string' ? parsed.output : '',
+      raw: typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed),
+    };
+  } catch {
+    return { passed: false, output: '', raw: value };
   }
 }
 

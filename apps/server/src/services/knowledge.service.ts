@@ -16,9 +16,11 @@ import type { KnowledgeStatus } from '@career-atlas/shared';
 import { KNOWLEDGE_ROUTE_INDEX } from './knowledge-relations.service.js';
 import { inferChallengeProfile, savePointNote } from './learning.service.js';
 import {
-  extractKnowledgeTags,
   extractLearningMaterialReferences,
-  extractMinimumOutput,
+  extractStrictAssessmentTasks,
+  practiceEvidenceRequirements,
+  practiceSubmissionTemplate,
+  type PracticeProfile,
   type LearningMaterialReference,
 } from './learning-content.service.js';
 
@@ -118,6 +120,11 @@ export interface LearningActivity {
   starterCode: string | null;
   submissionTemplate: string | null;
   materialReferences: LearningMaterialReference[];
+  /** 首考题 4 原文：不能用泛化的异常模板替换。 */
+  failureFixture: string | null;
+  /** 本地可确定检查的项目；语义是否正确由 AI 或严格考核判断。 */
+  verificationChecklist: string[];
+  vetoItems: string[];
 }
 
 // ===== 服务函数 =====
@@ -224,6 +231,7 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
       projectMinutes: knowledgePoints.projectMinutes,
       assessmentMinutes: knowledgePoints.assessmentMinutes,
       retestMinutes: knowledgePoints.retestMinutes,
+      assessmentSpecMd: knowledgePoints.assessmentSpecMd,
     })
     .from(knowledgePoints)
     .innerJoin(knowledgeDomains, eq(knowledgePoints.domainId, knowledgeDomains.id))
@@ -231,9 +239,9 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
     .orderBy(knowledgeDomains.orderIndex, knowledgePoints.code);
 
   // 清单默认沿推荐学习路径排列，避免字母序把 Agent 等后置能力提前展示。
-  const items = rows.map((item) => {
+  const items = rows.map(({ assessmentSpecMd, ...item }) => {
     const route = KNOWLEDGE_ROUTE_INDEX.get(item.code);
-    const challengeProfile = inferChallengeProfile(item.code, item.title, item.domainTitle);
+    const challengeProfile = inferChallengeProfile(item.code, item.title, item.domainTitle, assessmentSpecMd);
     return {
       ...item,
       planWeek: route?.week ?? item.planWeek,
@@ -311,7 +319,7 @@ export async function getKnowledgePointByCode(code: string): Promise<KnowledgePo
   const result = results[0];
   if (!result) return null;
   const route = KNOWLEDGE_ROUTE_INDEX.get(result.code);
-  const challengeProfile = inferChallengeProfile(result.code, result.title, result.domainTitle);
+  const challengeProfile = inferChallengeProfile(result.code, result.title, result.domainTitle, result.assessmentSpecMd);
   const learningActivities = buildLearningActivities(result, challengeProfile);
   return {
     ...result,
@@ -335,12 +343,11 @@ function buildLearningActivities(
   point: Pick<KnowledgePointDetail, 'code' | 'studyMinutes' | 'practiceMinutes' | 'projectMinutes' | 'studyMaterialMd' | 'assessmentSpecMd' | 'passCriteriaMd' | 'title'>,
   profile: ReturnType<typeof inferChallengeProfile>,
 ): LearningActivity[] {
-  const minimumOutput = extractMinimumOutput(point.assessmentSpecMd)
-    || `围绕“${point.title}”完成一个能说明适用边界的最小例子，并记录预期与实际结果。`;
+  const strictTasks = extractStrictAssessmentTasks(point.assessmentSpecMd);
+  if (!strictTasks) throw new Error(`${point.code} 缺少可解析的首考题 3 / 首考题 4 严格考核合同`);
   const references = extractLearningMaterialReferences(point.studyMaterialMd, point.title);
-  const tags = extractKnowledgeTags(point.title);
-  const sourceNames = references.slice(0, 3).map((item) => `《${item.title}》`).join('、');
-  const taskLiteral = JSON.stringify(minimumOutput);
+  const sourceNames = references.map((item) => `《${item.title}》`).join('、');
+  const practiceProfile = profile as PracticeProfile;
   const activities: LearningActivity[] = [{
     id: 'reading', type: 'READING', label: '资料阅读与笔记', minutes: point.studyMinutes, optional: false,
     task: '读完列出的资料，记录核心概念、仍有疑问的地方，以及至少一个边界或反例。',
@@ -349,63 +356,51 @@ function buildLearningActivities(
     completionCriteria: ['由你确认资料已经阅读', '原始笔记已保存；系统不会用 AI 稿覆盖原文'],
     deliveryMode: 'READ_ONLY', workspaceMode: null, language: null, starterCode: null, submissionTemplate: null,
     materialReferences: references,
+    failureFixture: null, verificationChecklist: [], vetoItems: [],
   }];
-  if (profile === 'THEORY_ONLY') {
-    activities.push({
-      id: 'case-study', type: 'CASE_STUDY', label: '站内案例辨析', minutes: point.practiceMinutes, optional: true,
-      task: minimumOutput,
-      input: `待分析任务：${minimumOutput}\n只允许使用 ${sourceNames} 与当前知识点通过标准。`,
-      outputRequirements: ['明确结论', '资料名称与定位', '规则 → 条件 → 结论的推导链', '一个不成立的边界或反例'],
-      completionCriteria: ['所有输出栏目均已填写', '结论能回指学习资料', '系统验证推导链与知识点边界一致'],
-      deliveryMode: 'WORKSPACE', workspaceMode: 'TEXT', language: null, starterCode: null,
-      submissionTemplate: '# 结论\n\n# 资料依据与定位\n\n# 推导过程\n1. 资料规则：\n2. 题目条件：\n3. 中间推导：\n4. 结论：\n\n# 边界或反例\n',
-      materialReferences: references,
-    });
-    return activities;
-  }
   const isCode = profile === 'CODING';
-  const language = point.code.startsWith('TS-') ? 'typescript' : 'javascript';
+  const label = ({
+    THEORY_ONLY: '站内案例辨析', EXAMPLE_DRIVEN: '站内最小示例', CODING: '站内编码验证',
+    DEBUGGING: '站内故障诊断', TOOL_OPERATION: '站内工具操作', DESIGN_CASE: '站内方案取舍',
+  } as const)[profile];
+  const outputByProfile: Record<PracticeProfile, string[]> = {
+    THEORY_ONLY: ['题 3 结论与推导链', '固定条件下的预期和实际结论', '题 4 的异常假设、证伪和资料定位'],
+    EXAMPLE_DRIVEN: ['题 3 的可复现最小示例', '固定输入、预期和实际结果', '题 4 的异常复现、根因或排除证据'],
+    CODING: ['题 3 的可执行实现', '固定输入、预期、实际输出与断言', '题 4 的异常、根因、修复和回归证据'],
+    DEBUGGING: ['题 3 复现基线', '题 4 的假设、证伪、根因、修复和回归', '固定输入、预期与实际现象'],
+    TOOL_OPERATION: ['题 3 的命令、配置或操作产物', '环境、固定输入、预期与实际结果', '题 4 的异常处理和验证证据'],
+    DESIGN_CASE: ['题 3 的方案产出', '固定场景、约束与候选方案取舍', '题 4 的异常假设、证伪与验证证据'],
+  };
+  const verificationChecklist = [
+    '首考题 3 和首考题 4 原文均已绑定到本练习',
+    '提交模板的每个固定栏目都已填写',
+    '固定输入、预期、实际和验证证据均可定位',
+    ...practiceEvidenceRequirements(practiceProfile),
+    ...(isCode ? ['代码包含固定输入、expected、actual 与 console.assert，并已成功执行'] : []),
+  ];
   activities.push({
-    id: 'guided-practice', type: 'GUIDED_PRACTICE', label: isCode ? '站内脚本练习' : '站内机制练习', minutes: point.practiceMinutes, optional: true,
-    task: minimumOutput,
-    input: isCode
-      ? `固定任务输入：${minimumOutput}\n系统已在代码模板中提供 normal、boundary、failure 三个不可省略的样例编号；预期输出分别为 PASS、PASS、CONTROLLED。禁止依赖外部服务；重点验证 ${tags.join('、') || point.title}。`
-      : `给定任务：${minimumOutput}\n依据仅限 ${sourceNames} 与当前知识点通过标准。`,
-    outputRequirements: isCode
-      ? ['可独立执行的 JavaScript/TypeScript 脚本', '明确的固定输入', '控制台输出预期值与实际值', '正常、边界、异常至少三类验证', '说明代码如何对应资料机制']
-      : ['按任务逐项给出结果', '标明使用的资料与定位', '写出预期结果和实际判断', '解释至少一个边界或失败条件'],
-    completionCriteria: isCode
-      ? ['脚本在站内隔离运行区执行成功', '控制台没有未处理错误', '提交内容包含输入、输出与资料机制映射', '系统完成语义验证']
-      : ['所有输出栏目均已填写', '答案能够回指资料', '系统验证结论与边界'],
-    deliveryMode: 'WORKSPACE', workspaceMode: isCode ? 'CODE' : 'TEXT', language: isCode ? language : null,
-    starterCode: isCode
-      ? `// ${point.code} ${point.title}\n// 固定输入：保留三个样例编号，并把 description 补成可执行的具体数据。\nconst input = Object.freeze({\n  task: ${taskLiteral},\n  cases: [\n    { id: 'normal', description: '填写正常输入' },\n    { id: 'boundary', description: '填写边界输入' },\n    { id: 'failure', description: '填写异常输入' },\n  ],\n});\n\n// 固定预期输出：实现必须让三个样例分别得到这些状态。\nconst expectedOutput = Object.freeze({ normal: 'PASS', boundary: 'PASS', failure: 'CONTROLLED' });\n\nfunction solve(givenInput) {\n  // 根据学习资料实现；返回 { normal, boundary, failure }。\n  return { normal: 'TODO', boundary: 'TODO', failure: 'TODO' };\n}\n\nconst actualOutput = solve(input);\nconsole.log({ input, expectedOutput, actualOutput });\nfor (const id of ['normal', 'boundary', 'failure']) {\n  console.assert(actualOutput[id] === expectedOutput[id], id + ' 的实际输出不符合预期');\n}\n`
-      : null,
-    submissionTemplate: isCode
-      ? '# 固定输入\n\n# 预期输出\n\n# 实际输出\n\n# 资料机制映射\n\n# 边界与异常验证\n'
-      : '# 任务结果\n\n# 资料依据与定位\n\n# 预期与实际\n\n# 机制解释\n\n# 边界或失败条件\n',
-    materialReferences: references,
-  });
-  activities.push({
-    id: 'application', type: 'APPLICATION', label: '站内综合产出', minutes: point.projectMinutes, optional: true,
-    task: minimumOutput,
-    input: isCode
-      ? `固定综合任务：${minimumOutput}\n代码模板给出 normal、boundary、failure 三个固定输入槽位与 PASS、PASS、CONTROLLED 三个预期状态；必须在站内逐项运行并保留输出。`
-      : `把前一项练习扩展成可复核产出：${minimumOutput}\n必须显式使用当前知识点的资料依据和通过标准。`,
-    outputRequirements: isCode
-      ? ['可独立执行的完整脚本', '固定输入与约束', '预期与实际输出', '正常、边界和异常样例的验证证据', '资料依据、机制映射和仍未解决的问题']
-      : ['任务结果或实现说明', '输入与约束', '预期与实际输出', '验证步骤与证据', '资料依据、边界和仍未解决的问题'],
-    completionCriteria: isCode
-      ? ['完整脚本已在本页面隔离运行区执行成功', '输入、输出和验证证据齐全', '系统验证与学习资料及通过标准一致']
-      : ['产出可在本页面完整查看', '输入、输出和验证证据齐全', '系统验证与学习资料及通过标准一致'],
-    deliveryMode: 'WORKSPACE', workspaceMode: isCode ? 'CODE' : 'TEXT', language: isCode ? language : null,
-    starterCode: isCode
-      ? `// ${point.code} ${point.title} · 综合产出\nconst task = ${taskLiteral};\nconst cases = [\n  { id: 'normal', input: { description: '填写正常输入' }, expected: 'PASS' },\n  { id: 'boundary', input: { description: '填写边界输入' }, expected: 'PASS' },\n  { id: 'failure', input: { description: '填写异常输入' }, expected: 'CONTROLLED' },\n];\n\nfunction solve(input) {\n  // 根据学习资料实现，并返回 PASS 或 CONTROLLED。\n  return 'TODO';\n}\n\nconsole.log({ task });\nfor (const testCase of cases) {\n  const actual = solve(testCase.input);\n  console.log(testCase.id, { input: testCase.input, expected: testCase.expected, actual });\n  console.assert(actual === testCase.expected, testCase.id + ' 未通过');\n}\n`
-      : null,
-    submissionTemplate: '# 输入与约束\n\n# 产出\n\n# 预期输出\n\n# 实际输出与验证证据\n\n# 资料依据\n\n# 边界与未解决问题\n',
-    materialReferences: references,
+    id: 'strict-practice', type: profile === 'THEORY_ONLY' ? 'CASE_STUDY' : 'GUIDED_PRACTICE', label,
+    minutes: point.practiceMinutes + (profile === 'THEORY_ONLY' ? 0 : point.projectMinutes), optional: true,
+    task: strictTasks.minimumOutput,
+    input: `首考题 3（最小产出）原文：${strictTasks.minimumOutput}\n\n首考题 4（受限排错）原文：${strictTasks.constrainedDebugging}\n\n仅可依据 ${sourceNames} 和本点通过标准完成；不得用通用 PASS/CONTROLLED 模板替换题目给定的输入、预期或异常。`,
+    outputRequirements: outputByProfile[practiceProfile],
+    completionCriteria: verificationChecklist,
+    deliveryMode: 'WORKSPACE', workspaceMode: isCode ? 'CODE' : 'TEXT', language: isCode ? (point.code.startsWith('TS-') ? 'typescript' : 'javascript') : null,
+    starterCode: isCode ? strictPracticeStarterCode(point, strictTasks.minimumOutput, strictTasks.constrainedDebugging) : null,
+    submissionTemplate: practiceSubmissionTemplate(practiceProfile), materialReferences: references,
+    failureFixture: strictTasks.constrainedDebugging,
+    verificationChecklist,
+    vetoItems: ['未保留首考题 3 的具体产出或首考题 4 的受限排错证据', '以资料外经验、空泛描述或预设 PASS/CONTROLLED 状态替代题目要求'],
   });
   return activities;
+}
+
+function strictPracticeStarterCode(
+  point: Pick<KnowledgePointDetail, 'code' | 'title'>,
+  minimumOutput: string,
+  constrainedDebugging: string,
+) {
+  return `// ${point.code} ${point.title}\n// 首考题 3 原文：${minimumOutput}\n// 首考题 4 原文：${constrainedDebugging}\n// 把题目给定的具体 fixture 写入 fixedInput；不要把预期替换成通用 PASS/CONTROLLED。\nconst fixedInput = Object.freeze({ /* 填写首考题 3 的固定输入 */ });\nconst expected = Object.freeze({ /* 填写题目要求的具体预期 */ });\n\nfunction solve(input) {\n  // 根据学习资料实现首考题 3。\n  throw new Error('TODO');\n}\n\nlet actual;\ntry {\n  actual = solve(fixedInput);\n  console.log({ fixedInput, expected, actual });\n  console.assert(JSON.stringify(actual) === JSON.stringify(expected), '实际输出与首考题 3 的具体预期不一致');\n} catch (error) {\n  console.error({ fixedInput, expected, error: String(error) });\n  throw error;\n}\n`;
 }
 
 /**

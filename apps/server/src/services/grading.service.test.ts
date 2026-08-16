@@ -6,7 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import { calculateVerdict, PASS_THRESHOLD } from '@career-atlas/shared';
 import { buildGradingUserMessage } from '../ai/provider.js';
-import { normalizeFeedbackAndDimensionScores } from './grading.service.js';
+import { collectDeterministicContractFailures, normalizeFeedbackAndDimensionScores } from './grading.service.js';
+import { extractLocalMaterialContext } from './learning-material-context.service.js';
 
 describe('评分逻辑', () => {
   describe('calculateVerdict', () => {
@@ -206,5 +207,39 @@ describe('DeepSeek 评分契约', () => {
       troubleshootingAndDesign: 25,
       projectCommunication: 15,
     });
+  });
+});
+
+describe('逐题合同评分门禁', () => {
+  it('编码题漏掉本地自检记录时只产生诊断提示，不能升级为服务端硬证据', () => {
+    const questions = [{
+      id: 'coding-q3', dimension: 'practice', maxScore: 35,
+      questionContent: JSON.stringify({
+        deterministicRequired: true,
+        testCases: [{ id: 'contract-normal' }, { id: 'contract-boundary' }],
+      }),
+    }];
+    const failures = collectDeterministicContractFailures(questions, [{
+      questionId: 'coding-q3',
+      answerContent: 'const actual = runFixture(); console.assert(actual === expected, "contract-normal"); console.assert(actual === expected, "contract-boundary");',
+      deterministicResult: JSON.stringify({ passed: true, output: '[ASSERT PASS] contract-normal' }),
+    }]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.reason).toContain('contract-boundary');
+    expect(failures[0]?.reason).toContain('不能单独决定结果');
+  });
+
+  it('JS 与 AI 点的本地中文讲义正文会进入评分上下文，而非只给 Markdown 链接', () => {
+    const examples = [
+      ['[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#js-07)', 'core-and-ecosystem-topics.md#js-07', 'JS-07'],
+      ['[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#aiapp-01)', 'core-and-ecosystem-topics.md#aiapp-01', 'AIAPP-01'],
+    ] as const;
+    for (const [markdown, source, marker] of examples) {
+      const context = extractLocalMaterialContext(markdown);
+      expect(context).toHaveLength(1);
+      expect(context[0]?.source).toBe(source);
+      expect(context[0]?.content).toContain(marker);
+      expect(context[0]?.content.length).toBeGreaterThan(300);
+    }
   });
 });

@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { rawDb } from '../db/index.js';
 import { aiThinkingRequestOption, config } from '../config/index.js';
 import { getKnowledgePointByCode } from './knowledge.service.js';
+import { PRACTICE_SECTION_HEADINGS, type PracticeProfile } from './learning-content.service.js';
+import { extractLocalMaterialContext } from './learning-material-context.service.js';
 
 export interface PracticeAttemptInput {
   submissionMd: string;
@@ -11,12 +13,13 @@ export interface PracticeAttemptInput {
   executionStatus?: 'NOT_RUN' | 'SUCCESS' | 'ERROR' | 'TIMEOUT';
 }
 
-type PracticeReview = {
+export type PracticeReview = {
   passed: boolean;
   summary: string;
   checks: Array<{ label: string; passed: boolean }>;
   nextAction: string;
   mode: 'AI' | 'RULE';
+  validationLevel: 'STRUCTURE_ONLY' | 'SEMANTIC';
 };
 
 type PracticeAttemptRow = {
@@ -46,6 +49,7 @@ export function listPracticeAttempts(code: string) {
 }
 
 export function savePracticeAttempt(code: string, activityId: string, input: PracticeAttemptInput) {
+  assertStrictPracticeId(activityId);
   const now = new Date().toISOString();
   const existing = rawDb.prepare(`${selectAttempt} WHERE knowledge_point_code = ? AND activity_id = ? LIMIT 1`)
     .get(code, activityId) as PracticeAttemptRow | undefined;
@@ -86,15 +90,7 @@ export async function validatePracticeAttempt(
   const activity = point.learningActivities.find((item) => item.id === activityId && item.deliveryMode === 'WORKSPACE');
   if (!activity) throw new Error('练习任务不存在或不需要提交');
   const saved = savePracticeAttempt(code, activityId, input);
-  const localChecks = [
-    { label: '提交说明达到可复核长度', passed: input.submissionMd.trim().length >= 80 },
-    { label: '包含资料、依据、机制、输入或输出等证据', passed: /资料|依据|机制|输入|输出|验证|边界/.test(input.submissionMd) },
-    ...(activity.workspaceMode === 'CODE' ? [
-      { label: '代码达到最小可运行规模', passed: (input.code?.trim().length ?? 0) >= 80 },
-      { label: '脚本已在站内执行成功', passed: input.executionStatus === 'SUCCESS' },
-      { label: '已保存实际执行输出', passed: Boolean(input.executionOutput?.trim()) },
-    ] : []),
-  ];
+  const localChecks = buildLocalContractChecks(activity, input, point.challengeProfile as PracticeProfile);
   const locallyReady = localChecks.every((item) => item.passed);
   onProgress(locallyReady ? '本地必备项已通过，正在依据学习资料进行 AI 核对' : '本地必备项尚未齐全，正在生成明确的补充要求');
   let review: PracticeReview | null = locallyReady ? await requestAiPracticeReview(point, activity, input, onProgress, signal) : null;
@@ -102,24 +98,81 @@ export async function validatePracticeAttempt(
     review = {
       passed: locallyReady,
       summary: locallyReady
-        ? '输入、输出、资料依据和验证证据已经齐全；当前使用本地规则完成结构验证。'
-        : '提交内容还不能被复核，请先补齐未通过的检查项。',
+        ? '已完成站内练习合同的确定性结构核验；未配置 AI 时，本结论不表示语义或技术方案已被判定正确。'
+        : '提交尚未满足可确定的练习合同；请逐项补齐未通过的固定栏目、输入/预期/实际或验证证据。',
       checks: localChecks,
-      nextAction: locallyReady ? '可以保留为练习证据，继续下一项。' : '根据红色检查项补充后再次验证。',
+      nextAction: locallyReady ? '可保留为结构完整的练习证据；需要语义正确性判断时，请在可用 AI 下再次验证或参加严格考核。' : '根据红色检查项补充后再次验证。',
       mode: 'RULE' as const,
+      validationLevel: 'STRUCTURE_ONLY' as const,
     };
   }
   const merged = {
     ...review,
     passed: locallyReady && review.passed,
-    checks: review.checks?.length ? review.checks : localChecks,
+    checks: mergePracticeChecks(localChecks, review.checks ?? []),
     mode: review.mode ?? 'AI',
+    validationLevel: review.mode === 'AI' ? 'SEMANTIC' as const : 'STRUCTURE_ONLY' as const,
   };
   const now = new Date().toISOString();
   rawDb.prepare(`UPDATE learning_practice_attempts SET validation_json = ?, status = ?, updated_at = ? WHERE id = ?`)
     .run(JSON.stringify(merged), merged.passed ? 'COMPLETED' : 'DRAFT', now, saved.id);
   onProgress('验证结论已完成并保存');
   return getPracticeAttempt(code, activityId);
+}
+
+function assertStrictPracticeId(activityId: string) {
+  if (activityId !== 'strict-practice') {
+    throw new Error('每个知识点只有“strict-practice”这一项可提交练习；阅读和历史模板不可提交。');
+  }
+}
+
+type WorkspaceActivity = NonNullable<NonNullable<Awaited<ReturnType<typeof getKnowledgePointByCode>>>['learningActivities'][number]>;
+
+function buildLocalContractChecks(activity: WorkspaceActivity, input: PracticeAttemptInput, profile: PracticeProfile) {
+  const headings = PRACTICE_SECTION_HEADINGS[profile];
+  const markdown = input.submissionMd.replace(/\r\n/g, '\n');
+  const checks = [
+    { label: '首考题 3 原文已绑定到任务', passed: activity.task.trim().length > 0 && activity.input.includes(activity.task) },
+    { label: '首考题 4 受限排错原文已绑定到任务', passed: Boolean(activity.failureFixture?.trim()) && activity.input.includes(activity.failureFixture ?? '') },
+    ...headings.map((heading, index) => ({
+      label: `已填写固定栏目：${heading}`,
+      passed: hasFilledHeading(markdown, heading, headings[index + 1]),
+    })),
+    { label: '固定输入、预期、实际和验证证据均已保留', passed: /# (?:固定输入|固定输入与约束|固定场景与约束)/.test(markdown)
+      && /# (?:预期(?:结论|结果|输出)|固定输入与预期|预期与实际结果)/.test(markdown)
+      && /# (?:实际(?:结论|结果|输出|现象)|预期与实际结果)/.test(markdown)
+      && /# (?:验证证据|回归验证证据)/.test(markdown) },
+  ];
+  if (activity.workspaceMode === 'CODE') {
+    const source = input.code ?? '';
+    checks.push(
+      { label: '代码保留 fixedInput、expected 与 actual', passed: /\bfixedInput\b/.test(source) && /\bexpected\b/.test(source) && /\bactual\b/.test(source) },
+      { label: '代码包含针对具体预期的断言', passed: /console\.assert\s*\(/.test(source) && !/expectedOutput\s*=\s*.*PASS|CONTROLLED/.test(source) },
+      { label: '脚本已在站内执行成功', passed: input.executionStatus === 'SUCCESS' },
+      { label: '执行输出保留固定输入、预期和实际值', passed: /fixedInput|input/.test(input.executionOutput ?? '') && /expected/.test(input.executionOutput ?? '') && /actual/.test(input.executionOutput ?? '') },
+    );
+  }
+  return checks;
+}
+
+function hasFilledHeading(markdown: string, heading: string, nextHeading?: string) {
+  const start = markdown.indexOf(`# ${heading}`);
+  if (start < 0) return false;
+  const bodyStart = start + heading.length + 2;
+  const end = nextHeading ? markdown.indexOf(`# ${nextHeading}`, bodyStart) : markdown.length;
+  const body = markdown.slice(bodyStart, end < 0 ? markdown.length : end).trim();
+  return body.length >= 8 && !/^(?:TODO|待填写|填写|待补充|暂无|n\/a)[。.!！\s]*$/i.test(body);
+}
+
+/** 同名项以本地门禁为准；AI 不得用同名的“通过”结论覆盖本地失败。 */
+export function mergePracticeChecks(
+  localChecks: Array<{ label: string; passed: boolean }>,
+  reviewChecks: Array<{ label: string; passed: boolean }>,
+) {
+  const merged = new Map<string, { label: string; passed: boolean }>();
+  for (const check of localChecks) merged.set(check.label, check);
+  for (const check of reviewChecks) if (!merged.has(check.label)) merged.set(check.label, check);
+  return [...merged.values()];
 }
 
 function getPracticeAttempt(code: string, activityId: string) {
@@ -165,6 +218,8 @@ async function requestAiPracticeReview(
             outputRequirements: activity.outputRequirements,
             completionCriteria: activity.completionCriteria,
             materialReferences: activity.materialReferences,
+            // 外部链接只提供元数据；本地中文讲义的已链接章节正文才是 AI 的可核验依据。
+            materialContext: extractLocalMaterialContext(point.studyMaterialMd),
             passCriteria: point.passCriteriaMd,
             submissionMd: input.submissionMd,
             code: input.code ?? '',
@@ -215,6 +270,7 @@ async function requestAiPracticeReview(
       checks: parsed.checks ?? [],
       nextAction: parsed.nextAction,
       mode: 'AI',
+      validationLevel: 'SEMANTIC',
     };
   } catch {
     return null;

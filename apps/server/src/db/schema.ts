@@ -375,7 +375,7 @@ export const assessmentAnswers = sqliteTable('assessment_answers', {
   // 答案内容
   answerContent: text('answer_content').notNull(), // JSON string
 
-  // 确定性测试结果（代码题）
+  // 历史字段名：当前保存的是未经服务端认证的本地 Worker 自检记录（代码题）
   deterministicResult: text('deterministic_result'), // JSON string
 
   // 提交时间

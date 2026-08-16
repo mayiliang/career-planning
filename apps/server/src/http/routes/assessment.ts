@@ -45,6 +45,11 @@ const ExecuteCodeQuestionRequestSchema = z.object({
   memoryLimitMb: z.number().int().min(16).max(512).optional(),
 });
 
+const SaveAssessmentAnswerSchema = z.object({
+  answerContent: z.string().min(1).max(120_000),
+  deterministicResult: z.string().max(16_000).optional(),
+});
+
 // ===== 路由插件 =====
 
 export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => {
@@ -186,9 +191,8 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
   // ===== PUT /api/v1/assessments/:id/answers/:questionId - 保存答案 =====
   app.put('/api/v1/assessments/:id/answers/:questionId', async (request, reply) => {
     const { id, questionId } = request.params as { id: string; questionId: string };
-    const body = request.body as { answerContent: string; deterministicResult?: string };
-    
     try {
+      const body = SaveAssessmentAnswerSchema.parse(request.body);
       const answer = await saveAnswer(id, questionId, body.answerContent, body.deterministicResult);
       
       return reply.ok({
