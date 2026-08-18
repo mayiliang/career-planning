@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { resolvePointTaxonomy } from '@career-atlas/content-parser';
 import { CONTENT_PLAN_WEEK_COUNT, LEARNING_WEEK_PATHS } from './plan.service.js';
-import { KNOWLEDGE_PATHS, buildRelationDefinitions } from './knowledge-relations.service.js';
+import {
+  DEFAULT_TRACK_IDS,
+  FRAMEWORK_ROUTE_CANDIDATES,
+  KNOWLEDGE_PATHS,
+  RECOMMENDED_KNOWLEDGE_ROUTE,
+  buildRelationDefinitions,
+} from './knowledge-relations.service.js';
 
 describe('知识关系与 64 周计划编排', () => {
-  it('完整体系包含 223 点，默认 60 周只覆盖全员必修与 React、Agent/MCP 默认主修', () => {
+  it('完整体系包含 223 点，默认 60 周覆盖全员必修与同等优先的 React、Vue、Agent/MCP 主修', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
       .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
@@ -18,13 +24,27 @@ describe('知识关系与 64 周计划编排', () => {
       for (const code of path) {
         const { requirementLevel, trackIds } = resolvePointTaxonomy(code, domainCode);
         const belongsToDefaultTrack = requirementLevel === 'TRACK_REQUIRED'
-          && trackIds.some((trackId) => trackId === 'react' || trackId === 'agent-mcp');
+          && trackIds.some((trackId) => DEFAULT_TRACK_IDS.has(trackId));
         expect(
           plannedSet.has(code),
           `${code} 的默认路线归属与要求级别不一致`,
         ).toBe(requirementLevel === 'REQUIRED' || belongsToDefaultTrack);
       }
     });
+
+    expect([...DEFAULT_TRACK_IDS]).toEqual(['react', 'vue', 'agent-mcp']);
+    expect(plannedSet.has('REACT-01')).toBe(true);
+    expect(plannedSet.has('REACT-09')).toBe(true);
+    expect(plannedSet.has('VUE-01')).toBe(true);
+    expect(plannedSet.has('VUE-11')).toBe(true);
+    expect(plannedSet.has('VUE-09')).toBe(false);
+
+    const plannedFrameworkRoute = RECOMMENDED_KNOWLEDGE_ROUTE.filter(
+      (code) => code.startsWith('REACT-') || code.startsWith('VUE-'),
+    );
+    expect(plannedFrameworkRoute).toEqual(
+      FRAMEWORK_ROUTE_CANDIDATES.filter((code) => code !== 'VUE-09'),
+    );
   });
 
   it('只把真实依赖建成硬前置，不把推荐阅读顺序机械转成前置', () => {
@@ -76,6 +96,10 @@ describe('知识关系与 64 周计划编排', () => {
     expect(relationKeys.has('MCP-01->AIAPP-05')).toBe(false);
     expect(relationKeys.has('RENDER-01->RENDER-02')).toBe(true);
     expect(relationKeys.has('REACT-02->REACT-10')).toBe(true);
+    expect(relationKeys.has('VUE-02->VUE-05')).toBe(true);
+    expect(relationKeys.has('VUE-05->VUE-06')).toBe(true);
+    expect(relationKeys.has('VUE-02->VUE-08')).toBe(true);
+    expect(relationKeys.has('VUE-07->VUE-11')).toBe(true);
     expect(relationKeys.has('ARCH-04->ARCH-05')).toBe(true);
     expect(relationKeys.has('WEB-01->EDITOR-01')).toBe(true);
     expect(relationKeys.has('AGENT-09->AGENT-10')).toBe(false);
@@ -101,6 +125,8 @@ describe('知识关系与 64 周计划编排', () => {
       .map(([pair]) => pair);
     expect(conflictingPairs, '同一知识对不得同时标记为前置与相关').toEqual([]);
     expect(definitions.some((relation) => relation.source === 'REACT-05' && relation.target === 'VUE-06' && relation.type === 'RELATED')).toBe(true);
+    expect(definitions.some((relation) => relation.source === 'REACT-10' && relation.target === 'VUE-07' && relation.type === 'RELATED')).toBe(true);
+    expect(definitions.some((relation) => relation.source === 'REACT-09' && relation.target === 'VUE-11' && relation.type === 'RELATED')).toBe(true);
     expect(definitions.some((relation) => relation.source === 'AIAPP-04' && relation.target === 'AGENT-01' && relation.type === 'PREREQUISITE')).toBe(true);
   });
 

@@ -25,7 +25,7 @@ export const KNOWLEDGE_PATHS: string[][] = [
   ['COMP-01', 'COMP-02', 'DS-01', 'UX-01', 'COMP-03', 'PLATFORM-01', 'PLATFORM-02', 'PLATFORM-03', 'EMBED-01', 'RUNTIME-01', 'RUNTIME-02', 'MOBILE-01'],
   ['NODE-01', 'NODE-02', 'NODE-04', 'NODE-03', 'API-01', 'API-02'],
   ['CAREER-01', 'CAREER-02', 'CAREER-04', 'CAREER-05', 'CAREER-06'],
-  ['VUE-01', 'VUE-02', 'VUE-03', 'VUE-04', 'VUE-05', 'VUE-06', 'VUE-07', 'VUE-08', 'VUE-09', 'VUE-10', 'VUE-11'],
+  ['VUE-01', 'VUE-02', 'VUE-03', 'VUE-04', 'VUE-05', 'VUE-06', 'VUE-07', 'VUE-08', 'VUE-10', 'VUE-11', 'VUE-09'],
   ['AIAPP-01', 'AIAPP-02', 'AIAPP-03', 'AIAPP-04', 'AIAPP-05', 'AIUI-01', 'AIAPP-06', 'AIAPP-07', 'AIAPP-08', 'AIAPP-09', 'AIAPP-10', 'AIAPP-11', 'AIMEDIA-01', 'AIAPP-12', 'AIAPP-13'],
   ['MCP-01', 'AGENT-01', 'AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07', 'AGENT-11', 'AGENT-08', 'AGENT-09', 'AGENT-10'],
   ['WEBAI-01', 'WEBAI-02', 'WEBAI-03', 'WEBAI-11', 'WEBAI-04', 'WEBAI-05', 'WEBAI-06', 'WEBAI-07', 'WEBAI-08', 'WEBAI-09', 'WEBAI-10', 'WEBAGENT-01'],
@@ -38,8 +38,23 @@ export const KNOWLEDGE_PATHS: string[][] = [
 ];
 
 /**
+ * React 与 Vue 共用同一框架阶段并交错出现，避免按领域文件顺序把 Vue
+ * 隐式放在 React 之后；VUE-09 仍是按项目需要选择的服务器状态库专项。
+ */
+export const FRAMEWORK_ROUTE_CANDIDATES = [
+  'REACT-01', 'VUE-01', 'VUE-02',
+  'REACT-02', 'VUE-03', 'VUE-04', 'REACT-03',
+  'REACT-04', 'VUE-05', 'REACT-05', 'VUE-06',
+  'REACT-06', 'VUE-08',
+  'REACT-08', 'REACT-10', 'VUE-07',
+  'REACT-07', 'VUE-10',
+  'REACT-09', 'VUE-11',
+  'VUE-09',
+] as const;
+
+/**
  * 完整候选顺序用于知识图谱和分支编排；默认 60 周路线只纳入全员必修，
- * 加上默认的 React 与 Agent/MCP 主修轨，避免把 Vue、Umi、图形、端侧推理等选修误标成必修。
+ * 加上同等优先的 React、Vue 与 Agent/MCP 主修轨，避免把其他专项误标成必修。
  */
 const COMPLETE_ROUTE_CANDIDATES = [
   ...(KNOWLEDGE_PATHS[0] ?? []).filter((code) => code !== 'DEBUG-01'),
@@ -50,8 +65,7 @@ const COMPLETE_ROUTE_CANDIDATES = [
   'NODE-01', 'NODE-02', 'NODE-04', 'NODE-03', 'API-01',
   'ENG-01', 'ENG-02', 'ENG-03', 'ENG-04', 'ENG-05', 'TEST-01', 'TEST-02', 'TEST-03',
   'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
-  ...(KNOWLEDGE_PATHS[2] ?? []),
-  ...(KNOWLEDGE_PATHS[10] ?? []),
+  ...FRAMEWORK_ROUTE_CANDIDATES,
   'BIZ-01', 'BIZ-02', 'BIZ-03',
   ...(KNOWLEDGE_PATHS[3] ?? []),
   'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08', 'TEST-04',
@@ -78,7 +92,7 @@ const COMPLETE_ROUTE_CANDIDATES = [
 const DOMAIN_CODE_BY_POINT = new Map(
   KNOWLEDGE_PATHS.flatMap((path, index) => path.map((code) => [code, String(index + 1).padStart(2, '0')] as const)),
 );
-export const DEFAULT_TRACK_IDS = new Set(['react', 'agent-mcp']);
+export const DEFAULT_TRACK_IDS = new Set(['react', 'vue', 'agent-mcp']);
 const PLAN_ROUTE = COMPLETE_ROUTE_CANDIDATES.filter((code) => {
   const domainCode = DOMAIN_CODE_BY_POINT.get(code);
   if (!domainCode) throw new Error(`默认路线包含未知知识点：${code}`);
@@ -137,6 +151,10 @@ const explicitPrerequisites: Array<[string, string, string]> = [
   ['TS-03', 'REACT-05', '泛型与约束支撑类型安全的自定义 Hook'],
   ['REACT-03', 'REACT-06', '跨组件状态边界需要先掌握状态归属、派生与提升原则'],
   ['JS-07', 'VUE-02', 'Vue 响应式代理建立在对象身份、Proxy 与 Reflect 语义之上'],
+  ['VUE-02', 'VUE-05', '副作用监听、失效清理与异步恢复建立在 Vue 响应式依赖追踪之上'],
+  ['VUE-05', 'VUE-06', '抽取 Composable 前需掌握组件副作用、停用/卸载与资源清理边界'],
+  ['VUE-02', 'VUE-08', 'Pinia 的 state、getter 与订阅传播建立在 Vue 响应式语义之上'],
+  ['VUE-07', 'VUE-11', 'Nuxt 路由与全栈导航恢复需要先掌握 Vue Router 的匹配、参数和守卫边界'],
   ['WEB-01', 'A11Y-01', '可访问名称、表单和焦点顺序首先依赖语义 HTML'],
   ['WEB-02', 'WEB-03', '先掌握布局与层叠，再建立现代 CSS 架构'],
   ['BROWSER-01', 'WEB-04', '原生分层 UI 与导航增强依赖浏览器事件、渲染和历史模型'],
@@ -310,6 +328,12 @@ const relatedPairs: Array<[string, string, string]> = [
   ['REACT-05', 'VUE-06', '自定义 Hook 与 Composable 都解决组件逻辑复用'],
   ['REACT-06', 'VUE-08', 'Context 与 Pinia 都涉及跨组件状态边界'],
   ['REACT-07', 'VUE-10', '两个框架都必须以测量驱动性能优化'],
+  ['REACT-01', 'VUE-02', 'React state snapshot 与 Vue 依赖追踪是两种不同的更新心智模型'],
+  ['REACT-02', 'VUE-04', 'React 组合与 Vue 类型化 props/emits/slots 都要求显式组件合同和所有权'],
+  ['REACT-04', 'VUE-05', 'Effect 与 watch 都需要处理依赖、失效清理和迟到异步结果'],
+  ['REACT-08', 'VUE-05', '两个框架都需要区分 pending 协调、错误捕获和可恢复重试边界'],
+  ['REACT-10', 'VUE-07', 'React Router 与 Vue Router 都以 URL、导航、数据和服务端授权边界为核心'],
+  ['REACT-09', 'VUE-11', 'React 与 Nuxt 的演进能力都需要版本锁定、安全公告、灰度和稳定回退'],
   ['REACT-08', 'AIAPP-10', '可恢复异步体验是 AI 产品信任设计的基础'],
   ['ANTD-04', 'H5-01', '移动组件设计需要适配和安全区基础'],
   ['BIZ-03', 'PLATFORM-03', '平台采用率依赖可配置且可治理的权限边界'],

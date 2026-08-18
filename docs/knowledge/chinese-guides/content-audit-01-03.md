@@ -262,6 +262,16 @@ class CardBoundary extends React.Component<{ resetKey: string; onRetry(): void; 
 
 恢复 UI 也需要测量，但性能优化不是本点的默认目标。为 `onRetry` 使用 `useCallback`、为纯错误展示组件使用 `memo`、为昂贵且确定的错误摘要使用 `useMemo` 前，先在同一错误—重试脚本下用 Profiler 记录提交次数与 `actualDuration`；然后分别删除三个优化，若中位数、焦点和请求次数没有变好，就撤销这些缓存。验收同时检查 retry 按钮在 reset 后仍可聚焦、旧 promise 兑现不会覆盖新请求、日志不暴露敏感 cause；这样 `memo`/`useMemo`/`useCallback` 是可反证的恢复体验证据，而不是掩盖错误状态设计的装饰。
 
+## REACT-09
+
+**定义与当前基线。** 本点把三类经常被混写的事情分开：React 19.2 是运行时与 DOM 能力基线，React Compiler 1.0 是稳定的编译期优化工具，React Server Components（RSC）与 Server Functions 则是由框架和打包器承载的服务端协议边界。Compiler 已稳定不代表所有组件都必然变快；RSC 能在服务端执行也不代表客户端输入已经可信。安全结论必须以实施时最新的 React 官方公告和所用框架公告为准，不能停留在首次修复版本。2025 年 12 月的 RSC 远程代码执行公告之后，又出现拒绝服务与源码暴露的跟进修复，且早期补丁并不完整，因此“曾经升级过”不能替代当前依赖树核验。
+
+**机制与使用条件。** Compiler 在构建期分析符合 Rules of React 的组件与 Hook，生成缓存边界并由 lint/构建诊断提示无法安全优化的位置；它不会修复渲染副作用、错误 key、陈旧闭包、慢网络或服务端授权。采用时先固定 React、编译器、lint 插件、框架与构建插件版本，在一个可回滚路由切片记录启用前后的 React Performance Tracks、交互结果与构建日志。`Activity` 负责隐藏或恢复一棵 UI 子树并调整 Effect 生命周期，`useEffectEvent` 只用于 Effect 内的事件语义，不能拿来绕过依赖规则；`cacheSignal`、部分预渲染与 resume API 还受 RSC/框架支持约束，不能在普通客户端组件中假定可用。
+
+**服务端信任边界。** Server Component 可以读取服务端数据，Server Function 可以接收客户端序列化参数，但每一次读取和写入仍要以当前会话重新鉴权、校验资源归属、限制副作用并记录关联 ID。客户端传入的 `role`、`userId`、资源 ID、组件是否成功渲染或按钮是否隐藏都不是授权证据。依赖核验要检查实际安装的 `react-server-dom-webpack`、`react-server-dom-parcel` 或 `react-server-dom-turbopack` 及框架锁文件，而不是只看顶层 `react` 版本；发现受影响版本时升级到当前受支持分支的最新补丁，并以供应链扫描和生产构建复核，不把托管商临时缓解当作长期修复。
+
+**可复现实验与反例。** 固定一个 1,000 行列表、一个依赖不完整的手工 `memo`、一个带 `Activity` 的编辑面板，以及接收 `{ role: "admin", userId: "u2" }` 的 Server Function。先在相同脚本下记录 Compiler 关闭/开启的构建结果、提交次数和交互断言，再删除手工 `memo` 做反证；若行为回归或没有稳定收益，应缩小启用范围而不是为通过检查关闭 lint。服务端夹具把真实会话固定为 viewer，断言伪造 admin 被拒绝，并保存请求 ID、会话主体、授权决定和依赖版本清单。再注入旧 RSC 补丁、恶意超大/循环输入和可能暴露函数源码的字符串化路径，验证请求限额、超时/隔离、日志脱敏与升级闸门。否决反例包括：只改 `package.json` 不核锁文件、把“构建成功”当性能证据、把 Server Component 当授权边界、或继续使用官方已说明不完整的早期补丁。
+
 ## SEC-05
 
 定义：Web Crypto 提供浏览器中的密码原语和 `CryptoKey` 句柄，不提供“前端天然可信”的业务安全。AES-GCM 是带认证的对称加密：同一密钥下每次加密必须使用新的 IV/nonce，解密会同时验证密文与可选的附加认证数据（AAD）。适用场景是明确威胁模型下的本地数据保护、端到端协议的一部分或对服务端签名的验证；不适用于把混淆当加密、在 XSS 已失守的同一页面保护密钥，或替代服务端授权、KMS/HSM、备份与撤销。

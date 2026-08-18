@@ -60,6 +60,5 @@ pnpm test:e2e
 | [产品与开发文档](docs/development/README.md) | 产品决策、架构、API、AI 与验收 |
 | [现代 Markdown 与 AI 流式协议](docs/development/10-modern-markdown-and-ai-streaming.md) | 语法、thinking、性能和安全设计 |
 | [服务器支持与部署手册](docs/deployment/server-support.md) | 生产环境标准 |
-| [Vue 实现学习指南](docs/vue-learning-guide.md) | 结合真实代码学习 Vue 3 项目开发 |
 
 用户数据默认位于 `data/` 或 Docker 命名卷 `career-atlas-data`。升级、重装或重建容器前先备份数据；删除代码文档不会删除 SQLite 中的学习记录和笔记。

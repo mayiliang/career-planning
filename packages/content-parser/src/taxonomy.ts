@@ -163,7 +163,7 @@ const POINT_OVERRIDES: Record<string, Partial<KnowledgeTaxonomy>> = {
   'CAREER-06': { requirementLevel: 'ELECTIVE', topicTags: ['engineering-leadership'] },
 
   'VUE-09': { requirementLevel: 'ELECTIVE', trackIds: ['vue'] },
-  'VUE-11': { requirementLevel: 'ELECTIVE', trackIds: ['vue'] },
+  'VUE-11': { requirementLevel: 'TRACK_REQUIRED', maturity: 'EVOLVING', trackIds: ['vue'] },
 
   'AIAPP-05': { aiRelation: 'AI_NATIVE' },
   'AIAPP-11': { requirementLevel: 'ELECTIVE', aiRelation: 'AI_NATIVE', topicTags: ['realtime-ai'] },

@@ -118,7 +118,7 @@ const PHASE_BLUEPRINTS = [
   { through: 12, phase: '类型与协作底座', theme: 'TypeScript、身份隐私、Git、系统调试与 Node.js', projectAnchor: '安全可调试的协作工具链' },
   { through: 16, phase: '工程质量', theme: '构建、依赖、测试、门禁与 AI 规格验证', projectAnchor: '可追溯质量流水线' },
   { through: 20, phase: '框架核心', theme: 'React、Vue、渲染、状态与性能', projectAnchor: '双框架垂直切片' },
-  { through: 24, phase: '复杂业务', theme: 'Vue 工程化、业务建模、权限与中后台组件', projectAnchor: '复杂业务工作台' },
+  { through: 24, phase: '复杂业务', theme: 'React/Vue 工程化、业务建模、权限与中后台组件', projectAnchor: '复杂业务工作台' },
   { through: 28, phase: '数据与渲染架构', theme: '接口契约、SSR、Server State、实时协作与离线', projectAnchor: '实时离线数据应用' },
   { through: 32, phase: '组件、体验与平台', theme: '组件 API、设计系统、UX、微前端与多运行时', projectAnchor: '跨框架体验平台' },
   { through: 36, phase: '供应链与交付', theme: '供应链、Linux、Docker、CI/CD、部署与可观测性', projectAnchor: '可信生产交付流水线' },

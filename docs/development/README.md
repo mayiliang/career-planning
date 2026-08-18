@@ -1,6 +1,6 @@
 # Career Atlas 开发文档
 
-更新时间：2026-08-03
+更新时间：2026-08-18
 
 Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdown 文档是知识内容真源，SQLite 保存用户状态、笔记、练习、挑战、打卡和求职数据；浏览器不持有 AI 密钥。
 
@@ -29,11 +29,10 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 5. [AI 与掌握挑战](05-ai-assessment-system.md)
 6. [API 与状态机](06-local-api-and-state-machines.md)
 7. [测试与验收](07-testing-and-acceptance.md)
-8. [Vue 项目学习路线](09-vue-learning-plan.md)
-9. [现代 Markdown 与 AI 流式协议](10-modern-markdown-and-ai-streaming.md)
-10. [运行时评分器提示词](prompts/runtime-assessment-judge-system-prompt.md)
-11. [服务器支持与部署](../deployment/server-support.md)
-12. [实施状态](implementation-status.md)
+8. [现代 Markdown 与 AI 流式协议](10-modern-markdown-and-ai-streaming.md)
+9. [运行时评分器提示词](prompts/runtime-assessment-judge-system-prompt.md)
+10. [服务器支持与部署](../deployment/server-support.md)
+11. [实施状态](implementation-status.md)
 
 早期的阶段实施路线、GLM-5 生成提示词、固定 64 周个人计划和重复职业路线已经移除。Git 历史可用于追溯，当前文档只维护实际产品口径。
 
@@ -42,7 +41,7 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 | 变更 | 同步文档 |
 | --- | --- |
 | 学习、掌握、路线、打卡规则 | `01`、`02`、根 README |
-| Vue 页面、组件和交互 | `02`、`docs/vue-learning-guide.md` |
+| Vue 页面、组件和交互 | `02`、对应 feature/component 测试；框架学习合同归 `docs/knowledge/knowledge-base/11-vue-development.md` |
 | 依赖、包边界、渲染与性能 | `03`、`10` |
 | 表、迁移、导入 | `04` |
 | AI 提示、评分、thinking | `05`、`06`、`10`、运行时提示词（评分边界变化时） |
