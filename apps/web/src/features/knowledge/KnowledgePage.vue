@@ -182,7 +182,7 @@ const clearFilters = () => {
         <span class="card-copy">
           <span class="card-kicker"><code>{{ point.code }}</code><small>{{ point.domainCode }}</small><small>{{ point.secondaryTopic }}</small><small>{{ layerLabels[point.capabilityLayer] }}</small><small>{{ requirementLabels[point.requirementLevel] }}</small><em v-if="point.code === currentCode">推荐下一站</em></span>
           <strong>{{ point.title }}</strong>
-          <span class="card-meta">{{ point.planWeek ? `第 ${point.planWeek} 周` : '分支路线' }} · {{ maturityLabels[point.maturity] }} · {{ portabilityLabels[point.portability] }}<template v-if="point.aiRelation !== 'NONE'"> · {{ aiRelationLabels[point.aiRelation] }}</template><template v-if="point.trackIds.length"> · 路线 {{ point.trackIds.join(' / ') }}</template><template v-if="point.topicTags.length"> · 主题 {{ point.topicTags.join(' / ') }}</template> · {{ point.difficulty }} · 预计 {{ formatMinutes(point.estimatedTotalMinutes) }}</span>
+          <span class="card-meta">{{ point.planWeek ? `核心批次 B${String(point.planWeek).padStart(2, '0')}` : '专项路线' }} · {{ maturityLabels[point.maturity] }} · {{ portabilityLabels[point.portability] }}<template v-if="point.aiRelation !== 'NONE'"> · {{ aiRelationLabels[point.aiRelation] }}</template><template v-if="point.trackIds.length"> · 路线 {{ point.trackIds.join(' / ') }}</template><template v-if="point.topicTags.length"> · 主题 {{ point.topicTags.join(' / ') }}</template> · {{ point.difficulty }} · 预计 {{ formatMinutes(point.estimatedTotalMinutes) }}</span>
         </span>
         <span class="card-state">{{ formatStatus(point.status) }}<b>→</b></span>
       </button>

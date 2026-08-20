@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdir, readFile, rm } from 'fs/promises';
 import { dirname, join } from 'path';
-import { createBackupService } from './backup.service.js';
+import { createBackupService, createPortableDataExport } from './backup.service.js';
 import { getDatabasePath } from '../db/index.js';
 
 const dbPath = getDatabasePath();
@@ -20,6 +20,17 @@ afterAll(async () => {
 });
 
 describe('BackupService', () => {
+  it('导出固定白名单内的可阅读个人数据，不包含知识正文或密钥配置', () => {
+    const exported = createPortableDataExport();
+    expect(exported).toMatchObject({ schemaVersion: 1, product: 'career-atlas' });
+    expect(exported.counts.knowledgeProgress).toBeGreaterThanOrEqual(0);
+    expect(exported.data).toHaveProperty('knowledgeNotes');
+    expect(exported.data).toHaveProperty('jobs');
+    expect(exported.data).not.toHaveProperty('systemConfig');
+    expect(JSON.stringify(exported)).not.toContain('study_material_md');
+    expect(JSON.stringify(exported)).not.toContain('DEEPSEEK_API_KEY');
+  });
+
   it('创建带真实统计与校验和的 SQLite 快照', async () => {
     const result = await service.createBackup('自动化验收');
 

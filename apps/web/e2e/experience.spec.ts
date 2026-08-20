@@ -1,4 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function mockAIReady(page: Page) {
+  await page.route('**/api/v1/system/ai/status', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: { configured: true, provider: 'deepseek', model: 'e2e-model', connectionOk: true },
+        meta: { requestId: 'e2e-ai-ready' },
+      }),
+    });
+  });
+}
 
 test.describe.serial('核心使用体验', () => {
   test('知识脑图展示完整能力体系并可逐层展开', async ({ page }) => {
@@ -11,6 +23,20 @@ test.describe.serial('核心使用体验', () => {
     const aiDomain = page.getByRole('button', { name: /12 AI 原生前端与模型应用工程/ });
     await aiDomain.click();
     await expect(page.getByRole('button', { name: /AIAPP-01/ })).toBeVisible();
+  });
+
+  test('首次进入直接给出可完成、可验收的具体学习任务', async ({ page }) => {
+    const reset = await page.request.post('/api/v1/import/reset-learning-progress', { data: {} });
+    expect(reset.ok()).toBe(true);
+    await page.goto('/');
+    const firstStep = page.locator('.empty-current');
+    await expect(firstStep).toContainText('FIRST CONCRETE STEP');
+    await expect(firstStep).toContainText('JS-01');
+    await expect(firstStep).toContainText('先完成：');
+    await expect(firstStep).toContainText('固定输入');
+    await expect(firstStep).toContainText('交付结果');
+    await expect(firstStep).toContainText('完成判定');
+    await expect(page.getByRole('button', { name: '开始这项具体任务 →' })).toBeVisible();
   });
 
   test('资料学习、笔记和掌握状态彼此独立', async ({ page }) => {
@@ -51,8 +77,8 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText('01 · 固定输入与约束')).toBeVisible();
     await expect(page.getByText('02 · 必须提交')).toBeVisible();
     await expect(page.getByText('03 · 验证清单')).toBeVisible();
-    await expect(page.getByText('本地结构检查')).toBeVisible();
-    await expect(page.getByText('AI 语义复核')).toBeVisible();
+    await expect(page.getByText('本地结构检查', { exact: true })).toBeVisible();
+    await expect(page.getByText('AI 语义复核', { exact: true })).toBeVisible();
     await expect(page.getByText('完全通过', { exact: true })).toBeVisible();
     const codeEditor = page.getByRole('textbox', { name: '练习代码' });
     await expect(codeEditor).toBeVisible();
@@ -105,12 +131,13 @@ test.describe.serial('核心使用体验', () => {
   });
 
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {
+    await mockAIReady(page);
     await page.goto('/knowledge/JS-02');
     await page.getByRole('button', { name: '我的笔记' }).click();
     await page.locator('.note-editor textarea').fill('会话恢复回归测试笔记：原型、对象模型与 this。');
     await page.getByRole('button', { name: '我已阅读资料并完成笔记' }).click();
     await page.getByRole('button', { name: /掌握挑战/ }).last().click();
-    await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
+    await page.getByRole('button', { name: '检查并开始这一级挑战 →' }).click();
     await page.getByRole('button', { name: '开始挑战' }).click();
     await expect(page.getByText('相关知识点').first()).toBeVisible();
     await expect(page.getByText('题目输入').first()).toBeVisible();
@@ -129,14 +156,15 @@ test.describe.serial('核心使用体验', () => {
     const firstSessionPath = new URL(page.url()).pathname;
 
     await page.goto('/knowledge/JS-02?tab=mastery');
-    await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
+    await page.getByRole('button', { name: '检查并开始这一级挑战 →' }).click();
     await expect(page).toHaveURL(new RegExp(`${firstSessionPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?resumed=1`));
     await expect(page.getByText(/已找到正在进行的 M1 掌握挑战/)).toBeVisible();
   });
 
   test('取消挑战保留旧答卷，并允许按当前合同新建会话', async ({ page }) => {
+    await mockAIReady(page);
     await page.goto('/knowledge/JS-02?tab=mastery');
-    await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
+    await page.getByRole('button', { name: '检查并开始这一级挑战 →' }).click();
     await expect(page).toHaveURL(/\/assessment\//);
     const cancelledSessionPath = new URL(page.url()).pathname;
     const cancelledSessionId = cancelledSessionPath.split('/').at(-1);
@@ -160,10 +188,22 @@ test.describe.serial('核心使用体验', () => {
     expect(cancelled.data.answers.some((answer) => answer.answerContent.includes('取消前保留的首题作答'))).toBe(true);
 
     await page.goto('/knowledge/JS-02?tab=mastery');
-    await page.getByRole('button', { name: '开始这一级挑战 →' }).click();
+    await page.getByRole('button', { name: '检查并开始这一级挑战 →' }).click();
     await expect(page).toHaveURL(/\/assessment\//);
     expect(new URL(page.url()).pathname).not.toBe(cancelledSessionPath);
     await expect(page.getByText('待开始', { exact: true })).toBeVisible();
+  });
+
+  test('AI 不可用时在答题前说明影响、数据边界和修复入口', async ({ page }) => {
+    await page.goto('/knowledge/JS-02?tab=mastery');
+    await expect(page.getByText(/挑战题目合同、本点学习资料/)).toBeVisible();
+    await page.getByRole('button', { name: '检查并开始这一级挑战 →' }).click();
+    const dialog = page.getByRole('dialog', { name: '掌握挑战暂时无法完整评分' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('尚未配置 AI 密钥');
+    await expect(dialog).toContainText('资料阅读、笔记和站内练习仍可正常使用');
+    await dialog.getByRole('button', { name: '去设置 AI' }).click();
+    await expect(page).toHaveURL(/\/settings$/);
   });
 
   test('M4 明示七天稳定性门槛，并以真实变式取代旧题附录', async ({ page }) => {
@@ -215,20 +255,20 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.locator('.question-body h2')).not.toContainText('固定 fixture 为上述循环、两个独立计数器');
   });
 
-  test('64 周内容是可展开的路线参考而非每日计划', async ({ page }) => {
+  test('35 个核心批次只包含可进入的真实知识点', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '64 周路线参考' })).toBeVisible();
-    await expect(page.getByText(/不规定你哪一天必须学什么/)).toBeVisible();
-    await expect(page.getByText(/不会制造逾期/)).toBeVisible();
-    await expect(page.locator('.week-list article')).toHaveCount(64);
+    await expect(page.getByRole('heading', { name: '紧凑核心学习路线' })).toBeVisible();
+    await expect(page.getByText(/批次只表达顺序，不绑定自然周/)).toBeVisible();
+    await expect(page.getByText(/每个条目都对应真实知识点/)).toBeVisible();
+    await expect(page.locator('.week-list article')).toHaveCount(35);
     const pairedHeights = await page.locator('.week-list article:not(.open)').evaluateAll((items) => items.slice(0, 2).map((item) => item.getBoundingClientRect().height));
     expect(Math.abs((pairedHeights[0] ?? 0) - (pairedHeights[1] ?? 0))).toBeLessThanOrEqual(1);
-    const firstWeek = page.locator('.week-list article').filter({ has: page.locator('.week-points button') }).first();
+    const firstWeek = page.locator('.week-list article').first();
+    if (!await firstWeek.evaluate((element) => element.classList.contains('open'))) await firstWeek.locator('.week-summary').click();
     const firstPoint = firstWeek.locator('.week-points button').first();
-    if (!(await firstPoint.isVisible())) await firstWeek.locator('.week-summary').click();
     await expect(firstPoint).toBeVisible();
     await expect(firstPoint).toContainText('JS-01');
-    await expect(page.getByText('每天都明确学什么')).toHaveCount(0);
+    await expect(page.getByText(/自主复盘与机动学习|综合实践参考|自由复盘/)).toHaveCount(0);
   });
 
   test('详情下一步与路线一致，关系分支按知识点去重', async ({ page }) => {
@@ -244,6 +284,10 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/knowledge/A11Y-01');
     await expect(page.getByText('BROWSER-01', { exact: true })).toBeVisible();
     await expect(page.getByText('UX-01', { exact: true })).toHaveCount(0);
+
+    await page.goto('/knowledge/REACT-01');
+    await expect(page.locator('.branch-grid article').first()).toContainText('VUE-01');
+    await expect(page.locator('.branch-grid article').first()).toContainText('紧凑核心路线');
   });
 
   test('路线建议、学习完成和学习台当前现场形成连续闭环', async ({ page }) => {
@@ -281,6 +325,35 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText(/知识点里写下的内容会自动同步到这里/)).toBeVisible();
   });
 
+  test('笔记服务端保存失败后保留本地草稿，刷新仍可恢复', async ({ page }) => {
+    const noteEndpoint = '**/api/v1/notes/WEB-01';
+    await page.route(noteEndpoint, async (route) => {
+      if (route.request().method() !== 'PUT') { await route.continue(); return; }
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: { code: 'E2E_NOTE_FAILURE', message: '模拟服务端暂时不可用', retryable: true },
+          meta: { requestId: 'e2e-note-failure' },
+        }),
+      });
+    });
+
+    await page.goto('/knowledge/WEB-01?tab=notes');
+    const editor = page.getByRole('textbox', { name: 'Markdown 原始笔记' });
+    const draft = `# 本地恢复验证\n\n${Date.now()} · 这段文字不能因保存失败而丢失。`;
+    await editor.fill(draft);
+    await expect(page.getByText('本地草稿已保留，服务端保存失败', { exact: true })).toBeVisible({ timeout: 5_000 });
+
+    await page.reload();
+    await expect(page.getByText(/已恢复上次未写入服务端的本地草稿/)).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Markdown 原始笔记' })).toHaveValue(draft);
+
+    await page.unroute(noteEndpoint);
+    await page.getByRole('button', { name: '立即保存' }).click();
+    await expect(page.getByText('已自动保存', { exact: true })).toBeVisible();
+  });
+
   test('Markdown 笔记实时预览、AI 流式整理并可切换排序', async ({ page }) => {
     await page.goto('/knowledge/JS-03?tab=notes');
     const editor = page.getByRole('textbox', { name: 'Markdown 原始笔记' });
@@ -291,7 +364,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByLabel('Markdown 实时预览').locator('.katex-display')).toBeVisible();
     await expect(page.getByLabel('Markdown 实时预览').locator('.mermaid-diagram[data-mermaid-state="ready"] svg')).toBeVisible();
     await expect(page.getByLabel('Markdown 实时预览').locator('details.thinking-block')).toContainText('先核对引用边界');
-    await page.getByRole('button', { name: '保存原始笔记' }).click();
+    await expect(page.getByText('已自动保存', { exact: true })).toBeVisible({ timeout: 5_000 });
 
     await page.route('**/notes/JS-03/organize/stream', async (route) => {
       const response = await route.fetch();
@@ -329,7 +402,7 @@ test.describe.serial('核心使用体验', () => {
   test('学习台不分配每日任务并支持回顾式打卡', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: '学习台' })).toBeVisible();
-    await expect(page.getByText('这里没有每日任务表', { exact: true })).toBeVisible();
+    await expect(page.getByText('这里没有泛化每日任务', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: '按你的节奏积累' })).toBeVisible();
     await expect(page.getByText('M3 已掌握', { exact: true })).toBeVisible();
     await expect(page.getByText('M4 稳定掌握', { exact: true })).toBeVisible();
@@ -353,14 +426,87 @@ test.describe.serial('核心使用体验', () => {
   });
 
   test('系统页说明自主节奏、数据备份和重置保留笔记', async ({ page }) => {
+    await page.route('**/api/v1/system/ai/status', async (route) => {
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { configured: true, provider: 'deepseek', model: 'e2e-model', connectionOk: false }, meta: { requestId: 'e2e-ai-failed' } }) });
+    });
+    await page.route('**/api/v1/system/executor/status', async (route) => {
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { available: false, type: 'disabled', warnings: ['Executor disabled by configuration', 'Code execution is disabled for security reasons', 'Assessment will require manual review for code questions'] }, meta: { requestId: 'e2e-executor-safe' } }) });
+    });
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '系统与数据' })).toBeVisible();
-    await expect(page.getByText(/64 周内容只作为可选路线参考/)).toBeVisible();
+    await expect(page.getByText(/35 个核心批次只编排真实知识点/)).toBeVisible();
     await expect(page.getByText('223 个知识点')).toBeVisible();
     await expect(page.getByText('20 个领域已入库')).toBeVisible();
     await expect(page.getByText(/每天自动创建一次一致性快照/)).toBeVisible();
     await expect(page.getByText(/清空进度，但保留全部笔记/)).toBeVisible();
-    await expect(page.getByText(/^(?:已配置(?: \/ 连接失败)?|未配置)$/)).toBeVisible();
+    const aiCard = page.locator('.status-card').filter({ hasText: 'DeepSeek' });
+    await expect(aiCard).toHaveClass(/status-bad/);
+    await expect(aiCard).toContainText('连接失败');
+    await expect(page.getByText('当前采用保守复核模式')).toBeVisible();
+    await expect(page.getByText('代码执行器已在当前配置中关闭。')).toBeVisible();
+    await expect(page.getByText('Executor disabled by configuration')).toHaveCount(0);
+  });
+
+  test('岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约', async ({ page }) => {
+    await page.goto('/jobs');
+    await expect(page.locator('.empty-guide li')).toHaveCount(3);
+    await expect(page.getByText('记录事实', { exact: true })).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    const skipLink = page.getByRole('link', { name: '跳到主要内容' });
+    await expect(skipLink).toBeFocused();
+    await skipLink.press('Enter');
+    await expect(page.locator('#main-content')).toBeFocused();
+
+    const createTrigger = page.getByRole('button', { name: '新增岗位' });
+    await createTrigger.click();
+    const createDialog = page.getByRole('dialog', { name: '新增一个真实岗位' });
+    await expect(createDialog.getByLabel('公司名称')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(createDialog.getByRole('button', { name: '关闭' })).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(createDialog.getByRole('button', { name: '取消' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(createTrigger).toBeFocused();
+
+    await createTrigger.click();
+    await createDialog.getByLabel('公司名称').fill('质量验收科技');
+    await createDialog.getByLabel('岗位名称').fill('高级前端工程师');
+    await createDialog.getByLabel('来源平台').fill('公司官网');
+    await createDialog.getByRole('button', { name: '创建岗位' }).click();
+    await expect(page.getByRole('status')).toContainText('已创建 质量验收科技 · 高级前端工程师');
+    await expect(page.getByRole('button', { name: /质量验收科技.*高级前端工程师/ })).toBeVisible();
+    expect(await page.locator('.kanban-column').count()).toBeGreaterThanOrEqual(4);
+    await expect(page.locator('.empty-column').first()).toBeVisible();
+
+    await page.getByRole('button', { name: '导入 CSV' }).click();
+    const importDialog = page.getByRole('dialog', { name: '先预览，再导入岗位' });
+    await importDialog.getByRole('button', { name: '填入格式示例' }).click();
+    await importDialog.getByRole('button', { name: '先检查并预览' }).click();
+    await expect(importDialog).toContainText('全部通过服务端校验');
+    await expect(importDialog.getByRole('button', { name: /确认导入 \d+ 个岗位/ })).toBeEnabled();
+    await importDialog.getByRole('button', { name: /确认导入 \d+ 个岗位/ }).click();
+    await expect(page.getByRole('status')).toContainText('导入');
+  });
+
+  test('恢复数据必须先展示当前值、恢复后值和差异', async ({ page }) => {
+    await page.goto('/settings');
+    const note = `端到端恢复预览 ${Date.now()}`;
+    await page.getByPlaceholder('给这份快照加一句备注（可选）').fill(note);
+    await page.getByRole('button', { name: '创建本地快照' }).click();
+    await expect(page.getByRole('status')).toContainText('本地数据库快照已创建');
+
+    const backup = page.locator('.backup-list article').filter({ hasText: note });
+    await backup.getByRole('button', { name: '预览恢复' }).click();
+    const dialog = page.getByRole('dialog', { name: '确认按预览结果恢复？' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('当前');
+    await expect(dialog).toContainText('恢复后');
+    await expect(dialog).toContainText('变化');
+    await expect(dialog).toContainText('知识点');
+    await expect(dialog.getByRole('button', { name: '按此差异恢复' })).toBeVisible();
+    await dialog.getByRole('button', { name: '取消' }).click();
+    await expect(backup.getByRole('button', { name: '预览恢复' })).toBeFocused();
   });
 
   test('窄屏下主导航和脑图没有页面级横向溢出', async ({ page }) => {
@@ -371,7 +517,24 @@ test.describe.serial('核心使用体验', () => {
     expect(overflow).toBeLessThanOrEqual(1);
     await expect(page.getByRole('link', { name: /学习台/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /笔记中心/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /路线参考/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /核心路线/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /知识体系/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('未知地址提供可恢复入口，跨页面导航回到顶部', async ({ page }) => {
+    await page.goto('/this-route-does-not-exist');
+    await expect(page.getByRole('heading', { name: '这条路线还没有内容' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '回到学习台' })).toBeVisible();
+    await page.getByRole('button', { name: '打开知识体系' }).click();
+    await expect(page).toHaveURL(/\/knowledge\/map$/);
+
+    await page.goto('/plan');
+    await expect(page.getByRole('heading', { name: '紧凑核心学习路线' })).toBeVisible();
+    await page.locator('.week-list article').last().scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await page.getByRole('link', { name: /学习台/ }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
 
   test('窄屏下新学习路径没有页面级横向溢出', async ({ page }) => {

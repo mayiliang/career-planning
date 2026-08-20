@@ -27,6 +27,57 @@ import {
   CreateSkillGapRequestSchema,
   JobStatusSchema,
 } from '@career-atlas/shared';
+import { z } from 'zod';
+
+const OptionalCsvTextSchema = z.string().trim().max(2000).optional();
+const JobCSVInputRowSchema = z.object({
+  date: z.string().trim().max(40).optional(),
+  platform: z.string().trim().min(1, 'platform 不能为空').max(120),
+  company: z.string().trim().min(1, 'company 不能为空').max(200),
+  job_title: z.string().trim().min(1, 'job_title 不能为空').max(200),
+  salary: OptionalCsvTextSchema,
+  experience: OptionalCsvTextSchema,
+  location: OptionalCsvTextSchema,
+  source_url: z.union([
+    z.literal(''),
+    z.string().trim().url('source_url 必须是完整 URL').refine((value) => /^https?:\/\//i.test(value), 'source_url 只允许 http/https'),
+  ]).optional(),
+  job_direction: OptionalCsvTextSchema,
+  tech_stack: OptionalCsvTextSchema,
+  jd_keywords: OptionalCsvTextSchema,
+  matched_project: OptionalCsvTextSchema,
+  match_level: z.union([z.literal(''), z.enum(['HIGH', 'MEDIUM', 'LOW'])]).optional(),
+  skill_gap: OptionalCsvTextSchema,
+  next_learning_action: OptionalCsvTextSchema,
+  status: z.union([z.literal(''), JobStatusSchema]).optional(),
+  notes: z.string().trim().max(10000).optional(),
+}).strip();
+
+const JobCSVRowsPayloadSchema = z.object({
+  rows: z.array(z.record(z.string(), z.unknown())).min(1, '至少提供一行岗位').max(500, '单次最多导入 500 行'),
+});
+
+function inspectJobCSVRows(rows: Array<Record<string, unknown>>) {
+  const validRows: JobCSVRow[] = [];
+  const errors: Array<{ row: number; field: string; message: string }> = [];
+
+  rows.forEach((row, index) => {
+    const parsed = JobCSVInputRowSchema.safeParse(row);
+    if (parsed.success) {
+      validRows.push({
+        ...parsed.data,
+        match_level: parsed.data.match_level || undefined,
+        status: parsed.data.status || undefined,
+      });
+      return;
+    }
+    for (const issue of parsed.error.issues) {
+      errors.push({ row: index + 2, field: String(issue.path[0] ?? 'row'), message: issue.message });
+    }
+  });
+
+  return { validRows, errors };
+}
 
 export async function jobsRoutes(app: FastifyInstance) {
   // ===== 岗位列表 =====
@@ -127,36 +178,31 @@ export async function jobsRoutes(app: FastifyInstance) {
   
   // ===== CSV 导入预览 =====
   app.post('/api/v1/jobs/import/preview', async (request, reply) => {
-    const body = request.body as { rows: JobCSVRow[] };
-    
-    if (!body.rows || !Array.isArray(body.rows)) {
-      return reply.error('VALIDATION_ERROR', '必须提供 rows 数组');
-    }
-    
-    // 返回预览信息
-    const validRows = body.rows.filter(row => row.company && row.job_title && row.platform);
+    const payload = JobCSVRowsPayloadSchema.safeParse(request.body);
+    if (!payload.success) return reply.error('VALIDATION_ERROR', 'CSV 数据无效', 400, payload.error.issues);
+    const { validRows, errors } = inspectJobCSVRows(payload.data.rows);
     
     return reply.ok({
-      total: body.rows.length,
+      total: payload.data.rows.length,
       valid: validRows.length,
+      invalid: payload.data.rows.length - validRows.length,
       preview: validRows.slice(0, 5).map(row => ({
         company: row.company,
         jobTitle: row.job_title,
         platform: row.platform,
         status: row.status || 'SAVED',
       })),
+      errors,
     });
   });
   
   // ===== CSV 导入执行 =====
   app.post('/api/v1/jobs/import', async (request, reply) => {
-    const body = request.body as { rows: JobCSVRow[] };
-    
-    if (!body.rows || !Array.isArray(body.rows)) {
-      return reply.error('VALIDATION_ERROR', '必须提供 rows 数组');
-    }
-    
-    const imported = await importJobsFromCSV(body.rows);
+    const payload = JobCSVRowsPayloadSchema.safeParse(request.body);
+    if (!payload.success) return reply.error('VALIDATION_ERROR', 'CSV 数据无效', 400, payload.error.issues);
+    const { validRows, errors } = inspectJobCSVRows(payload.data.rows);
+    if (errors.length > 0) return reply.error('VALIDATION_ERROR', 'CSV 仍有无效行，请先根据预览修正', 400, errors);
+    const imported = await importJobsFromCSV(validRows);
     
     return reply.ok({
       imported,

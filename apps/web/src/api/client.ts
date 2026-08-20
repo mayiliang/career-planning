@@ -259,24 +259,6 @@ const TodayPlanSchema = z.object({
   }),
 });
 
-// 计划导入预览 Schema
-const PlanImportPreviewSchema = z.object({
-  totalItems: z.number(),
-  weeks: z.array(z.object({
-    week: z.number(),
-    theme: z.string(),
-    itemCount: z.number(),
-  })),
-  items: z.array(z.object({
-    week: z.number(),
-    day: z.string(),
-    date: z.string(),
-    title: z.string(),
-    learningTopic: z.string(),
-    practiceTask: z.string(),
-  })),
-});
-
 const LeaveDaySchema = z.object({
   id: z.string(),
   leaveDate: z.string(),
@@ -507,6 +489,38 @@ const JobFunnelStatsSchema = z.object({
   offer: z.number(),
 });
 
+const JobCSVRowSchema = z.object({
+  date: z.string().optional(),
+  platform: z.string(),
+  company: z.string(),
+  job_title: z.string(),
+  salary: z.string().optional(),
+  experience: z.string().optional(),
+  location: z.string().optional(),
+  source_url: z.string().optional(),
+  job_direction: z.string().optional(),
+  tech_stack: z.string().optional(),
+  jd_keywords: z.string().optional(),
+  matched_project: z.string().optional(),
+  match_level: z.string().optional(),
+  skill_gap: z.string().optional(),
+  next_learning_action: z.string().optional(),
+  status: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const JobImportPreviewSchema = z.object({
+  total: z.number(),
+  valid: z.number(),
+  invalid: z.number(),
+  preview: z.array(z.object({
+    company: z.string(), jobTitle: z.string(), platform: z.string(), status: JobStatusSchema,
+  })),
+  errors: z.array(z.object({ row: z.number(), field: z.string(), message: z.string() })),
+});
+
+const JobImportResultSchema = z.object({ imported: z.number(), message: z.string() });
+
 // ===== 严格考核与系统运维 Schema =====
 
 const AssessmentSessionSchema = z.object({
@@ -599,6 +613,22 @@ const BackupMetadataSchema = z.object({
     jobs: z.number(),
   }),
   note: z.string().optional(),
+});
+
+const BackupStatsSchema = BackupMetadataSchema.shape.stats;
+const RestorePreviewSchema = z.object({
+  metadata: BackupMetadataSchema,
+  currentStats: BackupStatsSchema,
+  differences: BackupStatsSchema,
+  warnings: z.array(z.string()),
+});
+
+const PortableDataExportSchema = z.object({
+  schemaVersion: z.literal(1),
+  product: z.literal('career-atlas'),
+  exportedAt: z.string(),
+  counts: z.record(z.number()),
+  data: z.record(z.array(z.record(z.unknown()))),
 });
 
 const AssessmentGradeResponseSchema = z.object({
@@ -714,10 +744,28 @@ async function request<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  const controller = new AbortController();
+  const callerSignal = options?.signal;
+  let timedOut = false;
+  const timeoutMs = path === '/system/ai/status' ? 35_000 : 20_000;
+  const timeout = globalThis.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const abortFromCaller = () => controller.abort(callerSignal?.reason);
+  if (callerSignal?.aborted) abortFromCaller();
+  else callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
+  } catch (reason) {
+    if (timedOut) throw new ApiError('REQUEST_TIMEOUT', `本地服务在 ${Math.round(timeoutMs / 1000)} 秒内没有响应`, true, 'client-timeout');
+    throw reason;
+  } finally {
+    globalThis.clearTimeout(timeout);
+    callerSignal?.removeEventListener('abort', abortFromCaller);
+  }
 
   const json = await response.json().catch(() => null);
 
@@ -1187,35 +1235,6 @@ export const apiClient = {
     });
   },
 
-  /**
-   * 预览计划导入
-   */
-  async previewPlanImport(data: {
-    startDate: string;
-    templatePath?: string;
-  }) {
-    return request(`/calendar/plan/preview`, PlanImportPreviewSchema, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  /**
-   * 执行计划导入
-   */
-  async importPlan(data: {
-    startDate: string;
-    templatePath?: string;
-  }) {
-    return request(`/calendar/plan/import`, z.object({
-      imported: z.number(),
-      eventIds: z.array(z.string()),
-    }), {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
   // ===== 知识图谱 API =====
 
   /**
@@ -1449,6 +1468,30 @@ export const apiClient = {
     });
   },
 
+  async previewBackupRestore(filename: string) {
+    return request(`/backups/${encodeURIComponent(filename)}/preview`, RestorePreviewSchema);
+  },
+
+  async exportPortableData() {
+    return request('/data/export', PortableDataExportSchema);
+  },
+
+  async previewJobImport(rows: z.infer<typeof JobCSVRowSchema>[]) {
+    const validatedRows = z.array(JobCSVRowSchema).parse(rows);
+    return request('/jobs/import/preview', JobImportPreviewSchema, {
+      method: 'POST',
+      body: JSON.stringify({ rows: validatedRows }),
+    });
+  },
+
+  async importJobs(rows: z.infer<typeof JobCSVRowSchema>[]) {
+    const validatedRows = z.array(JobCSVRowSchema).parse(rows);
+    return request('/jobs/import', JobImportResultSchema, {
+      method: 'POST',
+      body: JSON.stringify({ rows: validatedRows }),
+    });
+  },
+
   /**
    * 更新岗位
    */
@@ -1469,7 +1512,7 @@ export const apiClient = {
    * 删除岗位
    */
   async deleteJob(id: string) {
-    await fetch(`${API_BASE}/jobs/${id}`, { method: 'DELETE' });
+    return request(`/jobs/${id}`, z.object({ deleted: z.boolean() }), { method: 'DELETE' });
   },
 
   /**
@@ -1561,7 +1604,6 @@ export type Checkin = z.infer<typeof CheckinSchema>;
 export type TodayPlan = z.infer<typeof TodayPlanSchema>;
 export type PlanLearningBrief = z.infer<typeof PlanLearningBriefSchema>;
 export type LearningBriefPoint = z.infer<typeof LearningBriefPointSchema>;
-export type PlanImportPreview = z.infer<typeof PlanImportPreviewSchema>;
 export type LeaveDay = z.infer<typeof LeaveDaySchema>;
 export type EventType = z.infer<typeof EventTypeSchema>;
 export type EventStatus = z.infer<typeof EventStatusSchema>;
@@ -1579,6 +1621,8 @@ export type AssessmentAnswer = z.infer<typeof AssessmentAnswerSchema>;
 export type AssessmentDetail = z.infer<typeof AssessmentDetailSchema>;
 export type AssessmentResult = z.infer<typeof AssessmentResultSchema>;
 export type BackupMetadata = z.infer<typeof BackupMetadataSchema>;
+export type RestorePreview = z.infer<typeof RestorePreviewSchema>;
+export type PortableDataExport = z.infer<typeof PortableDataExportSchema>;
 // 求职相关类型
 export type Job = z.infer<typeof JobSchema>;
 export type JobStatus = z.infer<typeof JobStatusSchema>;
@@ -1589,3 +1633,5 @@ export type JobListResponse = z.infer<typeof JobListResponseSchema>;
 export type JobDetailResponse = z.infer<typeof JobDetailResponseSchema>;
 export type JobKanbanColumn = z.infer<typeof JobKanbanColumnSchema>;
 export type JobFunnelStats = z.infer<typeof JobFunnelStatsSchema>;
+export type JobCSVRow = z.infer<typeof JobCSVRowSchema>;
+export type JobImportPreview = z.infer<typeof JobImportPreviewSchema>;

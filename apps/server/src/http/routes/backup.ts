@@ -4,7 +4,7 @@
  * Phase 8 实现：备份、恢复、轮换管理接口
  */
 import type { FastifyPluginCallback } from 'fastify';
-import { getBackupService } from '../../services/backup.service.js';
+import { createPortableDataExport, getBackupService } from '../../services/backup.service.js';
 
 // ===== 路由插件 =====
 
@@ -28,6 +28,11 @@ export const backupRoutes: FastifyPluginCallback = (app, _options, done) => {
   app.get('/api/v1/backups', async (request, reply) => {
     const backups = await backupService.listBackups();
     return reply.ok(backups);
+  });
+
+  // ===== GET /api/v1/data/export - 导出可阅读的个人数据 =====
+  app.get('/api/v1/data/export', async (_request, reply) => {
+    return reply.ok(createPortableDataExport());
   });
 
   // ===== GET /api/v1/backups/:filename/preview - 预览恢复 =====

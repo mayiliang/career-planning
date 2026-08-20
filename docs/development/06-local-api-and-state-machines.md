@@ -1,6 +1,6 @@
 # API 与状态机
 
-更新时间：2026-08-03
+更新时间：2026-08-20
 
 API 前缀为 `/api/v1`。普通响应使用 `{ data, meta }`，错误使用稳定代码、中文信息和 `retryable`；流式接口使用 SSE。
 
@@ -29,8 +29,15 @@ API 前缀为 `/api/v1`。普通响应使用 `{ data, meta }`，错误使用稳�
 | POST | `.../hints/stream` | 题目专属渐进帮助 |
 | POST | `/assessments/:id/grade/stream` | 流式评分 |
 | POST | `/assessments/:id/regrade/stream` | 保留答案重新评分 |
+| POST | `/jobs` | 手动创建岗位 |
+| POST | `/jobs/import/preview` | 校验整批 CSV 并返回逐行错误和前五行预览，不写入 |
+| POST | `/jobs/import` | 仅在整批全部有效时导入岗位 |
+| POST | `/backups` | 创建一致性数据库快照 |
+| GET | `/backups/:filename/preview` | 校验快照并比较当前/恢复后数据量 |
+| POST | `/backups/:filename/restore` | 生成回滚文件后安排恢复 |
+| GET | `/data/export` | 导出固定白名单内的可阅读个人数据，不含密钥和知识正文 |
 
-知识、图谱、求职、项目、设置、备份和导入接口继续按各自路由提供；新增接口必须在客户端 Zod Schema 和本文件同步。
+知识、图谱、项目、设置和内容导入接口继续按各自路由提供；新增接口必须在客户端 Zod Schema 和本文件同步。普通非流式请求默认 20 秒超时，AI 状态检查为 35 秒；调用方主动取消时保留原始取消信号。
 
 ## 2. SSE 协议
 
@@ -75,10 +82,11 @@ DRAFT -> IN_PROGRESS -> SUBMITTED -> GRADING -> GRADED
 
 ## 5. 路线语义
 
-- `CONTINUE`：系统在过滤主动放弃/暂缓和不可满足硬前置后，得到唯一直接后续。
-- `TRACK_CHOICE`：当前轨道结束，返回多个新轨道入口及说明。
+- 默认主干：149 个主干点按唯一顺序分成 35 个非空批次；`planWeek` 只是兼容字段名，API 含义为批次编号。
+- `CONTINUE`：主干点沿同一个紧凑路线索引得到唯一直接后续；专项点才沿所属领域路线继续。
+- `TRACK_CHOICE`：当前连续路线结束，返回多个专项路线入口及说明。
 - `SELECTED`：当前选择，不等于永久放弃其他轨道。
 - `DEFERRED + POINT`：只暂缓一个点；非硬前置时可以跨过继续。
 - `DEFERRED + BRANCH`：整条支线暂不推荐，用户可恢复。
 
-推荐入口、学习台、详情下一步和路线参考必须共用同一服务层结果，不能各自排序。
+推荐入口、学习台、详情下一步和路线页必须共用同一服务层结果，不能各自排序；旧数据库中的周次不得让专项点混入主干。

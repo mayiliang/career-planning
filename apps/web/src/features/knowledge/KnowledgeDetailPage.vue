@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { apiClient, type KnowledgePointDetail, type KnowledgeNote, type LearningBranch } from '@/api/client';
 import BaseDialog from '@/components/BaseDialog.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
@@ -12,6 +12,10 @@ const point = ref<KnowledgePointDetail | null>(null);
 const note = ref<KnowledgeNote | null>(null);
 const branches = ref<LearningBranch[]>([]);
 const noteDraft = ref('');
+const loadedCode = ref('');
+const noteSavedSnapshot = ref('');
+const noteSaveState = ref<'SAVED' | 'UNSAVED' | 'SAVING' | 'ERROR'>('SAVED');
+let noteSaveTimer: ReturnType<typeof setTimeout> | null = null;
 const loading = ref(true);
 const saving = ref(false);
 const organizing = ref(false);
@@ -27,6 +31,8 @@ const activeTab = ref<'materials' | 'notes' | 'mastery'>('materials');
 const selectedStage = ref(1);
 const challengeMode = ref<'THEORY' | 'PRACTICE' | 'MIXED'>('THEORY');
 const launching = ref(false);
+const aiPreflightOpen = ref(false);
+const aiPreflightStatus = ref<Awaited<ReturnType<typeof apiClient.getAIStatus>> | null>(null);
 const deferDialogOpen = ref(false);
 const deferReason = ref('');
 const deferring = ref(false);
@@ -54,8 +60,20 @@ const profileText = computed(() => ({
   TOOL_OPERATION: '工具操作型：沿真实工作流操作并保留产物。',
   DESIGN_CASE: '方案设计型：围绕具体约束比较方案与代价。',
 } as Record<string, string>)[point.value?.challengeProfile ?? 'EXAMPLE_DRIVEN']);
+const aiPreflightReady = computed(() => Boolean(aiPreflightStatus.value?.configured && aiPreflightStatus.value.connectionOk !== false));
+const aiProviderLabel = computed(() => {
+  const status = aiPreflightStatus.value;
+  return status ? `${status.provider} · ${status.model}` : '尚未检查';
+});
+
+function recommendedChallengeMode(profile: KnowledgePointDetail['challengeProfile']): 'THEORY' | 'PRACTICE' | 'MIXED' {
+  if (profile === 'THEORY_ONLY') return 'THEORY';
+  if (['CODING', 'DEBUGGING', 'TOOL_OPERATION'].includes(profile)) return 'PRACTICE';
+  return 'MIXED';
+}
 
 async function load() {
+  if (noteSaveTimer) clearTimeout(noteSaveTimer);
   loading.value = true;
   error.value = '';
   try {
@@ -64,10 +82,20 @@ async function load() {
     ]);
     point.value = pointData;
     note.value = noteData;
-    noteDraft.value = noteData?.originalMd ?? pointData.summary ?? '';
+    loadedCode.value = pointData.code;
+    const serverDraft = noteData?.originalMd ?? pointData.summary ?? '';
+    noteSavedSnapshot.value = serverDraft;
+    let localDraft: string | null = null;
+    try { localDraft = window.localStorage.getItem(`career-atlas:note-draft:${pointData.code}`); } catch { /* 存储不可用时仍可手动保存 */ }
+    noteDraft.value = localDraft !== null && localDraft !== serverDraft ? localDraft : serverDraft;
+    noteSaveState.value = noteDraft.value === serverDraft ? 'SAVED' : 'UNSAVED';
+    if (noteSaveState.value === 'UNSAVED') {
+      message.value = '已恢复上次未写入服务端的本地草稿，系统会自动重试保存';
+      scheduleNoteSave();
+    }
     branches.value = branchData;
     selectedStage.value = Math.min(4, Math.max(1, pointData.masteryLevel + 1));
-    challengeMode.value = pointData.challengeProfile === 'THEORY_ONLY' ? 'THEORY' : 'THEORY';
+    challengeMode.value = recommendedChallengeMode(pointData.challengeProfile);
     if (['materials', 'notes', 'mastery'].includes(String(route.query.tab))) activeTab.value = String(route.query.tab) as typeof activeTab.value;
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '知识点加载失败';
@@ -76,15 +104,51 @@ async function load() {
   }
 }
 
-async function saveNote(showMessage = true) {
-  if (saving.value) return;
+function storeLocalDraft(content: string, targetCode = loadedCode.value) {
+  try { window.localStorage.setItem(`career-atlas:note-draft:${targetCode}`, content); return true; }
+  catch { return false; }
+}
+
+function clearLocalDraft(targetCode = loadedCode.value) {
+  try { window.localStorage.removeItem(`career-atlas:note-draft:${targetCode}`); } catch { /* 无需阻断服务端保存 */ }
+}
+
+function scheduleNoteSave() {
+  if (noteSaveTimer) clearTimeout(noteSaveTimer);
+  noteSaveTimer = setTimeout(() => { void saveNote(false); }, 1200);
+}
+
+async function saveNote(showMessage = true, targetCode = loadedCode.value): Promise<boolean> {
+  if (saving.value || !targetCode) return false;
+  if (noteSaveTimer) { clearTimeout(noteSaveTimer); noteSaveTimer = null; }
+  const contentToSave = noteDraft.value;
+  let savedSuccessfully = false;
   saving.value = true;
+  noteSaveState.value = 'SAVING';
   try {
-    note.value = await apiClient.saveNote(code.value, noteDraft.value);
+    const saved = await apiClient.saveNote(targetCode, contentToSave);
+    if (loadedCode.value === targetCode) {
+      note.value = saved;
+      noteSavedSnapshot.value = contentToSave;
+      if (noteDraft.value === contentToSave) {
+        clearLocalDraft(targetCode);
+        noteSaveState.value = 'SAVED';
+      } else {
+        noteSaveState.value = 'UNSAVED';
+      }
+    }
     if (showMessage) message.value = '原始笔记已保存，并写入版本历史';
+    savedSuccessfully = true;
+    return true;
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '笔记保存失败';
-  } finally { saving.value = false; }
+    noteSaveState.value = 'ERROR';
+    storeLocalDraft(noteDraft.value, targetCode);
+    return false;
+  } finally {
+    saving.value = false;
+    if (savedSuccessfully && loadedCode.value === targetCode && noteDraft.value !== noteSavedSnapshot.value) scheduleNoteSave();
+  }
 }
 
 async function organizeNote() {
@@ -170,6 +234,11 @@ async function launchChallenge() {
   launching.value = true;
   error.value = '';
   try {
+    aiPreflightStatus.value = await apiClient.getAIStatus();
+    if (!aiPreflightReady.value) {
+      aiPreflightOpen.value = true;
+      return;
+    }
     const type = selectedStage.value === 4 ? 'RETEST' : 'FIRST';
     const session = await apiClient.createAssessment({
       knowledgePointCode: point.value.code,
@@ -184,13 +253,43 @@ async function launchChallenge() {
   finally { launching.value = false; }
 }
 
+async function openAISettings() {
+  aiPreflightOpen.value = false;
+  await router.push('/settings');
+}
+
 function togglePractice(activityId: string) {
   activePracticeId.value = activePracticeId.value === activityId ? null : activityId;
 }
 
+watch(noteDraft, (content) => {
+  if (loading.value || !loadedCode.value) return;
+  if (content === noteSavedSnapshot.value) {
+    if (noteSaveTimer) { clearTimeout(noteSaveTimer); noteSaveTimer = null; }
+    clearLocalDraft();
+    noteSaveState.value = 'SAVED';
+    return;
+  }
+  storeLocalDraft(content);
+  noteSaveState.value = 'UNSAVED';
+  scheduleNoteSave();
+});
+
+async function flushNoteBeforeNavigation() {
+  if (!loadedCode.value || noteDraft.value === noteSavedSnapshot.value) return true;
+  const storedLocally = storeLocalDraft(noteDraft.value);
+  const saved = await saveNote(false);
+  return saved || storedLocally;
+}
+
+onBeforeRouteLeave(flushNoteBeforeNavigation);
+onBeforeRouteUpdate(flushNoteBeforeNavigation);
 watch(code, load);
 onMounted(load);
-onBeforeUnmount(() => organizeController?.abort());
+onBeforeUnmount(() => {
+  if (noteSaveTimer) clearTimeout(noteSaveTimer);
+  organizeController?.abort();
+});
 </script>
 
 <template>
@@ -271,7 +370,7 @@ onBeforeUnmount(() => organizeController?.abort());
             <label v-show="notePreviewMode !== 'preview'" class="markdown-source"><span>Markdown 源文本</span><textarea v-model="noteDraft" aria-label="Markdown 原始笔记" placeholder="# 标题&#10;&#10;记录理解、疑问、代码和示例……"></textarea></label>
             <section v-show="notePreviewMode !== 'edit'" class="markdown-preview" aria-label="Markdown 实时预览"><span>实时预览</span><MarkdownRenderer v-if="noteDraft.trim()" class="markdown-content" :source="noteDraft" :streaming="true" aria-label="笔记实时预览" /><p v-else>开始输入后，这里会实时显示标题、表格、公式、图形、任务清单、引用、链接和代码块。</p></section>
           </div>
-          <footer><span>支持标题、列表、任务清单、表格、引用、链接、粗体、行内代码和代码块</span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '保存原始笔记' }}</button><button v-if="organizing" @click="cancelOrganization">停止生成</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? `AI 整理中 · ${organizeElapsedSeconds} 秒 · ${streamingOrganizedMd.length} 字` : '用 AI 整理并核对' }}</button></footer>
+          <footer><span>支持标题、列表、任务清单、表格、引用、链接、粗体、行内代码和代码块 <b class="note-save-state" :data-state="noteSaveState" aria-live="polite">{{ { SAVED: '已自动保存', UNSAVED: '等待自动保存', SAVING: '自动保存中…', ERROR: '本地草稿已保留，服务端保存失败' }[noteSaveState] }}</b></span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '立即保存' }}</button><button v-if="organizing" @click="cancelOrganization">停止生成</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? `AI 整理中 · ${organizeElapsedSeconds} 秒 · ${streamingOrganizedMd.length} 字` : '用 AI 整理并核对' }}</button></footer>
         </section>
         <section class="content-card organized">
           <header><div><small>AI 整理候选稿</small><h2>{{ organizing ? '正在生成可核对的最终正文' : note?.generationMode === 'LOCAL_FALLBACK' ? 'AI 未完成：这是安全排版稿' : '核对后由你决定是否采用' }}</h2></div><button v-if="note?.organizedMd && !organizing" @click="acceptOrganized">采用为阅读版本</button></header>
@@ -296,13 +395,14 @@ onBeforeUnmount(() => organizeController?.abort());
         </section>
         <section class="content-card launch-card">
           <small>挑战形式</small><h2>M{{ selectedStage }} · {{ masteryCopy[selectedStage]?.[1] }}</h2>
-          <p>默认先理论后实战，但不强制。系统已按这个知识点判定为“{{ point.challengeProfile }}”。</p>
+          <p>系统会按“{{ point.challengeProfile }}”选择更贴近本点的默认形式，你仍可在开始前调整。</p>
           <div class="mode-picker">
             <button :class="{ active: challengeMode === 'THEORY' }" @click="challengeMode = 'THEORY'">先做理论</button>
             <button v-if="point.challengeProfile !== 'THEORY_ONLY'" :class="{ active: challengeMode === 'PRACTICE' }" @click="challengeMode = 'PRACTICE'">先做实战</button>
             <button v-if="point.challengeProfile !== 'THEORY_ONLY'" :class="{ active: challengeMode === 'MIXED' }" @click="challengeMode = 'MIXED'">理论 + 实战</button>
           </div>
-          <button class="primary launch" :disabled="point.learningState !== 'LEARNED' || launching" @click="launchChallenge">{{ launching ? '正在准备…' : point.learningState !== 'LEARNED' ? '先标记为已学完' : '开始这一级挑战 →' }}</button>
+          <div class="ai-disclosure"><strong>开始前会先检查 AI</strong><span>挑战题目合同、本点学习资料、你的作答与帮助使用记录会发送给设置页中配置的 AI 服务商，用于出题、提示与评分；不会发送 API Key。</span></div>
+          <button class="primary launch" :disabled="point.learningState !== 'LEARNED' || launching" @click="launchChallenge">{{ launching ? '正在检查 AI…' : point.learningState !== 'LEARNED' ? '先标记为已学完' : '检查并开始这一级挑战 →' }}</button>
           <MarkdownRenderer class="criteria markdown-content" :source="point.passCriteriaMd" aria-label="通过标准" />
         </section>
       </main>
@@ -339,6 +439,18 @@ onBeforeUnmount(() => organizeController?.abort());
   >
     <textarea v-model="deferReason" maxlength="300" placeholder="为什么暂时不学？可以留空，例如：当前工作暂时用不到。"></textarea>
   </BaseDialog>
+  <BaseDialog
+    :open="aiPreflightOpen"
+    eyebrow="AI PREFLIGHT"
+    title="掌握挑战暂时无法完整评分"
+    :description="`当前配置：${aiProviderLabel}。${aiPreflightStatus?.configured ? '系统未能连接该服务；请检查网络、模型名称或密钥。' : '尚未配置 AI 密钥。先完成设置，避免做完整份答卷后才发现无法判定。'}`"
+    confirm-label="去设置 AI"
+    cancel-label="稍后再做"
+    @cancel="aiPreflightOpen = false"
+    @confirm="openAISettings"
+  >
+    <p class="preflight-note">资料阅读、笔记和站内练习仍可正常使用；只有需要 AI 出题、提示或评分的掌握挑战被暂停。</p>
+  </BaseDialog>
 </template>
 
 <style scoped>
@@ -358,8 +470,10 @@ onBeforeUnmount(() => organizeController?.abort());
 .notes-layout,.mastery-layout,.branch-grid{align-items:stretch}.notes-layout>.content-card,.mastery-layout>.content-card,.branch-grid>article{height:100%}.note-editor,.organized{display:flex;min-width:0;flex-direction:column}.note-editor footer{margin-top:auto;padding-top:10px}.organized{max-height:none}.organized>.empty{margin:auto 0}
 .completion-card{background:linear-gradient(135deg,#f9fffb,#f0f9f5)}
 .note-view-switch{display:flex;gap:5px;width:max-content;margin:0 0 12px;padding:4px;border:1px solid #dce4ed;border-radius:11px;background:#f2f6fa}.note-view-switch button{border:0;background:transparent;padding:7px 10px}.note-view-switch button.active{color:#fff;background:#234e77;box-shadow:0 4px 12px rgba(32,72,111,.18)}
+.note-save-state{display:inline-block;margin-left:8px;padding:3px 7px;color:#23704b;background:#e9f7ef;border-radius:999px;font-size:.68rem}.note-save-state[data-state=UNSAVED],.note-save-state[data-state=SAVING]{color:#785c1b;background:#fff6d9}.note-save-state[data-state=ERROR]{color:#972f29;background:#fff0ee}
 .markdown-workbench{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:430px}.markdown-workbench.mode-edit,.markdown-workbench.mode-preview{grid-template-columns:1fr}.markdown-source,.markdown-preview{display:flex;min-width:0;flex-direction:column;border:1px solid #d7e0e9;border-radius:13px;overflow:hidden;background:#fff}.markdown-source>span,.markdown-preview>span{padding:9px 12px;color:#617087;font-size:.7rem;font-weight:800;background:#f3f7fa;border-bottom:1px solid #dfe6ed}.note-editor .markdown-source textarea{min-height:430px;height:100%;border:0;border-radius:0;outline:0;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview>article,.markdown-preview>p{padding:4px 17px 20px;margin:0;overflow:auto}.markdown-preview>p{padding-top:20px;color:#7a8492}.markdown-preview pre,.organized pre{overflow:auto;padding:14px;color:#deebf8;background:#122033;border-radius:11px}.markdown-preview code,.organized code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview table,.organized table{width:100%;border-collapse:collapse}.markdown-preview th,.markdown-preview td,.organized th,.organized td{padding:8px;border:1px solid #dce3eb;text-align:left}.markdown-preview blockquote,.organized blockquote{margin-left:0;padding:2px 14px;color:#53677e;border-left:4px solid #81a4ce;background:#f4f8fc}.task-item{display:flex;gap:7px;align-items:flex-start}.task-item input{margin-top:6px}
 .stream-state{display:flex;gap:10px;align-items:center;margin-bottom:12px;padding:11px 12px;color:#31597e;background:#edf6ff;border:1px solid #d3e7f8;border-radius:10px;font-size:.8rem}.stream-state>span{display:grid;gap:3px}.stream-state b{font-size:.8rem}.stream-state small{color:#647b94;font-size:.7rem}.stream-state i{flex:0 0 auto;width:9px;height:9px;background:#2a75bc;border-radius:50%;box-shadow:0 0 0 0 rgba(42,117,188,.35);animation:stream-pulse 1.25s infinite}.awaiting-final{margin:.7rem 0 0;padding:12px;color:#64758a;font-size:.78rem;background:#f6f8fb;border:1px dashed #ccd7e3;border-radius:10px}.streaming-markdown.live::after{display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:text-bottom;content:'';background:#2c70b1;animation:stream-caret .7s steps(1) infinite}@keyframes stream-pulse{70%{box-shadow:0 0 0 8px rgba(42,117,188,0)}}@keyframes stream-caret{50%{opacity:0}}
+.ai-disclosure{display:grid;gap:4px;margin:0 0 12px;padding:11px 12px;color:#4b5c71;background:#f4f7fb;border:1px solid #dfe6ef;border-radius:10px;font-size:.78rem;line-height:1.55}.ai-disclosure strong{color:#283d59}.preflight-note{margin:0;color:#566579;line-height:1.65}
 @media(max-width:1100px){.activity-panel{grid-template-columns:1fr 1fr}.activity-panel>article.active{grid-column:1/-1}.learning-guide__body{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.notes-layout>.content-card,.mastery-layout>.content-card{height:auto}}
 @media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide>summary{grid-template-columns:minmax(0,1fr) 12px}.learning-guide>summary em{display:none}.learning-guide__body{grid-template-columns:1fr}.materials-layout{display:block}.activity-panel{grid-template-columns:1fr;margin-top:14px}.activity-panel>article.active{grid-column:auto}.tabs{top:6px;width:100%;overflow:auto}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}.markdown-workbench{grid-template-columns:1fr}.note-view-switch{width:100%}.note-view-switch button{flex:1}.note-editor footer button{flex:1}}

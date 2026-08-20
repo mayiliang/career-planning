@@ -73,19 +73,6 @@ export const ParsedDomainSchema = z.object({
 
 export type ParsedDomain = z.infer<typeof ParsedDomainSchema>;
 
-// CSV 学习计划解析结果
-export const ParsedPlanItemSchema = z.object({
-  week: z.number(),
-  phase: z.string(),
-  theme: z.string(),
-  projectAnchor: z.string(),
-  weeklyOutcome: z.string(),
-  weeklyAssessment: z.string(),
-  status: z.string(),
-});
-
-export type ParsedPlanItem = z.infer<typeof ParsedPlanItemSchema>;
-
 // 岗位 CSV 解析结果
 export const ParsedJobSchema = z.object({
   date: z.string(),

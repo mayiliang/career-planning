@@ -61,7 +61,7 @@ const routes = [
     path: '/plan',
     name: 'Plan',
     component: () => import('@/features/calendar/CalendarPage.vue'),
-    meta: { title: '路线参考' },
+    meta: { title: '紧凑核心路线' },
   },
   {
     path: '/notes',
@@ -87,12 +87,24 @@ const routes = [
     component: () => import('@/features/settings/SettingsPage.vue'),
     meta: { title: '设置' },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/features/not-found/NotFoundPage.vue'),
+    meta: { title: '页面未找到' },
+  },
 ];
 
 // 创建路由实例
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.hash) return { el: to.hash, behavior: 'smooth' };
+    if (to.path === from.path) return false;
+    return { left: 0, top: 0 };
+  },
 });
 
 // 路由守卫：更新页面标题

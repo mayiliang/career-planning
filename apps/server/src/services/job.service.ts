@@ -412,7 +412,7 @@ export async function updateSkillGapStatus(
 // ===== CSV 导入 =====
 
 export interface JobCSVRow {
-  date: string;
+  date?: string;
   platform: string;
   company: string;
   job_title: string;

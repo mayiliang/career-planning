@@ -11,14 +11,11 @@
  * - POST /api/v1/calendar/events/:id/checkins - 打卡
  * - POST /api/v1/calendar/events/:id/reschedule - 改期
  * - GET /api/v1/calendar/today - 获取今日计划
- * - POST /api/v1/calendar/plan/import - 从模板导入计划
- * - POST /api/v1/calendar/plan/preview - 预览模板导入
+ * 推荐学习路线直接来自知识点，不提供固定周历模板导入。
  */
 import type { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
 import { currentBeijingDate, planService } from '../../services/plan.service.js';
-import { projectRoot } from '../../config/index.js';
-import { join } from 'path';
 
 // ===== Zod Schemas =====
 
@@ -66,11 +63,6 @@ const checkinSchema = z.object({
 const rescheduleSchema = z.object({
   newStartAt: z.string().datetime(),
   newEndAt: z.string().datetime(),
-});
-
-const planImportSchema = z.object({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  templatePath: z.string().optional(),
 });
 
 const dailyReviewSchema = z.object({
@@ -319,80 +311,6 @@ export const calendarRoutes: FastifyPluginCallback = (app, _opts, done) => {
       data: result,
       meta: { requestId: request.id },
     } as ApiResponse<typeof result>);
-  });
-  
-  // ===== 计划导入 =====
-  
-  /**
-   * POST /api/v1/calendar/plan/preview
-   * 预览模板导入
-   */
-  app.post('/plan/preview', {
-    schema: {
-      body: planImportSchema,
-    },
-  }, async (request, reply) => {
-    const { startDate, templatePath } = request.body as z.infer<typeof planImportSchema>;
-    
-    // 默认模板路径
-    const defaultTemplatePath = join(projectRoot, 'templates', 'learning-tracker-template.csv');
-    const path = templatePath ?? defaultTemplatePath;
-    
-    try {
-      const preview = await planService.previewFromTemplate(path, { startDate });
-      
-      return reply.send({
-        data: preview,
-        meta: { requestId: request.id },
-      } as ApiResponse<typeof preview>);
-    } catch {
-      return reply.status(400).send({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: '无法读取模板文件',
-          details: { path },
-          retryable: false,
-        },
-        meta: { requestId: request.id },
-      } as ApiErrorResponse);
-    }
-  });
-  
-  /**
-   * POST /api/v1/calendar/plan/import
-   * 执行模板导入
-   */
-  app.post('/plan/import', {
-    schema: {
-      body: planImportSchema,
-    },
-  }, async (request, reply) => {
-    const { startDate, templatePath } = request.body as z.infer<typeof planImportSchema>;
-    
-    // 默认模板路径
-    const defaultTemplatePath = join(projectRoot, 'templates', 'learning-tracker-template.csv');
-    const path = templatePath ?? defaultTemplatePath;
-    
-    try {
-      const result = await planService.importFromTemplate(path, { startDate });
-      
-      return reply.send({
-        data: {
-          imported: result.imported,
-          eventIds: result.events.map(e => e.id),
-        },
-        meta: { requestId: request.id },
-      } as ApiResponse<{ imported: number; eventIds: string[] }>);
-    } catch {
-      return reply.status(400).send({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: '导入失败',
-          retryable: true,
-        },
-        meta: { requestId: request.id },
-      } as ApiErrorResponse);
-    }
   });
   
   app.put('/reviews/daily/:date', {

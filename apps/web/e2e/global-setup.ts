@@ -1,5 +1,7 @@
 import type { FullConfig } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +23,31 @@ function startNodeProcess(entrypoint: string, args: string[], env: NodeJS.Proces
   child.stderr?.on('data', (chunk) => output.push(String(chunk)));
   child.once('error', (error) => output.push(error.stack ?? error.message));
   return { child, output };
+}
+
+async function assertPortIsFree(port: number) {
+  const occupied = await new Promise<boolean>((resolve) => {
+    const socket = createConnection({ host: '127.0.0.1', port });
+    let settled = false;
+    const finish = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(value);
+    };
+    socket.setTimeout(600, () => finish(false));
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
+  });
+  if (occupied) {
+    throw new Error(`端到端测试专用端口 ${port} 已被其它进程占用；请先停止旧测试服务，避免误连旧版本。`);
+  }
+}
+
+async function removeTestDataDir(dataDir: string) {
+  const expectedPrefix = join(tmpdir(), 'career-atlas-e2e-');
+  if (!dataDir.startsWith(expectedPrefix)) throw new Error(`拒绝清理非测试目录：${dataDir}`);
+  await rm(dataDir, { recursive: true, force: true });
 }
 
 async function waitForUrl(url: string, processInfo: { child: ChildProcess; output: string[] }) {
@@ -56,12 +83,14 @@ async function stopProcess(child: ChildProcess) {
 }
 
 export default async function globalSetup(_config: FullConfig) {
+  await Promise.all([assertPortIsFree(backendPort), assertPortIsFree(frontendPort)]);
+  const dataDir = await mkdtemp(join(tmpdir(), 'career-atlas-e2e-'));
   const backend = startNodeProcess(
     fileURLToPath(new URL('../../server/dist/index.js', import.meta.url)),
     [],
     {
       PORT: String(backendPort),
-      DATA_DIR: join(tmpdir(), `career-atlas-e2e-${process.pid}`),
+      DATA_DIR: dataDir,
       NODE_ENV: 'test',
       AUTO_BACKUP: 'false',
       DEEPSEEK_API_KEY: '',
@@ -81,10 +110,12 @@ export default async function globalSetup(_config: FullConfig) {
     return async () => {
       await stopProcess(frontend.child);
       await stopProcess(backend.child);
+      await removeTestDataDir(dataDir);
     };
   } catch (error) {
     if (frontend) await stopProcess(frontend.child);
     await stopProcess(backend.child);
+    await removeTestDataDir(dataDir);
     throw error;
   }
 }

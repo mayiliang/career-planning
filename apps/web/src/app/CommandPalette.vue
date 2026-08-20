@@ -10,6 +10,14 @@ const router = useRouter();
 const query = ref('');
 const activeIndex = ref(0);
 const input = ref<HTMLInputElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
+let previousFocus: HTMLElement | null = null;
+let previousBodyOverflow = '';
+
+function focusableElements() {
+  return Array.from(panel.value?.querySelectorAll<HTMLElement>('input, button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])') ?? [])
+    .filter((element) => element.getClientRects().length > 0);
+}
 
 const { data } = useQuery({
   queryKey: ['knowledge', 'points', 'command-palette'],
@@ -22,7 +30,7 @@ const destinations = [
   { label: '知识体系脑图', hint: '查看完整能力结构', path: '/knowledge/map', code: 'ATLAS', type: '页面' },
   { label: '知识关系图谱', hint: '查看前置与关联关系', path: '/knowledge/graph', code: 'GRAPH', type: '页面' },
   { label: '笔记中心', hint: '按知识体系管理原文与 AI 整理稿', path: '/notes', code: 'NOTES', type: '页面' },
-  { label: '64 周路线参考', hint: '只查看推荐先后顺序，不生成每日任务', path: '/plan', code: 'ROUTE', type: '页面' },
+  { label: '紧凑核心路线', hint: '35 个连续批次，只安排真实知识点', path: '/plan', code: 'ROUTE', type: '页面' },
   { label: '求职支线', hint: '管理岗位、反馈与技能缺口', path: '/jobs', code: 'JOBS', type: '页面' },
   { label: '设置与本地数据', hint: 'DeepSeek、备份与恢复', path: '/settings', code: 'LOCAL', type: '页面' },
 ];
@@ -35,7 +43,7 @@ const results = computed(() => {
     .slice(0, keyword ? 9 : 5)
     .map((point) => ({
       label: point.title,
-      hint: `${point.domainTitle} · 第 ${point.planWeek ?? '—'} 周`,
+      hint: `${point.domainTitle} · ${point.planWeek ? `核心批次 B${String(point.planWeek).padStart(2, '0')}` : '专项路线'}`,
       path: `/knowledge/${point.code}`,
       code: point.code,
       type: point.status === 'MASTERED' ? '已掌握' : '知识点',
@@ -62,6 +70,13 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   }
   if (!props.modelValue) return;
   if (event.key === 'Escape') close();
+  if (event.key === 'Tab') {
+    const elements = focusableElements();
+    const first = elements[0];
+    const last = elements.at(-1);
+    if (first && last && event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (first && last && !event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
   if (event.key === 'ArrowDown') {
     event.preventDefault();
     activeIndex.value = (activeIndex.value + 1) % Math.max(1, results.value.length);
@@ -77,7 +92,15 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 }
 
 watch(() => props.modelValue, async (open) => {
-  if (!open) return;
+  if (!open) {
+    document.body.style.overflow = previousBodyOverflow;
+    previousFocus?.focus();
+    previousFocus = null;
+    return;
+  }
+  previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  previousBodyOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
   query.value = '';
   activeIndex.value = 0;
   await nextTick();
@@ -85,14 +108,18 @@ watch(() => props.modelValue, async (open) => {
 });
 watch(results, () => { activeIndex.value = 0; });
 onMounted(() => window.addEventListener('keydown', handleGlobalKeydown));
-onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown));
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown);
+  if (props.modelValue) document.body.style.overflow = previousBodyOverflow;
+  previousFocus?.focus();
+});
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="command">
       <div v-if="modelValue" class="command-overlay" @mousedown.self="close">
-        <section class="command-panel" role="dialog" aria-modal="true" aria-label="快速查找">
+        <section ref="panel" class="command-panel" role="dialog" aria-modal="true" aria-label="快速查找" tabindex="-1">
           <header>
             <span>⌕</span>
             <input ref="input" v-model="query" aria-label="搜索页面或知识点" placeholder="搜索知识点、页面或能力领域…" autocomplete="off" />

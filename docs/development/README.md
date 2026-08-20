@@ -1,6 +1,6 @@
 # Career Atlas 开发文档
 
-更新时间：2026-08-18
+更新时间：2026-08-20
 
 Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdown 文档是知识内容真源，SQLite 保存用户状态、笔记、练习、挑战、打卡和求职数据；浏览器不持有 AI 密钥。
 
@@ -11,7 +11,7 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 | 学习节奏 | 不生成每日强制学习任务；用户选择当前知识点，打卡记录实际学习 |
 | 学习完成 | 用户完成资料和笔记后主动标记“已学完” |
 | 掌握判定 | 完全可选的 M1～M4 掌握挑战；M3 为已掌握，M4 为稳定掌握 |
-| 路线 | 唯一后续自动连续；当前线路结束后才展示方向选择 |
+| 路线 | 149 个主干点压缩为 35 个非空批次；唯一后续自动连续，React/Vue 同等优先 |
 | 笔记 | 原始 Markdown 永不被 AI 覆盖；AI 候选稿需用户接受 |
 | 练习 | 有练习就必须有明确输入、输出、完成标准和站内工作区 |
 | AI | Fastify 服务端调用可替换兼容接口；正文、thinking、进度分流式事件 |
@@ -32,9 +32,11 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 8. [现代 Markdown 与 AI 流式协议](10-modern-markdown-and-ai-streaming.md)
 9. [运行时评分器提示词](prompts/runtime-assessment-judge-system-prompt.md)
 10. [服务器支持与部署](../deployment/server-support.md)
-11. [实施状态](implementation-status.md)
+11. [商用品质发布检查表](commercial-release-checklist.md)
+12. [隐私与数据说明](../../PRIVACY.md)
+13. [实施状态](implementation-status.md)
 
-早期的阶段实施路线、GLM-5 生成提示词、固定 64 周个人计划和重复职业路线已经移除。Git 历史可用于追溯，当前文档只维护实际产品口径。
+早期的阶段实施路线、生成提示词、固定周历任务模板和重复职业路线已经移除。Git 历史可用于追溯，当前文档只维护实际产品口径。
 
 ## 变更同步矩阵
 
@@ -49,6 +51,8 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 | 测试、计数、验收命令 | `07`、`implementation-status.md` |
 | 部署、端口、环境变量 | 根 README、服务器支持文档、`.env.example` |
 | 知识点或资料 | `docs/knowledge/` 对应文件与内容门禁 |
+| 隐私、导出、恢复、追踪 | 根 `PRIVACY.md`、`06`、商用品质发布检查表 |
+| 发布阻断、性能预算、商用边界 | 商用品质发布检查表、`07`、`implementation-status.md` |
 
 ## 完成定义
 

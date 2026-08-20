@@ -53,7 +53,7 @@ export const FRAMEWORK_ROUTE_CANDIDATES = [
 ] as const;
 
 /**
- * 完整候选顺序用于知识图谱和分支编排；默认 60 周路线只纳入全员必修，
+ * 完整候选顺序用于知识图谱和分支编排；默认核心路线只纳入全员必修，
  * 加上同等优先的 React、Vue 与 Agent/MCP 主修轨，避免把其他专项误标成必修。
  */
 const COMPLETE_ROUTE_CANDIDATES = [
@@ -102,20 +102,20 @@ const PLAN_ROUTE = COMPLETE_ROUTE_CANDIDATES.filter((code) => {
       && taxonomy.trackIds.some((trackId) => DEFAULT_TRACK_IDS.has(trackId)));
 });
 
-export const CONTENT_PLAN_WEEK_COUNT = 60;
+/**
+ * 默认主干压缩为 35 个连续学习批次。批次只表达顺序与一组可连续推进的
+ * 知识点，不承诺固定周历；旧 API/数据库仍沿用 planWeek 字段以避免迁移。
+ */
+export const CORE_ROUTE_BATCH_COUNT = 35;
+export const CONTENT_PLAN_WEEK_COUNT = CORE_ROUTE_BATCH_COUNT;
 export const LEARNING_WEEK_PATHS: Record<number, string[]> = {};
 for (let week = 1; week <= CONTENT_PLAN_WEEK_COUNT; week++) {
   const start = Math.floor(((week - 1) * PLAN_ROUTE.length) / CONTENT_PLAN_WEEK_COUNT);
   const end = Math.floor((week * PLAN_ROUTE.length) / CONTENT_PLAN_WEEK_COUNT);
   LEARNING_WEEK_PATHS[week] = PLAN_ROUTE.slice(start, end);
 }
-LEARNING_WEEK_PATHS[61] = ['ARCH-02', 'CAREER-01', 'CAREER-02', 'CAREER-06'];
-LEARNING_WEEK_PATHS[62] = ['ENG-06', 'OBS-01', 'DEPLOY-01', 'CLOUD-01'];
-LEARNING_WEEK_PATHS[63] = ['RENDER-02', 'DATA-02', 'AIAPP-08', 'AGENT-10', 'AISAFE-02'];
-LEARNING_WEEK_PATHS[64] = ['TEST-03', 'A11Y-01', 'UX-01', 'AIGOV-01', 'LEAD-01', 'CAREER-06'];
-
 let globalRouteOrder = 0;
-/** 所有推荐入口共用的唯一顺序；不包含后四周重复使用的综合实践节点。 */
+/** 所有推荐入口共用的唯一顺序；每个知识点只出现一次。 */
 export const RECOMMENDED_KNOWLEDGE_ROUTE = Object.entries(LEARNING_WEEK_PATHS)
   .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
   .flatMap(([, path]) => path);

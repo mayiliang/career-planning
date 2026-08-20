@@ -244,7 +244,8 @@ export async function getKnowledgePoints(query: KnowledgeListQuery): Promise<{
     const challengeProfile = inferChallengeProfile(item.code, item.title, item.domainTitle, assessmentSpecMd);
     return {
       ...item,
-      planWeek: route?.week ?? item.planWeek,
+      // 旧库可能保留历史周次；当前路线只认运行时索引，专项点必须保持为空。
+      planWeek: route?.week ?? null,
       routeOrder: route?.order ?? Number.MAX_SAFE_INTEGER,
       // 掌握挑战完全可选，不计入路线的学习投入；纯理论知识也不再虚构项目时间。
       estimatedTotalMinutes: visibleLearningMinutes(item, challengeProfile),
@@ -323,7 +324,7 @@ export async function getKnowledgePointByCode(code: string): Promise<KnowledgePo
   const learningActivities = buildLearningActivities(result, challengeProfile);
   return {
     ...result,
-    planWeek: route?.week ?? result.planWeek,
+    planWeek: route?.week ?? null,
     routeOrder: route?.order ?? Number.MAX_SAFE_INTEGER,
     estimatedTotalMinutes: learningActivities.reduce((sum, activity) => sum + activity.minutes, 0),
     estimatedCoreMinutes: result.studyMinutes,

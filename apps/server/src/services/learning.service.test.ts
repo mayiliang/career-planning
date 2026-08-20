@@ -192,7 +192,11 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(a11yBranches[0]?.code).toBe('BROWSER-01');
     expect(a11yBranches[0]?.navigationKind).toBe('CONTINUE');
     expect(a11yBranches.some((item) => item.code === 'UX-01')).toBe(false);
-    const trackChoices = getNextBranches('SEC-05');
+    const crossDomainContinuation = getNextBranches('SEC-05');
+    expect(crossDomainContinuation).toHaveLength(1);
+    expect(crossDomainContinuation[0]?.code).toBe('TS-01');
+    expect(crossDomainContinuation[0]?.navigationKind).toBe('CONTINUE');
+    const trackChoices = getNextBranches('CAREER-05');
     expect(trackChoices.length).toBeGreaterThan(1);
     expect(trackChoices.every((item) => item.navigationKind === 'TRACK_CHOICE')).toBe(true);
   });
@@ -249,6 +253,31 @@ describe('自主学习、笔记版本与打卡', () => {
     }
     expect(problems, '站内练习必须逐点绑定本点题源、最小产出与可验证合同').toEqual([]);
     expect(explicitProfileProblems, '223 个知识点必须显式声明挑战类型，不能只依赖标题启发式').toEqual([]);
+  });
+
+  it('路线批次只认运行时主干索引，不让旧周次把专项点混入主线', async () => {
+    rawDb.prepare("UPDATE knowledge_points SET plan_week = 99 WHERE code = 'VUE-09'").run();
+    try {
+      const { items } = await getKnowledgePoints({});
+      const vueSpecialty = items.find((item) => item.code === 'VUE-09');
+      expect(vueSpecialty?.planWeek).toBeNull();
+      expect(items.filter((item) => item.planWeek !== null)).toHaveLength(149);
+    } finally {
+      rawDb.prepare("UPDATE knowledge_points SET plan_week = NULL WHERE code = 'VUE-09'").run();
+    }
+  });
+
+  it('详情下一步沿紧凑主干交错推荐 React 与 Vue，而不是先学完单一框架', () => {
+    rawDb.prepare("UPDATE knowledge_points SET learning_state = 'NOT_STARTED' WHERE code IN ('REACT-01', 'VUE-01', 'VUE-02', 'REACT-02')").run();
+    const afterReactStart = getNextBranches('REACT-01');
+    expect(afterReactStart).toHaveLength(1);
+    expect(afterReactStart[0]?.code).toBe('VUE-01');
+    expect(afterReactStart[0]?.navigationKind).toBe('CONTINUE');
+    expect(afterReactStart[0]?.trackName).toBe('紧凑核心路线');
+
+    rawDb.prepare("UPDATE knowledge_points SET learning_state = 'LEARNED' WHERE code = 'VUE-01'").run();
+    expect(getNextBranches('REACT-01')[0]?.code).toBe('VUE-02');
+    rawDb.prepare("UPDATE knowledge_points SET learning_state = 'NOT_STARTED' WHERE code = 'VUE-01'").run();
   });
 
   it('无 AI 时只能通过固定合同的结构验证，不能声称语义正确', async () => {

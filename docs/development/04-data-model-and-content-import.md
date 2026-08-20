@@ -1,6 +1,6 @@
 # 数据模型与内容导入
 
-更新时间：2026-08-09
+更新时间：2026-08-20
 
 ## 1. 数据边界
 
@@ -33,6 +33,7 @@
 - `masteryLevel`：0～4；与学习状态独立。
 - `challengeProfile`：由内容特性推导为理论、示例、编码、排错、工具或设计案例。
 - `study/practice/project/assessment/retest minutes`：为旧内容与统计兼容字段。UI 只展示有真实任务的活动时长，不再把五项解释成用户必须线下完成的阶段。
+- `planWeek`：仅为数据库/API 兼容名，运行时含义是 1～35 的核心路线批次；专项点一律返回空值，不读取旧库残留周次。
 
 旧的 `status`（如 `SELF_MASTERED`、`FIRST_PASS_PENDING_RETEST`、`MASTERED`）继续作为数据库兼容/统计字段；新产品语义以 `learningState + masteryLevel` 为准。
 
@@ -53,6 +54,8 @@ AI 流式增量和 thinking 是临时 UI 状态，只有通过完整 JSON 解析
 7. 关系类型区分硬前置、推荐顺序、相关和应用关系；只有硬前置允许阻塞。
 8. 导入必须支持 LF/CRLF 和 Windows/macOS/Linux 路径。
 9. `TRACK_REQUIRED` 必须有至少一个 `trackId`；默认路线由 `REQUIRED` 与所选路线的 `TRACK_REQUIRED` 动态生成。
+10. 当前默认路线必须精确为 149 个唯一知识点、35 个非空批次，每批 4～5 点；不得加入复盘周、项目周或自由文本占位项。
+11. 非知识点事项只有在系统中具有固定输入、交付物、验证清单、否决项和系统/AI 验收结果时才能发布为路线任务；否则不得生成。
 
 ## 6. 同步与迁移
 

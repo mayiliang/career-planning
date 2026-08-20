@@ -125,7 +125,12 @@ export function restorePoint(code: string) {
 export function getNextBranches(code: string) {
   requirePoint(code);
   const trackIndex = KNOWLEDGE_PATHS.findIndex((path) => path.includes(code));
-  const currentTrack = trackIndex >= 0 ? KNOWLEDGE_PATHS[trackIndex]! : RECOMMENDED_KNOWLEDGE_ROUTE;
+  const mainlinePosition = RECOMMENDED_KNOWLEDGE_ROUTE.indexOf(code);
+  // 主干点必须沿 35 批次的同一顺序推进；否则 React/Vue 会重新退化为各自领域内串行。
+  // 只有专项点才沿其所属领域路线继续。
+  const currentTrack = mainlinePosition >= 0
+    ? RECOMMENDED_KNOWLEDGE_ROUTE
+    : trackIndex >= 0 ? KNOWLEDGE_PATHS[trackIndex]! : [code];
   const position = currentTrack.indexOf(code);
   const directNextCode = currentTrack.slice(position + 1).find(isAvailableForRoute);
 
@@ -136,12 +141,12 @@ export function getNextBranches(code: string) {
       relation: 'CONTINUE',
       description: '当前学习路线中紧接此知识点的下一步；不会打乱路线或丢失其他方向。',
       navigationKind: 'CONTINUE',
-      trackName: next.domainTitle,
+      trackName: mainlinePosition >= 0 ? '紧凑核心路线' : next.domainTitle,
       trackRemaining: countAvailable(currentTrack, currentTrack.indexOf(directNextCode)),
     })] : [];
   }
 
-  // 当前路线走完后，才从其他尚未完成且未被暂缓的路线中各取一个入口。
+  // 当前路线走完后，才从其他尚未完成且未被暂缓的专项路线中各取一个入口。
   const trackChoices = KNOWLEDGE_PATHS
     .map((path, index) => ({ path, index, nextCode: path.find(isAvailableForRoute) }))
     .filter((item) => item.index !== trackIndex && item.nextCode)
@@ -422,8 +427,11 @@ function requirePoint(code: string, withContent = false): PointRow {
 
 function enrichPoint(point: PointRow) {
   const profile = inferChallengeProfile(point.code, point.title, point.domainTitle, point.assessmentSpecMd);
+  const route = KNOWLEDGE_ROUTE_INDEX.get(point.code);
   return {
     ...point,
+    // 不回退到旧数据库周次，避免专项点重新混入紧凑核心路线。
+    planWeek: route?.week ?? null,
     currentFocus: Boolean(point.currentFocus),
     masteryLevel: Math.max(0, Math.min(4, point.masteryLevel || 0)),
     estimatedMinutes: point.studyMinutes + point.practiceMinutes + (profile === 'THEORY_ONLY' ? 0 : point.projectMinutes),

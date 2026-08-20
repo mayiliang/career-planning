@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { resolvePointTaxonomy } from '@career-atlas/content-parser';
-import { CONTENT_PLAN_WEEK_COUNT, LEARNING_WEEK_PATHS } from './plan.service.js';
+import { projectRoot } from '../config/index.js';
 import {
+  CONTENT_PLAN_WEEK_COUNT,
+  CORE_ROUTE_BATCH_COUNT,
   DEFAULT_TRACK_IDS,
   FRAMEWORK_ROUTE_CANDIDATES,
   KNOWLEDGE_PATHS,
+  LEARNING_WEEK_PATHS,
   RECOMMENDED_KNOWLEDGE_ROUTE,
   buildRelationDefinitions,
 } from './knowledge-relations.service.js';
 
-describe('知识关系与 64 周计划编排', () => {
-  it('完整体系包含 223 点，默认 60 周覆盖全员必修与同等优先的 React、Vue、Agent/MCP 主修', () => {
+describe('知识关系与紧凑核心路线编排', () => {
+  it('完整体系包含 223 点，35 个非空批次覆盖 149 个主干点且不生成占位任务', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
       .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
@@ -18,7 +23,12 @@ describe('知识关系与 64 周计划编排', () => {
 
     const plannedSet = new Set(plannedCodes);
     expect(new Set(knowledgeCodes).size).toBe(223);
+    expect(CORE_ROUTE_BATCH_COUNT).toBe(35);
+    expect(Object.keys(LEARNING_WEEK_PATHS)).toHaveLength(CORE_ROUTE_BATCH_COUNT);
+    expect(Object.values(LEARNING_WEEK_PATHS).every((codes) => codes.length >= 4 && codes.length <= 5)).toBe(true);
+    expect(plannedCodes).toHaveLength(149);
     expect(plannedSet.size).toBe(plannedCodes.length);
+    expect(plannedCodes).toEqual(RECOMMENDED_KNOWLEDGE_ROUTE);
     KNOWLEDGE_PATHS.forEach((path, index) => {
       const domainCode = String(index + 1).padStart(2, '0');
       for (const code of path) {
@@ -45,6 +55,17 @@ describe('知识关系与 64 周计划编排', () => {
     expect(plannedFrameworkRoute).toEqual(
       FRAMEWORK_ROUTE_CANDIDATES.filter((code) => code !== 'VUE-09'),
     );
+  });
+
+  it('唯一推荐路线文档的 35 个批次与运行时逐点一致', () => {
+    const document = readFileSync(resolve(projectRoot, 'docs/plans/self-paced-learning-route.md'), 'utf8');
+    const rows = [...document.matchAll(/^\| B(\d{2}) \| ([^|]+) \|$/gm)];
+    expect(rows).toHaveLength(CORE_ROUTE_BATCH_COUNT);
+    for (const row of rows) {
+      const batch = Number(row[1]);
+      const codes = [...row[2]!.matchAll(/`([A-Z0-9-]+)`/g)].map((match) => match[1]);
+      expect(codes, `路线文档 B${row[1]} 与运行时不一致`).toEqual(LEARNING_WEEK_PATHS[batch]);
+    }
   });
 
   it('只把真实依赖建成硬前置，不把推荐阅读顺序机械转成前置', () => {
@@ -152,7 +173,7 @@ describe('知识关系与 64 周计划编排', () => {
     expect(visited, '硬前置关系中存在循环依赖').toBe(codes.length);
   });
 
-  it('所有跨周前置知识都排在依赖知识之前', () => {
+  it('所有跨批次前置知识都排在依赖知识之前', () => {
     const weekByCode = new Map(Object.entries(LEARNING_WEEK_PATHS)
       .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
       .flatMap(([week, codes]) => codes.map((code) => [code, Number(week)] as const)));
@@ -163,7 +184,7 @@ describe('知识关系与 64 周计划编排', () => {
       expect(sourceWeek, `${relation.source} 是 ${relation.target} 的前置，但不在默认路线`).toBeDefined();
       expect(
         sourceWeek!,
-        `${relation.source}（第 ${sourceWeek} 周）必须早于 ${relation.target}（第 ${targetWeek} 周）`,
+        `${relation.source}（批次 ${sourceWeek}）必须早于 ${relation.target}（批次 ${targetWeek}）`,
       ).toBeLessThanOrEqual(targetWeek!);
     }
   });

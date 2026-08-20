@@ -42,11 +42,12 @@ const navItems = [
   { path: '/', label: '学习台', hint: 'LEARN', glyph: '学' },
   { path: '/knowledge/map', label: '知识体系', hint: 'ATLAS', glyph: '知' },
   { path: '/notes', label: '笔记中心', hint: 'NOTES', glyph: '记' },
-  { path: '/plan', label: '路线参考', hint: 'OPTIONAL', glyph: '路' },
+  { path: '/plan', label: '核心路线', hint: '35 BATCHES', glyph: '路' },
   { path: '/jobs', label: '求职支线', hint: 'JOBS', glyph: '职' },
 ];
 
 const route = useRoute();
+const routeAnnouncement = computed(() => `${String(route.meta.title ?? 'Career Atlas')}页面已打开`);
 const isActive = (path: string) => {
   if (path === '/') return route.path === '/';
   if (path === '/knowledge/map') return route.path.startsWith('/knowledge');
@@ -56,11 +57,12 @@ const isActive = (path: string) => {
 
 <template>
   <div class="app-root">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <!-- 左侧导航 -->
-    <nav class="side-nav">
+    <nav class="side-nav" aria-label="主导航">
       <div class="nav-header">
         <div class="brand-mark">CA</div>
-        <div class="brand-copy"><h1 class="app-title">Career Atlas</h1><p>AI 时代前端能力地图</p></div>
+        <div class="brand-copy"><div class="app-title">Career Atlas</div><p>AI 时代前端能力地图</p></div>
       </div>
       
       <ul class="nav-list">
@@ -69,6 +71,8 @@ const isActive = (path: string) => {
             :to="item.path" 
             class="nav-link"
             :class="{ active: isActive(item.path) }"
+            :aria-current="isActive(item.path) ? 'page' : undefined"
+            :title="item.label"
           >
             <span class="nav-glyph">{{ item.glyph }}</span>
             <span class="nav-copy"><strong>{{ item.label }}</strong><small>{{ item.hint }}</small></span>
@@ -82,15 +86,22 @@ const isActive = (path: string) => {
       
       <div class="nav-footer">
         <div class="service-state" :title="statusText"><span :style="{ backgroundColor: statusColor }"></span><div><strong>{{ statusText }}</strong><small>本地数据服务</small></div></div>
-        <RouterLink to="/settings" class="nav-link settings-link" :class="{ active: isActive('/settings') }">
+        <RouterLink to="/settings" class="nav-link settings-link" :class="{ active: isActive('/settings') }" :aria-current="isActive('/settings') ? 'page' : undefined" title="设置与数据">
           <span class="nav-glyph">设</span><span class="nav-copy"><strong>设置与数据</strong><small>LOCAL</small></span>
         </RouterLink>
       </div>
     </nav>
 
     <!-- 主内容区 -->
-    <main class="main-content">
-      <div class="content-frame"><RouterView /></div>
+    <main id="main-content" class="main-content" tabindex="-1">
+      <p class="sr-only" aria-live="polite">{{ routeAnnouncement }}</p>
+      <div class="content-frame">
+        <RouterView v-slot="{ Component }">
+          <Transition name="route" mode="out-in">
+            <div :key="route.path" class="route-shell"><component :is="Component" /></div>
+          </Transition>
+        </RouterView>
+      </div>
     </main>
     <CommandPalette v-model="commandPaletteOpen" />
   </div>

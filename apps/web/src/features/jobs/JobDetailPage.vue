@@ -7,6 +7,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiClient, type JobDetailResponse } from '../../api/client';
+import BaseDialog from '@/components/BaseDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -16,6 +17,9 @@ const jobId = route.params.id as string;
 const detail = ref<JobDetailResponse | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const actionError = ref('');
+const message = ref('');
+const actionSaving = ref(false);
 
 // 活动表单
 const showActivityForm = ref(false);
@@ -78,7 +82,8 @@ const activityTypeLabels: Record<string, string> = {
 // 创建活动
 async function createActivity() {
   if (!activityForm.value.title) return;
-  
+  actionSaving.value = true;
+  actionError.value = '';
   try {
     await apiClient.createJobActivity(jobId, {
       activityType: activityForm.value.activityType,
@@ -100,15 +105,17 @@ async function createActivity() {
     };
     
     await loadDetail();
+    message.value = '求职活动已保存。';
   } catch (e) {
-    alert('创建失败: ' + (e instanceof Error ? e.message : '未知错误'));
-  }
+    actionError.value = '创建失败：' + (e instanceof Error ? e.message : '未知错误');
+  } finally { actionSaving.value = false; }
 }
 
 // 创建技能缺口
 async function createGap() {
   if (!gapForm.value.knowledgePointCode) return;
-  
+  actionSaving.value = true;
+  actionError.value = '';
   try {
     await apiClient.createSkillGap(jobId, {
       knowledgePointCode: gapForm.value.knowledgePointCode,
@@ -126,9 +133,10 @@ async function createGap() {
     };
     
     await loadDetail();
+    message.value = '技能缺口已保存。';
   } catch (e) {
-    alert('创建失败: ' + (e instanceof Error ? e.message : '未知错误'));
-  }
+    actionError.value = '创建失败：' + (e instanceof Error ? e.message : '未知错误');
+  } finally { actionSaving.value = false; }
 }
 
 // 更新技能缺口状态
@@ -137,7 +145,7 @@ async function updateGapStatus(gapId: string, status: 'IDENTIFIED' | 'LEARNING' 
     await apiClient.updateSkillGapStatus(jobId, gapId, status);
     await loadDetail();
   } catch (e) {
-    alert('更新失败: ' + (e instanceof Error ? e.message : '未知错误'));
+    actionError.value = '更新失败：' + (e instanceof Error ? e.message : '未知错误');
   }
 }
 
@@ -166,7 +174,7 @@ onMounted(loadDetail);
       <header class="page-header">
         <button class="back-btn" @click="goBack">← 返回</button>
         <div class="job-header">
-          <h2>{{ detail.job.jobTitle }}</h2>
+          <h1>{{ detail.job.jobTitle }}</h1>
           <div class="company">{{ detail.job.company }}</div>
           <div
             class="status-badge"
@@ -176,6 +184,8 @@ onMounted(loadDetail);
           </div>
         </div>
       </header>
+      <p v-if="message" class="action-notice" role="status">{{ message }}</p>
+      <p v-if="actionError" class="action-notice error" role="alert">{{ actionError }}</p>
       
       <!-- 基本信息 -->
       <section class="info-section">
@@ -297,14 +307,10 @@ onMounted(loadDetail);
       </section>
     </template>
     
-    <!-- 添加活动对话框 -->
-    <div v-if="showActivityForm" class="modal-overlay" @click.self="showActivityForm = false">
-      <div class="modal">
-        <h3>添加求职活动</h3>
-        <form @submit.prevent="createActivity">
+    <BaseDialog :open="showActivityForm" eyebrow="JOB ACTIVITY" title="添加求职活动" description="记录一个已经发生或明确计划的动作，避免只有模糊状态。" confirm-label="保存活动" :busy="actionSaving" :confirm-disabled="!activityForm.title.trim()" @cancel="showActivityForm = false" @confirm="createActivity">
+        <div class="dialog-form">
           <div class="form-group">
-            <label>类型</label>
-            <select v-model="activityForm.activityType">
+            <label>类型<select v-model="activityForm.activityType">
               <option value="APPLICATION">投递</option>
               <option value="MESSAGE">消息</option>
               <option value="WRITTEN_TEST">笔试</option>
@@ -312,75 +318,55 @@ onMounted(loadDetail);
               <option value="FOLLOW_UP">跟进</option>
               <option value="OFFER">Offer</option>
               <option value="REJECTION">拒信</option>
-            </select>
+            </select></label>
           </div>
           <div class="form-group">
-            <label>标题</label>
-            <input v-model="activityForm.title" type="text" required />
+            <label>标题<input v-model="activityForm.title" type="text" maxlength="200" required /></label>
           </div>
           <div class="form-group">
-            <label>描述</label>
-            <textarea v-model="activityForm.description" rows="3"></textarea>
+            <label>描述<textarea v-model="activityForm.description" maxlength="5000" rows="3"></textarea></label>
           </div>
           <div v-if="activityForm.activityType === 'INTERVIEW'" class="form-row">
             <div class="form-group">
-              <label>轮次</label>
-              <input v-model.number="activityForm.interviewRound" type="number" min="1" />
+              <label>轮次<input v-model.number="activityForm.interviewRound" type="number" min="1" /></label>
             </div>
             <div class="form-group">
-              <label>形式</label>
-              <select v-model="activityForm.interviewType">
+              <label>形式<select v-model="activityForm.interviewType">
                 <option value="">请选择</option>
                 <option value="PHONE">电话</option>
                 <option value="VIDEO">视频</option>
                 <option value="ONSITE">现场</option>
-              </select>
+              </select></label>
             </div>
           </div>
-          <div class="form-actions">
-            <button type="button" @click="showActivityForm = false">取消</button>
-            <button type="submit" class="primary">保存</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+    </BaseDialog>
     
     <!-- 添加技能缺口对话框 -->
-    <div v-if="showGapForm" class="modal-overlay" @click.self="showGapForm = false">
-      <div class="modal">
-        <h3>添加技能缺口</h3>
-        <form @submit.prevent="createGap">
+    <BaseDialog :open="showGapForm" eyebrow="SKILL GAP" title="添加技能缺口" description="只记录能映射到知识体系的具体差距，并给出一个下一步。" confirm-label="保存缺口" :busy="actionSaving" :confirm-disabled="!gapForm.knowledgePointCode.trim()" @cancel="showGapForm = false" @confirm="createGap">
+        <div class="dialog-form">
           <div class="form-group">
-            <label>知识点代码</label>
-            <input v-model="gapForm.knowledgePointCode" type="text" required placeholder="如: 01-js-01" />
+            <label>知识点代码<input v-model="gapForm.knowledgePointCode" type="text" maxlength="40" required placeholder="如：JS-01" /></label>
           </div>
           <div class="form-group">
-            <label>缺口等级</label>
-            <select v-model="gapForm.gapLevel">
+            <label>缺口等级<select v-model="gapForm.gapLevel">
               <option value="HIGH">高</option>
               <option value="MEDIUM">中</option>
               <option value="LOW">低</option>
-            </select>
+            </select></label>
           </div>
           <div class="form-group">
-            <label>来源</label>
-            <select v-model="gapForm.sourceType">
+            <label>来源<select v-model="gapForm.sourceType">
               <option value="JD_ANALYSIS">JD 分析</option>
               <option value="INTERVIEW_FEEDBACK">面试反馈</option>
               <option value="SELF_ASSESSMENT">自我评估</option>
-            </select>
+            </select></label>
           </div>
           <div class="form-group">
-            <label>学习行动</label>
-            <input v-model="gapForm.learningAction" type="text" />
+            <label>学习行动<input v-model="gapForm.learningAction" type="text" maxlength="500" placeholder="例如：完成 JS-01 站内练习并复盘失败证据" /></label>
           </div>
-          <div class="form-actions">
-            <button type="button" @click="showGapForm = false">取消</button>
-            <button type="submit" class="primary">保存</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+    </BaseDialog>
   </div>
 </template>
 

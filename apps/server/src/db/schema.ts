@@ -66,7 +66,7 @@ export const knowledgePoints = sqliteTable('knowledge_points', {
   trackIds: text('track_ids', { mode: 'json' }).$type<string[]>().notNull().default([]),
   verifiedAt: text('verified_at').notNull().default('2026-08-04'),
   fallbackStrategy: text('fallback_strategy').notNull().default('按目标环境做能力检测并保留稳定降级路径。'),
-  planWeek: integer('plan_week'), // 推荐周次
+  planWeek: integer('plan_week'), // 兼容字段：紧凑核心路线的批次编号
 
   // 首次掌握按阶段拆分，复测单列；均以分钟计，便于计划负载计算。
   studyMinutes: integer('study_minutes').notNull().default(45),
@@ -274,9 +274,9 @@ export const weeklyReviews = sqliteTable('weekly_reviews', {
   adjustmentsMd: text('adjustments_md'), // 下周调整
   nextWeekFocus: text('next_week_focus'), // 下周重点
 
-  // 64 周计划进度
-  planWeekNumber: integer('plan_week_number'), // 对应 64 周计划的周次
-  themeCompleted: integer('theme_completed', { mode: 'boolean' }), // 当周主题是否完成
+  // 历史复盘兼容字段；新路线不以自然周为单位
+  planWeekNumber: integer('plan_week_number'), // 可记录核心路线批次编号
+  themeCompleted: integer('theme_completed', { mode: 'boolean' }), // 该批次主题是否完成
 
   // 实际学习时长（分钟）
   totalMinutes: integer('total_minutes').notNull().default(0),
