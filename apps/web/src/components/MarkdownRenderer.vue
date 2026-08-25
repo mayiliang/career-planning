@@ -18,6 +18,7 @@ const props = withDefaults(defineProps<{
   thinkingAutoCollapse: true,
   ariaLabel: 'Markdown 内容',
 });
+const emit = defineEmits<{ rendered: [] }>();
 
 const contentRoot = ref<HTMLElement | null>(null);
 const thinkingRoot = ref<HTMLElement | null>(null);
@@ -53,9 +54,37 @@ function flushRender() {
   renderedThinking.value = props.thinking ? renderMarkdown(props.thinking) : '';
   const currentRevision = ++revision;
   void nextTick(async () => {
+    emit('rendered');
     await renderDiagrams(currentRevision);
     syncThinkingViewport();
   });
+}
+
+async function onContentClick(event: MouseEvent) {
+  const target = event.target instanceof Element ? event.target : null;
+  const button = target?.closest<HTMLButtonElement>('.code-copy');
+  if (!button) return;
+  const code = button.closest('.code-block')?.querySelector('pre code')?.textContent ?? '';
+  if (!code) return;
+  const original = button.textContent ?? '复制代码';
+  let copied = false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(code);
+      copied = true;
+    }
+  } catch { /* 使用兼容路径 */ }
+  if (!copied) {
+    const textarea = document.createElement('textarea');
+    textarea.value = code;
+    textarea.style.cssText = 'position:fixed;left:-9999px;opacity:0';
+    document.body.append(textarea);
+    textarea.select();
+    copied = document.execCommand('copy');
+    textarea.remove();
+  }
+  button.textContent = copied ? '已复制' : '复制失败';
+  window.setTimeout(() => { if (button.isConnected) button.textContent = original; }, 1400);
 }
 
 function syncThinkingViewport(force = false) {
@@ -152,7 +181,7 @@ onBeforeUnmount(() => {
         <button v-if="streaming && !followingThinking" type="button" class="thinking-panel__latest" @click="jumpToLatestThinking">回到最新 ↓</button>
       </div>
     </details>
-    <article ref="contentRoot" class="markdown-body" :aria-label="ariaLabel" v-html="rendered"></article>
+    <article ref="contentRoot" class="markdown-body" :aria-label="ariaLabel" @click="onContentClick" v-html="rendered"></article>
   </div>
 </template>
 
@@ -170,10 +199,17 @@ onBeforeUnmount(() => {
 .markdown-renderer :deep(li + li) { margin-top: .28em; }
 .markdown-renderer :deep(a) { color: #096c59; text-decoration-thickness: .08em; text-underline-offset: .2em; }
 .markdown-renderer :deep(a:hover) { color: #b34b2d; }
+.markdown-renderer :deep(a[target="_blank"]::after) { content: " ↗"; font-size: .75em; text-decoration: none; }
 .markdown-renderer :deep(blockquote) { padding: .7em 1em; border-left: 4px solid #5c8c7c; background: #f3f7f5; color: #4d615a; border-radius: 0 10px 10px 0; }
 .markdown-renderer :deep(code:not(pre code)) { padding: .14em .38em; border: 1px solid #dde6e1; border-radius: 5px; background: #f3f6f4; color: #a2422b; font-size: .9em; }
 .markdown-renderer :deep(pre.hljs), .markdown-renderer :deep(pre:not(.mermaid-source)) { position: relative; padding: 1.1rem 1.2rem; border-radius: 12px; background: #17231f; color: #edf5f1; overflow: auto; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 .markdown-renderer :deep(pre code) { font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace; font-size: .88rem; line-height: 1.65; }
+.markdown-renderer :deep(.code-block) { margin: 1rem 0; overflow: hidden; border: 1px solid #263a33; border-radius: 13px; background: #17231f; box-shadow: 0 10px 28px rgba(19,37,31,.12); }
+.markdown-renderer :deep(.code-block__bar) { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding: 0 .55rem 0 .9rem; color: #a9c0b7; background: #21312c; border-bottom: 1px solid rgba(255,255,255,.07); }
+.markdown-renderer :deep(.code-block__bar span) { font: 700 .68rem "Cascadia Code", "SFMono-Regular", Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.markdown-renderer :deep(.code-copy) { padding: .35rem .62rem; color: #dceae4; font-size: .68rem; font-weight: 700; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.11); border-radius: 7px; cursor: pointer; }
+.markdown-renderer :deep(.code-copy:hover) { color: #fff; background: rgba(255,255,255,.14); }
+.markdown-renderer :deep(.code-block pre.hljs), .markdown-renderer :deep(.code-block pre:not(.mermaid-source)) { margin: 0; border-radius: 0; box-shadow: none; }
 .markdown-renderer :deep(.table-wrap) { overflow-x: auto; }
 .markdown-renderer :deep(table) { display: block; width: max-content; min-width: min(100%, 36rem); max-width: 100%; border-spacing: 0; overflow-x: auto; border: 1px solid #dbe4df; border-radius: 10px; }
 .markdown-renderer :deep(th), .markdown-renderer :deep(td) { min-width: 8rem; padding: .65rem .78rem; border-right: 1px solid #e1e8e4; border-bottom: 1px solid #e1e8e4; text-align: left; vertical-align: top; }

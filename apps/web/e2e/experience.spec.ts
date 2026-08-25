@@ -60,7 +60,14 @@ test.describe.serial('核心使用体验', () => {
     expect(Math.max(...activityHeights) - Math.min(...activityHeights)).toBeLessThanOrEqual(1);
 
     await page.getByRole('button', { name: '我的笔记' }).click();
-    await expect(page.getByRole('heading', { name: '边写边预览，你的原文永远保留' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '专心写作，需要时切换完整预览' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '只编辑' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '只预览' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '编辑 + 预览' })).toHaveCount(0);
+    await page.getByRole('button', { name: '只预览' }).click();
+    await expect(page.getByLabel('Markdown 实时预览')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Markdown 原始笔记' })).toBeHidden();
+    await page.getByRole('button', { name: '只编辑' }).click();
     await expect(page.getByText(/只会生成新稿，不覆盖你的文字/)).toBeVisible();
 
     await page.getByRole('button', { name: /掌握挑战/ }).last().click();
@@ -121,13 +128,18 @@ test.describe.serial('核心使用体验', () => {
 
   test('自建中文讲义能从知识点、练习与挑战共用的站内地址打开', async ({ page }) => {
     await page.goto('/knowledge/JS-04');
-    const materialLink = page.getByRole('link', { name: /中文补充讲义：JS-04/ }).first();
-    await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/content-audit-01-03.md/js-04');
+    const materialLink = page.getByRole('link', { name: /中文核心讲义：JS-04/ }).first();
+    await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/javascript-language-core.md/js-04');
     await materialLink.click();
-    await expect(page).toHaveURL(/\/knowledge\/materials\/content-audit-01-03\.md\/js-04$/);
-    await expect(page.getByText('IN-SITE LEARNING MATERIAL · JS-04')).toBeVisible();
+    await expect(page).toHaveURL(/\/knowledge\/materials\/javascript-language-core\.md\/js-04$/);
+    await expect(page.getByText(/站内中文讲义.*JS-04/)).toBeVisible();
     await expect(page.getByRole('heading', { name: /JS-04/ }).first()).toBeVisible();
     await expect(page.getByText(/任务、微任务|事件循环/).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: '初学者术语讲义', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '初学者术语讲义', exact: true }).click();
+    await expect(page).toHaveURL(/beginner-prerequisites-and-glossary\.md\/primer-00$/);
+    await expect(page.getByRole('heading', { name: /初学者前置知识与术语讲义/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /代码从文本到运行/ })).toBeVisible();
   });
 
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {
@@ -257,9 +269,9 @@ test.describe.serial('核心使用体验', () => {
 
   test('35 个核心批次只包含可进入的真实知识点', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '紧凑核心学习路线' })).toBeVisible();
-    await expect(page.getByText(/批次只表达顺序，不绑定自然周/)).toBeVisible();
-    await expect(page.getByText(/每个条目都对应真实知识点/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '从初级前端，到 AI 时代的高级工程师' })).toBeVisible();
+    await expect(page.getByText(/批次只表达可靠的学习顺序，不绑定自然周/)).toBeVisible();
+    await expect(page.getByText(/每个条目都连接中文资料、站内练习与掌握挑战/)).toBeVisible();
     await expect(page.locator('.week-list article')).toHaveCount(35);
     const pairedHeights = await page.locator('.week-list article:not(.open)').evaluateAll((items) => items.slice(0, 2).map((item) => item.getBoundingClientRect().height));
     expect(Math.abs((pairedHeights[0] ?? 0) - (pairedHeights[1] ?? 0))).toBeLessThanOrEqual(1);
@@ -321,8 +333,8 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByRole('option', { name: /VUE-11/ })).toBeVisible();
 
     await page.goto('/notes');
-    await expect(page.getByRole('heading', { name: '笔记中心' })).toBeVisible();
-    await expect(page.getByText(/知识点里写下的内容会自动同步到这里/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '把零散记录，沉淀成自己的工程手册' })).toBeVisible();
+    await expect(page.getByText(/知识点里保存的 Markdown 会自动归档/)).toBeVisible();
   });
 
   test('笔记服务端保存失败后保留本地草稿，刷新仍可恢复', async ({ page }) => {
@@ -354,10 +366,12 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText('已自动保存', { exact: true })).toBeVisible();
   });
 
-  test('Markdown 笔记实时预览、AI 流式整理并可切换排序', async ({ page }) => {
+  test('Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序', async ({ page }) => {
     await page.goto('/knowledge/JS-03?tab=notes');
     const editor = page.getByRole('textbox', { name: 'Markdown 原始笔记' });
     await editor.fill('# 类型与不可变更新\n\n- [x] 理解浅拷贝\n\n| 输入 | 输出 |\n| --- | --- |\n| state | next |\n\n$$T(n) = O(n)$$\n\n```js\nconst next = { ...state };\n```\n\n```mermaid\nflowchart LR\n  A[原对象] --> B[新对象]\n```\n\n::: thinking\n先核对引用边界。\n:::');
+    await page.getByRole('button', { name: '只预览' }).click();
+    await expect(editor).toBeHidden();
     await expect(page.getByLabel('Markdown 实时预览').getByRole('heading', { name: '类型与不可变更新' })).toBeVisible();
     await expect(page.getByLabel('Markdown 实时预览').locator('pre.hljs code')).toContainText('const next');
     await expect(page.getByLabel('Markdown 实时预览').locator('table')).toBeVisible();
@@ -391,7 +405,7 @@ test.describe.serial('核心使用体验', () => {
     expect(Math.abs((noteCardHeights[0] ?? 0) - (noteCardHeights[1] ?? 0))).toBeLessThanOrEqual(1);
 
     await page.goto('/notes');
-    expect(await page.locator('.notes-header').evaluate((element) => element.getBoundingClientRect().height)).toBeLessThan(100);
+    expect(await page.locator('.notes-header').evaluate((element) => element.getBoundingClientRect().height)).toBeLessThan(240);
     const sort = page.getByLabel('笔记排序');
     await expect(sort).toHaveValue('knowledge');
     await expect(page.locator('.notes-index section button code').first()).toHaveText('JS-02');
@@ -529,7 +543,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(page).toHaveURL(/\/knowledge\/map$/);
 
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '紧凑核心学习路线' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '从初级前端，到 AI 时代的高级工程师' })).toBeVisible();
     await page.locator('.week-list article').last().scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     await page.getByRole('link', { name: /学习台/ }).click();

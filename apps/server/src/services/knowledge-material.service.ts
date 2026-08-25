@@ -74,6 +74,12 @@ export async function getKnowledgeMaterial(guide: string, anchor: string) {
     const match = lines[index]?.match(/^(#{1,6})\s+/);
     if (match && (match[1]?.length ?? 7) <= level) {
       end = index;
+      while (
+        end > start + 1
+        && (/^\s*$/.test(lines[end - 1] ?? '') || /^\s*<a\s+id=["'][^"']+["']\s*><\/a>\s*$/i.test(lines[end - 1] ?? ''))
+      ) {
+        end -= 1;
+      }
       break;
     }
   }

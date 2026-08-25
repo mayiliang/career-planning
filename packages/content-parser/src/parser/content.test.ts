@@ -616,6 +616,44 @@ describe('知识库内容完整性', () => {
 });
 
 describe('知识资源审计防线', () => {
+  it('为初级学习者提供不扩张考核边界的中英术语与前置讲义', () => {
+    const root = findProjectRoot();
+    const primerPath = path.join(
+      root,
+      'docs',
+      'knowledge',
+      'chinese-guides',
+      'beginner-prerequisites-and-glossary.md',
+    );
+    expect(fs.existsSync(primerPath), '缺少初学者前置知识与术语讲义').toBe(true);
+    const primer = fs.readFileSync(primerPath, 'utf8');
+    expect(primer.replace(/\s/g, '').length, '初学者讲义不能只是术语清单').toBeGreaterThan(6000);
+    for (const term of [
+      '运行时（Runtime）',
+      '构建期（Build Time）',
+      '产物（Artifact）',
+      '依赖（Dependency）',
+      '模式（Schema）',
+      '幂等性（Idempotency）',
+      '竞态条件（Race Condition）',
+      '应用程序接口（Application Programming Interface, API）',
+      '跨源资源共享（Cross-Origin Resource Sharing, CORS）',
+      '测试夹具（Test Fixture）',
+      '断言（Assertion）',
+      '抽象语法树（Abstract Syntax Tree, AST）',
+      '持续集成（Continuous Integration, CI）',
+      '容器（Container）',
+      '检索增强生成（Retrieval-Augmented Generation, RAG）',
+      '模型上下文协议（Model Context Protocol, MCP）',
+      '评估（Evaluation, Eval）',
+    ]) {
+      expect(primer, `初学者讲义缺少中英并列术语：${term}`).toContain(term);
+    }
+    expect(primer).toMatch(/不(?:替代|扩张).{0,30}(?:主讲义|知识点|考核)/s);
+    expect(primer).toMatch(/正确例子|失败反例/);
+    expect(primer).toMatch(/验证方法/);
+  });
+
   it('要求每个知识点具备可学习的中文主源、覆盖说明和可验证考核', () => {
     const root = findProjectRoot();
     const knowledgeDirectory = path.join(root, 'docs', 'knowledge', 'knowledge-base');
@@ -1024,7 +1062,7 @@ describe('知识资源审计防线', () => {
       expect(actualCodes.length, `${report.file} 没有可解析的知识点表格行`).toBeGreaterThan(0);
       expect(new Set(actualCodes).size, `${report.file} 存在重复知识点行`).toBe(actualCodes.length);
       expect(new Set(actualCodes), `${report.file} 缺少、错放或多报知识点`).toEqual(new Set(expectedCodes));
-      expect(reportText, `${report.file} 缺少本次核验日期`).toMatch(/2026-08-09/);
+      expect(reportText, `${report.file} 缺少本次核验日期`).toMatch(/2026-08-25/);
       expect(reportText, `${report.file} 缺少逐点审计结论`).toMatch(/通过|有条件通过|需修订|阻塞/);
 
       for (const code of actualCodes) {

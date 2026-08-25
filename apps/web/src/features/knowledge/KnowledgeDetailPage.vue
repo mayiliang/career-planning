@@ -23,7 +23,7 @@ const streamingOrganizedMd = ref('');
 const streamingThinking = ref('');
 const organizeProgress = ref('');
 const organizeElapsedSeconds = ref(0);
-const notePreviewMode = ref<'split' | 'edit' | 'preview'>('split');
+const notePreviewMode = ref<'edit' | 'preview'>('edit');
 let organizeController: AbortController | null = null;
 const message = ref('');
 const error = ref('');
@@ -262,6 +262,10 @@ function togglePractice(activityId: string) {
   activePracticeId.value = activePracticeId.value === activityId ? null : activityId;
 }
 
+function openBeginnerGuide() {
+  void router.push('/knowledge/materials/beginner-prerequisites-and-glossary.md/primer-00');
+}
+
 watch(noteDraft, (content) => {
   if (loading.value || !loadedCode.value) return;
   if (content === noteSavedSnapshot.value) {
@@ -274,6 +278,9 @@ watch(noteDraft, (content) => {
   noteSaveState.value = 'UNSAVED';
   scheduleNoteSave();
 });
+watch(notePreviewMode, (mode) => {
+  try { window.localStorage.setItem('career-atlas:note-view-mode', mode); } catch { /* 视图偏好不可用不影响笔记 */ }
+});
 
 async function flushNoteBeforeNavigation() {
   if (!loadedCode.value || noteDraft.value === noteSavedSnapshot.value) return true;
@@ -285,7 +292,13 @@ async function flushNoteBeforeNavigation() {
 onBeforeRouteLeave(flushNoteBeforeNavigation);
 onBeforeRouteUpdate(flushNoteBeforeNavigation);
 watch(code, load);
-onMounted(load);
+onMounted(() => {
+  try {
+    const savedMode = window.localStorage.getItem('career-atlas:note-view-mode');
+    if (savedMode === 'edit' || savedMode === 'preview') notePreviewMode.value = savedMode;
+  } catch { /* 默认只编辑 */ }
+  void load();
+});
 onBeforeUnmount(() => {
   if (noteSaveTimer) clearTimeout(noteSaveTimer);
   organizeController?.abort();
@@ -333,6 +346,7 @@ onBeforeUnmount(() => {
             <li>由你点击“已学完”；掌握挑战完全可选</li>
           </ol>
           <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
+          <aside class="beginner-assist"><div><small>初学者阅读辅助</small><strong>遇到陌生术语或隐含前置知识时，先补台阶</strong><p>中文译名与英文原名同时保留；这份辅助讲义不扩张当前知识点，也不单独作为考核题源。</p></div><button type="button" @click="openBeginnerGuide">打开前置与术语讲义 →</button></aside>
         </div>
       </details>
 
@@ -360,11 +374,10 @@ onBeforeUnmount(() => {
 
       <main v-else-if="activeTab === 'notes'" class="notes-layout">
         <section class="content-card note-editor">
-          <header><div><small>Markdown 原始笔记</small><h2>边写边预览，你的原文永远保留</h2></div><span>{{ note?.versions.length ?? 0 }} 个可见版本</span></header>
+          <header><div><small>Markdown 原始笔记</small><h2>专心写作，需要时切换完整预览</h2></div><span>{{ note?.versions.length ?? 0 }} 个可见版本</span></header>
           <nav class="note-view-switch" aria-label="笔记编辑视图">
-            <button :class="{ active: notePreviewMode === 'edit' }" @click="notePreviewMode = 'edit'">只编辑</button>
-            <button :class="{ active: notePreviewMode === 'split' }" @click="notePreviewMode = 'split'">编辑 + 预览</button>
-            <button :class="{ active: notePreviewMode === 'preview' }" @click="notePreviewMode = 'preview'">只预览</button>
+            <button type="button" :aria-pressed="notePreviewMode === 'edit'" :class="{ active: notePreviewMode === 'edit' }" @click="notePreviewMode = 'edit'">只编辑</button>
+            <button type="button" :aria-pressed="notePreviewMode === 'preview'" :class="{ active: notePreviewMode === 'preview' }" @click="notePreviewMode = 'preview'">只预览</button>
           </nav>
           <div class="markdown-workbench" :class="`mode-${notePreviewMode}`">
             <label v-show="notePreviewMode !== 'preview'" class="markdown-source"><span>Markdown 源文本</span><textarea v-model="noteDraft" aria-label="Markdown 原始笔记" placeholder="# 标题&#10;&#10;记录理解、疑问、代码和示例……"></textarea></label>
@@ -463,18 +476,18 @@ onBeforeUnmount(() => {
 .point-hero{position:relative;overflow:hidden;align-items:center;padding:16px 20px;background:linear-gradient(135deg,#fff 0%,#f7faff 72%,#edf5ff 100%)}
 .point-hero::after{position:absolute;right:-90px;bottom:-120px;width:280px;height:280px;content:'';background:radial-gradient(circle,rgba(61,116,211,.12),transparent 68%);pointer-events:none}
 .point-hero>*{position:relative;z-index:1}.hero-copy h1{margin-top:3px;font-size:clamp(1.55rem,2.25vw,2.3rem);line-height:1.14;letter-spacing:-.035em}.hero-copy h1 code{padding:4px 7px;color:#2d63b8;background:#eaf2ff;border-radius:8px}.state-row{margin-top:9px}.state-row span{padding:5px 8px;background:#fff;border:1px solid #e1e7ef;box-shadow:0 2px 7px rgba(27,48,78,.035)}.hero-actions button{padding:8px 10px}
-.learning-guide{display:block;padding:0;overflow:hidden}.learning-guide>summary{display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:14px;align-items:center;min-height:62px;padding:10px 18px;cursor:pointer;list-style:none}.learning-guide>summary::-webkit-details-marker{display:none}.learning-guide>summary span{min-width:0}.learning-guide>summary strong{overflow:hidden;margin-top:2px;text-overflow:ellipsis;white-space:nowrap}.learning-guide>summary em{color:#617087;font-size:.72rem;font-style:normal;white-space:nowrap}.learning-guide>summary i{width:8px;height:8px;border-right:2px solid #718096;border-bottom:2px solid #718096;transform:rotate(45deg);transition:transform .18s ease}.learning-guide[open]>summary i{transform:rotate(225deg)}.learning-guide__body{display:grid;grid-template-columns:1fr 1.2fr;gap:18px;padding:15px 18px 18px;border-top:1px solid #e5eaf0}.learning-guide__body ol{margin:0}.effort span{color:#33465f;background:#f2f6fc;border:1px solid #e0e7f0}.effort b{line-height:1.5}
+.learning-guide{display:block;padding:0;overflow:hidden}.learning-guide>summary{display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:14px;align-items:center;min-height:62px;padding:10px 18px;cursor:pointer;list-style:none}.learning-guide>summary::-webkit-details-marker{display:none}.learning-guide>summary span{min-width:0}.learning-guide>summary strong{overflow:hidden;margin-top:2px;text-overflow:ellipsis;white-space:nowrap}.learning-guide>summary em{color:#617087;font-size:.72rem;font-style:normal;white-space:nowrap}.learning-guide>summary i{width:8px;height:8px;border-right:2px solid #718096;border-bottom:2px solid #718096;transform:rotate(45deg);transition:transform .18s ease}.learning-guide[open]>summary i{transform:rotate(225deg)}.learning-guide__body{display:grid;grid-template-columns:1fr 1.2fr;gap:18px;padding:15px 18px 18px;border-top:1px solid #e5eaf0}.learning-guide__body ol{margin:0}.effort span{color:#33465f;background:#f2f6fc;border:1px solid #e0e7f0}.effort b{line-height:1.5}.beginner-assist{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 16px;border:1px solid #d4e3dc;border-radius:13px;background:linear-gradient(135deg,#f1f8f5,#fff7f2)}.beginner-assist strong{margin-top:3px;color:#285446}.beginner-assist p{margin:4px 0 0;color:#687a72;font-size:.76rem;line-height:1.55}.beginner-assist button{flex:0 0 auto;color:#9b4c32;font-weight:800;background:#fffaf7;border-color:#e4c8bc}
 .tabs{position:sticky;top:12px;z-index:12;width:max-content;padding:5px;background:rgba(241,245,250,.9);border:1px solid #dce4ed;border-radius:14px;box-shadow:0 7px 24px rgba(27,50,80,.08);backdrop-filter:blur(14px)}.tabs button{border:0;background:transparent}.tabs button.active{background:linear-gradient(135deg,#1c3353,#245a83);box-shadow:0 7px 18px rgba(28,62,99,.2)}
 .materials-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch}.material-reader{min-width:0;padding:24px 28px}.activity-panel{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:20px}.activity-panel>header{grid-column:1/-1}.activity-panel header h2{margin:3px 0}.activity-panel header p{margin:0 0 5px;color:#68768a;font-size:.82rem}.activity-panel>article{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;height:100%;padding:14px;border:1px solid #e1e7ef;border-radius:14px;background:linear-gradient(145deg,#fff,#f8fbff)}.activity-panel>article.active{grid-column:1/-1;height:auto;border-color:#9eb8dc;box-shadow:0 8px 24px rgba(41,84,139,.08)}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel>article>div{display:flex;min-width:0;flex-direction:column}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}.activity-panel.expanded{position:static}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{align-self:flex-start;margin-top:auto;padding:9px 13px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
 .content-card{padding:25px}.branch-grid{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}.branch-grid article{padding:18px;background:linear-gradient(145deg,#fff,#fafcff);border-radius:16px;box-shadow:0 5px 17px rgba(28,51,82,.04)}.branch-grid article:first-child{border-color:#9cb5df;box-shadow:0 9px 24px rgba(43,91,171,.09)}
-.notes-layout,.mastery-layout,.branch-grid{align-items:stretch}.notes-layout>.content-card,.mastery-layout>.content-card,.branch-grid>article{height:100%}.note-editor,.organized{display:flex;min-width:0;flex-direction:column}.note-editor footer{margin-top:auto;padding-top:10px}.organized{max-height:none}.organized>.empty{margin:auto 0}
+.notes-layout,.mastery-layout,.branch-grid{align-items:stretch}.notes-layout>.content-card,.mastery-layout>.content-card,.branch-grid>article{height:100%}.note-editor,.organized{display:flex;min-width:0;flex-direction:column}.note-editor>header>span{white-space:nowrap}.note-editor footer{margin-top:auto;padding-top:10px}.organized{max-height:none}.organized>.empty{margin:auto 0}
 .completion-card{background:linear-gradient(135deg,#f9fffb,#f0f9f5)}
 .note-view-switch{display:flex;gap:5px;width:max-content;margin:0 0 12px;padding:4px;border:1px solid #dce4ed;border-radius:11px;background:#f2f6fa}.note-view-switch button{border:0;background:transparent;padding:7px 10px}.note-view-switch button.active{color:#fff;background:#234e77;box-shadow:0 4px 12px rgba(32,72,111,.18)}
 .note-save-state{display:inline-block;margin-left:8px;padding:3px 7px;color:#23704b;background:#e9f7ef;border-radius:999px;font-size:.68rem}.note-save-state[data-state=UNSAVED],.note-save-state[data-state=SAVING]{color:#785c1b;background:#fff6d9}.note-save-state[data-state=ERROR]{color:#972f29;background:#fff0ee}
-.markdown-workbench{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:430px}.markdown-workbench.mode-edit,.markdown-workbench.mode-preview{grid-template-columns:1fr}.markdown-source,.markdown-preview{display:flex;min-width:0;flex-direction:column;border:1px solid #d7e0e9;border-radius:13px;overflow:hidden;background:#fff}.markdown-source>span,.markdown-preview>span{padding:9px 12px;color:#617087;font-size:.7rem;font-weight:800;background:#f3f7fa;border-bottom:1px solid #dfe6ed}.note-editor .markdown-source textarea{min-height:430px;height:100%;border:0;border-radius:0;outline:0;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview>article,.markdown-preview>p{padding:4px 17px 20px;margin:0;overflow:auto}.markdown-preview>p{padding-top:20px;color:#7a8492}.markdown-preview pre,.organized pre{overflow:auto;padding:14px;color:#deebf8;background:#122033;border-radius:11px}.markdown-preview code,.organized code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview table,.organized table{width:100%;border-collapse:collapse}.markdown-preview th,.markdown-preview td,.organized th,.organized td{padding:8px;border:1px solid #dce3eb;text-align:left}.markdown-preview blockquote,.organized blockquote{margin-left:0;padding:2px 14px;color:#53677e;border-left:4px solid #81a4ce;background:#f4f8fc}.task-item{display:flex;gap:7px;align-items:flex-start}.task-item input{margin-top:6px}
+.markdown-workbench{display:grid;grid-template-columns:1fr;gap:10px;min-height:430px}.markdown-source,.markdown-preview{display:flex;min-width:0;flex-direction:column;border:1px solid #d7e0e9;border-radius:13px;overflow:hidden;background:#fff}.markdown-source>span,.markdown-preview>span{padding:9px 12px;color:#617087;font-size:.7rem;font-weight:800;background:#f3f7fa;border-bottom:1px solid #dfe6ed}.note-editor .markdown-source textarea{min-height:430px;height:100%;border:0;border-radius:0;outline:0;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview>article,.markdown-preview>p{padding:4px 17px 20px;margin:0;overflow:auto}.markdown-preview>p{padding-top:20px;color:#7a8492}.markdown-preview pre,.organized pre{overflow:auto;padding:14px;color:#deebf8;background:#122033;border-radius:11px}.markdown-preview code,.organized code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.markdown-preview table,.organized table{width:100%;border-collapse:collapse}.markdown-preview th,.markdown-preview td,.organized th,.organized td{padding:8px;border:1px solid #dce3eb;text-align:left}.markdown-preview blockquote,.organized blockquote{margin-left:0;padding:2px 14px;color:#53677e;border-left:4px solid #81a4ce;background:#f4f8fc}.task-item{display:flex;gap:7px;align-items:flex-start}.task-item input{margin-top:6px}
 .stream-state{display:flex;gap:10px;align-items:center;margin-bottom:12px;padding:11px 12px;color:#31597e;background:#edf6ff;border:1px solid #d3e7f8;border-radius:10px;font-size:.8rem}.stream-state>span{display:grid;gap:3px}.stream-state b{font-size:.8rem}.stream-state small{color:#647b94;font-size:.7rem}.stream-state i{flex:0 0 auto;width:9px;height:9px;background:#2a75bc;border-radius:50%;box-shadow:0 0 0 0 rgba(42,117,188,.35);animation:stream-pulse 1.25s infinite}.awaiting-final{margin:.7rem 0 0;padding:12px;color:#64758a;font-size:.78rem;background:#f6f8fb;border:1px dashed #ccd7e3;border-radius:10px}.streaming-markdown.live::after{display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:text-bottom;content:'';background:#2c70b1;animation:stream-caret .7s steps(1) infinite}@keyframes stream-pulse{70%{box-shadow:0 0 0 8px rgba(42,117,188,0)}}@keyframes stream-caret{50%{opacity:0}}
 .ai-disclosure{display:grid;gap:4px;margin:0 0 12px;padding:11px 12px;color:#4b5c71;background:#f4f7fb;border:1px solid #dfe6ef;border-radius:10px;font-size:.78rem;line-height:1.55}.ai-disclosure strong{color:#283d59}.preflight-note{margin:0;color:#566579;line-height:1.65}
 @media(max-width:1100px){.activity-panel{grid-template-columns:1fr 1fr}.activity-panel>article.active{grid-column:1/-1}.learning-guide__body{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.notes-layout>.content-card,.mastery-layout>.content-card{height:auto}}
-@media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide>summary{grid-template-columns:minmax(0,1fr) 12px}.learning-guide>summary em{display:none}.learning-guide__body{grid-template-columns:1fr}.materials-layout{display:block}.activity-panel{grid-template-columns:1fr;margin-top:14px}.activity-panel>article.active{grid-column:auto}.tabs{top:6px;width:100%;overflow:auto}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}.markdown-workbench{grid-template-columns:1fr}.note-view-switch{width:100%}.note-view-switch button{flex:1}.note-editor footer button{flex:1}}
+@media(max-width:700px){.knowledge-detail{padding:0}.point-hero{padding:18px}.learning-guide>summary{grid-template-columns:minmax(0,1fr) 12px}.learning-guide>summary em{display:none}.learning-guide__body{grid-template-columns:1fr}.beginner-assist{align-items:flex-start;flex-direction:column}.materials-layout{display:block}.activity-panel{grid-template-columns:1fr;margin-top:14px}.activity-panel>article.active{grid-column:auto}.tabs{top:6px;width:100%;overflow:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tabs button{flex:1}.material-reader{padding:19px}.branch-grid{grid-template-columns:1fr}.markdown-workbench{grid-template-columns:1fr}.note-view-switch{width:100%}.note-view-switch button{flex:1}.note-editor footer button{flex:1}}
 </style>
