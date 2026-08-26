@@ -61,7 +61,7 @@ const isActive = (path: string) => {
     <!-- 左侧导航 -->
     <nav class="side-nav" aria-label="主导航">
       <div class="nav-header">
-        <div class="brand-mark">CA</div>
+        <img class="brand-mark" src="/career-atlas-icon-192.png" alt="" width="38" height="38" aria-hidden="true" />
         <div class="brand-copy"><div class="app-title">Career Atlas</div><p>AI 时代前端能力地图</p></div>
       </div>
       

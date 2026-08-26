@@ -1,0 +1,23 @@
+{
+  "name": "Career Atlas - 前端成长与求职工作台",
+  "short_name": "Career Atlas",
+  "description": "AI 时代前端能力地图与本地学习工作台",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#15263f",
+  "icons": [
+    {
+      "src": "/career-atlas-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/career-atlas-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

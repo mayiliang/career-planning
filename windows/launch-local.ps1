@@ -93,7 +93,7 @@ try {
     )
     $edgePath = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     if ($edgePath) {
-      Start-Process -FilePath $edgePath -ArgumentList @("--app=$appUrl", '--new-window') | Out-Null
+      Start-Process -FilePath $edgePath -ArgumentList @("--app=$appUrl", '--new-window', '--start-maximized') | Out-Null
     } else {
       Start-Process $appUrl | Out-Null
     }

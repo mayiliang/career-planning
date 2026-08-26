@@ -35,6 +35,29 @@ function Stop-InstalledServer {
   }
 }
 
+function Remove-DirectoryTree([string]$Path) {
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  $removerScript = Join-Path $PSScriptRoot 'remove-directory-tree.mjs'
+  if (-not (Test-Path -LiteralPath $removerScript)) { throw "The safe directory remover is missing: $removerScript" }
+
+  $nodePath = ''
+  $runtimePath = Join-Path $InstallRoot 'state\runtime.json'
+  if (Test-Path -LiteralPath $runtimePath) {
+    try {
+      $runtime = Get-Content -LiteralPath $runtimePath -Raw -Encoding UTF8 | ConvertFrom-Json
+      if (Test-Path -LiteralPath ([string]$runtime.nodePath)) { $nodePath = [string]$runtime.nodePath }
+    } catch { }
+  }
+  if (-not $nodePath) {
+    $node = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($node) { $nodePath = $node.Source }
+  }
+  if (-not $nodePath) { throw 'Node.js is required to safely remove the installed runtime.' }
+
+  & $nodePath $removerScript $InstallRoot $Path
+  if ($LASTEXITCODE -ne 0) { throw "The installed directory could not be removed: $Path" }
+}
+
 if ($RemoveData -and -not $Force) {
   $confirmation = Read-Host 'Type DELETE to remove all Career Atlas personal data and backups'
   if ($confirmation -ne 'DELETE') { throw 'Data removal was cancelled.' }
@@ -49,17 +72,17 @@ if (-not $SkipShortcuts) {
   if (Test-Path -LiteralPath $programsRoot) { Remove-Item -LiteralPath $programsRoot -Recurse -Force }
 }
 
-foreach ($name in @('app', 'rollback-app', 'logs', 'state', 'tools')) {
+foreach ($name in @('app', 'rollback-app', 'assets', 'logs', 'state', 'tools')) {
   $target = Join-Path $InstallRoot $name
-  if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+  if (Test-Path -LiteralPath $target) { Remove-DirectoryTree $target }
 }
 
 if ($RemoveData) {
   foreach ($name in @('data', 'config')) {
     $target = Join-Path $InstallRoot $name
-    if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+    if (Test-Path -LiteralPath $target) { Remove-DirectoryTree $target }
   }
-  if (Test-Path -LiteralPath $InstallRoot) { Remove-Item -LiteralPath $InstallRoot -Recurse -Force }
+  if (Test-Path -LiteralPath $InstallRoot) { [IO.Directory]::Delete($InstallRoot, $true) }
   Write-Host 'Career Atlas and all personal data were removed.' -ForegroundColor Green
 } else {
   Write-Host 'Career Atlas was uninstalled. Personal data and configuration were kept at:' -ForegroundColor Green

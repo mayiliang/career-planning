@@ -76,6 +76,13 @@ function Copy-DirectoryContents([string]$Source, [string]$Destination) {
   }
 }
 
+function Remove-DirectoryTree([string]$Path) {
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  $removerScript = Join-Path $PSScriptRoot 'remove-directory-tree.mjs'
+  if (-not (Test-Path -LiteralPath $removerScript)) { throw "The safe directory remover is missing: $removerScript" }
+  Invoke-Checked $node.Source @($removerScript, $InstallRoot, $Path)
+}
+
 function New-Shortcut([string]$Path, [string]$Target, [string]$Arguments, [string]$WorkingDirectory, [string]$Description, [string]$IconLocation) {
   $shell = New-Object -ComObject WScript.Shell
   $shortcut = $shell.CreateShortcut($Path)
@@ -110,17 +117,25 @@ $stageRoot = Join-Path $InstallRoot ("stage-{0}" -f [Guid]::NewGuid().ToString('
 $dataRoot = Join-Path $InstallRoot 'data'
 $configRoot = Join-Path $InstallRoot 'config'
 $toolsRoot = Join-Path $InstallRoot 'tools'
+$assetsRoot = Join-Path $InstallRoot 'assets'
 $stateRoot = Join-Path $InstallRoot 'state'
 $logsRoot = Join-Path $InstallRoot 'logs'
 
 try {
   Write-Step "$Mode Career Atlas Windows local edition"
-  New-Item -ItemType Directory -Path $InstallRoot, $dataRoot, $configRoot, $toolsRoot, $stateRoot, $logsRoot -Force | Out-Null
+  New-Item -ItemType Directory -Path $InstallRoot, $dataRoot, $configRoot, $toolsRoot, $assetsRoot, $stateRoot, $logsRoot -Force | Out-Null
 
   if (-not $SkipDependencyInstall) {
     Write-Step 'Checking project dependencies'
     Push-Location $repoRoot
-    try { Invoke-Pnpm $runner @('install', '--frozen-lockfile') } finally { Pop-Location }
+    $previousCI = $env:CI
+    try {
+      $env:CI = 'true'
+      Invoke-Pnpm $runner @('install', '--frozen-lockfile')
+    } finally {
+      $env:CI = $previousCI
+      Pop-Location
+    }
   }
 
   Write-Step 'Building the production application once'
@@ -131,7 +146,7 @@ try {
   New-Item -ItemType Directory -Path (Join-Path $stageRoot 'apps') -Force | Out-Null
   Push-Location $repoRoot
   try {
-    Invoke-Pnpm $runner @('--filter', '@career-atlas/server', '--prod', 'deploy', (Join-Path $stageRoot 'apps\server'))
+    Invoke-Pnpm $runner @('--config.node-linker=hoisted', '--filter', '@career-atlas/server', '--prod', 'deploy', (Join-Path $stageRoot 'apps\server'))
   } finally { Pop-Location }
   Copy-DirectoryContents (Join-Path $repoRoot 'apps\web\dist') (Join-Path $stageRoot 'apps\web\dist')
   Copy-DirectoryContents (Join-Path $repoRoot 'docs') (Join-Path $stageRoot 'docs')
@@ -155,7 +170,13 @@ try {
   Write-Step 'Replacing only the installed application runtime'
   Stop-InstalledServer $InstallRoot
   if (Test-Path -LiteralPath $rollbackRoot) {
-    Remove-Item -LiteralPath $rollbackRoot -Recurse -Force
+    try {
+      Remove-DirectoryTree $rollbackRoot
+    } catch {
+      $legacyRollback = Join-Path $InstallRoot ("legacy-runtime-{0}" -f [Guid]::NewGuid().ToString('N'))
+      Move-Item -LiteralPath $rollbackRoot -Destination $legacyRollback
+      Write-Warning "An older pnpm-linked rollback was isolated instead of blocking the upgrade: $legacyRollback"
+    }
   }
   if (Test-Path -LiteralPath $appRoot) {
     Move-Item -LiteralPath $appRoot -Destination $rollbackRoot
@@ -171,6 +192,11 @@ try {
 
   Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'launch-local.ps1') -Destination (Join-Path $toolsRoot 'launch-local.ps1') -Force
   Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'uninstall-local.ps1') -Destination (Join-Path $toolsRoot 'uninstall-local.ps1') -Force
+  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'remove-directory-tree.mjs') -Destination (Join-Path $toolsRoot 'remove-directory-tree.mjs') -Force
+  $iconSource = Join-Path $PSScriptRoot 'assets\Career-Atlas.ico'
+  if (-not (Test-Path -LiteralPath $iconSource)) { throw "The Career Atlas icon is missing: $iconSource" }
+  $iconPath = Join-Path $assetsRoot 'Career-Atlas.ico'
+  Copy-Item -LiteralPath $iconSource -Destination $iconPath -Force
   $commit = (& git -C $repoRoot rev-parse --short HEAD 2>$null)
   if ($LASTEXITCODE -ne 0) { $commit = 'unknown' }
   [PSCustomObject]@{
@@ -178,17 +204,13 @@ try {
     sourceRoot = $repoRoot
     installedAtUtc = [DateTime]::UtcNow.ToString('o')
     commit = [string]$commit
+    runtimeLayout = 'hoisted-v1'
   } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stateRoot 'runtime.json') -Encoding UTF8
 
   if (-not $SkipShortcuts) {
     Write-Step 'Creating Desktop and Start Menu shortcuts'
     $powershellPath = Join-Path $PSHOME 'powershell.exe'
-    $edgeCandidates = @(
-      'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-      'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
-    )
-    $edgePath = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    $icon = if ($edgePath) { "$edgePath,0" } else { "$powershellPath,0" }
+    $icon = "$iconPath,0"
     $launchScript = Join-Path $toolsRoot 'launch-local.ps1'
     $launchArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchScript`""
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Career Atlas.lnk'
@@ -210,10 +232,15 @@ try {
     Invoke-Checked (Join-Path $PSHOME 'powershell.exe') @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $toolsRoot 'launch-local.ps1'))
   }
 } catch {
+  $installFailure = $_
   if (Test-Path -LiteralPath $stageRoot) {
-    Remove-Item -LiteralPath $stageRoot -Recurse -Force
+    try {
+      Remove-DirectoryTree $stageRoot
+    } catch {
+      Write-Warning "The temporary runtime could not be removed automatically: $($_.Exception.Message)"
+    }
   }
-  Write-Error $_
+  Write-Error $installFailure
   exit 1
 }
 
