@@ -214,9 +214,14 @@ try {
     runtimeLayout = 'hoisted-v1'
   } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stateRoot 'runtime.json') -Encoding UTF8
 
+  # The installer can itself run under PowerShell 7, whose $PSHOME does not
+  # contain powershell.exe. Shortcuts and the launcher deliberately use the
+  # Windows inbox host so they remain available independently of Codex or pwsh.
+  $powershellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+  if (-not (Test-Path -LiteralPath $powershellPath)) { throw "Windows PowerShell was not found: $powershellPath" }
+
   if (-not $SkipShortcuts) {
     Write-Step 'Creating Desktop and Start Menu shortcuts'
-    $powershellPath = Join-Path $PSHOME 'powershell.exe'
     $icon = "$iconPath,0"
     $launchScript = Join-Path $toolsRoot 'launch-local.ps1'
     $launchArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchScript`""
@@ -236,7 +241,7 @@ try {
   Write-Host "Application: $appRoot"
   Write-Host "Personal data: $dataRoot"
   if (-not $SkipLaunch) {
-    Invoke-Checked (Join-Path $PSHOME 'powershell.exe') @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $toolsRoot 'launch-local.ps1'))
+    Invoke-Checked $powershellPath @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $toolsRoot 'launch-local.ps1'))
   }
 } catch {
   $installFailure = $_
