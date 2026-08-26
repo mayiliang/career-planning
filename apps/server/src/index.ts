@@ -35,6 +35,7 @@ import { assessmentRoutes } from './http/routes/assessment.js';
 import { jobsRoutes } from './http/routes/jobs.js';
 import { backupRoutes } from './http/routes/backup.js';
 import { learningRoutes } from './http/routes/learning.js';
+import { registerLocalWeb } from './http/local-web.js';
 import { getConfig } from './config/index.js';
 import { checkDatabaseHealth, closeDatabase } from './db/index.js';
 import { bootstrapLocalData, startAutomaticBackups } from './services/bootstrap.service.js';
@@ -125,6 +126,10 @@ await app.register(backupRoutes);
 
 // 自主学习工作台、笔记中心、学习打卡与个人分支偏好
 await app.register(learningRoutes);
+
+// Windows 单机版显式设置 WEB_DIST_DIR 后，由同一个 Fastify 进程提供页面与 API。
+// 开发环境和 Docker 双容器部署没有该变量，行为保持不变。
+await registerLocalWeb(app, config.webDistDir);
 
 // 启动服务
 const start = async () => {

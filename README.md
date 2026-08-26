@@ -31,6 +31,18 @@ pnpm dev
 
 Linux/macOS 可用 `cp .env.example .env.local`。不要提交 `.env.local`，也不要把 API 密钥写入前端代码。
 
+## Windows 本地单机版
+
+如果只在自己的 Windows 电脑上使用，不需要 Docker，也不需要每次打开终端。在本分支双击：
+
+```text
+windows\Install-Career-Atlas.cmd
+```
+
+安装程序只在首次安装或主动升级时构建一次，随后会创建桌面快捷方式。日常双击“Career Atlas”即可静默启动本地服务，并以 Microsoft Edge 应用窗口打开。应用副本、个人数据、配置和日志彼此隔离；升级应用不会覆盖 SQLite 数据库或 AI 配置。
+
+完整的安装、升级、卸载、数据迁移和故障恢复说明见 [Windows 本地单机版手册](docs/deployment/windows-local.md)。
+
 ## 生产部署
 
 推荐使用 Docker Compose：
@@ -64,6 +76,7 @@ pnpm test:e2e
 | [产品与开发文档](docs/development/README.md) | 产品决策、架构、API、AI 与验收 |
 | [现代 Markdown 与 AI 流式协议](docs/development/10-modern-markdown-and-ai-streaming.md) | 语法、thinking、性能和安全设计 |
 | [服务器支持与部署手册](docs/deployment/server-support.md) | 生产环境标准 |
+| [Windows 本地单机版手册](docs/deployment/windows-local.md) | 一次安装、桌面直开、升级、卸载和数据保护 |
 | [隐私与数据说明](PRIVACY.md) | 本地数据、AI 传输、导出、备份和部署边界 |
 | [商用品质发布检查表](docs/development/commercial-release-checklist.md) | 候选版本阻断项、无障碍、安全和运营验收 |
 | [变更记录](CHANGELOG.md) | 已落地、用户可感知的功能变化 |

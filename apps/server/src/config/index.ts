@@ -27,6 +27,10 @@ function findProjectRoot(start = process.cwd()): string {
 
 export const projectRoot = findProjectRoot();
 
+function resolveFromProjectRoot(value: string): string {
+  return resolve(projectRoot, value);
+}
+
 function resolveDataDir(): string {
   if (process.env.DATA_DIR) return resolve(projectRoot, process.env.DATA_DIR);
   // 即使测试绕过包级 setup，也绝不允许连接正式本地数据库。
@@ -34,8 +38,14 @@ function resolveDataDir(): string {
   return resolve(projectRoot, './data');
 }
 
-// 加载环境变量
-dotenv.config({ path: resolve(projectRoot, '.env.local') });
+// Windows 单机版把配置保存在安装目录之外，升级应用时不会覆盖密钥。
+// 测试默认不加载真实密钥；其他运行方式继续读取仓库根目录的 .env.local。
+const envFile = process.env.CAREER_ATLAS_ENV_FILE
+  ? resolve(process.env.CAREER_ATLAS_ENV_FILE)
+  : process.env.NODE_ENV === 'test'
+    ? undefined
+    : resolve(projectRoot, '.env.local');
+if (envFile) dotenv.config({ path: envFile });
 
 // 配置类型
 export interface AppConfig {
@@ -48,6 +58,7 @@ export interface AppConfig {
   aiModel?: string;
   aiTimeoutMs: number;
   isProduction: boolean;
+  webDistDir?: string;
 }
 
 // 获取配置
@@ -62,6 +73,9 @@ export function getConfig(): AppConfig {
     aiModel: process.env.DEEPSEEK_MODEL || undefined,
     aiTimeoutMs: parseInt(process.env.DEEPSEEK_TIMEOUT_MS || '120000', 10),
     isProduction: process.env.NODE_ENV === 'production',
+    webDistDir: process.env.WEB_DIST_DIR
+      ? resolveFromProjectRoot(process.env.WEB_DIST_DIR)
+      : undefined,
   };
 }
 
