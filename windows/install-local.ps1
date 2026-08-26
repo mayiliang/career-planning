@@ -52,7 +52,14 @@ function Stop-InstalledServer([string]$Root) {
     $process = Get-Process -Id ([int]$state.processId) -ErrorAction SilentlyContinue
     if (-not $process -or $process.ProcessName -ne 'node') { return }
 
-    $recordedStart = [DateTime]::Parse([string]$state.startedAtUtc).ToUniversalTime()
+    # PowerShell 7 turns ISO JSON timestamps into DateTime, while Windows
+    # PowerShell 5.1 can leave them as strings. Preserve the parsed UTC kind when
+    # present; otherwise DateTimeOffset keeps the explicit offset from the text.
+    $recordedStart = if ($state.startedAtUtc -is [DateTime]) {
+      ([DateTime]$state.startedAtUtc).ToUniversalTime()
+    } else {
+      [DateTimeOffset]::Parse([string]$state.startedAtUtc).UtcDateTime
+    }
     $actualStart = $process.StartTime.ToUniversalTime()
     if ([Math]::Abs(($actualStart - $recordedStart).TotalSeconds) -gt 2) { return }
 
