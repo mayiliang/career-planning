@@ -432,6 +432,10 @@ export function importPortableData(input: unknown, confirmation: string): Portab
     for (const table of DELETE_ORDER) rawDb.prepare(`DELETE FROM ${quoteIdentifier(table)}`).run();
     for (const definition of TABLE_DEFINITIONS) insertRows(definition.table, snapshot.data[definition.key]);
 
+    // current_focus uses a partial unique index, so clear the existing focus before
+    // replaying snapshot rows. Otherwise a new focused point can be written before
+    // the previous focused point is cleared, making a valid snapshot fail by row order.
+    rawDb.prepare('UPDATE knowledge_points SET current_focus = 0 WHERE current_focus = 1').run();
     const assignments = KNOWLEDGE_PROGRESS_WRITABLE_COLUMNS.map((column) => `${quoteIdentifier(column)} = ?`).join(', ');
     const statement = rawDb.prepare(`UPDATE knowledge_points SET ${assignments} WHERE code = ?`);
     for (const row of matchedKnowledgeRows) {

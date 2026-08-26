@@ -70,6 +70,32 @@ describe('可迁移个人数据 JSON', () => {
     expect(removedJob).toBeUndefined();
   });
 
+  it('切换当前学习焦点时不受快照行顺序影响', () => {
+    const snapshot = createPortableDataExport();
+    const previousFocusCodes = snapshot.data.knowledgeProgress
+      .filter((row) => row.current_focus === 1)
+      .map((row) => String(row.code));
+    const importedFocusCode = 'JS-01';
+    const existingFocusCode = 'TS-01';
+
+    for (const row of snapshot.data.knowledgeProgress) row.current_focus = row.code === importedFocusCode ? 1 : 0;
+    rawDb.prepare('UPDATE knowledge_points SET current_focus = 0 WHERE current_focus = 1').run();
+    rawDb.prepare('UPDATE knowledge_points SET current_focus = 1 WHERE code = ?').run(existingFocusCode);
+
+    try {
+      const preview = previewPortableDataImport(snapshot);
+      expect(() => importPortableData(snapshot, preview.confirmation)).not.toThrow();
+
+      const focuses = rawDb.prepare('SELECT code FROM knowledge_points WHERE current_focus = 1').all() as Array<{ code: string }>;
+      expect(focuses).toEqual([{ code: importedFocusCode }]);
+    } finally {
+      rawDb.prepare('UPDATE knowledge_points SET current_focus = 0 WHERE current_focus = 1').run();
+      for (const code of previousFocusCodes) {
+        rawDb.prepare('UPDATE knowledge_points SET current_focus = 1 WHERE code = ?').run(code);
+      }
+    }
+  });
+
   it('数据库写入中途失败时回滚全部删除和更新', () => {
     const jobId = `portable-rollback-${randomUUID()}`;
     const now = new Date().toISOString();
