@@ -102,49 +102,6 @@ export interface RestorePreviewResult {
   warnings: string[];
 }
 
-export interface PortableDataExport {
-  schemaVersion: 1;
-  product: 'career-atlas';
-  exportedAt: string;
-  counts: Record<string, number>;
-  data: Record<string, unknown[]>;
-}
-
-/**
- * 导出可阅读、可迁移的用户数据。查询名固定在白名单内，不接受外部表名。
- * 知识正文由仓库维护，这里只导出知识点身份快照、个人进度和用户生成内容。
- */
-export function createPortableDataExport(): PortableDataExport {
-  const queries: Record<string, string> = {
-    knowledgeProgress: `SELECT code, title, domain_id, status, learning_state, mastery_level, learned_at,
-      deferred_at, defer_reason, current_focus, self_mastered_at, first_passed_at, mastered_at,
-      next_review_at, updated_at FROM knowledge_points ORDER BY code`,
-    planEvents: 'SELECT * FROM plan_events ORDER BY start_at',
-    checkins: 'SELECT * FROM checkins ORDER BY checked_at',
-    dailyReviews: 'SELECT * FROM daily_reviews ORDER BY review_date',
-    leaveDays: 'SELECT * FROM leave_days ORDER BY leave_date',
-    weeklyReviews: 'SELECT * FROM weekly_reviews ORDER BY week_start_date',
-    assessmentSessions: 'SELECT * FROM assessment_sessions ORDER BY created_at',
-    assessmentQuestions: 'SELECT * FROM assessment_questions ORDER BY session_id, order_index',
-    assessmentAnswers: 'SELECT * FROM assessment_answers ORDER BY session_id, created_at',
-    assessmentResults: 'SELECT * FROM assessment_results ORDER BY created_at',
-    assessmentHintEvents: 'SELECT * FROM assessment_hint_events ORDER BY created_at',
-    masteryEvents: 'SELECT * FROM mastery_events ORDER BY created_at',
-    knowledgeNotes: 'SELECT * FROM knowledge_notes ORDER BY updated_at',
-    knowledgeNoteVersions: 'SELECT * FROM knowledge_note_versions ORDER BY note_id, version_no',
-    learningCheckins: 'SELECT * FROM learning_checkins ORDER BY checkin_date',
-    learningCheckinPoints: 'SELECT * FROM learning_checkin_points ORDER BY created_at',
-    learningRouteChoices: 'SELECT * FROM learning_route_choices ORDER BY created_at',
-    jobs: 'SELECT * FROM jobs ORDER BY created_at',
-    jobActivities: 'SELECT * FROM job_activities ORDER BY created_at',
-    skillGaps: 'SELECT * FROM skill_gaps ORDER BY created_at',
-    projects: 'SELECT * FROM projects ORDER BY created_at',
-  };
-  const data = Object.fromEntries(Object.entries(queries).map(([name, query]) => [name, rawDb.prepare(query).all() as unknown[]]));
-  const counts = Object.fromEntries(Object.entries(data).map(([name, rows]) => [name, rows.length]));
-  return { schemaVersion: 1, product: 'career-atlas', exportedAt: new Date().toISOString(), counts, data };
-}
-
 // ===== 备份服务 =====
 
 export class BackupService {

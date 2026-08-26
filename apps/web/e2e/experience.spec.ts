@@ -523,6 +523,35 @@ test.describe.serial('核心使用体验', () => {
     await expect(backup.getByRole('button', { name: '预览恢复' })).toBeFocused();
   });
 
+  test('本地个人数据 JSON 必须完整校验并预览后才能导入', async ({ page }) => {
+    const exportResponse = await page.request.get('/api/v1/data/export');
+    expect(exportResponse.ok()).toBe(true);
+    const snapshot = (await exportResponse.json() as { data: unknown }).data;
+    await page.goto('/settings');
+
+    const chooseButton = page.getByRole('button', { name: '选择 JSON 并预览' });
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await chooseButton.click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles({
+      name: 'career-atlas-existing-export.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(snapshot)),
+    });
+
+    const dialog = page.getByRole('dialog', { name: '确认导入这份个人数据？' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('career-atlas-existing-export.json');
+    await expect(dialog).toContainText('文件导出时间');
+    await expect(dialog).toContainText('个人数据类别');
+    await expect(dialog).toContainText('知识点进度');
+    await expect(dialog).toContainText('当前');
+    await expect(dialog).toContainText('导入后');
+    await expect(dialog.getByRole('button', { name: '按预览结果导入' })).toBeVisible();
+    await dialog.getByRole('button', { name: '取消' }).click();
+    await expect(chooseButton).toBeFocused();
+  });
+
   test('窄屏下主导航和脑图没有页面级横向溢出', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/knowledge/map');

@@ -7,14 +7,27 @@ import BaseDialog from '@/components/BaseDialog.vue';
 const queryClient = useQueryClient();
 const backupNote = ref('');
 const notice = ref<string | null>(null);
-const pendingAction = ref<{ kind: 'RESTORE' | 'DELETE' | 'RESET'; filename?: string } | null>(null);
+const noticeTone = ref<'success' | 'error' | 'info'>('info');
+const pendingAction = ref<{ kind: 'RESTORE' | 'DELETE' | 'RESET' | 'IMPORT'; filename?: string } | null>(null);
 const actionBusy = ref(false);
 const restorePreview = ref<Awaited<ReturnType<typeof apiClient.previewBackupRestore>> | null>(null);
+const portableImportPreview = ref<Awaited<ReturnType<typeof apiClient.previewPortableDataImport>> | null>(null);
+const portableSnapshot = ref<unknown>(null);
+const portableFileInput = ref<HTMLInputElement | null>(null);
+const portablePreviewing = ref(false);
 const previewLoadingFilename = ref('');
 const exporting = ref(false);
+const MAX_PORTABLE_FILE_BYTES = 20 * 1024 * 1024;
+
+function showNotice(message: string, tone: 'success' | 'error' | 'info' = 'info') {
+  notice.value = message;
+  noticeTone.value = tone;
+}
+
 const dialogCopy = computed(() => {
   const action = pendingAction.value;
   if (action?.kind === 'RESTORE') return { title: '确认按预览结果恢复？', description: `已验证 ${action.filename} 的完整性。恢复会先生成回滚文件，完成后需要重启服务。`, confirm: '按此差异恢复', tone: 'primary' as const };
+  if (action?.kind === 'IMPORT') return { title: '确认导入这份个人数据？', description: `已完整校验 ${action.filename}。导入前会自动创建数据库快照；导入要么全部成功，要么完全不改动现有数据。`, confirm: '按预览结果导入', tone: 'primary' as const };
   if (action?.kind === 'DELETE') return { title: '永久删除这份快照？', description: `${action.filename} 删除后无法从系统中恢复。`, confirm: '永久删除', tone: 'danger' as const };
   return { title: '重置全部学习进度？', description: '学习状态、掌握证据和打卡会被清空；原始笔记、AI 整理稿、版本历史、岗位、项目和备份全部保留。', confirm: '重置学习进度', tone: 'danger' as const };
 });
@@ -50,7 +63,7 @@ const executorWarnings = computed(() => (executorQuery.data.value?.warnings ?? [
 const importMutation = useMutation({
   mutationFn: apiClient.executeContentImport,
   onSuccess: (result) => {
-    notice.value = `同步完成：新增 ${result.importedPoints}，更新 ${result.updatedPoints}，未变化 ${result.skippedPoints}`;
+    showNotice(`同步完成：新增 ${result.importedPoints}，更新 ${result.updatedPoints}，未变化 ${result.skippedPoints}`, 'success');
     queryClient.invalidateQueries({ queryKey: ['system', 'import'] });
     queryClient.invalidateQueries({ queryKey: ['knowledge'] });
   },
@@ -59,7 +72,7 @@ const importMutation = useMutation({
 const resetProgressMutation = useMutation({
   mutationFn: () => apiClient.resetLearningProgress(),
   onSuccess: (result) => {
-    notice.value = `学习进度已重置：${result.resetKnowledgePoints} 个知识点回到未开始。你的原始笔记、AI 整理稿与版本历史均已保留。`;
+    showNotice(`学习进度已重置：${result.resetKnowledgePoints} 个知识点回到未开始。你的原始笔记、AI 整理稿与版本历史均已保留。`, 'success');
     queryClient.invalidateQueries({ queryKey: ['system', 'import'] });
     queryClient.invalidateQueries({ queryKey: ['knowledge'] });
     queryClient.invalidateQueries({ queryKey: ['calendar'] });
@@ -71,18 +84,14 @@ const createBackupMutation = useMutation({
   mutationFn: () => apiClient.createBackup(backupNote.value.trim() || undefined),
   onSuccess: () => {
     backupNote.value = '';
-    notice.value = '本地数据库快照已创建';
+    showNotice('本地数据库快照已创建', 'success');
     queryClient.invalidateQueries({ queryKey: ['system', 'backups'] });
   },
 });
 
 async function restore(filename: string) {
-  try {
-    const result = await apiClient.restoreBackup(filename);
-    notice.value = result.message;
-  } catch (reason) {
-    notice.value = reason instanceof Error ? reason.message : '恢复失败';
-  }
+  const result = await apiClient.restoreBackup(filename);
+  showNotice(result.message, 'success');
 }
 
 async function prepareRestore(filename: string) {
@@ -92,7 +101,7 @@ async function prepareRestore(filename: string) {
   try {
     restorePreview.value = await apiClient.previewBackupRestore(filename);
     pendingAction.value = { kind: 'RESTORE', filename };
-  } catch (reason) { notice.value = reason instanceof Error ? reason.message : '无法读取恢复预览'; }
+  } catch (reason) { showNotice(reason instanceof Error ? reason.message : '无法读取恢复预览', 'error'); }
   finally { previewLoadingFilename.value = ''; }
 }
 
@@ -107,18 +116,56 @@ async function exportPortableData() {
     link.download = `career-atlas-export-${exported.exportedAt.slice(0, 10)}.json`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
-    notice.value = `可读数据导出完成：${Object.values(exported.counts).reduce((sum, count) => sum + count, 0)} 条记录。`;
-  } catch (reason) { notice.value = reason instanceof Error ? reason.message : '数据导出失败'; }
+    showNotice(`可读数据导出完成：${Object.values(exported.counts).reduce((sum, count) => sum + count, 0)} 条记录。`, 'success');
+  } catch (reason) { showNotice(reason instanceof Error ? reason.message : '数据导出失败', 'error'); }
   finally { exporting.value = false; }
+}
+
+async function selectPortableDataFile(event: Event) {
+  const input = event.currentTarget as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file || portablePreviewing.value) return;
+  notice.value = null;
+  portablePreviewing.value = true;
+  portableImportPreview.value = null;
+  portableSnapshot.value = null;
+  try {
+    if (!file.name.toLocaleLowerCase().endsWith('.json')) throw new Error('请选择系统导出的 .json 文件。');
+    if (file.size === 0) throw new Error('这个 JSON 文件是空的。');
+    if (file.size > MAX_PORTABLE_FILE_BYTES) throw new Error('JSON 文件超过 20 MB，系统未读取它。');
+    const text = (await file.text()).replace(/^\uFEFF/, '');
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); }
+    catch { throw new Error('文件不是有效的 JSON，请重新选择原始导出文件。'); }
+    const preview = await apiClient.previewPortableDataImport(parsed);
+    portableSnapshot.value = parsed;
+    portableImportPreview.value = preview;
+    pendingAction.value = { kind: 'IMPORT', filename: file.name };
+  } catch (reason) {
+    showNotice(reason instanceof Error ? reason.message : '无法读取个人数据 JSON', 'error');
+  } finally {
+    portablePreviewing.value = false;
+  }
+}
+
+function openPortableDataFilePicker() {
+  if (portablePreviewing.value || actionBusy.value) return;
+  portableFileInput.value?.click();
+}
+
+function clearPortableSelection() {
+  portableSnapshot.value = null;
+  portableImportPreview.value = null;
 }
 
 async function remove(filename: string) {
   try {
     await apiClient.deleteBackup(filename);
-    notice.value = '备份已删除';
+    showNotice('备份已删除', 'success');
     await backupsQuery.refetch();
   } catch (reason) {
-    notice.value = reason instanceof Error ? reason.message : '删除失败';
+    throw reason instanceof Error ? reason : new Error('删除失败');
   }
 }
 
@@ -130,14 +177,24 @@ async function confirmAction() {
     if (action.kind === 'RESTORE' && action.filename) await restore(action.filename);
     if (action.kind === 'DELETE' && action.filename) await remove(action.filename);
     if (action.kind === 'RESET') await resetProgressMutation.mutateAsync();
+    if (action.kind === 'IMPORT') {
+      if (!portableImportPreview.value || portableSnapshot.value === null) throw new Error('导入预览已失效，请重新选择 JSON。');
+      const result = await apiClient.importPortableData(portableSnapshot.value, portableImportPreview.value.confirmation);
+      showNotice(`已导入 ${result.importedRecords} 条个人记录；导入前快照 ${result.backupFilename} 已保留。`, 'success');
+      await queryClient.invalidateQueries();
+    }
     pendingAction.value = null;
     restorePreview.value = null;
+    clearPortableSelection();
+  } catch (reason) {
+    showNotice(reason instanceof Error ? reason.message : '操作失败', 'error');
   } finally { actionBusy.value = false; }
 }
 
 function cancelPendingAction() {
   pendingAction.value = null;
   restorePreview.value = null;
+  clearPortableSelection();
 }
 
 function formatSize(bytes: number) {
@@ -153,7 +210,7 @@ function formatSize(bytes: number) {
       <p>首次启动会自动迁移、同步知识并创建数据快照；35 个核心批次只编排真实知识点，不会生成泛化每日任务。这里不会回显任何 API Key。</p>
     </header>
 
-    <p v-if="notice" class="notice" role="status">{{ notice }}</p>
+    <p v-if="notice" class="notice" :class="`notice-${noticeTone}`" role="status">{{ notice }}</p>
 
     <section>
       <div class="section-heading"><span>01</span><div><h2>运行状态</h2><p>本地服务、AI 连接与代码题复核方式</p></div></div>
@@ -188,9 +245,26 @@ function formatSize(bytes: number) {
         <input v-model="backupNote" maxlength="120" placeholder="给这份快照加一句备注（可选）" />
         <button :disabled="createBackupMutation.isPending.value" @click="createBackupMutation.mutate()">{{ createBackupMutation.isPending.value ? '创建中...' : '创建本地快照' }}</button>
       </div>
-      <div class="portable-export">
-        <div><strong>导出可阅读的个人数据</strong><p>生成 JSON，包含学习进度、笔记及版本、挑战记录、打卡、路线选择、岗位、求职活动、技能缺口和项目；不包含 API Key。</p></div>
-        <button :disabled="exporting" @click="exportPortableData">{{ exporting ? '正在整理…' : '下载个人数据 JSON' }}</button>
+      <div class="portable-transfer">
+        <article class="portable-card">
+          <span class="portable-label">带走数据</span>
+          <div><strong>导出可阅读的个人数据</strong><p>生成 JSON，包含学习进度、笔记及版本、挑战记录、打卡、路线选择、岗位、求职活动、技能缺口和项目；不包含 API Key。</p></div>
+          <button :disabled="exporting" @click="exportPortableData">{{ exporting ? '正在整理…' : '下载个人数据 JSON' }}</button>
+        </article>
+        <article class="portable-card portable-import-card">
+          <span class="portable-label">恢复数据</span>
+          <div><strong>导入个人数据 JSON</strong><p>选择之前下载的 JSON。系统会先校验格式并预览变化，只有再次确认后才导入；导入前还会自动创建数据库快照。</p></div>
+          <input
+            ref="portableFileInput"
+            class="visually-hidden"
+            type="file"
+            accept=".json,application/json"
+            aria-hidden="true"
+            tabindex="-1"
+            @change="selectPortableDataFile"
+          />
+          <button :aria-busy="portablePreviewing" @click="openPortableDataFilePicker">{{ portablePreviewing ? '正在完整校验…' : '选择 JSON 并预览' }}</button>
+        </article>
       </div>
       <div v-if="backupsQuery.data.value?.length" class="backup-list">
         <article v-for="backup in backupsQuery.data.value" :key="backup.filename">
@@ -222,13 +296,34 @@ function formatSize(bytes: number) {
       <ul v-if="restorePreview.warnings.length" class="restore-warnings"><li v-for="warning in restorePreview.warnings" :key="warning">{{ warning }}</li></ul>
       <p v-else class="restore-safe">未发现按数量计算的数据减少；仍建议保留系统自动创建的回滚文件。</p>
     </div>
+    <div v-if="pendingAction?.kind === 'IMPORT' && portableImportPreview" class="restore-preview portable-import-preview">
+      <div class="import-source">
+        <div><span>所选文件</span><strong>{{ pendingAction.filename }}</strong></div>
+        <div><span>文件导出时间</span><strong>{{ new Date(portableImportPreview.exportedAt).toLocaleString('zh-CN') }}</strong></div>
+        <div><span>文件记录总数</span><strong>{{ portableImportPreview.totalRecords }}</strong></div>
+      </div>
+      <p class="match-summary">
+        <strong>{{ portableImportPreview.knowledgePoints.matched }}</strong> 个知识点进度可匹配
+        <span v-if="portableImportPreview.knowledgePoints.skipped">，{{ portableImportPreview.knowledgePoints.skipped }} 个旧知识点将跳过</span>
+        <span v-if="portableImportPreview.knowledgePoints.retainedCurrent">，{{ portableImportPreview.knowledgePoints.retainedCurrent }} 个当前新增知识点保持不变</span>
+      </p>
+      <div class="restore-grid">
+        <span>个人数据类别</span><b>当前</b><b>导入后</b><b>变化</b>
+        <template v-for="row in portableImportPreview.categories" :key="row.key">
+          <span>{{ row.label }}</span><b>{{ row.current }}</b><b>{{ row.after }}</b><b :class="row.difference < 0 ? 'negative' : 'positive'">{{ row.difference > 0 ? '+' : '' }}{{ row.difference }}</b>
+        </template>
+      </div>
+      <ul v-if="portableImportPreview.warnings.length" class="restore-warnings"><li v-for="warning in portableImportPreview.warnings" :key="warning">{{ warning }}</li></ul>
+      <p v-else class="restore-safe">文件与当前版本完全匹配，未发现按数量计算的数据减少。</p>
+    </div>
   </BaseDialog>
 </template>
 
 <style scoped>
-.settings-page{max-width:1120px;margin:0 auto}.page-header{padding:.5rem 0 2rem}.eyebrow{margin:0;color:var(--color-primary);font:750 .72rem var(--font-mono);letter-spacing:.16em}.page-header h1{margin:.25rem 0 .5rem;font-size:clamp(2.4rem,5vw,4.6rem);line-height:1;letter-spacing:-.06em}.page-header>p:last-child{max-width:720px;margin:0;color:var(--color-text-secondary)}.notice{margin:0 0 1rem;padding:.8rem 1rem;color:var(--color-success-strong);background:var(--color-success-soft);border:1px solid var(--color-success-border);border-radius:12px}.settings-page section{margin-bottom:1rem;padding:1.35rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:18px;box-shadow:var(--shadow-xs)}.section-heading{display:grid;grid-template-columns:2.5rem 1fr;gap:.7rem;margin-bottom:1.2rem}.section-heading>span{display:grid;place-items:center;width:2rem;height:2rem;color:var(--color-primary);font:750 .68rem var(--font-mono);background:var(--color-primary-soft);border-radius:9px}.section-heading h2,.section-heading p{margin:0}.section-heading h2{font-size:1.12rem}.section-heading p{margin-top:.15rem;color:var(--color-text-tertiary);font-size:.76rem}.status-table{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-left:3.2rem}.status-table>div{display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;padding:.8rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:11px}.status-table>div span{font-size:.78rem}.status-table strong{font:700 .72rem var(--font-mono)}.status-table small{grid-column:1/-1;color:var(--color-text-tertiary);font:.62rem var(--font-mono)}.status-card{position:relative;overflow:hidden}.status-card::after{position:absolute;top:12px;right:12px;width:7px;height:7px;content:'';background:var(--color-text-tertiary);border-radius:50%;box-shadow:0 0 0 5px rgba(137,149,164,.1)}.status-card.status-ok strong{color:var(--color-success)}.status-card.status-ok::after{background:var(--color-success);box-shadow:0 0 0 5px rgba(47,138,106,.1)}.status-card.status-warn strong{color:var(--color-warning)}.status-card.status-warn::after{background:var(--color-warning);box-shadow:0 0 0 5px rgba(198,138,45,.1)}.status-card.status-bad strong{color:var(--color-danger)}.status-card.status-bad::after{background:var(--color-danger);box-shadow:0 0 0 5px rgba(196,80,82,.1)}.status-card.status-pending strong{color:var(--color-text-tertiary)}.ok{color:var(--color-success)}.warn{color:var(--color-warning)}.bad,.danger{color:var(--color-danger)}.mode-note{display:grid;grid-template-columns:auto 1fr;gap:14px;margin:.85rem 0 0 3.2rem;padding:12px 14px;color:#6f582c;background:#fff8e9;border:1px solid #efe0b9;border-radius:11px}.mode-note strong{font-size:.76rem;white-space:nowrap}.mode-note ul{margin:0;padding-left:18px;font-size:.74rem;line-height:1.65}.action-row,.backup-create{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-left:3.2rem}.action-row p{margin:.15rem 0 0;color:var(--color-text-tertiary);font-size:.76rem}.settings-page button{min-height:40px;padding:0 .9rem;color:var(--color-text);font-weight:650;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px;cursor:pointer}.settings-page button:hover{border-color:var(--color-primary)}.settings-page button:disabled{opacity:.5;cursor:wait}.danger-button{color:var(--color-danger)!important;border-color:var(--color-danger)!important}.danger-button:hover{background:color-mix(in srgb,var(--color-danger) 8%,transparent)}.backup-create input{flex:1;min-height:42px;padding:0 .8rem;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px}.backup-list{display:grid;gap:.6rem;margin:1rem 0 0 3.2rem}.backup-list article{display:grid;grid-template-columns:1fr auto auto;gap:1rem;align-items:center;padding:.9rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:12px}.backup-list p{margin:.2rem 0 0;color:var(--color-text-tertiary);font-size:.7rem}.backup-stats{display:flex;gap:.7rem;color:var(--color-text-secondary);font:.65rem var(--font-mono)}.backup-actions{display:flex;gap:.4rem}.empty{margin-left:3.2rem;color:var(--color-text-tertiary)}@media(max-width:760px){.status-table{grid-template-columns:1fr}.status-table,.action-row,.backup-create,.backup-list,.empty,.mode-note{margin-left:0}.mode-note{grid-template-columns:1fr}.action-row,.backup-create{align-items:stretch;flex-direction:column}.backup-list article{grid-template-columns:1fr}.backup-stats{flex-wrap:wrap}}
+.settings-page{max-width:1120px;margin:0 auto}.page-header{padding:.5rem 0 2rem}.eyebrow{margin:0;color:var(--color-primary);font:750 .72rem var(--font-mono);letter-spacing:.16em}.page-header h1{margin:.25rem 0 .5rem;font-size:clamp(2.4rem,5vw,4.6rem);line-height:1;letter-spacing:-.06em}.page-header>p:last-child{max-width:720px;margin:0;color:var(--color-text-secondary)}.notice{margin:0 0 1rem;padding:.8rem 1rem;border:1px solid;border-radius:12px}.notice-success{color:var(--color-success-strong);background:var(--color-success-soft);border-color:var(--color-success-border)}.notice-error{color:#8e342d;background:#fff0ee;border-color:#efc8c2}.notice-info{color:var(--color-text-secondary);background:var(--color-surface-raised);border-color:var(--color-border)}.settings-page section{margin-bottom:1rem;padding:1.35rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:18px;box-shadow:var(--shadow-xs)}.section-heading{display:grid;grid-template-columns:2.5rem 1fr;gap:.7rem;margin-bottom:1.2rem}.section-heading>span{display:grid;place-items:center;width:2rem;height:2rem;color:var(--color-primary);font:750 .68rem var(--font-mono);background:var(--color-primary-soft);border-radius:9px}.section-heading h2,.section-heading p{margin:0}.section-heading h2{font-size:1.12rem}.section-heading p{margin-top:.15rem;color:var(--color-text-tertiary);font-size:.76rem}.status-table{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-left:3.2rem}.status-table>div{display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;padding:.8rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:11px}.status-table>div span{font-size:.78rem}.status-table strong{font:700 .72rem var(--font-mono)}.status-table small{grid-column:1/-1;color:var(--color-text-tertiary);font:.62rem var(--font-mono)}.status-card{position:relative;overflow:hidden}.status-card::after{position:absolute;top:12px;right:12px;width:7px;height:7px;content:'';background:var(--color-text-tertiary);border-radius:50%;box-shadow:0 0 0 5px rgba(137,149,164,.1)}.status-card.status-ok strong{color:var(--color-success)}.status-card.status-ok::after{background:var(--color-success);box-shadow:0 0 0 5px rgba(47,138,106,.1)}.status-card.status-warn strong{color:var(--color-warning)}.status-card.status-warn::after{background:var(--color-warning);box-shadow:0 0 0 5px rgba(198,138,45,.1)}.status-card.status-bad strong{color:var(--color-danger)}.status-card.status-bad::after{background:var(--color-danger);box-shadow:0 0 0 5px rgba(196,80,82,.1)}.status-card.status-pending strong{color:var(--color-text-tertiary)}.ok{color:var(--color-success)}.warn{color:var(--color-warning)}.bad,.danger{color:var(--color-danger)}.mode-note{display:grid;grid-template-columns:auto 1fr;gap:14px;margin:.85rem 0 0 3.2rem;padding:12px 14px;color:#6f582c;background:#fff8e9;border:1px solid #efe0b9;border-radius:11px}.mode-note strong{font-size:.76rem;white-space:nowrap}.mode-note ul{margin:0;padding-left:18px;font-size:.74rem;line-height:1.65}.action-row,.backup-create{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-left:3.2rem}.action-row p{margin:.15rem 0 0;color:var(--color-text-tertiary);font-size:.76rem}.settings-page button{min-height:40px;padding:0 .9rem;color:var(--color-text);font-weight:650;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px;cursor:pointer}.settings-page button:hover{border-color:var(--color-primary)}.settings-page button:focus-visible{outline:3px solid color-mix(in srgb,var(--color-primary) 22%,transparent);outline-offset:2px}.settings-page button:disabled{opacity:.5;cursor:wait}.danger-button{color:var(--color-danger)!important;border-color:var(--color-danger)!important}.danger-button:hover{background:color-mix(in srgb,var(--color-danger) 8%,transparent)}.backup-create input{flex:1;min-height:42px;padding:0 .8rem;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:10px}.backup-list{display:grid;gap:.6rem;margin:1rem 0 0 3.2rem}.backup-list article{display:grid;grid-template-columns:1fr auto auto;gap:1rem;align-items:center;padding:.9rem;background:var(--color-surface-raised);border:1px solid var(--color-border-subtle);border-radius:12px}.backup-list p{margin:.2rem 0 0;color:var(--color-text-tertiary);font-size:.7rem}.backup-stats{display:flex;gap:.7rem;color:var(--color-text-secondary);font:.65rem var(--font-mono)}.backup-actions{display:flex;gap:.4rem}.empty{margin-left:3.2rem;color:var(--color-text-tertiary)}.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}@media(max-width:760px){.status-table{grid-template-columns:1fr}.status-table,.action-row,.backup-create,.backup-list,.empty,.mode-note{margin-left:0}.mode-note{grid-template-columns:1fr}.action-row,.backup-create{align-items:stretch;flex-direction:column}.backup-list article{grid-template-columns:1fr}.backup-stats{flex-wrap:wrap}}
 .settings-page{width:100%;max-width:1480px}.page-header{padding:4px 2px 22px}.settings-page section{padding:1.5rem;border-color:#dfe5ed;box-shadow:0 9px 28px rgba(25,48,78,.055)}.status-table{grid-template-columns:repeat(4,1fr)}.status-table>div{min-height:88px;background:linear-gradient(145deg,#f9fbfe,#f5f8fc)}
-.portable-export{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:14px 0 0 3.2rem;padding:13px 15px;background:#f5f8fc;border:1px solid #e0e7ef;border-radius:12px}.portable-export p{max-width:760px;margin:4px 0 0;color:var(--color-text-tertiary);font-size:.74rem;line-height:1.55}.restore-preview{display:grid;gap:12px}.restore-grid{display:grid;grid-template-columns:1fr repeat(3,auto);gap:7px 14px;align-items:center;padding:12px;background:#f5f8fc;border-radius:11px;font-size:.76rem}.restore-grid>span:first-child,.restore-grid>b:nth-child(-n+4){color:#6c7a8d;font-size:.68rem}.restore-grid b{text-align:right}.restore-grid .negative{color:#a53732}.restore-grid .positive{color:#247047}.restore-warnings{margin:0;padding:10px 12px 10px 28px;color:#8e342d;background:#fff0ee;border-radius:10px;font-size:.76rem;line-height:1.6}.restore-safe{margin:0;padding:10px 12px;color:#247047;background:#edf8f1;border-radius:10px;font-size:.76rem}
+.portable-transfer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 0 3.2rem}.portable-card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'label label' 'copy action';gap:9px 18px;align-items:end;padding:15px;background:linear-gradient(145deg,#f7f9fc,#f2f6fa);border:1px solid #e0e7ef;border-radius:13px}.portable-card>div{grid-area:copy}.portable-card>button{grid-area:action}.portable-card p{margin:4px 0 0;color:var(--color-text-tertiary);font-size:.72rem;line-height:1.55}.portable-label{grid-area:label;width:max-content;padding:3px 7px;color:#516477;background:#e8eef5;border-radius:6px;font:700 .6rem var(--font-mono);letter-spacing:.06em}.portable-import-card{background:linear-gradient(145deg,#f2f8f5,#edf5f1);border-color:#d5e6dd}.portable-import-card .portable-label{color:#2f6f55;background:#dceee5}.restore-preview{display:grid;gap:12px}.restore-grid{display:grid;grid-template-columns:1fr repeat(3,auto);gap:7px 14px;align-items:center;padding:12px;background:#f5f8fc;border-radius:11px;font-size:.76rem}.restore-grid>span:first-child,.restore-grid>b:nth-child(-n+4){color:#6c7a8d;font-size:.68rem}.restore-grid b{text-align:right}.restore-grid .negative{color:#a53732}.restore-grid .positive{color:#247047}.restore-warnings{margin:0;padding:10px 12px 10px 28px;color:#8e342d;background:#fff0ee;border-radius:10px;font-size:.76rem;line-height:1.6}.restore-safe{margin:0;padding:10px 12px;color:#247047;background:#edf8f1;border-radius:10px;font-size:.76rem}.import-source{display:grid;grid-template-columns:1.5fr 1fr auto;gap:8px}.import-source>div{display:grid;gap:3px;min-width:0;padding:10px 11px;background:#f5f8fc;border-radius:9px}.import-source span{color:var(--color-text-tertiary);font-size:.64rem}.import-source strong{overflow:hidden;font-size:.74rem;text-overflow:ellipsis;white-space:nowrap}.match-summary{margin:0;padding:10px 12px;color:#36576a;background:#eef6f8;border-radius:10px;font-size:.75rem;line-height:1.55}.match-summary strong{color:#1e6f63}
 @media(max-width:1180px){.status-table{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:760px){.status-table{grid-template-columns:1fr}.portable-export{align-items:stretch;flex-direction:column;margin-left:0}.restore-grid{grid-template-columns:1fr repeat(3,minmax(42px,auto));gap:6px}}
+@media(max-width:900px){.portable-transfer{grid-template-columns:1fr}}
+@media(max-width:760px){.status-table{grid-template-columns:1fr}.portable-transfer{margin-left:0}.portable-card{grid-template-columns:1fr;grid-template-areas:'label' 'copy' 'action';align-items:stretch}.restore-grid{grid-template-columns:1fr repeat(3,minmax(42px,auto));gap:6px}.import-source{grid-template-columns:1fr}}
 </style>

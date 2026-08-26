@@ -631,6 +631,34 @@ const PortableDataExportSchema = z.object({
   data: z.record(z.array(z.record(z.unknown()))),
 });
 
+const PortableDataImportPreviewSchema = z.object({
+  schemaVersion: z.literal(1),
+  exportedAt: z.string(),
+  totalRecords: z.number().int().nonnegative(),
+  confirmation: z.string(),
+  knowledgePoints: z.object({
+    inFile: z.number().int().nonnegative(),
+    matched: z.number().int().nonnegative(),
+    skipped: z.number().int().nonnegative(),
+    retainedCurrent: z.number().int().nonnegative(),
+  }),
+  categories: z.array(z.object({
+    key: z.string(),
+    label: z.string(),
+    current: z.number().int().nonnegative(),
+    after: z.number().int().nonnegative(),
+    difference: z.number().int(),
+  })),
+  warnings: z.array(z.string()),
+});
+
+const PortableDataImportResultSchema = z.object({
+  message: z.string(),
+  importedRecords: z.number().int().nonnegative(),
+  skippedKnowledgePoints: z.number().int().nonnegative(),
+  backupFilename: z.string(),
+});
+
 const AssessmentGradeResponseSchema = z.object({
   session: AssessmentSessionSchema,
   result: AssessmentResultSchema,
@@ -747,7 +775,7 @@ async function request<T>(
   const controller = new AbortController();
   const callerSignal = options?.signal;
   let timedOut = false;
-  const timeoutMs = path === '/system/ai/status' ? 35_000 : 20_000;
+  const timeoutMs = path.startsWith('/data/import') ? 60_000 : path === '/system/ai/status' ? 35_000 : 20_000;
   const timeout = globalThis.setTimeout(() => {
     timedOut = true;
     controller.abort();
@@ -1476,6 +1504,20 @@ export const apiClient = {
     return request('/data/export', PortableDataExportSchema);
   },
 
+  async previewPortableDataImport(snapshot: unknown) {
+    return request('/data/import/preview', PortableDataImportPreviewSchema, {
+      method: 'POST',
+      body: JSON.stringify({ snapshot }),
+    });
+  },
+
+  async importPortableData(snapshot: unknown, confirm: string) {
+    return request('/data/import', PortableDataImportResultSchema, {
+      method: 'POST',
+      body: JSON.stringify({ snapshot, confirm }),
+    });
+  },
+
   async previewJobImport(rows: z.infer<typeof JobCSVRowSchema>[]) {
     const validatedRows = z.array(JobCSVRowSchema).parse(rows);
     return request('/jobs/import/preview', JobImportPreviewSchema, {
@@ -1623,6 +1665,7 @@ export type AssessmentResult = z.infer<typeof AssessmentResultSchema>;
 export type BackupMetadata = z.infer<typeof BackupMetadataSchema>;
 export type RestorePreview = z.infer<typeof RestorePreviewSchema>;
 export type PortableDataExport = z.infer<typeof PortableDataExportSchema>;
+export type PortableDataImportPreview = z.infer<typeof PortableDataImportPreviewSchema>;
 // 求职相关类型
 export type Job = z.infer<typeof JobSchema>;
 export type JobStatus = z.infer<typeof JobStatusSchema>;
