@@ -224,13 +224,17 @@ try {
     Write-Step 'Creating Desktop and Start Menu shortcuts'
     $icon = "$iconPath,0"
     $launchScript = Join-Path $toolsRoot 'launch-local.ps1'
-    $launchArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchScript`""
+    $chromeLaunchArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchScript`" -BrowserMode Chrome"
+    $immersiveLaunchArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launchScript`" -BrowserMode EdgeApp"
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Career Atlas.lnk'
-    New-Shortcut $desktopShortcut $powershellPath $launchArguments $InstallRoot 'Open Career Atlas' $icon
+    $desktopImmersiveShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Career Atlas Immersive.lnk'
+    New-Shortcut $desktopShortcut $powershellPath $chromeLaunchArguments $InstallRoot 'Open Career Atlas in Chrome with browser extensions' $icon
+    New-Shortcut $desktopImmersiveShortcut $powershellPath $immersiveLaunchArguments $InstallRoot 'Open Career Atlas in immersive mode' $icon
 
     $programsRoot = Join-Path ([Environment]::GetFolderPath('Programs')) 'Career Atlas'
     New-Item -ItemType Directory -Path $programsRoot -Force | Out-Null
-    New-Shortcut (Join-Path $programsRoot 'Career Atlas.lnk') $powershellPath $launchArguments $InstallRoot 'Open Career Atlas' $icon
+    New-Shortcut (Join-Path $programsRoot 'Career Atlas.lnk') $powershellPath $chromeLaunchArguments $InstallRoot 'Open Career Atlas in Chrome with browser extensions' $icon
+    New-Shortcut (Join-Path $programsRoot 'Career Atlas Immersive.lnk') $powershellPath $immersiveLaunchArguments $InstallRoot 'Open Career Atlas in immersive mode' $icon
     $updateArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $PSScriptRoot 'install-local.ps1')`" -Mode Update"
     New-Shortcut (Join-Path $programsRoot 'Update Career Atlas.lnk') $powershellPath $updateArguments $repoRoot 'Update Career Atlas from the selected source branch' $icon
     $uninstallArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $toolsRoot 'uninstall-local.ps1')`""
@@ -241,7 +245,7 @@ try {
   Write-Host "Application: $appRoot"
   Write-Host "Personal data: $dataRoot"
   if (-not $SkipLaunch) {
-    Invoke-Checked $powershellPath @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $toolsRoot 'launch-local.ps1'))
+    Invoke-Checked $powershellPath @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $toolsRoot 'launch-local.ps1'), '-BrowserMode', 'Chrome')
   }
 } catch {
   $installFailure = $_

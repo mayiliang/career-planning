@@ -1,5 +1,7 @@
 param(
   [string]$InstallRoot = '',
+  [ValidateSet('Chrome', 'EdgeApp')]
+  [string]$BrowserMode = 'Chrome',
   [switch]$NoOpen,
   [int]$StartupTimeoutSeconds = 60
 )
@@ -34,6 +36,37 @@ function Show-LaunchError([string]$Message) {
       Add-Type -AssemblyName System.Windows.Forms
       [System.Windows.Forms.MessageBox]::Show($Message, 'Career Atlas could not start', 'OK', 'Error') | Out-Null
     } catch { }
+  }
+}
+
+function Open-CareerAtlas([string]$Mode) {
+  if ($Mode -eq 'Chrome') {
+    $chromeCandidates = @(
+      'C:\Program Files\Google\Chrome\Application\chrome.exe',
+      'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+      (Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe')
+    )
+    $chromePath = $chromeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $chromePath) {
+      throw 'Google Chrome was not found. Reinstall Chrome or use the Career Atlas Immersive shortcut.'
+    }
+
+    # Use the existing Chrome profile so installed assistants, side panels and
+    # site permissions remain available. A regular maximized window keeps the
+    # extension toolbar accessible, unlike browser app mode.
+    Start-Process -FilePath $chromePath -ArgumentList @('--new-window', '--start-maximized', $appUrl) | Out-Null
+    return
+  }
+
+  $edgeCandidates = @(
+    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+    'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+  )
+  $edgePath = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+  if ($edgePath) {
+    Start-Process -FilePath $edgePath -ArgumentList @("--app=$appUrl", '--new-window', '--start-maximized') | Out-Null
+  } else {
+    Start-Process $appUrl | Out-Null
   }
 }
 
@@ -87,16 +120,7 @@ try {
   }
 
   if (-not $NoOpen) {
-    $edgeCandidates = @(
-      'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-      'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
-    )
-    $edgePath = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    if ($edgePath) {
-      Start-Process -FilePath $edgePath -ArgumentList @("--app=$appUrl", '--new-window', '--start-maximized') | Out-Null
-    } else {
-      Start-Process $appUrl | Out-Null
-    }
+    Open-CareerAtlas $BrowserMode
   }
 } catch {
   Show-LaunchError $_.Exception.Message

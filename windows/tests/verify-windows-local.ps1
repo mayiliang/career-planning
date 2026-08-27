@@ -9,10 +9,18 @@ function Assert-True([bool]$Condition, [string]$Message) {
 
 $launchScript = Get-Content -LiteralPath (Join-Path $repoRoot 'windows\launch-local.ps1') -Raw -Encoding UTF8
 $installScript = Get-Content -LiteralPath (Join-Path $repoRoot 'windows\install-local.ps1') -Raw -Encoding UTF8
+$uninstallScript = Get-Content -LiteralPath (Join-Path $repoRoot 'windows\uninstall-local.ps1') -Raw -Encoding UTF8
 $appShell = Get-Content -LiteralPath (Join-Path $repoRoot 'apps\web\index.html') -Raw -Encoding UTF8
 
-Assert-True ($launchScript.Contains("'--start-maximized'")) 'The Edge app window is not configured to start maximized.'
-Assert-True ($launchScript.Contains('"--app=$appUrl"')) 'The launcher no longer opens Career Atlas in Edge app mode.'
+Assert-True ($launchScript.Contains("[ValidateSet('Chrome', 'EdgeApp')]")) 'The launcher does not expose both browser modes.'
+Assert-True ($launchScript.Contains("[string]`$BrowserMode = 'Chrome'")) 'Chrome is not the default Career Atlas browser mode.'
+Assert-True ($launchScript.Contains("'Google\Chrome\Application\chrome.exe'")) 'The launcher does not locate an existing Chrome installation.'
+Assert-True ($launchScript.Contains("@('--new-window', '--start-maximized', `$appUrl)")) 'The Chrome window is not configured to open maximized with extension controls available.'
+Assert-True ($launchScript.Contains('"--app=$appUrl"')) 'The launcher no longer offers the Edge immersive app mode.'
+Assert-True ($installScript.Contains('-BrowserMode Chrome')) 'The main shortcut does not open the Chrome extension-enabled mode.'
+Assert-True ($installScript.Contains('-BrowserMode EdgeApp')) 'The installer does not create an immersive Edge shortcut.'
+Assert-True ($installScript.Contains('Career Atlas Immersive.lnk')) 'The immersive shortcut is missing.'
+Assert-True ($uninstallScript.Contains('Career Atlas Immersive.lnk')) 'The uninstaller leaves the immersive desktop shortcut behind.'
 Assert-True ($installScript.Contains("assets\Career-Atlas.ico")) 'The installer does not copy the Career Atlas icon.'
 Assert-True ($installScript.Contains('$icon = "$iconPath,0"')) 'Shortcuts do not use the Career Atlas icon.'
 Assert-True ($installScript.Contains('remove-directory-tree.mjs')) 'The updater cannot safely remove pnpm directory links on Windows.'
@@ -52,4 +60,4 @@ try {
 $removerPath = Join-Path $repoRoot 'windows\remove-directory-tree.mjs'
 Assert-True (Test-Path -LiteralPath $removerPath) 'The safe Windows directory remover is missing.'
 
-Write-Host 'Windows local icon and maximized-launch checks passed.' -ForegroundColor Green
+Write-Host 'Windows local icon, Chrome extension mode and immersive launch checks passed.' -ForegroundColor Green

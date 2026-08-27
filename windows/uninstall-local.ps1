@@ -20,7 +20,11 @@ function Stop-InstalledServer {
     $state = Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $process = Get-Process -Id ([int]$state.processId) -ErrorAction SilentlyContinue
     if (-not $process -or $process.ProcessName -ne 'node') { return }
-    $recordedStart = [DateTime]::Parse([string]$state.startedAtUtc).ToUniversalTime()
+    $recordedStart = if ($state.startedAtUtc -is [DateTime]) {
+      ([DateTime]$state.startedAtUtc).ToUniversalTime()
+    } else {
+      [DateTimeOffset]::Parse([string]$state.startedAtUtc).UtcDateTime
+    }
     if ([Math]::Abs(($process.StartTime.ToUniversalTime() - $recordedStart).TotalSeconds) -gt 2) { return }
     $processId = [int]$process.Id
     $taskkillPath = Join-Path $env:SystemRoot 'System32\taskkill.exe'
@@ -66,8 +70,10 @@ if ($RemoveData -and -not $Force) {
 Stop-InstalledServer
 
 if (-not $SkipShortcuts) {
-  $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Career Atlas.lnk'
-  if (Test-Path -LiteralPath $desktopShortcut) { Remove-Item -LiteralPath $desktopShortcut -Force }
+  foreach ($shortcutName in @('Career Atlas.lnk', 'Career Atlas Immersive.lnk')) {
+    $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) $shortcutName
+    if (Test-Path -LiteralPath $desktopShortcut) { Remove-Item -LiteralPath $desktopShortcut -Force }
+  }
   $programsRoot = Join-Path ([Environment]::GetFolderPath('Programs')) 'Career Atlas'
   if (Test-Path -LiteralPath $programsRoot) { Remove-Item -LiteralPath $programsRoot -Recurse -Force }
 }
