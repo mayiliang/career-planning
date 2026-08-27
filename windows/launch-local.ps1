@@ -39,6 +39,76 @@ function Show-LaunchError([string]$Message) {
   }
 }
 
+function Initialize-WindowApi {
+  if ('CareerAtlas.NativeWindow' -as [type]) { return }
+
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+namespace CareerAtlas {
+  public static class NativeWindow {
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int command);
+  }
+}
+'@
+}
+
+function Get-VisibleBrowserWindows([string]$ProcessName) {
+  Initialize-WindowApi
+  $processIds = @(
+    Get-Process -Name $ProcessName -ErrorAction SilentlyContinue |
+      Select-Object -ExpandProperty Id
+  )
+  if ($processIds.Count -eq 0) { return @() }
+
+  $windowHandles = New-Object 'System.Collections.Generic.List[System.IntPtr]'
+  $callback = [CareerAtlas.NativeWindow+EnumWindowsProc]{
+    param([IntPtr]$windowHandle, [IntPtr]$callbackData)
+    if ([CareerAtlas.NativeWindow]::IsWindowVisible($windowHandle)) {
+      [uint32]$ownerProcessId = 0
+      [CareerAtlas.NativeWindow]::GetWindowThreadProcessId($windowHandle, [ref]$ownerProcessId) | Out-Null
+      if ($processIds -contains [int]$ownerProcessId) {
+        $windowHandles.Add($windowHandle)
+      }
+    }
+    return $true
+  }.GetNewClosure()
+
+  [CareerAtlas.NativeWindow]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+  return @($windowHandles)
+}
+
+function Maximize-NewBrowserWindow([string]$ProcessName, [long[]]$KnownWindowHandles) {
+  Initialize-WindowApi
+  $deadline = [DateTime]::UtcNow.AddSeconds(8)
+  while ([DateTime]::UtcNow -lt $deadline) {
+    $newWindow = Get-VisibleBrowserWindows $ProcessName |
+      Where-Object { $KnownWindowHandles -notcontains $_.ToInt64() } |
+      Select-Object -Last 1
+    if ($null -ne $newWindow) {
+      # SW_MAXIMIZE = 3. Applying it to the newly-created top-level window is
+      # reliable even when Chrome reuses an already-running browser process.
+      [CareerAtlas.NativeWindow]::ShowWindowAsync($newWindow, 3) | Out-Null
+      return $true
+    }
+    Start-Sleep -Milliseconds 100
+  }
+  return $false
+}
+
 function Open-CareerAtlas([string]$Mode) {
   if ($Mode -eq 'Chrome') {
     $chromeCandidates = @(
@@ -54,7 +124,11 @@ function Open-CareerAtlas([string]$Mode) {
     # Use the existing Chrome profile so installed assistants, side panels and
     # site permissions remain available. A regular maximized window keeps the
     # extension toolbar accessible, unlike browser app mode.
+    $knownChromeWindows = @(
+      Get-VisibleBrowserWindows 'chrome' | ForEach-Object { $_.ToInt64() }
+    )
     Start-Process -FilePath $chromePath -ArgumentList @('--new-window', '--start-maximized', $appUrl) | Out-Null
+    Maximize-NewBrowserWindow 'chrome' $knownChromeWindows | Out-Null
     return
   }
 

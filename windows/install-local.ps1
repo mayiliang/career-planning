@@ -241,6 +241,15 @@ try {
     New-Shortcut (Join-Path $programsRoot 'Uninstall Career Atlas.lnk') $powershellPath $uninstallArguments $repoRoot 'Uninstall Career Atlas and keep personal data' $icon
   }
 
+  # Surface the assistant's persistent curriculum-gap inbox on every install or
+  # update so content maintainers cannot silently miss learner-discovered gaps.
+  $supplementPendingDir = Join-Path $dataRoot 'learning-material-supplements\pending'
+  New-Item -ItemType Directory -Path $supplementPendingDir -Force | Out-Null
+  $pendingSupplementCount = @(Get-ChildItem -LiteralPath $supplementPendingDir -Filter '*.md' -File -ErrorAction SilentlyContinue).Count
+  Write-Step 'Reviewing the learning-material supplement inbox'
+  Write-Host "Pending candidates: $pendingSupplementCount"
+  Write-Host "Review directory: $supplementPendingDir"
+
   Write-Step 'Installation completed'
   Write-Host "Application: $appRoot"
   Write-Host "Personal data: $dataRoot"

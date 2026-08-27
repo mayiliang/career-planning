@@ -16,6 +16,9 @@ Assert-True ($launchScript.Contains("[ValidateSet('Chrome', 'EdgeApp')]")) 'The 
 Assert-True ($launchScript.Contains("[string]`$BrowserMode = 'Chrome'")) 'Chrome is not the default Career Atlas browser mode.'
 Assert-True ($launchScript.Contains("'Google\Chrome\Application\chrome.exe'")) 'The launcher does not locate an existing Chrome installation.'
 Assert-True ($launchScript.Contains("@('--new-window', '--start-maximized', `$appUrl)")) 'The Chrome window is not configured to open maximized with extension controls available.'
+Assert-True ($launchScript.Contains('ShowWindowAsync')) 'The launcher does not apply a native maximize action to the new Chrome window.'
+Assert-True ($launchScript.Contains("Get-VisibleBrowserWindows 'chrome'")) 'The launcher does not distinguish the newly-created Chrome window from existing windows.'
+Assert-True ($launchScript.Contains('SW_MAXIMIZE = 3')) 'The native maximize command is not documented and verifiable.'
 Assert-True ($launchScript.Contains('"--app=$appUrl"')) 'The launcher no longer offers the Edge immersive app mode.'
 Assert-True ($installScript.Contains('-BrowserMode Chrome')) 'The main shortcut does not open the Chrome extension-enabled mode.'
 Assert-True ($installScript.Contains('-BrowserMode EdgeApp')) 'The installer does not create an immersive Edge shortcut.'
@@ -28,6 +31,8 @@ Assert-True ($installScript.Contains('--config.node-linker=hoisted')) 'The deplo
 Assert-True ($installScript.Contains('legacy-runtime-')) 'Legacy linked rollbacks are not isolated during the one-time runtime migration.'
 Assert-True ($installScript.Contains("`$env:CI = 'true'")) 'Dependency reconciliation may block a non-interactive Windows upgrade.'
 Assert-True ($installScript.Contains("runtimeLayout = 'hoisted-v1'")) 'The installed runtime layout is not recorded for future upgrades.'
+Assert-True ($installScript.Contains("learning-material-supplements\pending")) 'The updater does not surface the persistent learning-material supplement inbox.'
+Assert-True ($installScript.Contains('Pending candidates:')) 'The updater does not report how many supplement candidates require review.'
 Assert-True ($appShell.Contains('/manifest.webmanifest')) 'The web app manifest is not linked.'
 Assert-True ($appShell.Contains('/favicon.ico')) 'The Windows-compatible favicon is not linked.'
 

@@ -99,6 +99,13 @@
       "when": 1786060800000,
       "tag": "0013_knowledge_topics_and_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787798400000,
+      "tag": "0014_ai_assistant_gaps",
+      "breakpoints": true
     }
   ]
 }

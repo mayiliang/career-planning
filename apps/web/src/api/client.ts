@@ -659,6 +659,45 @@ const PortableDataImportResultSchema = z.object({
   backupFilename: z.string(),
 });
 
+const AssistantSourceSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['SITE', 'WEB']),
+  title: z.string(),
+  url: z.string(),
+  excerpt: z.string(),
+  code: z.string().optional(),
+  domain: z.string().optional(),
+});
+
+const AssistantGapCandidateSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  rationale: z.string(),
+  suggestedScope: z.string(),
+  sourceRoute: z.string(),
+  sourcePageTitle: z.string(),
+  status: z.enum(['PENDING', 'ADDED', 'DISMISSED']),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const AssistantGapDirectorySchema = z.object({
+  directory: z.string(),
+  items: z.array(AssistantGapCandidateSchema),
+});
+
+const AssistantRequestSchema = z.object({
+  mode: z.enum(['EXPLAIN', 'SUMMARY', 'ASK']),
+  question: z.string().optional(),
+  selectedText: z.string().optional(),
+  page: z.object({
+    route: z.string(),
+    title: z.string(),
+    content: z.string(),
+    capturedAt: z.string(),
+  }),
+});
+
 const AssessmentGradeResponseSchema = z.object({
   session: AssessmentSessionSchema,
   result: AssessmentResultSchema,
@@ -952,6 +991,46 @@ export const apiClient = {
   // 健康检查
   async getHealth() {
     return request('/system/health', HealthResponseSchema);
+  },
+
+  // ===== 全局 AI 学习助手 =====
+  async streamAssistant(
+    input: AssistantRequest,
+    handlers: AssistantStreamHandlers,
+    signal?: AbortSignal,
+  ) {
+    const payload = AssistantRequestSchema.parse(input);
+    await consumeSse(
+      '/assistant/stream',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal,
+      },
+      (event, data) => {
+        if (event === 'progress' && typeof data.message === 'string') handlers.onProgress?.(data.message);
+        if (event === 'delta' && typeof data.delta === 'string') handlers.onDelta?.(data.delta);
+        if (event === 'thinking' && typeof data.delta === 'string') handlers.onThinking?.(data.delta);
+        if (event === 'sources') {
+          handlers.onSources?.(
+            z.array(AssistantSourceSchema).parse(data.sources ?? []),
+            typeof data.searchQuery === 'string' ? data.searchQuery : '',
+            typeof data.webSearchWarning === 'string' ? data.webSearchWarning : '',
+          );
+        }
+        if (event === 'gap') handlers.onGap?.(AssistantGapCandidateSchema.parse(data.candidate));
+        if (event === 'done') handlers.onDone?.({
+          provider: typeof data.provider === 'string' ? data.provider : '',
+          model: typeof data.model === 'string' ? data.model : '',
+          pageCharacterCount: typeof data.pageCharacterCount === 'number' ? data.pageCharacterCount : 0,
+        });
+      },
+    );
+  },
+
+  async listAssistantGaps() {
+    return request('/assistant/gaps', AssistantGapDirectorySchema);
   },
 
   // ===== 知识点 API =====
@@ -1666,6 +1745,17 @@ export type BackupMetadata = z.infer<typeof BackupMetadataSchema>;
 export type RestorePreview = z.infer<typeof RestorePreviewSchema>;
 export type PortableDataExport = z.infer<typeof PortableDataExportSchema>;
 export type PortableDataImportPreview = z.infer<typeof PortableDataImportPreviewSchema>;
+export type AssistantSource = z.infer<typeof AssistantSourceSchema>;
+export type AssistantGapCandidate = z.infer<typeof AssistantGapCandidateSchema>;
+export type AssistantRequest = z.infer<typeof AssistantRequestSchema>;
+export interface AssistantStreamHandlers {
+  onProgress?: (message: string) => void;
+  onDelta?: (delta: string) => void;
+  onThinking?: (delta: string) => void;
+  onSources?: (sources: AssistantSource[], searchQuery: string, warning: string) => void;
+  onGap?: (candidate: AssistantGapCandidate) => void;
+  onDone?: (metadata: { provider: string; model: string; pageCharacterCount: number }) => void;
+}
 // 求职相关类型
 export type Job = z.infer<typeof JobSchema>;
 export type JobStatus = z.infer<typeof JobStatusSchema>;

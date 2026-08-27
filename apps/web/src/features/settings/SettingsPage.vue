@@ -47,6 +47,8 @@ const aiQuery = useQuery({ queryKey: ['system', 'ai'], queryFn: apiClient.getAIS
 const executorQuery = useQuery({ queryKey: ['system', 'executor'], queryFn: apiClient.getExecutorStatus });
 const importQuery = useQuery({ queryKey: ['system', 'import'], queryFn: apiClient.getImportStatus });
 const backupsQuery = useQuery({ queryKey: ['system', 'backups'], queryFn: apiClient.listBackups });
+const assistantGapsQuery = useQuery({ queryKey: ['assistant', 'gaps'], queryFn: apiClient.listAssistantGaps });
+const pendingAssistantGaps = computed(() => assistantGapsQuery.data.value?.items.filter((item) => item.status === 'PENDING') ?? []);
 const aiState = computed(() => {
   if (aiQuery.isPending.value) return { label: '检查中', tone: 'pending' };
   const status = aiQuery.data.value;
@@ -200,6 +202,17 @@ function cancelPendingAction() {
 function formatSize(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
+
+async function copyAssistantGapDirectory() {
+  const directory = assistantGapsQuery.data.value?.directory;
+  if (!directory) return;
+  try {
+    await navigator.clipboard.writeText(directory);
+    showNotice('后续学习资料补充目录路径已复制', 'success');
+  } catch {
+    showNotice(`目录位置：${directory}`, 'info');
+  }
+}
 </script>
 
 <template>
@@ -275,6 +288,24 @@ function formatSize(bytes: number) {
       </div>
       <p v-else class="empty">还没有本地快照。</p>
     </section>
+
+    <section id="assistant-gaps" class="assistant-gaps-section">
+      <div class="section-heading"><span>05</span><div><h2>后续学习资料补充目录</h2><p>Atlas AI 仅登记合理、符合培养目标且站内没有强匹配资料的知识缺口</p></div></div>
+      <div class="supplement-summary">
+        <div><strong>{{ pendingAssistantGaps.length }}</strong><span>项待完整审阅</span></div>
+        <p>开发者更新系统时会逐项阅读原问题、核对现有资料，再决定新增知识点、补充讲义或忽略。目录不会仅凭关键词自动改写正式课程。</p>
+        <button :disabled="!assistantGapsQuery.data.value?.directory" @click="copyAssistantGapDirectory">复制目录位置</button>
+      </div>
+      <div v-if="pendingAssistantGaps.length" class="supplement-list">
+        <article v-for="item in pendingAssistantGaps" :key="item.id">
+          <div class="supplement-index">PENDING</div>
+          <div class="supplement-copy"><strong>{{ item.title }}</strong><p>{{ item.rationale }}</p><small>建议范围：{{ item.suggestedScope }}</small></div>
+          <div class="supplement-origin"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN') }}</span><RouterLink :to="item.sourceRoute">回到发现页面 →</RouterLink></div>
+        </article>
+      </div>
+      <div v-else-if="assistantGapsQuery.isPending.value" class="supplement-empty">正在读取待补目录…</div>
+      <div v-else class="supplement-empty"><strong>当前没有待补项目</strong><span>当助手发现确实缺失且符合路线的问题时，会在这里留下可追溯记录。</span></div>
+    </section>
   </main>
   <BaseDialog
     :open="Boolean(pendingAction)"
@@ -326,4 +357,5 @@ function formatSize(bytes: number) {
 @media(max-width:1180px){.status-table{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.portable-transfer{grid-template-columns:1fr}}
 @media(max-width:760px){.status-table{grid-template-columns:1fr}.portable-transfer{margin-left:0}.portable-card{grid-template-columns:1fr;grid-template-areas:'label' 'copy' 'action';align-items:stretch}.restore-grid{grid-template-columns:1fr repeat(3,minmax(42px,auto));gap:6px}.import-source{grid-template-columns:1fr}}
+.assistant-gaps-section{scroll-margin-top:20px;background:linear-gradient(150deg,#fff 0%,#f4faf7 100%)!important}.supplement-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;margin-left:3.2rem;padding:15px;background:linear-gradient(135deg,#17314f,#174e42);border-radius:14px;box-shadow:0 13px 32px rgba(18,51,63,.13)}.supplement-summary>div{display:flex;flex-direction:column;align-items:center;min-width:72px;color:#fff}.supplement-summary>div strong{font:750 1.65rem var(--font-display)}.supplement-summary>div span{color:#9fc3b6;font-size:.58rem}.supplement-summary p{margin:0;color:#b7c8d6;font-size:.7rem;line-height:1.65}.supplement-summary button{color:#eaf8f2;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15)}.supplement-list{display:grid;gap:8px;margin:12px 0 0 3.2rem}.supplement-list article{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:13px;background:rgba(255,255,255,.8);border:1px solid #dbe8e2;border-radius:12px}.supplement-index{padding:4px 6px;color:#2d6a55;font:750 .53rem var(--font-mono);background:#dfeee7;border-radius:6px}.supplement-copy{display:flex;min-width:0;flex-direction:column}.supplement-copy strong{font-size:.78rem}.supplement-copy p{margin:3px 0;color:#657486;font-size:.69rem;line-height:1.55}.supplement-copy small{color:#839186;font-size:.61rem}.supplement-origin{display:flex;flex-direction:column;align-items:flex-end;gap:5px}.supplement-origin span{color:#8b98a6;font:.56rem var(--font-mono)}.supplement-origin a{color:#326c59;font-size:.62rem;text-decoration:none}.supplement-empty{display:flex;gap:4px;margin-left:3.2rem;padding:18px;flex-direction:column;align-items:center;color:#788796;text-align:center;background:#f5f8f7;border:1px dashed #cfddd6;border-radius:12px}.supplement-empty strong{color:#435667;font-size:.78rem}.supplement-empty span{font-size:.66rem}@media(max-width:760px){.supplement-summary,.supplement-list,.supplement-empty{margin-left:0}.supplement-summary{grid-template-columns:1fr;align-items:stretch}.supplement-summary>div{align-items:flex-start}.supplement-list article{grid-template-columns:auto 1fr}.supplement-origin{grid-column:2;align-items:flex-start}}
 </style>

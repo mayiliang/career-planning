@@ -11,6 +11,7 @@ import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { apiClient } from '@/api/client';
 import CommandPalette from './CommandPalette.vue';
+import AiAssistant from '@/components/AiAssistant.vue';
 
 const commandPaletteOpen = ref(false);
 
@@ -104,6 +105,7 @@ const isActive = (path: string) => {
       </div>
     </main>
     <CommandPalette v-model="commandPaletteOpen" />
+    <AiAssistant />
   </div>
 </template>
 

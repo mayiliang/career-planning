@@ -740,6 +740,25 @@ export const projects = sqliteTable('projects', {
   statusIdx: index('projects_status_idx').on(table.status),
 }));
 
+// ===== AI 助手发现的待补学习资料 =====
+// 只保存经模型判断与培养目标相关、且站内没有强匹配知识点的候选项。
+export const assistantGapCandidates = sqliteTable('assistant_gap_candidates', {
+  id: text('id').primaryKey().notNull(),
+  fingerprint: text('fingerprint').notNull().unique(),
+  title: text('title').notNull(),
+  rationale: text('rationale').notNull(),
+  suggestedScope: text('suggested_scope').notNull(),
+  sourceRoute: text('source_route').notNull(),
+  sourcePageTitle: text('source_page_title').notNull(),
+  questionExcerpt: text('question_excerpt').notNull(),
+  selectedTextExcerpt: text('selected_text_excerpt'),
+  status: text('status', { enum: ['PENDING', 'ADDED', 'DISMISSED'] }).notNull().default('PENDING'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  statusCreatedIdx: index('assistant_gap_status_created_idx').on(table.status, table.createdAt),
+}));
+
 // ===== 导出 schema 对象 =====
 export const schema = {
   knowledgeDomains,
@@ -765,6 +784,7 @@ export const schema = {
   jobActivities,
   skillGaps,
   projects,
+  assistantGapCandidates,
 };
 
 // ===== 类型导出 =====
@@ -810,6 +830,7 @@ export type SkillGapRecord = typeof skillGaps.$inferSelect;
 export type NewSkillGap = typeof skillGaps.$inferInsert;
 export type ProjectRecord = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
+export type AssistantGapCandidateRecord = typeof assistantGapCandidates.$inferSelect;
 
 // ===== 枚举类型导出 =====
 export type EventType = typeof planEvents.$inferSelect.eventType;
