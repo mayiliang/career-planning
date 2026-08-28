@@ -686,10 +686,37 @@ const AssistantGapDirectorySchema = z.object({
   items: z.array(AssistantGapCandidateSchema),
 });
 
+const AssistantDiagnosticRecordSchema = z.object({
+  incidentId: z.string(),
+  startedAt: z.string(),
+  finishedAt: z.string(),
+  outcome: z.enum(['SUCCESS', 'ERROR', 'ABORTED']),
+  mode: z.enum(['EXPLAIN', 'SUMMARY', 'ASK']),
+  route: z.string(),
+  stage: z.string(),
+  elapsedMs: z.number(),
+  pageCharacterCount: z.number(),
+  selectedCharacterCount: z.number(),
+  questionCharacterCount: z.number(),
+  contextCharacterCount: z.number(),
+  siteSourceCount: z.number(),
+  webSourceCount: z.number(),
+  webSearchUsed: z.boolean(),
+  firstTokenMs: z.number().optional(),
+  errorCode: z.string().optional(),
+  errorMessage: z.string().optional(),
+});
+
+const AssistantDiagnosticDirectorySchema = z.object({
+  file: z.string(),
+  items: z.array(AssistantDiagnosticRecordSchema),
+});
+
 const AssistantRequestSchema = z.object({
   mode: z.enum(['EXPLAIN', 'SUMMARY', 'ASK']),
   question: z.string().optional(),
   selectedText: z.string().optional(),
+  history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() })).max(12).optional(),
   page: z.object({
     route: z.string(),
     title: z.string(),
@@ -921,7 +948,18 @@ async function consumeSse(
     const rawData = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
     if (!rawData) return;
     const data = JSON.parse(rawData) as Record<string, unknown>;
-    if (event === 'error') throw new Error(typeof data.message === 'string' ? data.message : '流式请求失败');
+    if (event === 'error') {
+      throw new AssistantStreamError(
+        typeof data.message === 'string' ? data.message : '流式请求失败',
+        {
+          incidentId: typeof data.incidentId === 'string' ? data.incidentId : '',
+          code: typeof data.code === 'string' ? data.code : 'STREAM_ERROR',
+          stage: typeof data.stage === 'string' ? data.stage : 'UNKNOWN',
+          elapsedMs: typeof data.elapsedMs === 'number' ? data.elapsedMs : 0,
+          retryable: data.retryable === true,
+        },
+      );
+    }
     onEvent(event, data);
   };
   while (true) {
@@ -1010,6 +1048,20 @@ export const apiClient = {
       },
       (event, data) => {
         if (event === 'progress' && typeof data.message === 'string') handlers.onProgress?.(data.message);
+        if (event === 'diagnostic') handlers.onDiagnostic?.({
+          incidentId: typeof data.incidentId === 'string' ? data.incidentId : '',
+          stage: typeof data.stage === 'string' ? data.stage : 'UNKNOWN',
+          elapsedMs: typeof data.elapsedMs === 'number' ? data.elapsedMs : 0,
+          contextCharacterCount: typeof data.contextCharacterCount === 'number' ? data.contextCharacterCount : undefined,
+          siteSourceCount: typeof data.siteSourceCount === 'number' ? data.siteSourceCount : undefined,
+          webSourceCount: typeof data.webSourceCount === 'number' ? data.webSourceCount : undefined,
+          firstTokenMs: typeof data.firstTokenMs === 'number' ? data.firstTokenMs : undefined,
+        });
+        if (event === 'heartbeat') handlers.onHeartbeat?.({
+          incidentId: typeof data.incidentId === 'string' ? data.incidentId : '',
+          stage: typeof data.stage === 'string' ? data.stage : 'UNKNOWN',
+          elapsedMs: typeof data.elapsedMs === 'number' ? data.elapsedMs : 0,
+        });
         if (event === 'delta' && typeof data.delta === 'string') handlers.onDelta?.(data.delta);
         if (event === 'thinking' && typeof data.delta === 'string') handlers.onThinking?.(data.delta);
         if (event === 'sources') {
@@ -1017,6 +1069,7 @@ export const apiClient = {
             z.array(AssistantSourceSchema).parse(data.sources ?? []),
             typeof data.searchQuery === 'string' ? data.searchQuery : '',
             typeof data.webSearchWarning === 'string' ? data.webSearchWarning : '',
+            data.webSearchUsed === true,
           );
         }
         if (event === 'gap') handlers.onGap?.(AssistantGapCandidateSchema.parse(data.candidate));
@@ -1024,6 +1077,9 @@ export const apiClient = {
           provider: typeof data.provider === 'string' ? data.provider : '',
           model: typeof data.model === 'string' ? data.model : '',
           pageCharacterCount: typeof data.pageCharacterCount === 'number' ? data.pageCharacterCount : 0,
+          contextCharacterCount: typeof data.contextCharacterCount === 'number' ? data.contextCharacterCount : 0,
+          webSearchUsed: data.webSearchUsed === true,
+          elapsedMs: typeof data.elapsedMs === 'number' ? data.elapsedMs : 0,
         });
       },
     );
@@ -1031,6 +1087,10 @@ export const apiClient = {
 
   async listAssistantGaps() {
     return request('/assistant/gaps', AssistantGapDirectorySchema);
+  },
+
+  async listAssistantDiagnostics() {
+    return request('/assistant/diagnostics?limit=40', AssistantDiagnosticDirectorySchema);
   },
 
   // ===== 知识点 API =====
@@ -1748,13 +1808,37 @@ export type PortableDataImportPreview = z.infer<typeof PortableDataImportPreview
 export type AssistantSource = z.infer<typeof AssistantSourceSchema>;
 export type AssistantGapCandidate = z.infer<typeof AssistantGapCandidateSchema>;
 export type AssistantRequest = z.infer<typeof AssistantRequestSchema>;
+export interface AssistantRuntimeDiagnostic {
+  incidentId: string;
+  stage: string;
+  elapsedMs: number;
+  contextCharacterCount?: number;
+  siteSourceCount?: number;
+  webSourceCount?: number;
+  firstTokenMs?: number;
+}
+export interface AssistantErrorDiagnostic {
+  incidentId: string;
+  code: string;
+  stage: string;
+  elapsedMs: number;
+  retryable: boolean;
+}
+export class AssistantStreamError extends Error {
+  constructor(message: string, readonly diagnostic: AssistantErrorDiagnostic) {
+    super(message);
+    this.name = 'AssistantStreamError';
+  }
+}
 export interface AssistantStreamHandlers {
   onProgress?: (message: string) => void;
+  onDiagnostic?: (diagnostic: AssistantRuntimeDiagnostic) => void;
+  onHeartbeat?: (diagnostic: Pick<AssistantRuntimeDiagnostic, 'incidentId' | 'stage' | 'elapsedMs'>) => void;
   onDelta?: (delta: string) => void;
   onThinking?: (delta: string) => void;
-  onSources?: (sources: AssistantSource[], searchQuery: string, warning: string) => void;
+  onSources?: (sources: AssistantSource[], searchQuery: string, warning: string, webSearchUsed: boolean) => void;
   onGap?: (candidate: AssistantGapCandidate) => void;
-  onDone?: (metadata: { provider: string; model: string; pageCharacterCount: number }) => void;
+  onDone?: (metadata: { provider: string; model: string; pageCharacterCount: number; contextCharacterCount: number; webSearchUsed: boolean; elapsedMs: number }) => void;
 }
 // 求职相关类型
 export type Job = z.infer<typeof JobSchema>;

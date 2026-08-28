@@ -15,9 +15,11 @@ $appShell = Get-Content -LiteralPath (Join-Path $repoRoot 'apps\web\index.html')
 Assert-True ($launchScript.Contains("[ValidateSet('Chrome', 'EdgeApp')]")) 'The launcher does not expose both browser modes.'
 Assert-True ($launchScript.Contains("[string]`$BrowserMode = 'Chrome'")) 'Chrome is not the default Career Atlas browser mode.'
 Assert-True ($launchScript.Contains("'Google\Chrome\Application\chrome.exe'")) 'The launcher does not locate an existing Chrome installation.'
-Assert-True ($launchScript.Contains("@('--new-window', '--start-maximized', `$appUrl)")) 'The Chrome window is not configured to open maximized with extension controls available.'
+Assert-True ($launchScript.Contains('if ($visibleChromeWindows.Count -gt 0)')) 'The launcher does not detect an already-open Chrome window.'
+Assert-True ($launchScript.Contains('Start-Process -FilePath $chromePath -ArgumentList @($appUrl)')) 'An already-open Chrome window does not receive Career Atlas as a normal new tab.'
+Assert-True ($launchScript.Contains("@('--new-window', '--start-maximized', `$appUrl)")) 'Chrome is not configured to open a maximized window when no window exists.'
 Assert-True ($launchScript.Contains('ShowWindowAsync')) 'The launcher does not apply a native maximize action to the new Chrome window.'
-Assert-True ($launchScript.Contains("Get-VisibleBrowserWindows 'chrome'")) 'The launcher does not distinguish the newly-created Chrome window from existing windows.'
+Assert-True ($launchScript.Contains("Get-VisibleBrowserWindows 'chrome'")) 'The launcher does not distinguish existing Chrome windows from a first launch.'
 Assert-True ($launchScript.Contains('SW_MAXIMIZE = 3')) 'The native maximize command is not documented and verifiable.'
 Assert-True ($launchScript.Contains('"--app=$appUrl"')) 'The launcher no longer offers the Edge immersive app mode.'
 Assert-True ($installScript.Contains('-BrowserMode Chrome')) 'The main shortcut does not open the Chrome extension-enabled mode.'
@@ -65,4 +67,4 @@ try {
 $removerPath = Join-Path $repoRoot 'windows\remove-directory-tree.mjs'
 Assert-True (Test-Path -LiteralPath $removerPath) 'The safe Windows directory remover is missing.'
 
-Write-Host 'Windows local icon, Chrome extension mode and immersive launch checks passed.' -ForegroundColor Green
+Write-Host 'Windows local icon, Chrome tab reuse and immersive launch checks passed.' -ForegroundColor Green

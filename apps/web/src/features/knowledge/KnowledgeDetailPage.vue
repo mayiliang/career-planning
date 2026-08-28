@@ -44,6 +44,7 @@ const aiRelationLabels = { NONE: '非 AI 专属', AI_ASSISTED: 'AI 辅助', AI_N
 const portabilityLabels = { PORTABLE: '可迁移', FRAMEWORK_SPECIFIC: '框架特定', VENDOR_SPECIFIC: '厂商特定', PLATFORM_SPECIFIC: '平台特定', JURISDICTION_SPECIFIC: '地区规则' } as const;
 
 const code = computed(() => String(route.params.code));
+const usesLinkedPrerequisites = computed(() => ['JS-01', 'JS-02', 'JS-03', 'JS-07'].includes(point.value?.code ?? ''));
 const organizedDisplayMd = computed(() => organizing.value ? streamingOrganizedMd.value : note.value?.organizedMd || '');
 const masteryCopy = computed(() => [
   ['M0', '未评估', '还没有系统证据，不代表没有学过'],
@@ -346,7 +347,8 @@ onBeforeUnmount(() => {
             <li>由你点击“已学完”；掌握挑战完全可选</li>
           </ol>
           <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
-          <aside class="beginner-assist"><div><small>初学者阅读辅助</small><strong>遇到陌生术语或隐含前置知识时，先补台阶</strong><p>中文译名与英文原名同时保留；这份辅助讲义不扩张当前知识点，也不单独作为考核题源。</p></div><button type="button" @click="openBeginnerGuide">打开前置与术语讲义 →</button></aside>
+          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01 前置学习</small><strong>前置内容已按概念拆开</strong><p>打开本知识点的中文主讲义，头部只列实际需要的短文；正文遇到关联概念时也会就近互链，不需要先读总术语大全。</p></div></aside>
+          <aside v-else class="beginner-assist"><div><small>初学者阅读辅助</small><strong>遇到陌生术语或隐含前置知识时，先补台阶</strong><p>中文译名与英文原名同时保留；这份辅助讲义不扩张当前知识点，也不单独作为考核题源。</p></div><button type="button" @click="openBeginnerGuide">打开前置与术语讲义 →</button></aside>
         </div>
       </details>
 

@@ -1,0 +1,25 @@
+{
+  "b01": [
+    "js-01-execution-context-scope-closure.md",
+    "js-02-prototype-object-model-this.md",
+    "js-03-types-equality-copy-immutability.md",
+    "js-07-iteration-metaprogramming-resources.md",
+    "javascript-variables-and-bindings.md",
+    "javascript-functions-and-callbacks.md",
+    "javascript-objects-properties-methods.md",
+    "javascript-scheduled-callbacks.md",
+    "javascript-strict-mode.md",
+    "javascript-exceptions-and-finally.md",
+    "javascript-promises-and-cancellation.md",
+    "javascript-property-descriptors.md"
+  ],
+  "b02": [
+    "cs-01-complexity-scale-engineering-cost.md",
+    "cs-02-data-structures-algorithms-correctness.md",
+    "cs-03-large-data-workers-incremental-memory.md",
+    "js-04-async-promise-browser-event-loop.md",
+    "algorithm-input-size-and-growth.md",
+    "javascript-collections-keys-membership.md",
+    "browser-main-thread-messages-memory.md"
+  ]
+}

@@ -100,11 +100,17 @@ function normalizeMarkdownAnchor(value: string): string {
 }
 
 function markdownAnchors(markdown: string): Set<string> {
-  return new Set(
-    [...markdown.matchAll(/^#{1,6}\s+(.+?)\s*#*\s*$/gm)]
-      .map((match) => normalizeMarkdownAnchor(match[1] ?? ''))
-      .filter(Boolean),
-  );
+  const anchors = new Set<string>();
+  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*#*\s*$/gm)) {
+    const heading = match[1] ?? '';
+    const normalizedHeading = normalizeMarkdownAnchor(heading);
+    if (normalizedHeading) anchors.add(normalizedHeading);
+    // 站内讲义读取服务允许用知识点代码作为稳定短锚点；全量 Markdown
+    // 门禁必须与这个真实路由行为一致，避免强迫互链使用冗长中文标题 slug。
+    const code = heading.match(/\b[A-Z][A-Z0-9]*-\d+\b/i)?.[0];
+    if (code) anchors.add(normalizeMarkdownAnchor(code));
+  }
+  return anchors;
 }
 
 function localMarkdownLinkProblems(root: string): string[] {
@@ -284,7 +290,11 @@ function localChineseGuideBody(root: string, url: string): string | undefined {
   const targetAnchor = normalizeMarkdownAnchor(match[2] ?? '');
   const headingIndex = lines.findIndex((line) => {
     const heading = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-    return heading && normalizeMarkdownAnchor(heading[2] ?? '') === targetAnchor;
+    if (!heading) return false;
+    const title = heading[2] ?? '';
+    const code = title.match(/\b[A-Z][A-Z0-9]*-\d+\b/i)?.[0] ?? '';
+    return normalizeMarkdownAnchor(title) === targetAnchor
+      || normalizeMarkdownAnchor(code) === targetAnchor;
   });
   if (headingIndex < 0) return undefined;
 

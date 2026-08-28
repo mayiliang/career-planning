@@ -129,17 +129,148 @@ test.describe.serial('核心使用体验', () => {
   test('自建中文讲义能从知识点、练习与挑战共用的站内地址打开', async ({ page }) => {
     await page.goto('/knowledge/JS-04');
     const materialLink = page.getByRole('link', { name: /中文核心讲义：JS-04/ }).first();
-    await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/javascript-language-core.md/js-04');
+    await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/js-04-async-promise-browser-event-loop.md/js-04');
     await materialLink.click();
-    await expect(page).toHaveURL(/\/knowledge\/materials\/javascript-language-core\.md\/js-04$/);
+    await expect(page).toHaveURL(/\/knowledge\/materials\/js-04-async-promise-browser-event-loop\.md\/js-04$/);
     await expect(page.getByText(/站内中文讲义.*JS-04/)).toBeVisible();
     await expect(page.getByRole('heading', { name: /JS-04/ }).first()).toBeVisible();
     await expect(page.getByText(/任务、微任务|事件循环/).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: '初学者术语讲义', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: '初学者术语讲义', exact: true }).click();
-    await expect(page).toHaveURL(/beginner-prerequisites-and-glossary\.md\/primer-00$/);
-    await expect(page.getByRole('heading', { name: /初学者前置知识与术语讲义/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /代码从文本到运行/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '学习前先确认' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '初学者术语讲义', exact: true })).toHaveCount(0);
+  });
+
+  test('B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义', async ({ page }) => {
+    await page.goto('/knowledge/JS-01');
+    const materialLink = page.getByRole('link', { name: /中文主讲义：JS-01/ }).first();
+    await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/js-01-execution-context-scope-closure.md/js-01');
+    await materialLink.click();
+
+    await expect(page).toHaveURL(/\/knowledge\/materials\/js-01-execution-context-scope-closure\.md\/js-01$/);
+    await expect(page.getByRole('heading', { name: '学习前先确认' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '初学者术语讲义', exact: true })).toHaveCount(0);
+
+    const prerequisiteLink = page.getByRole('link', { name: '变量、绑定、声明与赋值', exact: true }).first();
+    await expect(prerequisiteLink).toHaveAttribute('href', '/knowledge/materials/javascript-variables-and-bindings.md/prejs-01');
+    await prerequisiteLink.click();
+    await expect(page).toHaveURL(/\/knowledge\/materials\/javascript-variables-and-bindings\.md\/prejs-01$/);
+    await expect(page.getByRole('heading', { name: /PREJS-01 变量、绑定、声明与赋值/ }).first()).toBeVisible();
+
+    const bindingPronunciation = page.getByRole('button', { name: '播放“binding”的美式发音' }).first();
+    await expect(bindingPronunciation).toBeVisible();
+    await expect(page.getByRole('button', { name: '播放“price”的美式发音' })).toHaveCount(0);
+    await expect(page.locator('.pronunciation-button')).toHaveCount(1);
+    await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
+    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b01\/[a-f0-9]+\.wav$/.test(response.url()));
+    await bindingPronunciation.click();
+    expect([200, 206]).toContain((await audioResponse).status());
+    await expect(bindingPronunciation).toHaveClass(/is-playing/);
+    await expect(page.locator('.pronunciation-feedback')).toContainText('正在播放“binding”的美式发音');
+
+    const materialSheetBox = await page.locator('.material-sheet').boundingBox();
+    expect(materialSheetBox).not.toBeNull();
+    expect(materialSheetBox!.width).toBeGreaterThan(600);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    const wideLayout = await page.evaluate(() => {
+      const hero = document.querySelector('.material-hero')!.getBoundingClientRect();
+      const sheet = document.querySelector('.material-sheet')!.getBoundingClientRect();
+      const support = document.querySelector('.support-rail')!.getBoundingClientRect();
+      return {
+        sheetLeftOffset: Math.abs(sheet.left - hero.left),
+        supportRightOffset: Math.abs(support.right - hero.right),
+        sheetWidth: sheet.width,
+      };
+    });
+    expect(wideLayout.sheetLeftOffset).toBeLessThanOrEqual(1);
+    expect(wideLayout.supportRightOffset).toBeLessThanOrEqual(1);
+    expect(wideLayout.sheetWidth).toBeGreaterThan(900);
+    expect(wideLayout.sheetWidth).toBeLessThan(1100);
+
+    await page.goto('/knowledge/materials/beginner-prerequisites-and-glossary.md/primer-00');
+    await expect(page.getByRole('heading', { name: /初学者前置知识与术语讲义/ }).first()).toBeVisible();
+    await expect(page.locator('.pronunciation-button')).toHaveCount(0);
+  });
+
+  test('B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮', async ({ page }) => {
+    const materials = [
+      '/knowledge/materials/js-01-execution-context-scope-closure.md/js-01',
+      '/knowledge/materials/js-02-prototype-object-model-this.md/js-02',
+      '/knowledge/materials/js-03-types-equality-copy-immutability.md/js-03',
+      '/knowledge/materials/js-07-iteration-metaprogramming-resources.md/js-07',
+      '/knowledge/materials/javascript-variables-and-bindings.md/prejs-01',
+      '/knowledge/materials/javascript-functions-and-callbacks.md/prejs-02',
+      '/knowledge/materials/javascript-objects-properties-methods.md/prejs-03',
+      '/knowledge/materials/javascript-scheduled-callbacks.md/prejs-04',
+      '/knowledge/materials/javascript-strict-mode.md/prejs-05',
+      '/knowledge/materials/javascript-exceptions-and-finally.md/prejs-06',
+      '/knowledge/materials/javascript-promises-and-cancellation.md/prejs-07',
+      '/knowledge/materials/javascript-property-descriptors.md/prejs-08',
+    ];
+
+    for (const materialPath of materials) {
+      await page.goto(materialPath);
+      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
+      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
+      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
+      const coverage = await page.evaluate(() => {
+        const root = document.querySelector<HTMLElement>('.markdown-body')!;
+        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
+          const copy = strong.cloneNode(true) as HTMLElement;
+          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
+          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
+          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
+          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
+        }).map(normalize).sort();
+        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
+          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
+          .sort();
+        return { expected, actual };
+      });
+      expect(coverage.actual, materialPath).toEqual(coverage.expected);
+    }
+  });
+
+  test('B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音', async ({ page }) => {
+    const materials = [
+      '/knowledge/materials/cs-01-complexity-scale-engineering-cost.md/cs-01',
+      '/knowledge/materials/cs-02-data-structures-algorithms-correctness.md/cs-02',
+      '/knowledge/materials/cs-03-large-data-workers-incremental-memory.md/cs-03',
+      '/knowledge/materials/js-04-async-promise-browser-event-loop.md/js-04',
+      '/knowledge/materials/algorithm-input-size-and-growth.md/precs-01',
+      '/knowledge/materials/javascript-collections-keys-membership.md/precs-02',
+      '/knowledge/materials/browser-main-thread-messages-memory.md/precs-03',
+    ];
+
+    for (const materialPath of materials) {
+      await page.goto(materialPath);
+      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
+      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
+      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
+      const coverage = await page.evaluate(() => {
+        const root = document.querySelector<HTMLElement>('.markdown-body')!;
+        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
+          const copy = strong.cloneNode(true) as HTMLElement;
+          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
+          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
+          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
+          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
+        }).map(normalize).sort();
+        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
+          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
+          .sort();
+        return { expected, actual };
+      });
+      expect(coverage.actual, materialPath).toEqual(coverage.expected);
+    }
+
+    await page.goto('/knowledge/materials/cs-01-complexity-scale-engineering-cost.md/cs-01');
+    const pronunciation = page.getByRole('button', { name: '播放“time complexity”的美式发音' }).first();
+    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b02\/[a-f0-9]+\.wav$/.test(response.url()));
+    await pronunciation.click();
+    expect([200, 206]).toContain((await audioResponse).status());
   });
 
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {

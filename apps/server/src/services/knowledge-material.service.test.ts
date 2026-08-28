@@ -10,10 +10,87 @@ import {
 
 describe('站内中文学习资料', () => {
   it('按知识点锚点只返回对应讲义章节', async () => {
-    const material = await getKnowledgeMaterial('core-and-ecosystem-topics.md', 'js-07');
+    const material = await getKnowledgeMaterial('js-07-iteration-metaprogramming-resources.md', 'js-07');
     expect(material.title).toMatch(/JS-07/i);
     expect(material.markdown).toContain('JS-07');
-    expect(material.markdown).not.toContain('## CS-01');
+    expect(material.markdown).not.toContain('## JS-03');
+  });
+
+  it('B01 四份主讲义独立成篇，并在正文头部按需列出前置资料', async () => {
+    const guides = [
+      ['js-01-execution-context-scope-closure.md', 'js-01'],
+      ['js-02-prototype-object-model-this.md', 'js-02'],
+      ['js-03-types-equality-copy-immutability.md', 'js-03'],
+      ['js-07-iteration-metaprogramming-resources.md', 'js-07'],
+    ] as const;
+
+    for (const [guide, anchor] of guides) {
+      const material = await getKnowledgeMaterial(guide, anchor);
+      const prerequisiteIndex = material.markdown.indexOf('### 学习前先确认');
+      expect(prerequisiteIndex, `${guide} 缺少讲义头部的前置入口`).toBeGreaterThan(0);
+      expect(prerequisiteIndex, `${guide} 的前置入口离讲义头部过远`).toBeLessThan(900);
+      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(4_000);
+      expect(material.markdown, `${guide} 不应按站内题目组织`).not.toMatch(/挑战前自检|固定\s*fixture|为了掌握挑战|能通过挑战|与挑战固定输入对齐/);
+    }
+  });
+
+  it('B02 四份主讲义独立成篇，并围绕知识本身而不是固定题目组织', async () => {
+    const guides = [
+      ['cs-01-complexity-scale-engineering-cost.md', 'cs-01'],
+      ['cs-02-data-structures-algorithms-correctness.md', 'cs-02'],
+      ['cs-03-large-data-workers-incremental-memory.md', 'cs-03'],
+      ['js-04-async-promise-browser-event-loop.md', 'js-04'],
+    ] as const;
+
+    for (const [guide, anchor] of guides) {
+      const material = await getKnowledgeMaterial(guide, anchor);
+      const prerequisiteIndex = material.markdown.indexOf('### 学习前先确认');
+      expect(prerequisiteIndex, `${guide} 缺少讲义头部的前置入口`).toBeGreaterThan(0);
+      expect(prerequisiteIndex, `${guide} 的前置入口离讲义头部过远`).toBeLessThan(900);
+      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(4_000);
+      expect(material.markdown, `${guide} 不应按站内题目组织`).not.toMatch(/挑战前自检|固定\s*fixture|为了掌握挑战|能通过挑战|与挑战固定输入对齐|讲义内置挑战/);
+    }
+  });
+
+  it('B01、B02 主讲义与原子前置短文的站内链接可以逐一打开', async () => {
+    const guideFiles = [
+      'js-01-execution-context-scope-closure.md',
+      'js-02-prototype-object-model-this.md',
+      'js-03-types-equality-copy-immutability.md',
+      'js-07-iteration-metaprogramming-resources.md',
+      'javascript-variables-and-bindings.md',
+      'javascript-functions-and-callbacks.md',
+      'javascript-objects-properties-methods.md',
+      'javascript-scheduled-callbacks.md',
+      'javascript-strict-mode.md',
+      'javascript-exceptions-and-finally.md',
+      'javascript-promises-and-cancellation.md',
+      'javascript-property-descriptors.md',
+      'cs-01-complexity-scale-engineering-cost.md',
+      'cs-02-data-structures-algorithms-correctness.md',
+      'cs-03-large-data-workers-incremental-memory.md',
+      'js-04-async-promise-browser-event-loop.md',
+      'algorithm-input-size-and-growth.md',
+      'javascript-collections-keys-membership.md',
+      'browser-main-thread-messages-memory.md',
+    ];
+    const references = new Set<string>();
+
+    for (const guideFile of guideFiles) {
+      const markdown = await readFile(resolve(projectRoot, 'docs', 'knowledge', 'chinese-guides', guideFile), 'utf8');
+      for (const match of markdown.matchAll(/\.\.\/chinese-guides\/([a-z0-9][a-z0-9.-]*\.md)#([\p{L}\p{N}_-]+)/giu)) {
+        references.add(`${match[1]}#${match[2]}`);
+      }
+    }
+
+    expect(references.size).toBeGreaterThan(10);
+    for (const reference of references) {
+      const [guide, anchor] = reference.split('#');
+      await expect(getKnowledgeMaterial(guide ?? '', anchor ?? ''), reference).resolves.toMatchObject({
+        guide,
+        anchor: anchor?.toLocaleLowerCase('en-US'),
+      });
+    }
   });
 
   it('不会把下一知识点的独立 HTML 锚点带进当前讲义', async () => {

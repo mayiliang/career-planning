@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build && node scripts/check-bundle-budget.mjs",
+    "build": "pnpm pronunciation:check && vue-tsc --noEmit && vite build && node scripts/check-bundle-budget.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 41731",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "pronunciation:check": "node scripts/check-pronunciations.mjs",
+    "pronunciation:generate": "pwsh -NoLogo -NoProfile -File scripts/generate-pronunciations.ps1",
     "lint": "eslint src --ext .vue,.ts,.tsx",
     "clean": "rm -rf dist"
   },

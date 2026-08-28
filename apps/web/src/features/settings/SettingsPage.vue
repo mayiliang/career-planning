@@ -48,7 +48,9 @@ const executorQuery = useQuery({ queryKey: ['system', 'executor'], queryFn: apiC
 const importQuery = useQuery({ queryKey: ['system', 'import'], queryFn: apiClient.getImportStatus });
 const backupsQuery = useQuery({ queryKey: ['system', 'backups'], queryFn: apiClient.listBackups });
 const assistantGapsQuery = useQuery({ queryKey: ['assistant', 'gaps'], queryFn: apiClient.listAssistantGaps });
+const assistantDiagnosticsQuery = useQuery({ queryKey: ['assistant', 'diagnostics'], queryFn: apiClient.listAssistantDiagnostics });
 const pendingAssistantGaps = computed(() => assistantGapsQuery.data.value?.items.filter((item) => item.status === 'PENDING') ?? []);
+const recentAssistantDiagnostics = computed(() => assistantDiagnosticsQuery.data.value?.items.slice(0, 8) ?? []);
 const aiState = computed(() => {
   if (aiQuery.isPending.value) return { label: '检查中', tone: 'pending' };
   const status = aiQuery.data.value;
@@ -213,6 +215,17 @@ async function copyAssistantGapDirectory() {
     showNotice(`目录位置：${directory}`, 'info');
   }
 }
+
+async function copyAssistantDiagnosticFile() {
+  const file = assistantDiagnosticsQuery.data.value?.file;
+  if (!file) return;
+  try {
+    await navigator.clipboard.writeText(file);
+    showNotice('Atlas AI 诊断日志位置已复制', 'success');
+  } catch {
+    showNotice(`日志位置：${file}`, 'info');
+  }
+}
 </script>
 
 <template>
@@ -306,6 +319,24 @@ async function copyAssistantGapDirectory() {
       <div v-else-if="assistantGapsQuery.isPending.value" class="supplement-empty">正在读取待补目录…</div>
       <div v-else class="supplement-empty"><strong>当前没有待补项目</strong><span>当助手发现确实缺失且符合路线的问题时，会在这里留下可追溯记录。</span></div>
     </section>
+
+    <section id="assistant-diagnostics" class="assistant-diagnostics-section">
+      <div class="section-heading"><span>06</span><div><h2>Atlas AI 诊断日志</h2><p>只记录阶段、耗时、字数、来源数量与错误编号，不保存页面正文或划词内容</p></div></div>
+      <div class="diagnostic-summary">
+        <div><strong>{{ recentAssistantDiagnostics.length }}</strong><span>条近期请求</span></div>
+        <p>发生卡顿或报错时，可在助手里复制单次错误报告；这里保留本机请求日志，便于继续定位是检索、模型等待还是流式传输阶段异常。</p>
+        <button :disabled="!assistantDiagnosticsQuery.data.value?.file" @click="copyAssistantDiagnosticFile">复制日志位置</button>
+      </div>
+      <div v-if="recentAssistantDiagnostics.length" class="diagnostic-list">
+        <article v-for="item in recentAssistantDiagnostics" :key="`${item.incidentId}-${item.startedAt}`" :class="`diagnostic-${item.outcome.toLocaleLowerCase()}`">
+          <div><strong>{{ item.mode }} · {{ item.outcome }}</strong><small>{{ new Date(item.startedAt).toLocaleString('zh-CN') }} · {{ item.incidentId }}</small></div>
+          <span>{{ item.stage }}</span><b>{{ (item.elapsedMs / 1000).toFixed(1) }} 秒</b>
+          <p>{{ item.contextCharacterCount }} 上下文字 · {{ item.siteSourceCount }} 站内 / {{ item.webSourceCount }} 站外<span v-if="item.errorCode"> · {{ item.errorCode }}</span></p>
+        </article>
+      </div>
+      <div v-else-if="assistantDiagnosticsQuery.isPending.value" class="supplement-empty">正在读取诊断日志…</div>
+      <div v-else class="supplement-empty"><strong>还没有诊断记录</strong><span>下一次使用 Atlas AI 后会自动生成一条不含正文的本机记录。</span></div>
+    </section>
   </main>
   <BaseDialog
     :open="Boolean(pendingAction)"
@@ -358,4 +389,5 @@ async function copyAssistantGapDirectory() {
 @media(max-width:900px){.portable-transfer{grid-template-columns:1fr}}
 @media(max-width:760px){.status-table{grid-template-columns:1fr}.portable-transfer{margin-left:0}.portable-card{grid-template-columns:1fr;grid-template-areas:'label' 'copy' 'action';align-items:stretch}.restore-grid{grid-template-columns:1fr repeat(3,minmax(42px,auto));gap:6px}.import-source{grid-template-columns:1fr}}
 .assistant-gaps-section{scroll-margin-top:20px;background:linear-gradient(150deg,#fff 0%,#f4faf7 100%)!important}.supplement-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;margin-left:3.2rem;padding:15px;background:linear-gradient(135deg,#17314f,#174e42);border-radius:14px;box-shadow:0 13px 32px rgba(18,51,63,.13)}.supplement-summary>div{display:flex;flex-direction:column;align-items:center;min-width:72px;color:#fff}.supplement-summary>div strong{font:750 1.65rem var(--font-display)}.supplement-summary>div span{color:#9fc3b6;font-size:.58rem}.supplement-summary p{margin:0;color:#b7c8d6;font-size:.7rem;line-height:1.65}.supplement-summary button{color:#eaf8f2;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15)}.supplement-list{display:grid;gap:8px;margin:12px 0 0 3.2rem}.supplement-list article{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:13px;background:rgba(255,255,255,.8);border:1px solid #dbe8e2;border-radius:12px}.supplement-index{padding:4px 6px;color:#2d6a55;font:750 .53rem var(--font-mono);background:#dfeee7;border-radius:6px}.supplement-copy{display:flex;min-width:0;flex-direction:column}.supplement-copy strong{font-size:.78rem}.supplement-copy p{margin:3px 0;color:#657486;font-size:.69rem;line-height:1.55}.supplement-copy small{color:#839186;font-size:.61rem}.supplement-origin{display:flex;flex-direction:column;align-items:flex-end;gap:5px}.supplement-origin span{color:#8b98a6;font:.56rem var(--font-mono)}.supplement-origin a{color:#326c59;font-size:.62rem;text-decoration:none}.supplement-empty{display:flex;gap:4px;margin-left:3.2rem;padding:18px;flex-direction:column;align-items:center;color:#788796;text-align:center;background:#f5f8f7;border:1px dashed #cfddd6;border-radius:12px}.supplement-empty strong{color:#435667;font-size:.78rem}.supplement-empty span{font-size:.66rem}@media(max-width:760px){.supplement-summary,.supplement-list,.supplement-empty{margin-left:0}.supplement-summary{grid-template-columns:1fr;align-items:stretch}.supplement-summary>div{align-items:flex-start}.supplement-list article{grid-template-columns:auto 1fr}.supplement-origin{grid-column:2;align-items:flex-start}}
+.assistant-diagnostics-section{scroll-margin-top:20px;background:linear-gradient(150deg,#fff 0%,#f5f8fc 100%)!important}.diagnostic-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;margin-left:3.2rem;padding:15px;background:linear-gradient(135deg,#18324e,#274b66);border-radius:14px}.diagnostic-summary>div{display:flex;min-width:72px;flex-direction:column;align-items:center;color:#fff}.diagnostic-summary strong{font:750 1.65rem var(--font-display)}.diagnostic-summary span{color:#b1c7d8;font-size:.58rem}.diagnostic-summary p{margin:0;color:#c0d0dc;font-size:.7rem;line-height:1.65}.diagnostic-summary button{color:#eff7fc;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}.diagnostic-list{display:grid;gap:7px;margin:12px 0 0 3.2rem}.diagnostic-list article{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px 12px;align-items:center;padding:11px 12px;background:#fff;border:1px solid #dfe7ee;border-left:4px solid #4f9379;border-radius:11px}.diagnostic-list article.diagnostic-error{border-left-color:#c55b5b}.diagnostic-list article.diagnostic-aborted{border-left-color:#c39140}.diagnostic-list article>div{display:flex;min-width:0;flex-direction:column}.diagnostic-list strong{font-size:.72rem}.diagnostic-list small{overflow:hidden;color:#8492a0;font:.55rem var(--font-mono);text-overflow:ellipsis;white-space:nowrap}.diagnostic-list article>span,.diagnostic-list article>b{font:.59rem var(--font-mono)}.diagnostic-list article>span{color:#526b80}.diagnostic-list article>b{color:#244964}.diagnostic-list p{grid-column:1/-1;margin:0;color:#7b8997;font-size:.61rem}@media(max-width:760px){.diagnostic-summary,.diagnostic-list{margin-left:0}.diagnostic-summary{grid-template-columns:1fr;align-items:stretch}.diagnostic-summary>div{align-items:flex-start}.diagnostic-list article{grid-template-columns:1fr auto}.diagnostic-list article>span{grid-row:2}.diagnostic-list article>p{grid-row:3}}
 </style>

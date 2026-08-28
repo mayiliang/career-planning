@@ -1,0 +1,219 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "cs-01-complexity-scale-engineering-cost.md",
+    "cs-02-data-structures-algorithms-correctness.md",
+    "cs-03-large-data-workers-incremental-memory.md",
+    "js-04-async-promise-browser-event-loop.md",
+    "algorithm-input-size-and-growth.md",
+    "javascript-collections-keys-membership.md",
+    "browser-main-thread-messages-memory.md"
+  ],
+  "terms": {
+    "amortized analysis": {
+      "file": "407c95475c9078ac.wav",
+      "text": "amortized analysis"
+    },
+    "array": {
+      "file": "dbe42cc09c16704a.wav",
+      "text": "Array"
+    },
+    "backpressure": {
+      "file": "6a06ac7024efc018.wav",
+      "text": "backpressure"
+    },
+    "basic operation": {
+      "file": "696b544954c5deec.wav",
+      "text": "basic operation"
+    },
+    "benchmark": {
+      "file": "0e89820860c342f2.wav",
+      "text": "benchmark"
+    },
+    "big o notation": {
+      "file": "a47f09d9af3ed8f7.wav",
+      "text": "Big O notation"
+    },
+    "binary search": {
+      "file": "090ae27620f1472a.wav",
+      "text": "binary search"
+    },
+    "breadth-first search": {
+      "file": "2c12e4186c2ac726.wav",
+      "text": "breadth-first search"
+    },
+    "call stack": {
+      "file": "895930fc6596c35f.wav",
+      "text": "call stack"
+    },
+    "cancellation": {
+      "file": "80812d7992dd498c.wav",
+      "text": "cancellation"
+    },
+    "chunking": {
+      "file": "7ce2d499b7d81a8d.wav",
+      "text": "chunking"
+    },
+    "concurrency limit": {
+      "file": "f6edf622ee4d184f.wav",
+      "text": "concurrency limit"
+    },
+    "depth-first search": {
+      "file": "47b87a5f4bcb6bb2.wav",
+      "text": "depth-first search"
+    },
+    "directed acyclic graph": {
+      "file": "7a3058a309c9c14b.wav",
+      "text": "directed acyclic graph"
+    },
+    "dynamic programming": {
+      "file": "4f17182543966064.wav",
+      "text": "dynamic programming"
+    },
+    "event loop": {
+      "file": "4f84e8f471009022.wav",
+      "text": "event loop"
+    },
+    "garbage collection": {
+      "file": "4f76b35955d6c947.wav",
+      "text": "garbage collection"
+    },
+    "graph": {
+      "file": "eef93e1d14482804.wav",
+      "text": "graph"
+    },
+    "greedy algorithm": {
+      "file": "4e07308b96788139.wav",
+      "text": "greedy algorithm"
+    },
+    "growth trend": {
+      "file": "01bf482c14df1bc5.wav",
+      "text": "growth trend"
+    },
+    "heap": {
+      "file": "103a360f285151bf.wav",
+      "text": "heap"
+    },
+    "incremental computation": {
+      "file": "f8c71da64a0d8dc6.wav",
+      "text": "incremental computation"
+    },
+    "input size": {
+      "file": "7e9125b4046a0f1f.wav",
+      "text": "input size"
+    },
+    "invariant": {
+      "file": "c94ad2d92135458a.wav",
+      "text": "invariant"
+    },
+    "main thread": {
+      "file": "006295de1193b4fa.wav",
+      "text": "main thread"
+    },
+    "map": {
+      "file": "60be9861750facbf.wav",
+      "text": "Map"
+    },
+    "microtask": {
+      "file": "b0ca47bba9db2987.wav",
+      "text": "microtask"
+    },
+    "microtask checkpoint": {
+      "file": "73ce92ad54785d16.wav",
+      "text": "microtask checkpoint"
+    },
+    "microtask starvation": {
+      "file": "555d0f7380476531.wav",
+      "text": "microtask starvation"
+    },
+    "ownership": {
+      "file": "01b8016fdce455c4.wav",
+      "text": "ownership"
+    },
+    "peak memory": {
+      "file": "7dbb9376abe879a6.wav",
+      "text": "peak memory"
+    },
+    "percentile": {
+      "file": "f31bb820c9ffe53d.wav",
+      "text": "percentile"
+    },
+    "property-based testing": {
+      "file": "510953c105ea0e48.wav",
+      "text": "property-based testing"
+    },
+    "queue": {
+      "file": "00b109cf1123a591.wav",
+      "text": "queue"
+    },
+    "reference identity": {
+      "file": "2f1bae6e788f9e84.wav",
+      "text": "reference identity"
+    },
+    "sample": {
+      "file": "af2bdbe1aa9b6ec1.wav",
+      "text": "sample"
+    },
+    "set": {
+      "file": "6ee0eb490ff83210.wav",
+      "text": "Set"
+    },
+    "sliding window": {
+      "file": "1ca4b2d5af520233.wav",
+      "text": "sliding window"
+    },
+    "space complexity": {
+      "file": "99120ee59893447b.wav",
+      "text": "space complexity"
+    },
+    "stack": {
+      "file": "6ee08e6eb3bc6f45.wav",
+      "text": "stack"
+    },
+    "structured clone": {
+      "file": "bfda4ac5e6feb89d.wav",
+      "text": "structured clone"
+    },
+    "task queue": {
+      "file": "443a732bc2ac28cb.wav",
+      "text": "task queue"
+    },
+    "time complexity": {
+      "file": "338d5c560cd443dd.wav",
+      "text": "time complexity"
+    },
+    "topological sort": {
+      "file": "067089555c90c149.wav",
+      "text": "topological sort"
+    },
+    "transferable object": {
+      "file": "8117f233e12307b4.wav",
+      "text": "Transferable object"
+    },
+    "tree": {
+      "file": "dc9c5edb8b2d479e.wav",
+      "text": "tree"
+    },
+    "two pointers": {
+      "file": "e03fa98f1a1ccaa3.wav",
+      "text": "two pointers"
+    },
+    "virtualization": {
+      "file": "0b7635b2568f0d2e.wav",
+      "text": "virtualization"
+    },
+    "web worker": {
+      "file": "3cfeaed5250f9cdb.wav",
+      "text": "Web Worker"
+    },
+    "worst case": {
+      "file": "ec54a477689abbf3.wav",
+      "text": "worst case"
+    }
+  }
+}

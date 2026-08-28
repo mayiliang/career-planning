@@ -1,0 +1,204 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "js-01-execution-context-scope-closure.md",
+    "js-02-prototype-object-model-this.md",
+    "js-03-types-equality-copy-immutability.md",
+    "js-07-iteration-metaprogramming-resources.md",
+    "javascript-variables-and-bindings.md",
+    "javascript-functions-and-callbacks.md",
+    "javascript-objects-properties-methods.md",
+    "javascript-scheduled-callbacks.md",
+    "javascript-strict-mode.md",
+    "javascript-exceptions-and-finally.md",
+    "javascript-promises-and-cancellation.md",
+    "javascript-property-descriptors.md"
+  ],
+  "terms": {
+    "abortsignal": {
+      "file": "1f840e7d0ca40bdb.wav",
+      "text": "AbortSignal"
+    },
+    "async iteration": {
+      "file": "07d85040abaea5b4.wav",
+      "text": "async iteration"
+    },
+    "binding": {
+      "file": "80f70afeef3caa57.wav",
+      "text": "binding"
+    },
+    "call stack": {
+      "file": "895930fc6596c35f.wav",
+      "text": "call stack"
+    },
+    "callback": {
+      "file": "f2579d976934c788.wav",
+      "text": "callback"
+    },
+    "cancellation signal": {
+      "file": "1ff9e198a9c74045.wav",
+      "text": "cancellation signal"
+    },
+    "closure": {
+      "file": "6d4cb937d6d22521.wav",
+      "text": "closure"
+    },
+    "constructor": {
+      "file": "e3c1703abf8a6b3d.wav",
+      "text": "constructor"
+    },
+    "deep clone": {
+      "file": "48bf6a1c49238c93.wav",
+      "text": "deep clone"
+    },
+    "event listener": {
+      "file": "31cdd69d54839d9b.wav",
+      "text": "event listener"
+    },
+    "exception": {
+      "file": "2104e56ef446302c.wav",
+      "text": "exception"
+    },
+    "execution context": {
+      "file": "e5d90f979d76cf4c.wav",
+      "text": "execution context"
+    },
+    "finally": {
+      "file": "205c3e16c66ff0b8.wav",
+      "text": "finally"
+    },
+    "generator": {
+      "file": "9123dcbb0b42652b.wav",
+      "text": "generator"
+    },
+    "immutable update": {
+      "file": "7648925b54cffea1.wav",
+      "text": "immutable update"
+    },
+    "invariant": {
+      "file": "c94ad2d92135458a.wav",
+      "text": "invariant"
+    },
+    "iterable": {
+      "file": "1000d7ffa3524e51.wav",
+      "text": "iterable"
+    },
+    "iterator": {
+      "file": "ef9baedff2f457dd.wav",
+      "text": "iterator"
+    },
+    "iterator result": {
+      "file": "01bf6c3cfda7b5d4.wav",
+      "text": "iterator result"
+    },
+    "lazy": {
+      "file": "81fd67d02f679b81.wav",
+      "text": "lazy"
+    },
+    "lexical environment": {
+      "file": "5fe366c5d30b2066.wav",
+      "text": "lexical environment"
+    },
+    "method": {
+      "file": "5b7e6bf2dc4a32a6.wav",
+      "text": "method"
+    },
+    "object invariant": {
+      "file": "995acf91a32504c2.wav",
+      "text": "object invariant"
+    },
+    "primitive value": {
+      "file": "f55b2a0594b2cc96.wav",
+      "text": "primitive value"
+    },
+    "promise": {
+      "file": "3513d9452af7c176.wav",
+      "text": "Promise"
+    },
+    "property descriptor": {
+      "file": "02351f2f677f8973.wav",
+      "text": "property descriptor"
+    },
+    "property shadowing": {
+      "file": "1df11f4fb490183c.wav",
+      "text": "property shadowing"
+    },
+    "prototype": {
+      "file": "b34563e2ebeb7717.wav",
+      "text": "prototype"
+    },
+    "prototype chain": {
+      "file": "6e63496d6872b31a.wav",
+      "text": "prototype chain"
+    },
+    "proxy": {
+      "file": "1241936d4dd3aad6.wav",
+      "text": "Proxy"
+    },
+    "receiver": {
+      "file": "81bae876b70513c9.wav",
+      "text": "receiver"
+    },
+    "reflect": {
+      "file": "909ca0096d519dcf.wav",
+      "text": "Reflect"
+    },
+    "samevalue": {
+      "file": "fb352e1d6f6f1ab0.wav",
+      "text": "SameValue"
+    },
+    "samevaluezero": {
+      "file": "bc305bb7669419e4.wav",
+      "text": "SameValueZero"
+    },
+    "scope chain": {
+      "file": "a4c23af87e4ef907.wav",
+      "text": "scope chain"
+    },
+    "shadowing": {
+      "file": "6dd015a84cac1a9a.wav",
+      "text": "shadowing"
+    },
+    "shallow copy": {
+      "file": "5b4b18002ca43a49.wav",
+      "text": "shallow copy"
+    },
+    "strict mode": {
+      "file": "f5cc124b70c8e577.wav",
+      "text": "strict mode"
+    },
+    "structural sharing": {
+      "file": "13bc311c8cfe934a.wav",
+      "text": "structural sharing"
+    },
+    "structured clone": {
+      "file": "bfda4ac5e6feb89d.wav",
+      "text": "structured clone"
+    },
+    "symbol": {
+      "file": "b76a7ca153c24671.wav",
+      "text": "Symbol"
+    },
+    "temporal dead zone": {
+      "file": "f84cc66d508c00a3.wav",
+      "text": "temporal dead zone"
+    },
+    "this binding": {
+      "file": "ce29a8a2e4944469.wav",
+      "text": "this binding"
+    },
+    "timer": {
+      "file": "cd94ec90364da372.wav",
+      "text": "timer"
+    },
+    "trap": {
+      "file": "11ba65852271cd24.wav",
+      "text": "trap"
+    }
+  }
+}

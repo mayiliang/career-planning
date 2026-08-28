@@ -121,14 +121,19 @@ function Open-CareerAtlas([string]$Mode) {
       throw 'Google Chrome was not found. Reinstall Chrome or use the Career Atlas Immersive shortcut.'
     }
 
-    # Use the existing Chrome profile so installed assistants, side panels and
-    # site permissions remain available. A regular maximized window keeps the
-    # extension toolbar accessible, unlike browser app mode.
-    $knownChromeWindows = @(
+    # When Chrome already has a visible window, passing only the URL asks the
+    # running browser instance to open a normal tab in that window. Starting a
+    # new maximized window is reserved for the case where Chrome is not open.
+    $visibleChromeWindows = @(
       Get-VisibleBrowserWindows 'chrome' | ForEach-Object { $_.ToInt64() }
     )
+    if ($visibleChromeWindows.Count -gt 0) {
+      Start-Process -FilePath $chromePath -ArgumentList @($appUrl) | Out-Null
+      return
+    }
+
     Start-Process -FilePath $chromePath -ArgumentList @('--new-window', '--start-maximized', $appUrl) | Out-Null
-    Maximize-NewBrowserWindow 'chrome' $knownChromeWindows | Out-Null
+    Maximize-NewBrowserWindow 'chrome' $visibleChromeWindows | Out-Null
     return
   }
 
