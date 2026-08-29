@@ -14,7 +14,7 @@ import {
   buildRelationDefinitions,
 } from './knowledge-relations.service.js';
 
-describe('知识关系与紧凑核心路线编排', () => {
+describe('知识关系与求职优先核心路线编排', () => {
   it('完整体系包含 223 点，35 个非空批次覆盖 149 个主干点且不生成占位任务', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
@@ -66,6 +66,22 @@ describe('知识关系与紧凑核心路线编排', () => {
       const codes = [...row[2]!.matchAll(/`([A-Z0-9-]+)`/g)].map((match) => match[1]);
       expect(codes, `路线文档 B${row[1]} 与运行时不一致`).toEqual(LEARNING_WEEK_PATHS[batch]);
     }
+  });
+
+  it('求职优先路线保留 B01～B03 底座，并在 B04～B12 完成框架与面试证据主线', () => {
+    const batchByCode = new Map(Object.entries(LEARNING_WEEK_PATHS)
+      .flatMap(([batch, codes]) => codes.map((code) => [code, Number(batch)] as const)));
+
+    expect(LEARNING_WEEK_PATHS[1]).toEqual(['JS-01', 'JS-02', 'JS-03', 'JS-07']);
+    expect(LEARNING_WEEK_PATHS[2]).toEqual(['CS-01', 'CS-02', 'CS-03', 'JS-04']);
+    expect(batchByCode.get('REACT-01')).toBe(4);
+    expect(batchByCode.get('VUE-01')).toBe(4);
+    expect(Math.max(...FRAMEWORK_ROUTE_CANDIDATES
+      .filter((code) => code !== 'VUE-09')
+      .map((code) => batchByCode.get(code) ?? Number.MAX_SAFE_INTEGER))).toBeLessThanOrEqual(8);
+    expect(batchByCode.get('GIT-01')).toBe(9);
+    expect(batchByCode.get('TEST-02')).toBe(11);
+    expect(batchByCode.get('CAREER-05')).toBe(12);
   });
 
   it('只把真实依赖建成硬前置，不把推荐阅读顺序机械转成前置', () => {

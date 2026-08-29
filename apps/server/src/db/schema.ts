@@ -6,7 +6,7 @@
  * Phase 4: 知识关系表
  * Phase 5: AI 考核表
  */
-import { sqliteTable, text, integer, index, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 // ===== 知识领域表 =====
 export const knowledgeDomains = sqliteTable('knowledge_domains', {
@@ -759,6 +759,22 @@ export const assistantGapCandidates = sqliteTable('assistant_gap_candidates', {
   statusCreatedIdx: index('assistant_gap_status_created_idx').on(table.status, table.createdAt),
 }));
 
+// ===== 站内学习资料阅读进度 =====
+// 单机本地应用无需用户外键；guide + anchor 唯一标识一篇可打开的资料章节。
+export const materialReadingProgress = sqliteTable('material_reading_progress', {
+  id: text('id').primaryKey().notNull(),
+  guide: text('guide').notNull(),
+  anchor: text('anchor').notNull(),
+  progressPercent: integer('progress_percent').notNull().default(0),
+  completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
+  completedAt: text('completed_at'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  guideAnchorIdx: uniqueIndex('material_reading_guide_anchor_uidx').on(table.guide, table.anchor),
+  completedIdx: index('material_reading_completed_idx').on(table.completed, table.updatedAt),
+}));
+
 // ===== 导出 schema 对象 =====
 export const schema = {
   knowledgeDomains,
@@ -785,6 +801,7 @@ export const schema = {
   skillGaps,
   projects,
   assistantGapCandidates,
+  materialReadingProgress,
 };
 
 // ===== 类型导出 =====
@@ -831,6 +848,7 @@ export type NewSkillGap = typeof skillGaps.$inferInsert;
 export type ProjectRecord = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type AssistantGapCandidateRecord = typeof assistantGapCandidates.$inferSelect;
+export type MaterialReadingProgressRecord = typeof materialReadingProgress.$inferSelect;
 
 // ===== 枚举类型导出 =====
 export type EventType = typeof planEvents.$inferSelect.eventType;

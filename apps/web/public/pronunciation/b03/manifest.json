@@ -1,0 +1,180 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "js-05-promise-errors-async-control-flow.md",
+    "js-06-es-modules-module-boundaries.md",
+    "ts-01-type-system-structural-strict-mode.md",
+    "ts-02-unions-narrowing-never-exhaustiveness.md"
+  ],
+  "terms": {
+    "assertion function": {
+      "file": "d5ef35f8282a14f9.wav",
+      "text": "assertion function"
+    },
+    "assignability": {
+      "file": "06287fa4170eaa0e.wav",
+      "text": "assignability"
+    },
+    "circular dependency": {
+      "file": "2a541d7eb7ff1cf6.wav",
+      "text": "circular dependency"
+    },
+    "contextual typing": {
+      "file": "a95a61d0397f776a.wav",
+      "text": "contextual typing"
+    },
+    "control flow analysis": {
+      "file": "b415ddbabdb8f687.wav",
+      "text": "control flow analysis"
+    },
+    "cooperative cancellation": {
+      "file": "a971aa6d87c2c855.wav",
+      "text": "cooperative cancellation"
+    },
+    "discriminated union": {
+      "file": "9971b58fca81d2e0.wav",
+      "text": "discriminated union"
+    },
+    "dynamic import": {
+      "file": "ee6b9250f73165ee.wav",
+      "text": "dynamic import"
+    },
+    "es module": {
+      "file": "0f0f27264ae6e109.wav",
+      "text": "ES Module"
+    },
+    "evaluation": {
+      "file": "efe77b201dc216c0.wav",
+      "text": "evaluation"
+    },
+    "excess property checking": {
+      "file": "d176c05a57a956c6.wav",
+      "text": "excess property checking"
+    },
+    "exhaustiveness checking": {
+      "file": "1f95075d5af969b8.wav",
+      "text": "exhaustiveness checking"
+    },
+    "exponential backoff": {
+      "file": "2710c13fbdcb6105.wav",
+      "text": "exponential backoff"
+    },
+    "failure boundary": {
+      "file": "ed7708679412adaa.wav",
+      "text": "failure boundary"
+    },
+    "idempotency": {
+      "file": "f5d39a07e87f63da.wav",
+      "text": "idempotency"
+    },
+    "impossible state": {
+      "file": "fa8a419e61be2b63.wav",
+      "text": "impossible state"
+    },
+    "instantiation": {
+      "file": "c8d361543c8247ba.wav",
+      "text": "instantiation"
+    },
+    "intersection type": {
+      "file": "f4b1358aad407c15.wav",
+      "text": "intersection type"
+    },
+    "jitter": {
+      "file": "16c7dc721bc2a15a.wav",
+      "text": "jitter"
+    },
+    "live binding": {
+      "file": "cba6f7db5aa738cb.wav",
+      "text": "live binding"
+    },
+    "module graph": {
+      "file": "8da23d7d57439dfd.wav",
+      "text": "module graph"
+    },
+    "module specifier": {
+      "file": "d6578cdfb3cb3181.wav",
+      "text": "module specifier"
+    },
+    "observability": {
+      "file": "58ee00072efbff71.wav",
+      "text": "observability"
+    },
+    "public surface": {
+      "file": "00526ee7c7b35615.wav",
+      "text": "public surface"
+    },
+    "rejection propagation": {
+      "file": "ba987f5cfc088790.wav",
+      "text": "rejection propagation"
+    },
+    "retry budget": {
+      "file": "92d825348ccf1515.wav",
+      "text": "retry budget"
+    },
+    "runtime validation": {
+      "file": "a778593d46fe876f.wav",
+      "text": "runtime validation"
+    },
+    "side effect": {
+      "file": "7106fc2760fbbc51.wav",
+      "text": "side effect"
+    },
+    "stale-result suppression": {
+      "file": "3cb1e5cf4bef9d77.wav",
+      "text": "stale-result suppression"
+    },
+    "static type checking": {
+      "file": "dd3538efbbd4be13.wav",
+      "text": "static type checking"
+    },
+    "strict mode": {
+      "file": "f5cc124b70c8e577.wav",
+      "text": "strict mode"
+    },
+    "structural typing": {
+      "file": "abfe8756c48fab9e.wav",
+      "text": "structural typing"
+    },
+    "top-level await": {
+      "file": "612b0f369b0b86bf.wav",
+      "text": "top-level await"
+    },
+    "tree shaking": {
+      "file": "f8086995c227855c.wav",
+      "text": "Tree shaking"
+    },
+    "type assertion": {
+      "file": "7561368d6d42fd6b.wav",
+      "text": "type assertion"
+    },
+    "type erasure": {
+      "file": "18fecb90b416a72c.wav",
+      "text": "type erasure"
+    },
+    "type inference": {
+      "file": "421538364c200eb2.wav",
+      "text": "type inference"
+    },
+    "type narrowing": {
+      "file": "feb08c15973c2f06.wav",
+      "text": "type narrowing"
+    },
+    "type predicate": {
+      "file": "20737c5e17cb6615.wav",
+      "text": "type predicate"
+    },
+    "unhandled rejection": {
+      "file": "c98ceb0668a59f8a.wav",
+      "text": "unhandled rejection"
+    },
+    "union type": {
+      "file": "e0b2de0e600e1605.wav",
+      "text": "union type"
+    }
+  }
+}

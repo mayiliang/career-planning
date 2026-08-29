@@ -149,16 +149,22 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByRole('heading', { name: '学习前先确认' })).toBeVisible();
     await expect(page.getByRole('button', { name: '初学者术语讲义', exact: true })).toHaveCount(0);
 
-    const prerequisiteLink = page.getByRole('link', { name: '变量、绑定、声明与赋值', exact: true }).first();
-    await expect(prerequisiteLink).toHaveAttribute('href', '/knowledge/materials/javascript-variables-and-bindings.md/prejs-01');
+    const prerequisiteLink = page.locator('a[href="/knowledge/materials/javascript-functions-and-callbacks.md/prejs-02"]').first();
+    await expect(prerequisiteLink).toContainText('函数、参数、返回值与回调');
     await prerequisiteLink.click();
+
+    await expect(page).toHaveURL(/\/knowledge\/materials\/javascript-functions-and-callbacks\.md\/prejs-02$/);
+    const nestedPrerequisiteLink = page.locator('a[href="/knowledge/materials/javascript-variables-and-bindings.md/prejs-01"]').first();
+    await expect(nestedPrerequisiteLink).toContainText('变量、绑定、声明与赋值');
+    await nestedPrerequisiteLink.click();
     await expect(page).toHaveURL(/\/knowledge\/materials\/javascript-variables-and-bindings\.md\/prejs-01$/);
     await expect(page.getByRole('heading', { name: /PREJS-01 变量、绑定、声明与赋值/ }).first()).toBeVisible();
 
     const bindingPronunciation = page.getByRole('button', { name: '播放“binding”的美式发音' }).first();
     await expect(bindingPronunciation).toBeVisible();
+    await expect(page.getByRole('button', { name: '播放“temporal dead zone”的美式发音' })).toBeVisible();
     await expect(page.getByRole('button', { name: '播放“price”的美式发音' })).toHaveCount(0);
-    await expect(page.locator('.pronunciation-button')).toHaveCount(1);
+    await expect(page.locator('.pronunciation-button')).toHaveCount(2);
     await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
     const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b01\/[a-f0-9]+\.wav$/.test(response.url()));
     await bindingPronunciation.click();
@@ -271,6 +277,81 @@ test.describe.serial('核心使用体验', () => {
     const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b02\/[a-f0-9]+\.wav$/.test(response.url()));
     await pronunciation.click();
     expect([200, 206]).toContain((await audioResponse).status());
+  });
+
+  test('B03 四份独立主讲义只为关键名词提供英文发音', async ({ page }) => {
+    const materials = [
+      '/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05',
+      '/knowledge/materials/js-06-es-modules-module-boundaries.md/js-06',
+      '/knowledge/materials/ts-01-type-system-structural-strict-mode.md/ts-01',
+      '/knowledge/materials/ts-02-unions-narrowing-never-exhaustiveness.md/ts-02',
+    ];
+
+    for (const materialPath of materials) {
+      await page.goto(materialPath);
+      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
+      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
+      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
+      const coverage = await page.evaluate(() => {
+        const root = document.querySelector<HTMLElement>('.markdown-body')!;
+        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
+          const copy = strong.cloneNode(true) as HTMLElement;
+          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
+          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
+          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
+          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
+        }).map(normalize).sort();
+        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
+          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
+          .sort();
+        return { expected, actual };
+      });
+      expect(coverage.actual, materialPath).toEqual(coverage.expected);
+    }
+
+    await page.goto('/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05');
+    const pronunciation = page.getByRole('button', { name: '播放“rejection propagation”的美式发音' }).first();
+    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b03\/[a-f0-9]+\.wav$/.test(response.url()));
+    await pronunciation.click();
+    expect([200, 206]).toContain((await audioResponse).status());
+  });
+
+  test('B01～B03 资料超过正文 80% 后自动标记看完，并在返回后保持状态', async ({ page }) => {
+    const materialPath = '/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05';
+    const progressPath = '/api/v1/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05/progress';
+
+    await page.goto(materialPath);
+    await expect(page.locator('.material-hero .reading-state')).toBeVisible();
+    await expect(page.locator('.markdown-body')).toBeVisible();
+
+    const progressResponse = page.waitForResponse((response) => (
+      response.request().method() === 'PATCH'
+      && new URL(response.url()).pathname === progressPath
+    ));
+    await page.evaluate(() => {
+      const article = document.querySelector<HTMLElement>('.markdown-body');
+      if (!article) throw new Error('未找到学习资料正文');
+      const rect = article.getBoundingClientRect();
+      const articleTop = rect.top + window.scrollY;
+      window.scrollTo({ top: articleTop + rect.height * 0.85 - window.innerHeight, behavior: 'instant' });
+    });
+
+    const response = await progressResponse;
+    expect(response.ok()).toBe(true);
+    const payload = await response.json() as { data: { progressPercent: number; completed: boolean } };
+    expect(payload.data.progressPercent).toBeGreaterThan(80);
+    expect(payload.data.completed).toBe(true);
+    await expect(page.locator('.material-hero .reading-state')).toContainText('已看完');
+    await expect(page.locator('.reading-save-feedback')).toContainText('已自动标记为看完');
+
+    await page.reload();
+    await expect(page.locator('.material-hero .reading-state')).toContainText('已看完');
+
+    await page.goto('/knowledge/JS-05');
+    const materialLink = page.locator('a[href="/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05"]').first();
+    await expect(materialLink).toBeVisible();
+    await expect(materialLink.locator('.material-reading-badge')).toHaveText('已看完');
   });
 
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {
@@ -400,9 +481,9 @@ test.describe.serial('核心使用体验', () => {
 
   test('35 个核心批次只包含可进入的真实知识点', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '从初级前端，到 AI 时代的高级工程师' })).toBeVisible();
-    await expect(page.getByText(/批次只表达可靠的学习顺序，不绑定自然周/)).toBeVisible();
-    await expect(page.getByText(/每个条目都连接中文资料、站内练习与掌握挑战/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '先建立面试竞争力，再走向高级工程师' })).toBeVisible();
+    await expect(page.getByText(/按求职优先重新排序/)).toBeVisible();
+    await expect(page.getByText(/B04 起进入 React\/Vue/)).toBeVisible();
     await expect(page.locator('.week-list article')).toHaveCount(35);
     const pairedHeights = await page.locator('.week-list article:not(.open)').evaluateAll((items) => items.slice(0, 2).map((item) => item.getBoundingClientRect().height));
     expect(Math.abs((pairedHeights[0] ?? 0) - (pairedHeights[1] ?? 0))).toBeLessThanOrEqual(1);
@@ -411,6 +492,13 @@ test.describe.serial('核心使用体验', () => {
     const firstPoint = firstWeek.locator('.week-points button').first();
     await expect(firstPoint).toBeVisible();
     await expect(firstPoint).toContainText('JS-01');
+    const frameworkBatch = page.locator('.week-list article').nth(3);
+    if (!await frameworkBatch.evaluate((element) => element.classList.contains('open'))) await frameworkBatch.locator('.week-summary').click();
+    await expect(frameworkBatch).toContainText('REACT-01');
+    await expect(frameworkBatch).toContainText('VUE-01');
+    const interviewBatch = page.locator('.week-list article').nth(8);
+    if (!await interviewBatch.evaluate((element) => element.classList.contains('open'))) await interviewBatch.locator('.week-summary').click();
+    await expect(interviewBatch).toContainText('GIT-01');
     await expect(page.getByText(/自主复盘与机动学习|综合实践参考|自由复盘/)).toHaveCount(0);
   });
 
@@ -430,7 +518,7 @@ test.describe.serial('核心使用体验', () => {
 
     await page.goto('/knowledge/REACT-01');
     await expect(page.locator('.branch-grid article').first()).toContainText('VUE-01');
-    await expect(page.locator('.branch-grid article').first()).toContainText('紧凑核心路线');
+    await expect(page.locator('.branch-grid article').first()).toContainText('求职优先核心路线');
   });
 
   test('路线建议、学习完成和学习台当前现场形成连续闭环', async ({ page }) => {
@@ -703,7 +791,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(page).toHaveURL(/\/knowledge\/map$/);
 
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '从初级前端，到 AI 时代的高级工程师' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '先建立面试竞争力，再走向高级工程师' })).toBeVisible();
     await page.locator('.week-list article').last().scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     await page.getByRole('link', { name: /学习台/ }).click();

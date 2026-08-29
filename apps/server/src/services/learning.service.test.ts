@@ -194,9 +194,12 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(a11yBranches.some((item) => item.code === 'UX-01')).toBe(false);
     const crossDomainContinuation = getNextBranches('SEC-05');
     expect(crossDomainContinuation).toHaveLength(1);
-    expect(crossDomainContinuation[0]?.code).toBe('TS-01');
+    expect(crossDomainContinuation[0]?.code).toBe('TS-04');
     expect(crossDomainContinuation[0]?.navigationKind).toBe('CONTINUE');
-    const trackChoices = getNextBranches('CAREER-05');
+    const jobRouteContinuation = getNextBranches('CAREER-05');
+    expect(jobRouteContinuation).toHaveLength(1);
+    expect(jobRouteContinuation[0]?.code).toBe('WEB-02');
+    const trackChoices = getNextBranches('LEAD-01');
     expect(trackChoices.length).toBeGreaterThan(1);
     expect(trackChoices.every((item) => item.navigationKind === 'TRACK_CHOICE')).toBe(true);
   });
@@ -273,7 +276,7 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(afterReactStart).toHaveLength(1);
     expect(afterReactStart[0]?.code).toBe('VUE-01');
     expect(afterReactStart[0]?.navigationKind).toBe('CONTINUE');
-    expect(afterReactStart[0]?.trackName).toBe('紧凑核心路线');
+    expect(afterReactStart[0]?.trackName).toBe('求职优先核心路线');
 
     rawDb.prepare("UPDATE knowledge_points SET learning_state = 'LEARNED' WHERE code = 'VUE-01'").run();
     expect(getNextBranches('REACT-01')[0]?.code).toBe('VUE-02');

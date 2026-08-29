@@ -1,8 +1,12 @@
 # PRECS-01 输入规模、基本操作与增长趋势
 
+## PRECS-01
+
 这是一份只补一个台阶的前置短文：怎样把“数据变多了，程序会怎样”变成可以讨论的问题。它不要求你先会复杂度符号。
 
-## PRECS-01
+### 学习前先确认
+
+- 直接前置：[PRECS-02 JavaScript 集合、键与成员关系](../chinese-guides/javascript-collections-keys-membership.md#precs-02)。示例会使用数组、遍历、函数和返回值；对象、函数与变量基础由这份短文继续向下链接。
 
 ### 先把问题中的量说清楚
 
@@ -58,5 +62,4 @@ function countPositive(values) {
 ### 接下来去哪里
 
 - 要系统学习复杂度、常数成本与可信基准，请进入 [CS-01 复杂度、数据规模与工程成本](../chinese-guides/cs-01-complexity-scale-engineering-cost.md#cs-01)。
-- 如果还不熟悉数组、Map、Set 和对象键，请先读 [PRECS-02 JavaScript 集合、键与成员关系](../chinese-guides/javascript-collections-keys-membership.md#precs-02)。
 

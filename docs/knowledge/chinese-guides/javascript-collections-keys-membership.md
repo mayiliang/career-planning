@@ -1,8 +1,12 @@
 # PRECS-02 JavaScript 集合、键与成员关系
 
+## PRECS-02
+
 这份短文只解释在算法讲义里会反复用到的四种容器：Array、Object、Map 和 Set。重点不是背 API，而是知道“按位置取”“按键找”“判断是否出现过”分别在表达什么。
 
-## PRECS-02
+### 学习前先确认
+
+- 直接前置：[PREJS-03 对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)。函数与变量基础由它继续向下链接。
 
 ### Array：有顺序的一列值
 
@@ -22,6 +26,8 @@ for (const city of cities) {
 ### Object 与 Map：从键找到值
 
 对象的属性把字符串或 Symbol 键映射到值，适合描述一条有固定字段的记录，例如 `{ id, name, score }`。当键集合会动态增加、需要任意类型的键，或需要直接使用 `size`、迭代与删除操作时，**映射（Map）**通常更清楚。
+
+把普通对象当动态字典时要记住三条边界：数字等非 Symbol 键会转成字符串；普通对象会继承原型上的属性，因此成员判断应优先用 `Object.hasOwn`；来自外部的任意键还可能碰到 `__proto__` 等敏感名字。确实需要无原型字典时可用 `Object.create(null)`，但当键完全动态、类型不限或来自不可信输入时，Map 往往能更直接表达意图。
 
 ```js
 const scoreById = new Map();

@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('all', 'b01', 'b02')]
+  [ValidateSet('all', 'b01', 'b02', 'b03')]
   [string]$Batch = 'all',
   [string]$VoiceName = 'Microsoft Zira Desktop',
   [int]$Rate = -1

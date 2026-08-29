@@ -29,7 +29,7 @@ describe('站内中文学习资料', () => {
       const prerequisiteIndex = material.markdown.indexOf('### 学习前先确认');
       expect(prerequisiteIndex, `${guide} 缺少讲义头部的前置入口`).toBeGreaterThan(0);
       expect(prerequisiteIndex, `${guide} 的前置入口离讲义头部过远`).toBeLessThan(900);
-      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(4_000);
+      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(5_000);
       expect(material.markdown, `${guide} 不应按站内题目组织`).not.toMatch(/挑战前自检|固定\s*fixture|为了掌握挑战|能通过挑战|与挑战固定输入对齐/);
     }
   });
@@ -47,12 +47,30 @@ describe('站内中文学习资料', () => {
       const prerequisiteIndex = material.markdown.indexOf('### 学习前先确认');
       expect(prerequisiteIndex, `${guide} 缺少讲义头部的前置入口`).toBeGreaterThan(0);
       expect(prerequisiteIndex, `${guide} 的前置入口离讲义头部过远`).toBeLessThan(900);
-      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(4_000);
+      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(5_000);
       expect(material.markdown, `${guide} 不应按站内题目组织`).not.toMatch(/挑战前自检|固定\s*fixture|为了掌握挑战|能通过挑战|与挑战固定输入对齐|讲义内置挑战/);
     }
   });
 
-  it('B01、B02 主讲义与原子前置短文的站内链接可以逐一打开', async () => {
+  it('B03 四份主讲义独立成篇，并从机制逐层推进到工程边界', async () => {
+    const guides = [
+      ['js-05-promise-errors-async-control-flow.md', 'js-05'],
+      ['js-06-es-modules-module-boundaries.md', 'js-06'],
+      ['ts-01-type-system-structural-strict-mode.md', 'ts-01'],
+      ['ts-02-unions-narrowing-never-exhaustiveness.md', 'ts-02'],
+    ] as const;
+
+    for (const [guide, anchor] of guides) {
+      const material = await getKnowledgeMaterial(guide, anchor);
+      const prerequisiteIndex = material.markdown.indexOf('### 学习前先确认');
+      expect(prerequisiteIndex, `${guide} 缺少讲义头部的前置入口`).toBeGreaterThan(0);
+      expect(prerequisiteIndex, `${guide} 的前置入口离讲义头部过远`).toBeLessThan(900);
+      expect(material.markdown.replace(/\s/g, '').length, `${guide} 仍像压缩提纲`).toBeGreaterThan(5_000);
+      expect(material.markdown, `${guide} 不应按站内题目组织`).not.toMatch(/挑战前自检|固定\s*fixture|为了掌握挑战|能通过挑战|与挑战固定输入对齐|讲义内置挑战/);
+    }
+  });
+
+  it('B01～B03 主讲义与原子前置短文的站内链接可以逐一打开', async () => {
     const guideFiles = [
       'js-01-execution-context-scope-closure.md',
       'js-02-prototype-object-model-this.md',
@@ -73,6 +91,10 @@ describe('站内中文学习资料', () => {
       'algorithm-input-size-and-growth.md',
       'javascript-collections-keys-membership.md',
       'browser-main-thread-messages-memory.md',
+      'js-05-promise-errors-async-control-flow.md',
+      'js-06-es-modules-module-boundaries.md',
+      'ts-01-type-system-structural-strict-mode.md',
+      'ts-02-unions-narrowing-never-exhaustiveness.md',
     ];
     const references = new Set<string>();
 

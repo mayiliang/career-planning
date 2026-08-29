@@ -21,6 +21,10 @@ import {
   getKnowledgeMaterial,
   KnowledgeMaterialError,
 } from '../../services/knowledge-material.service.js';
+import {
+  listMaterialReadingProgress,
+  updateMaterialReadingProgress,
+} from '../../services/knowledge-material-progress.service.js';
 
 // 请求参数 Schema
 const UpdateSummarySchema = z.object({
@@ -31,7 +35,44 @@ const SelfMasterSchema = z.object({
   summary: z.string().min(1, '摘要不能为空'),
 });
 
+const MaterialProgressSchema = z.object({
+  progressPercent: z.number().min(0).max(100),
+});
+
 export async function knowledgeRoutes(app: FastifyInstance) {
+  app.get('/material-progress', async (request, reply) => {
+    return reply.status(200).send({ data: listMaterialReadingProgress(), meta: { requestId: request.id } });
+  });
+
+  app.patch('/materials/:guide/:anchor/progress', async (request, reply) => {
+    try {
+      const { guide, anchor } = request.params as { guide: string; anchor: string };
+      // 先验证资料章节真实存在，避免为无效路径写入孤儿阅读记录。
+      await getKnowledgeMaterial(guide, anchor);
+      const body = MaterialProgressSchema.parse(request.body);
+      const progress = updateMaterialReadingProgress(guide, anchor, body.progressPercent);
+      return reply.status(200).send({ data: progress, meta: { requestId: request.id } });
+    } catch (error) {
+      if (error instanceof KnowledgeMaterialError) {
+        return reply.status(error.code === 'INVALID_MATERIAL_PATH' ? 400 : 404).send({
+          error: { code: error.code, message: error.message, retryable: false },
+          meta: { requestId: request.id },
+        });
+      }
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          error: { code: 'INVALID_MATERIAL_PROGRESS', message: '阅读进度必须是 0 到 100', retryable: false },
+          meta: { requestId: request.id },
+        });
+      }
+      request.log.error(error);
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: '无法保存阅读进度', retryable: true },
+        meta: { requestId: request.id },
+      });
+    }
+  });
+
   // ===== GET /api/v1/knowledge/materials/:guide/:anchor - 站内中文讲义章节 =====
   app.get('/materials/:guide/:anchor', async (request, reply) => {
     try {

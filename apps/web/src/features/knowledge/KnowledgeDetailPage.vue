@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { apiClient, type KnowledgePointDetail, type KnowledgeNote, type LearningBranch } from '@/api/client';
 import BaseDialog from '@/components/BaseDialog.vue';
@@ -9,6 +9,9 @@ import PracticeWorkspace from '@/components/PracticeWorkspace.vue';
 const route = useRoute();
 const router = useRouter();
 const point = ref<KnowledgePointDetail | null>(null);
+type MaterialReading = Awaited<ReturnType<typeof apiClient.getMaterialReadingProgress>>[number];
+const materialReadingByKey = ref<Record<string, MaterialReading>>({});
+const materialsRoot = ref<HTMLElement | null>(null);
 const note = ref<KnowledgeNote | null>(null);
 const branches = ref<LearningBranch[]>([]);
 const noteDraft = ref('');
@@ -44,7 +47,7 @@ const aiRelationLabels = { NONE: '非 AI 专属', AI_ASSISTED: 'AI 辅助', AI_N
 const portabilityLabels = { PORTABLE: '可迁移', FRAMEWORK_SPECIFIC: '框架特定', VENDOR_SPECIFIC: '厂商特定', PLATFORM_SPECIFIC: '平台特定', JURISDICTION_SPECIFIC: '地区规则' } as const;
 
 const code = computed(() => String(route.params.code));
-const usesLinkedPrerequisites = computed(() => ['JS-01', 'JS-02', 'JS-03', 'JS-07'].includes(point.value?.code ?? ''));
+const usesLinkedPrerequisites = computed(() => ['JS-01', 'JS-02', 'JS-03', 'JS-07', 'CS-01', 'CS-02', 'CS-03', 'JS-04', 'JS-05', 'JS-06', 'TS-01', 'TS-02'].includes(point.value?.code ?? ''));
 const organizedDisplayMd = computed(() => organizing.value ? streamingOrganizedMd.value : note.value?.organizedMd || '');
 const masteryCopy = computed(() => [
   ['M0', '未评估', '还没有系统证据，不代表没有学过'],
@@ -78,8 +81,8 @@ async function load() {
   loading.value = true;
   error.value = '';
   try {
-    const [pointData, noteData, branchData] = await Promise.all([
-      apiClient.getKnowledgePoint(code.value), apiClient.getNote(code.value), apiClient.getNextBranches(code.value),
+    const [pointData, noteData, branchData, materialReading] = await Promise.all([
+      apiClient.getKnowledgePoint(code.value), apiClient.getNote(code.value), apiClient.getNextBranches(code.value), apiClient.getMaterialReadingProgress(),
     ]);
     point.value = pointData;
     note.value = noteData;
@@ -95,6 +98,7 @@ async function load() {
       scheduleNoteSave();
     }
     branches.value = branchData;
+    materialReadingByKey.value = Object.fromEntries(materialReading.map((record) => [`${record.guide}#${record.anchor}`, record]));
     selectedStage.value = Math.min(4, Math.max(1, pointData.masteryLevel + 1));
     challengeMode.value = recommendedChallengeMode(pointData.challengeProfile);
     if (['materials', 'notes', 'mastery'].includes(String(route.query.tab))) activeTab.value = String(route.query.tab) as typeof activeTab.value;
@@ -103,6 +107,31 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+function decorateMaterialReadingStatuses() {
+  if (!usesLinkedPrerequisites.value) return;
+  void nextTick(() => {
+    const markdownRoot = materialsRoot.value?.querySelector<HTMLElement>('.markdown-body');
+    if (!markdownRoot) return;
+    for (const link of markdownRoot.querySelectorAll<HTMLAnchorElement>('a[href^="/knowledge/materials/"]')) {
+      const match = (link.getAttribute('href') ?? '').match(/^\/knowledge\/materials\/([^/]+)\/([^/#?]+)/u);
+      if (!match?.[1] || !match[2]) continue;
+      let guide = '';
+      let anchor = '';
+      try {
+        guide = decodeURIComponent(match[1]);
+        anchor = decodeURIComponent(match[2]).toLocaleLowerCase('en-US');
+      } catch { continue; }
+      const reading = materialReadingByKey.value[`${guide}#${anchor}`];
+      link.querySelector('.material-reading-badge')?.remove();
+      const badge = document.createElement('span');
+      badge.className = 'material-reading-badge';
+      badge.dataset.state = reading?.completed ? 'completed' : (reading?.progressPercent ?? 0) > 0 ? 'reading' : 'unread';
+      badge.textContent = reading?.completed ? '已看完' : (reading?.progressPercent ?? 0) > 0 ? `已读 ${reading?.progressPercent}%` : '未读';
+      link.append(badge);
+    }
+  });
 }
 
 function storeLocalDraft(content: string, targetCode = loadedCode.value) {
@@ -347,7 +376,7 @@ onBeforeUnmount(() => {
             <li>由你点击“已学完”；掌握挑战完全可选</li>
           </ol>
           <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
-          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01 前置学习</small><strong>前置内容已按概念拆开</strong><p>打开本知识点的中文主讲义，头部只列实际需要的短文；正文遇到关联概念时也会就近互链，不需要先读总术语大全。</p></div></aside>
+          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01～B03 前置学习</small><strong>只列直接前置，下一层会继续展开</strong><p>主讲义不会重复列出间接依赖；每个链接会显示未读、阅读进度或已看完，正文超过 80% 后自动完成。</p></div></aside>
           <aside v-else class="beginner-assist"><div><small>初学者阅读辅助</small><strong>遇到陌生术语或隐含前置知识时，先补台阶</strong><p>中文译名与英文原名同时保留；这份辅助讲义不扩张当前知识点，也不单独作为考核题源。</p></div><button type="button" @click="openBeginnerGuide">打开前置与术语讲义 →</button></aside>
         </div>
       </details>
@@ -358,8 +387,8 @@ onBeforeUnmount(() => {
         <button :class="{ active: activeTab === 'mastery' }" @click="activeTab = 'mastery'">掌握挑战 <em>可选</em></button>
       </nav>
 
-      <main v-if="activeTab === 'materials'" class="materials-layout">
-        <MarkdownRenderer class="content-card material-reader markdown-content" :source="point.studyMaterialMd" aria-label="学习资料" />
+      <main v-if="activeTab === 'materials'" ref="materialsRoot" class="materials-layout">
+        <MarkdownRenderer class="content-card material-reader markdown-content" :source="point.studyMaterialMd" aria-label="学习资料" @rendered="decorateMaterialReadingStatuses" />
         <aside class="content-card activity-panel" :class="{ expanded: activePracticeId }">
           <header><small>LEARNING ACTIVITIES</small><h2>学完资料后，可以这样练</h2><p>每一项都给出实际任务，不再用没有入口的“项目时间”占位。</p></header>
           <article v-for="(activity, index) in point.learningActivities" :key="activity.id" :class="{ required: !activity.optional, active: activePracticeId === activity.id }">
@@ -481,6 +510,7 @@ onBeforeUnmount(() => {
 .learning-guide{display:block;padding:0;overflow:hidden}.learning-guide>summary{display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:14px;align-items:center;min-height:62px;padding:10px 18px;cursor:pointer;list-style:none}.learning-guide>summary::-webkit-details-marker{display:none}.learning-guide>summary span{min-width:0}.learning-guide>summary strong{overflow:hidden;margin-top:2px;text-overflow:ellipsis;white-space:nowrap}.learning-guide>summary em{color:#617087;font-size:.72rem;font-style:normal;white-space:nowrap}.learning-guide>summary i{width:8px;height:8px;border-right:2px solid #718096;border-bottom:2px solid #718096;transform:rotate(45deg);transition:transform .18s ease}.learning-guide[open]>summary i{transform:rotate(225deg)}.learning-guide__body{display:grid;grid-template-columns:1fr 1.2fr;gap:18px;padding:15px 18px 18px;border-top:1px solid #e5eaf0}.learning-guide__body ol{margin:0}.effort span{color:#33465f;background:#f2f6fc;border:1px solid #e0e7f0}.effort b{line-height:1.5}.beginner-assist{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 16px;border:1px solid #d4e3dc;border-radius:13px;background:linear-gradient(135deg,#f1f8f5,#fff7f2)}.beginner-assist strong{margin-top:3px;color:#285446}.beginner-assist p{margin:4px 0 0;color:#687a72;font-size:.76rem;line-height:1.55}.beginner-assist button{flex:0 0 auto;color:#9b4c32;font-weight:800;background:#fffaf7;border-color:#e4c8bc}
 .tabs{position:sticky;top:12px;z-index:12;width:max-content;padding:5px;background:rgba(241,245,250,.9);border:1px solid #dce4ed;border-radius:14px;box-shadow:0 7px 24px rgba(27,50,80,.08);backdrop-filter:blur(14px)}.tabs button{border:0;background:transparent}.tabs button.active{background:linear-gradient(135deg,#1c3353,#245a83);box-shadow:0 7px 18px rgba(28,62,99,.2)}
 .materials-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch}.material-reader{min-width:0;padding:24px 28px}.activity-panel{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:20px}.activity-panel>header{grid-column:1/-1}.activity-panel header h2{margin:3px 0}.activity-panel header p{margin:0 0 5px;color:#68768a;font-size:.82rem}.activity-panel>article{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;height:100%;padding:14px;border:1px solid #e1e7ef;border-radius:14px;background:linear-gradient(145deg,#fff,#f8fbff)}.activity-panel>article.active{grid-column:1/-1;height:auto;border-color:#9eb8dc;box-shadow:0 8px 24px rgba(41,84,139,.08)}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel>article>div{display:flex;min-width:0;flex-direction:column}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}.activity-panel.expanded{position:static}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{align-self:flex-start;margin-top:auto;padding:9px 13px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
+.material-reader :deep(.material-reading-badge){display:inline-block;margin-left:.4rem;padding:.08rem .4rem;color:#68756f;font-size:.62rem;font-weight:800;line-height:1.5;text-decoration:none;background:#f0f3f1;border:1px solid #dce4df;border-radius:999px}.material-reader :deep(.material-reading-badge[data-state=reading]){color:#805b20;background:#fff7dc;border-color:#eadba6}.material-reader :deep(.material-reading-badge[data-state=completed]){color:#176448;background:#e7f6ee;border-color:#bddfce}.materials-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch}.material-reader{min-width:0;padding:24px 28px}.activity-panel{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:20px}.activity-panel>header{grid-column:1/-1}.activity-panel header h2{margin:3px 0}.activity-panel header p{margin:0 0 5px;color:#68768a;font-size:.82rem}.activity-panel>article{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;height:100%;padding:14px;border:1px solid #e1e7ef;border-radius:14px;background:linear-gradient(145deg,#fff,#f8fbff)}.activity-panel>article.active{grid-column:1/-1;height:auto;border-color:#9eb8dc;box-shadow:0 8px 24px rgba(41,84,139,.08)}.activity-panel>article>span{display:grid;place-items:center;width:36px;height:36px;color:#4b6591;font:760 .67rem var(--font-mono);background:#edf3fb;border-radius:11px}.activity-panel>article.required>span{color:#fff;background:linear-gradient(145deg,#3972c8,#24579e)}.activity-panel>article>div{display:flex;min-width:0;flex-direction:column}.activity-panel h3{display:flex;gap:8px;align-items:center;margin:0 0 5px;font-size:.94rem}.activity-panel h3 em{padding:2px 6px;color:#56708f;font-size:.62rem;font-style:normal;background:#eef2f7;border-radius:999px}.activity-panel article.required h3 em{color:#28624f;background:#e9f7f0}.activity-panel article p{margin:0;color:#4f6075;font-size:.82rem;line-height:1.68}.activity-panel article small{margin-top:7px;color:#8792a1;letter-spacing:0;font-family:inherit}.activity-panel.expanded{position:static}.activity-panel .activity-workspace{grid-column:1/-1}.practice-entry{align-self:flex-start;margin-top:auto;padding:9px 13px;border-color:#9fb5d3;background:#edf4fc;color:#28558b;font-weight:750}
 .content-card{padding:25px}.branch-grid{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}.branch-grid article{padding:18px;background:linear-gradient(145deg,#fff,#fafcff);border-radius:16px;box-shadow:0 5px 17px rgba(28,51,82,.04)}.branch-grid article:first-child{border-color:#9cb5df;box-shadow:0 9px 24px rgba(43,91,171,.09)}
 .notes-layout,.mastery-layout,.branch-grid{align-items:stretch}.notes-layout>.content-card,.mastery-layout>.content-card,.branch-grid>article{height:100%}.note-editor,.organized{display:flex;min-width:0;flex-direction:column}.note-editor>header>span{white-space:nowrap}.note-editor footer{margin-top:auto;padding-top:10px}.organized{max-height:none}.organized>.empty{margin:auto 0}
 .completion-card{background:linear-gradient(135deg,#f9fffb,#f0f9f5)}

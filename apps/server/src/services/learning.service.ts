@@ -141,7 +141,7 @@ export function getNextBranches(code: string) {
       relation: 'CONTINUE',
       description: '当前学习路线中紧接此知识点的下一步；不会打乱路线或丢失其他方向。',
       navigationKind: 'CONTINUE',
-      trackName: mainlinePosition >= 0 ? '紧凑核心路线' : next.domainTitle,
+      trackName: mainlinePosition >= 0 ? '求职优先核心路线' : next.domainTitle,
       trackRemaining: countAvailable(currentTrack, currentTrack.indexOf(directNextCode)),
     })] : [];
   }
@@ -430,7 +430,7 @@ function enrichPoint(point: PointRow) {
   const route = KNOWLEDGE_ROUTE_INDEX.get(point.code);
   return {
     ...point,
-    // 不回退到旧数据库周次，避免专项点重新混入紧凑核心路线。
+    // 不回退到旧数据库周次，避免专项点重新混入求职优先核心路线。
     planWeek: route?.week ?? null,
     currentFocus: Boolean(point.currentFocus),
     masteryLevel: Math.max(0, Math.min(4, point.masteryLevel || 0)),

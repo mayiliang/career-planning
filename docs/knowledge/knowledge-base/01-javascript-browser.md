@@ -8,7 +8,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文主讲义：JS-01 执行上下文、作用域与闭包](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)、[中文｜MDN 闭包](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Closures)（补充阅读，重点为词法作用域、循环闭包和性能考量）。覆盖范围：独立主讲义从普通函数调用出发，完整讲清执行上下文、调用栈、词法环境、作用域链、块/函数作用域、闭包绑定、循环绑定、独立实例、可达性和外部注册清理；所需基础按名词拆成讲义头部的短链接，正文不以站内练习或掌握挑战组织。MDN 只用于补充官方闭包示例。
+- 学习资料：[中文主讲义：JS-01 执行上下文、作用域与闭包](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)、[中文｜MDN 闭包](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Closures)（补充阅读，重点为词法作用域、循环闭包和性能考量）。覆盖范围：独立主讲义从普通函数调用出发，完整讲清执行上下文、调用栈、词法环境、作用域链、脚本/模块顶层边界、块/函数作用域、闭包绑定、循环绑定、独立实例、可达性和外部注册清理；所需基础按名词拆成讲义头部的短链接，正文不以站内练习或掌握挑战组织。MDN 只用于补充官方闭包示例。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：JS-01 执行上下文、作用域与闭包》《中文｜MDN 闭包》，分别定位执行上下文、词法环境、循环闭包、订阅清理和可达性边界；首考题 2（机制解释）：给定 `for(var i=0;i<3;i++) setTimeout(()=>out(i))` 与两个计数器，解释作用域链和每个闭包捕获的环境；首考题 3（最小产出）：固定 fixture 为上述循环、两个独立计数器 `A/B`、订阅 `unsubscribe()` 与预期输出 `[3,3,3]`/`[0,1,2]`；实现私有计数、撤销和订阅闭包模块，交付作用域图、两实例输出、取消后不再通知的测试及清理记录；首考题 4（受限排错）：给定异常“循环回调全打印 3，B 调用后 A 的计数也变化，已取消订阅仍触发”；只在 `var` 声明作用域、捕获变量、订阅清理三项中排查，提交每项证伪输出、根因修复和取消回归；首考题 5（学习复述）：用 3 分钟说明闭包保留什么、何时释放，并回答为何不应长期持有 DOM。复测变式：仅将循环声明从 `var` 改为 `let`，保持两个计数器 `A/B`、订阅/取消时机和其余 fixture 不变；预期循环输出为 `[0,1,2]`，取消后的 B 仍无通知；提交新的循环输出、隔离计数与取消断言作为新证据。命题边界：只使用本点语言模型 fixture。
 - 通过标准：作用域图、两实例输出、取消测试和清理记录可复核；无全局泄漏且输出符合预期。否决项：只改 `var` 不解释捕获环境，或未提交取消后的测试证据。评估边界：只评估执行上下文、作用域和闭包，不评估框架生命周期。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -17,7 +17,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文主讲义：JS-02 原型、对象模型与 `this`](../chinese-guides/js-02-prototype-object-model-this.md#js-02)、[中文｜MDN 对象模型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain)、[中文｜MDN `this`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/this)。覆盖范围：独立主讲义按“属性查找—调用形式—构造调用—设计边界”的自然顺序讲解自有/继承属性、`[[Prototype]]` 与函数 `.prototype`、属性遮蔽、六类 `this` 调用、脱离回调、`new`、class 和组合；讲义头部只列对象、函数、严格模式等直接前置。原型污染仍归 `SEC-01`。
+- 学习资料：[中文主讲义：JS-02 原型、对象模型与 `this`](../chinese-guides/js-02-prototype-object-model-this.md#js-02)、[中文｜MDN 对象模型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain)、[中文｜MDN `this`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/this)。覆盖范围：独立主讲义按“属性查找—调用形式—构造调用—设计边界”的自然顺序讲解自有/继承属性、`[[Prototype]]` 与函数 `.prototype`、属性遮蔽、访问器 receiver、六类 `this` 调用、`bind` 与 `new` 的优先边界、脱离回调、class 和组合；头部只列对象这一直接前置，函数与变量由它递归链接，严格模式在对应小节按需打开。原型污染仍归 `SEC-01`。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：JS-02 原型、对象模型与 `this`》《中文｜MDN 对象模型》《中文｜MDN `this`》，定位原型查找、构造调用、调用形式、脱离回调与箭头函数边界；首考题 2（机制解释）：给定 `user.say`、`const f=user.say`、箭头方法和三层原型，说明每次 `this` 与属性查找结果；首考题 3（最小产出）：固定 fixture 为 `user={name:'Ada',say(){return this.name}}`、脱离函数 `f`、构造函数显式返回 `{kind:'override'}` 与 `grand→parent→child` 原型链；实现简化 `new`/`bind`，交付原型图、五个调用输出和构造返回断言；首考题 4（受限排错）：给定异常“事件回调的 `this` 为 `undefined`，显式返回对象却未生效”；只在调用形式、箭头词法 `this`、`bind/new` 返回规则三项中排查，提交 trace 证伪、根因修复和五断言回归；首考题 5（学习复述）：用 3 分钟说明 class 隐藏的原型机制，并回答何时组合优于继承。复测变式：仅将 `say` 作为未绑定事件回调传入，保持原型链、构造显式返回和方法实现不变；预期未绑定调用的 `this` 不再指向 `user`，经 `bind` 后恢复返回 `Ada`；提交新的事件调用 trace、绑定结果和原型查找记录作为新证据。命题边界：只评估对象模型与 `this`。
 - 通过标准：原型图、五个调用输出和断言可复核；正确区分构造显式返回、箭头函数和多层委托。否决项：只用箭头函数回避 `this`，或未给出脱离调用的失败证据。评估边界：不评估原型污染安全主题。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -26,7 +26,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文主讲义：JS-03 类型、相等、拷贝与不可变更新](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)、[中文｜MDN 数据类型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Data_structures)、[中文｜MDN 相等比较](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness)、[中文｜structuredClone](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/structuredClone)。覆盖范围：独立主讲义从值、身份和所有权出发，串起原始类型、四类相等规则、浅拷贝、路径复制、结构共享、结构化克隆、循环图和 JSON 边界；对象基础作为头部短前置，Map、Set、展开语法等在正文首次出现处解释。官方资料用于补充规范化的类型、相等和结构化克隆参考。
+- 学习资料：[中文主讲义：JS-03 类型、相等、拷贝与不可变更新](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)、[中文｜MDN 数据类型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Data_structures)、[中文｜MDN 相等比较](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness)、[中文｜structuredClone](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/structuredClone)。覆盖范围：独立主讲义从值、身份和所有权出发，串起原始类型、四类相等规则、领域内容相等、浅拷贝、展开与 `Object.assign` 的可观察差异、路径复制、树/对象图结构共享、浅层冻结、结构化克隆、循环图和 JSON 边界；对象基础作为头部短前置，Map、Set、展开语法等在正文首次出现处解释。官方资料用于补充规范化的类型、相等和结构化克隆参考。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：JS-03 类型、相等、拷贝与不可变更新》《中文｜MDN 数据类型》《中文｜MDN 相等比较》《中文｜structuredClone》，定位值/身份相等、浅拷贝路径、结构化克隆和循环引用边界；首考题 2（机制解释）：给定 `NaN`、`-0`、共享嵌套对象和循环图，比较 `===`、`Object.is` 与克隆行为；首考题 3（最小产出）：固定 fixture 为 `{date:new Date(0),map:new Map([['x',1]]),set:new Set([1]),child:{n:1}}`、`fixture.self=fixture` 和两个共享 `child` 的状态 A/B；交付 15 个相等判断答案、克隆策略/明确拒绝说明、A 更新 B 不变的测试和 Date/Map/Set/循环快照；首考题 4（受限排错）：给定异常“更新 B 的 `child.n` 后 A 也变，循环对象克隆抛错”；只在引用路径、浅拷贝层级、循环处理三项中排查，提交快照证伪、根因修复与回归；首考题 5（学习复述）：用 3 分钟说明深拷贝为何不是默认方案，并回答何时用结构共享。复测变式：仅将既有 `Map` 键 `x` 的值从 `1` 改为既有循环根对象 `fixture`，保持 `fixture.self=fixture`、Date/Set、共享 `child` 与状态 A/B 的不可变更新机制不变；预期克隆后 `clone.map.get('x')===clone` 且 `clone.self===clone`，A/B 仍引用隔离；提交新的 Map—根对象身份断言、循环快照和 A/B 回归作为新证据。命题边界：只评估相等、拷贝和不可变更新。
 - 通过标准：15 题至少 13 题正确，快照、策略与测试可复核；Date、Map、Set、数组和循环引用均有明确结论。否决项：把 JSON 序列化当作通用深拷贝，或未验证 A/B 引用隔离。评估边界：不评估持久化数据结构库。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -35,7 +35,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文主讲义：JS-07 迭代协议、元编程与资源生命周期](../chinese-guides/js-07-iteration-metaprogramming-resources.md#js-07)、[中文｜MDN 迭代协议](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Iteration_protocols)、[中文｜MDN Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy)、[中文｜MDN Reflect](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Reflect)。覆盖范围：独立主讲义以“对象通过协议参与语言行为”为主线，逐步连接 iterable/iterator、惰性生成器、`return`/`throw`、同步与异步清理、Symbol、Proxy/Reflect 和不变量；JS-03 是直接前置，Promise/取消、异常清理和属性描述符按正文位置提供独立短链接，不要求先读混合术语大全。
+- 学习资料：[中文主讲义：JS-07 迭代协议、元编程与资源生命周期](../chinese-guides/js-07-iteration-metaprogramming-resources.md#js-07)、[中文｜MDN 迭代协议](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Iteration_protocols)、[中文｜MDN Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy)、[中文｜MDN Reflect](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Reflect)。覆盖范围：独立主讲义以“对象通过协议参与语言行为”为主线，逐步连接 iterable/iterator、惰性生成器、多步关闭、`return`/`throw`、同步迭代的异步适配、取消与背压、Symbol、Proxy/Reflect、代理身份和不变量；头部直接列属性描述符与异常清理，JS-03 由属性描述符继续链接，Promise/取消在异步迭代小节按需打开，不要求先读混合术语大全。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：JS-07 迭代协议、元编程与资源生命周期》《中文｜MDN 迭代协议》《中文｜MDN Proxy》《中文｜MDN Reflect》，定位迭代协议、不变量与资源清理；首考题 2（机制解释）：以 `for...of` 提前 `break`、生成器 `throw` 与代理转发解释暂停、关闭和陷阱约束；首考题 3（最小产出）：固定 fixture 为页码 `[[1,2],[3,4]]`、第二页前 `break`、异步页 `Promise.resolve([5])` 和资源 `closeCount`；实现惰性迭代器、异步生成器及资源包装器，交付消费输出、`return/throw` 清理测试、`closeCount===1` 断言与代理不变量记录；首考题 4（受限排错）：给定异常“`break` 后仍拉取第二页，`closeCount=2`，代理读取 non-configurable 属性报错”；仅在迭代器 `return`、重复消费、Proxy/Reflect 不变量三项中排查，提交证伪日志、根因修复和成功/异常/取消回归；首考题 5（学习复述）：用 3 分钟说明普通集合、生成器、代理和显式资源管理的取舍。复测变式：仅将提前终止信号从 `break` 改为生成器 `throw new Error('stop')`，保持页码、异步页、资源包装器和代理不变量不变；预期第二页仍不拉取且 `closeCount===1`；提交新的 `throw` 消费 trace、关闭断言和代理记录作为新证据。命题边界：必须验证终止、异常和清理。
 - 通过标准：迭代输出、关闭计数、代理断言和异常回归可复核；资源三条路径均只释放一次。否决项：只展示生成器正常路径、未给出 `return/throw` 清理证据，或把 Proxy 当通用状态管理。评估边界：不评估未给定的显式资源管理提案语法。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -46,7 +46,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：CS-01](../chinese-guides/cs-01-complexity-scale-engineering-cost.md#cs-01)。覆盖范围：独立讲义从输入规模与基本操作出发，连续讲解时间/空间复杂度、增长形状、最坏与摊还语境、常数/分配/GC、主线程预算、可信基准、延迟/吞吐和分层决策；所需集合与测量基础在讲义头部按需链接，不按站内练习或挑战组织。
+- 学习资料：[中文核心讲义：CS-01](../chinese-guides/cs-01-complexity-scale-engineering-cost.md#cs-01)。覆盖范围：独立讲义从输入规模与基本操作出发，连续讲解时间/空间复杂度、O/Θ/Ω 的界、增长形状、最坏/期望/摊还语境、空间计数合同、常数/分配/GC、主线程预算、可信基准、延迟/吞吐和分层决策；只直接链接输入规模短文，集合基础由它继续递归链接，不按站内练习或挑战组织。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：CS-01》，定位复杂度、摊还分析、基准预热与主线程预算；首考题 2（机制解释）：以 O(n) 两种实现一个有缓存命中一个频繁分配为例，解释相同 Big-O 的常数、内存和规模反例；首考题 3（最小产出）：固定 fixture 为排序数组 1k/10k/100k、相同随机种子和 30 次预热后 10 次采样；设计线性扫描与嵌套扫描实验，交付基本操作推导、CSV 曲线、P95、堆峰值和超过 16ms 帧数，并以 Performance 录制验证采样结果；首考题 4（受限排错）：给定日志“100k 时 P95 从 18ms 升至 820ms，火焰图显示 `find` 被调用 100000 次”；仅在嵌套查找、缓存未命中、序列化分配三项中排查，逐项提交证伪测量、根因改动和 1k/100k 回归表；首考题 5（学习复述）：用 3 分钟说明何时改算法、何时分块/Worker、何时移交服务端。复测变式：仅把输入规模从 100k 改为 1m，保持数据分布与采样命令不变，提交新曲线、内存峰值和帧预算证据。命题边界：不考竞赛技巧。
 - 通过标准：推导、命令/采样记录、曲线、P95 和内存证据可复核；能区分最坏、平均、摊还及浏览器边界。否决项：只测一个规模、忽略预热/缓存或只报告平均耗时。评估边界：只评估复杂度判断与测量设计，不评估具体算法库。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -55,7 +55,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：CS-02](../chinese-guides/cs-02-data-structures-algorithms-correctness.md#cs-02)、[中文｜MDN Map](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map)、[中文｜MDN Set](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)。覆盖范围：独立讲义围绕操作模式、结构选择、查找条件、图遍历、拓扑顺序、贪心/动态规划的适用前提，以及不变量、终止性、边界和性质测试展开；Array/Map/Set 的基础另设头部短文，业务语义先于算法模板。
+- 学习资料：[中文核心讲义：CS-02](../chinese-guides/cs-02-data-structures-algorithms-correctness.md#cs-02)、[中文｜MDN Map](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map)、[中文｜MDN Set](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)。覆盖范围：独立讲义围绕操作模式、结构选择、查找条件、无权/带权图遍历、拓扑顺序、带交换论证的贪心实例、完整状态转移的动态规划实例，以及不变量、终止性、边界和性质测试展开；Array/Map/Set 的基础另设头部短文，业务语义先于算法模板。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文核心讲义：CS-02》《中文｜MDN Map》《中文｜MDN Set》，定位结构操作、不变量和退化边界；首考题 2（机制解释）：给定依赖图和 Top-K 流，解释 Map 身份、入度不变量与堆/数组取舍；首考题 3（最小产出）：固定 fixture 为依赖 `A→C,B→C,C→D`、事件 `[a:3,b:9,a:4,c:2]`、空输入和重复边 `A→C`；实现拓扑排序与动态 Top-2，交付顺序/Top-2 输出、环/重复/空输入测试、关键不变量和复杂度说明；首考题 4（受限排错）：给定日志“拓扑结果缺 D，重复边令入度为 2，`A→B→A` 无限处理”；仅在入度初始化、去重集合、环检测三项中排查，逐项提交证伪用例、根因和回归；首考题 5（学习复述）：用 3 分钟说明为何此处不用数组扫描，并回答对象键何时不可靠。复测变式：仅把 fixture 的 `C→D` 改为 `C→A`，保持 Top-K 输入不变，提交环错误、未输出部分序列和不变量测试。命题边界：不考冷门模板。
 - 通过标准：输出、空/重复/环测试和不变量记录可复核；不会将对象字符串化当稳定键。否决项：忽略环、以递归无限重试或仅通过理想样例。评估边界：只评估数据结构选择与正确性。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -64,7 +64,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：CS-03](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#cs-03)、[中文｜MDN Web Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Using_web_workers)、[中文｜MDN Streams API](https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API)、[中文｜MDN 可转移对象](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Transferable_objects)。覆盖范围：独立讲义从完整数据路径和“少做工作”开始，区分虚拟化、增量计算与分块，讲清 Worker 端到端成本、结构化克隆/Transferable 所有权、有界背压、取消门禁、内存生命周期和客户端/服务端分层；线程与消息基础在头部单独链接。AI 推理任务池归 `WEBAI-04`。
+- 学习资料：[中文核心讲义：CS-03](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#cs-03)、[中文｜MDN Web Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Using_web_workers)、[中文｜MDN Streams API](https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API)、[中文｜MDN 可转移对象](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Transferable_objects)。覆盖范围：独立讲义从完整数据路径和“少做工作”开始，区分虚拟化、增量计算与分块，讲清 Worker 类型边界、端到端成本、结构化克隆/Transferable 所有权、SharedArrayBuffer/Atomics 同步边界、有界背压、取消门禁、失败重启与幂等提交、内存生命周期和客户端/服务端分层；线程与消息基础在头部单独链接。AI 推理任务池归 `WEBAI-04`。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文核心讲义：CS-03》《中文｜MDN Web Worker》《中文｜MDN Streams API》《中文｜MDN 可转移对象》，定位复制、Transferable、背压、取消与内存边界；首考题 2（机制解释）：以 100k Float64Array 和 500 条批次为例，解释主线程、Worker 和服务端模拟的复制成本与交互差异；首考题 3（最小产出）：固定 fixture 为 100000 条 `{id,score}`、Top-10、500 条批次、在第 20 批取消；实现筛选/聚合 Worker，分别运行 structured clone 与 Transferable，交付三方案吞吐、INP/长任务、堆峰值、消息数和取消后无新结果的记录；首考题 4（受限排错）：给定日志“每批 clone 80MB、队列积压 2400 条、取消后仍收到 6 批、堆持续增长”；仅在传输方式、背压阈值、缓存释放三项中排查，逐项证伪、修复并回归 100k；首考题 5（学习复述）：用 3 分钟给出客户端、Worker、服务端分层决策。复测变式：仅把数据量改为 1m，保持批次/Top-K/取消点不变，提交取消延迟、峰值内存和降级决策证据。命题边界：Worker 不消除计算成本。
 - 通过标准：三方案测量、消息/内存记录和取消测试可复核；Worker 有批量、背压和清理。否决项：只展示最终算完、无取消证据或把复制成本忽略。评估边界：不评估 AI 推理任务池。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -75,7 +75,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：JS-04](../chinese-guides/js-04-async-promise-browser-event-loop.md#js-04)、[中文｜MDN 微任务指南](https://developer.mozilla.org/zh-CN/docs/Web/API/HTML_DOM_API/Microtask_guide)。覆盖范围：独立讲义从调用栈与宿主等待自然展开任务、微任务、渲染机会、Promise reaction、链式采用、async/await、微任务饥饿、并发分层、取消门禁和浏览器/Node 边界；回调、timer 与 Promise 基础在头部按需引用，不以某个并发执行器或固定输入组织。MDN 用于补充官方任务/微任务模型。
+- 学习资料：[中文核心讲义：JS-04](../chinese-guides/js-04-async-promise-browser-event-loop.md#js-04)、[中文｜MDN 微任务指南](https://developer.mozilla.org/zh-CN/docs/Web/API/HTML_DOM_API/Microtask_guide)。覆盖范围：独立讲义从调用栈与宿主等待自然展开任务、微任务、渲染机会、Promise reaction、链式采用、脱离链条拒绝、async/await 的一致异步恢复、`Promise.all` 的失败与取消边界、微任务饥饿、真正控制启动时机的并发分层、取消门禁和浏览器/Node 边界；回调、timer 与 Promise 基础在头部按需引用，不以某个并发执行器或固定输入组织。MDN 用于补充官方任务/微任务模型。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文核心讲义：JS-04》《中文｜MDN 微任务指南》，定位任务、微任务、渲染机会和取消协议；首考题 2（机制解释）：给定 `console.log('A'); Promise.resolve().then(()=>console.log('B')); setTimeout(()=>console.log('C'))`，写出浏览器队列变化并区分业务并发限制；首考题 3（最小产出）：固定 fixture 为任务 `[10ms 成功,20ms 成功,15ms 失败,30ms 成功,5ms 成功]`、并发上限 2、在 12ms 取消；实现带 `nextIndex/active/AbortSignal` 的执行器，交付十道 trace 答卷、任务启动序列、按输入序号汇总结果和“取消后未启动 3–5”的自动测试；首考题 4（受限排错）：给定异常“递归微任务使 timer 不触发，`active=3`，取消后第 4 项仍写入状态”；仅在微任务递归、槽位递减、AbortSignal 检查三项中排查，提交队列 trace 证伪、根因修复和取消/超时回归；首考题 5（学习复述）：用 3 分钟说明浏览器事件循环与任务执行器协议的不同证据。复测变式：仅将取消时刻从 12ms 改为 35ms，保持任务序列、并发上限 2 和结果汇总规则不变；预期第 4 项在运行中取消、第 1/2/3/5 项仍按输入槽位汇总且 `active` 不超过 2；提交新的队列 trace、槽位释放和取消断言作为新证据。命题边界：不得使用 Node 专有顺序。
 - 通过标准：十题至少九题正确；启动序列、汇总结果、取消/超时测试可复核，`active` 从不超过 2。否决项：把 Promise 回调当普通宏任务、取消后仍启动新任务或未提交队列 trace。评估边界：只评估浏览器调度，不评估 Node 事件循环。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -84,8 +84,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：JS-05](../chinese-guides/javascript-language-core.md#js-05)、[中文｜MDN Promise](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Using_promises)、[中文｜MDN AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)。覆盖范围：Promise 拒绝传播、组合器、取消与 `finally`，以及官方页面未串成完整业务协议的请求序号、过期结果抑制、错误分类和安全重试预算。
-- 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文核心讲义：JS-05》《中文｜MDN Promise》《中文｜MDN AbortController》，定位拒绝传播、组合器、取消和安全重试边界；首考题 2（机制解释）：给定连续搜索，画出旧请求取消、最新结果提交和三类错误呈现状态图；首考题 3（最小产出）：固定 fixture 是 `a(30ms 成功)`、`ab(20ms AbortError)`、`abc(10ms 成功)` 与 `allSettled` 输入 `[resolve(1),reject('E')]`；实现等价聚合、请求序号与取消，交付聚合输出、最终 UI 仅为 `abc`、取消不显示错误和四类结果测试；首考题 4（受限排错）：给定异常“`finally` 覆盖原拒绝，`a` 晚到覆盖 `abc`，POST 被重复重试”；只在 `finally` 返回值、请求序号比较、重试幂等性三项中排查，提交证伪测试、根因修复和网络失败回归；首考题 5（学习复述）：说明取消、超时和重试各自不保证什么。复测变式：仅将 `abc` 的既有 10ms 结果从成功改为网络失败，保持查询顺序、`a` 的 30ms 晚到响应、`ab` 的 AbortError、`allSettled` 输入、取消和请求序号机制不变；预期最新请求显示网络错误且 `a` 不得提交旧结果；提交新的请求序号 trace、网络错误分类断言和旧结果抑制测试作为新证据。命题边界：重试仅限给定可安全重放操作。
+- 学习资料：[中文主讲义：JS-05 Promise 错误处理与异步控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)、[中文｜MDN Promise](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Using_promises)、[中文｜MDN AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)。覆盖范围：独立主讲义从 Promise 链的结果与拒绝传播开始，连续讲解责任化失败边界、`finally`、四类组合器、协作取消、请求版本门禁、错误分类、幂等写入、退避/抖动/总预算、超时结果未知、未处理拒绝、可观察性和确定性测试；头部只直接链接 JS-04，其余基础由 JS-04 递归包含。两份 MDN 作为官方机制和 API 补充，不替代中文连续教学。
+- 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：JS-05 Promise 错误处理与异步控制流》《中文｜MDN Promise》《中文｜MDN AbortController》，定位拒绝传播、组合器、取消和安全重试边界；首考题 2（机制解释）：给定连续搜索，画出旧请求取消、最新结果提交和三类错误呈现状态图；首考题 3（最小产出）：固定 fixture 是 `a(30ms 成功)`、`ab(20ms AbortError)`、`abc(10ms 成功)` 与 `allSettled` 输入 `[resolve(1),reject('E')]`；实现等价聚合、请求序号与取消，交付聚合输出、最终 UI 仅为 `abc`、取消不显示错误和四类结果测试；首考题 4（受限排错）：给定异常“`finally` 覆盖原拒绝，`a` 晚到覆盖 `abc`，POST 被重复重试”；只在 `finally` 返回值、请求序号比较、重试幂等性三项中排查，提交证伪测试、根因修复和网络失败回归；首考题 5（学习复述）：说明取消、超时和重试各自不保证什么。复测变式：仅将 `abc` 的既有 10ms 结果从成功改为网络失败，保持查询顺序、`a` 的 30ms 晚到响应、`ab` 的 AbortError、`allSettled` 输入、取消和请求序号机制不变；预期最新请求显示网络错误且 `a` 不得提交旧结果；提交新的请求序号 trace、网络错误分类断言和旧结果抑制测试作为新证据。命题边界：重试仅限给定可安全重放操作。
 - 通过标准：聚合输出、最终状态、取消/网络/业务/程序错误测试可复核；旧请求不能覆盖新结果。否决项：把取消展示成失败、允许非幂等 POST 自动重试或吞掉原拒绝。评估边界：不评估真实 HTTP 客户端库。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 
@@ -93,8 +93,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：JS-06](../chinese-guides/javascript-language-core.md#js-06)、[中文｜MDN JavaScript 模块](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)、[中文｜Node.js ECMAScript 模块](https://nodejs.cn/api/esm.html)。覆盖范围：浏览器与 Node.js 中 ESM 的静态结构、live binding、动态导入拒绝、循环初始化、强制扩展名、`type`/`exports`、ESM/CJS 互操作和单向模块边界；本地讲义提供与挑战固定依赖图一致的重构步骤。
-- 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文核心讲义：JS-06》《中文｜MDN JavaScript 模块》《中文｜Node.js ECMAScript 模块》，定位静态依赖、live binding、循环初始化、动态导入与导出边界；首考题 2（机制解释）：给定 `a.mjs↔b.mjs` 循环导入和失败的 `import('./missing.mjs')`，解释 live binding 与初始化顺序；首考题 3（最小产出）：固定 fixture 为 `a` 读取 `b.ready`、`b` 读取 `a.ready`、浏览器入口及组件包 `exports` 表；重构循环为单向依赖或动态导入，交付依赖图、重构代码、导出表、循环前后运行记录和动态导入 rejection 测试；首考题 4（受限排错）：给定异常“模块初始化读到 `undefined`，动态导入失败未显示”；只在循环依赖、顶层执行顺序、导出/错误边界三项中排查，提交最小复现、证伪日志、根因修复和构建回归；首考题 5（学习复述）：用 3 分钟比较 live binding 与复制值，回答动态导入失败在哪层处理。复测变式：仅删除动态导入分支的目标模块，保持 `a/b` 依赖图、动态导入调用和组件包 `exports` 表不变；预期 rejection 对用户可见且循环重构后的模块仍可运行；提交新的依赖图、失败 UI 和动态导入 rejection 测试作为新证据。命题边界：只评估 ES Modules；Node 文档仅用于本题所列互操作边界。
+- 学习资料：[中文主讲义：JS-06 ES Modules 与模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#js-06)、[中文｜MDN JavaScript 模块](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)。覆盖范围：独立主讲义从模块作用域和依赖图开始，讲清说明符解析、解析/实例化/求值、实时绑定、循环初始化、动态导入、顶层等待、副作用、tree shaking 边界、单向依赖和公共表面，再区分浏览器与 Node 的扩展名、`type`/`exports`、`import.meta` 和 ESM/CJS 互操作；头部只直接链接 JS-05。MDN 用于补充浏览器模块机制；Node 宿主差异已经由中文主讲义完整解释，不要求用户另读英文文档。
+- 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：JS-06 ES Modules 与模块边界》《中文｜MDN JavaScript 模块》，定位静态依赖、live binding、循环初始化、动态导入与导出边界；首考题 2（机制解释）：给定 `a.mjs↔b.mjs` 循环导入和失败的 `import('./missing.mjs')`，解释 live binding 与初始化顺序；首考题 3（最小产出）：固定 fixture 为 `a` 读取 `b.ready`、`b` 读取 `a.ready`、浏览器入口及组件包 `exports` 表；重构循环为单向依赖或动态导入，交付依赖图、重构代码、导出表、循环前后运行记录和动态导入 rejection 测试；首考题 4（受限排错）：给定异常“模块初始化读到 `undefined`，动态导入失败未显示”；只在循环依赖、顶层执行顺序、导出/错误边界三项中排查，提交最小复现、证伪日志、根因修复和构建回归；首考题 5（学习复述）：用 3 分钟比较 live binding 与复制值，回答动态导入失败在哪层处理。复测变式：仅删除动态导入分支的目标模块，保持 `a/b` 依赖图、动态导入调用和组件包 `exports` 表不变；预期 rejection 对用户可见且循环重构后的模块仍可运行；提交新的依赖图、失败 UI 和动态导入 rejection 测试作为新证据。命题边界：只评估 ES Modules；不要求另读未列出的 Node 英文文档。
 - 通过标准：依赖图、前后运行记录、动态导入失败测试和导出表可复核；可定位循环初始化问题并说明 ESM/CJS、tree-shaking、`exports` 边界。否决项：以延时或全局变量掩盖循环，或未处理动态导入拒绝。评估边界：不评估打包器私有实现。
 - 预计耗时：资料 90 分钟；练习 150 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
 

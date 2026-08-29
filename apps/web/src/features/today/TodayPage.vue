@@ -130,7 +130,7 @@ onMounted(load);
       </section>
 
       <section class="principle-strip">
-        <strong>这里没有泛化每日任务</strong><span>{{ workspace.principle }}</span><button @click="router.push('/plan')">查看紧凑核心路线</button>
+        <strong>这里没有泛化每日任务</strong><span>{{ workspace.principle }}</span><button @click="router.push('/plan')">查看求职优先路线</button>
       </section>
 
       <div class="workspace-grid">

@@ -1,15 +1,13 @@
 # JS-04 异步、Promise 与浏览器事件循环
 
-JavaScript 可以发起网络请求、等待定时器，也能在用户点击时响应事件，但普通页面脚本并不是把任意两段 JavaScript 同时放在主线程执行。理解异步的关键，是分清“当前调用栈怎样结束”“回调何时进入哪类队列”“Promise 怎样安排后续反应”以及“浏览器何时得到渲染机会”。
-
 ## JS-04
+
+JavaScript 可以发起网络请求、等待定时器，也能在用户点击时响应事件，但普通页面脚本并不是把任意两段 JavaScript 同时放在主线程执行。理解异步的关键，是分清“当前调用栈怎样结束”“回调何时进入哪类队列”“Promise 怎样安排后续反应”以及“浏览器何时得到渲染机会”。
 
 ### 学习前先确认
 
-- 不熟悉函数作为参数传递，先读 [PREJS-02 函数、参数、返回值与回调](../chinese-guides/javascript-functions-and-callbacks.md#prejs-02)。
-- 不清楚定时器为什么只是登记稍后执行，先读 [PREJS-04 定时器与稍后执行的回调](../chinese-guides/javascript-scheduled-callbacks.md#prejs-04)。
-- 不熟悉 Promise 的三个状态和 AbortSignal，先读 [PREJS-07 Promise 与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。
-- 若“函数调用进入栈、返回后离开”还不直观，可回看 [JS-01 的执行上下文与调用栈](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。
+- 直接前置：[PREJS-07 Promise、异步函数与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。它会继续链接 timer、回调、函数与变量基础。
+- 直接前置：[JS-01 的执行上下文与调用栈](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。
 
 ### 一、异步先把“等待”与“继续执行”分开
 
@@ -80,9 +78,13 @@ fetch('/api/profile')
 
 把 `.then` 回调写成花括号后忘记 `return`，下一步会收到 `undefined`；在链外启动 Promise 却不返回，也会让外层无法等待和统一处理错误。先画每个 `.then` 返回的新 Promise，很多“异步失踪”都会变清楚。
 
+没有返回、没有 `await`、也没有明确 `.catch` 的 Promise 常被称为脱离链条的工作。它拒绝时，宿主可能报告 `unhandledrejection`，但全局监听只能作为最后的观测和告警，不能替代调用边界上的处理责任。若业务确实要“发出后不等待”，也应显式说明谁记录失败、何时取消以及页面离开后是否允许继续。
+
 ### 四、async/await 改变写法，不改变调度模型
 
 调用 `async` 函数总会得到 Promise。执行到 `await expression` 时，表达式会按 Promise 语义处理；当前 async 函数暂停，把控制权还给调用者，待结果可用后，其后续作为微任务继续。
+
+即使表达式是普通值或已经兑现的 Promise，`await` 后面的代码也不会在当前同步栈中立刻继续，而会经过异步恢复。这个一致规则能避免“有缓存时同步、没缓存时异步”的时序分叉，也意味着在循环里对普通值反复 `await` 仍会产生调度边界。
 
 ```js
 async function loadProfile() {
@@ -109,7 +111,7 @@ const [userResponse, teamResponse] = await Promise.all([
 ]);
 ```
 
-是否并行发起要考虑服务端容量、浏览器连接、请求成本和错误策略，不能把 `Promise.all` 当成越多越快的开关。
+是否并行发起要考虑服务端容量、浏览器连接、请求成本和错误策略，不能把 `Promise.all` 当成越多越快的开关。它会在第一个输入拒绝时尽快拒绝自己的结果，却不会自动取消其他已启动操作；若要共同停止，需要这些操作共享可响应的取消协议。需要收集每一项成败时，应选择能表达该合同的组合方式，而不是用 `catch` 把所有失败悄悄改成成功值。
 
 ### 五、微任务连续产生会推迟任务和渲染
 
@@ -130,6 +132,8 @@ keepRunning();
 ### 六、事件循环并不等于业务并发控制
 
 浏览器主线程一次执行一段 JavaScript，与同时等待多少个网络请求是两个层次。若一次发起数百个请求，代码需要在应用层设置**并发限制（concurrency limit）**，保护服务端、网络和内存。这个限制器维护的是已启动但尚未完成的操作数量，而不是改变任务/微任务规则。
+
+并发限制必须控制“何时调用会启动工作的函数”。若先用 `items.map(item => fetch(item.url))` 创建数百个 Promise，再把这些 Promise 交给限制器，请求在 `map` 阶段已经启动，限制器只是在限制等待。可靠接口接收任务函数或输入项，在获得额度时才真正调用 API。
 
 应用层异步流程通常还要决定：结果是否保持输入顺序，单项失败是否终止整体，用户取消后是否停止未开始的工作，运行中的操作是否接受同一个 AbortSignal。它们是业务协议，不属于事件循环自动提供的保证。
 
@@ -169,6 +173,40 @@ Promise 的错误处理、重试和连续搜索状态会在 JS-05 继续展开�
 6. 对每个 Promise 标出它是谁返回的新 Promise，以及状态从哪里采用。
 
 开发者工具中的 Performance 录制可以验证任务块、长任务与渲染间隙，日志可以验证业务事件顺序。不要在生产逻辑里依赖多个同截止时间 timer 的偶然相对顺序；需要顺序时，应在程序中显式串联。
+
+### 十、Promise 解析不只是“保存一个值”
+
+当 `.then` 回调返回普通值时，下一个 Promise 兑现；返回 Promise 时，下一个 Promise 会等待并采用它的最终状态。更一般地，返回一个带可调用 `then` 属性的 thenable，也会进入解析过程。运行时需要防止一个 thenable 多次调用成功/失败回调、读取 `then` 时抛错，以及 Promise 试图采用自身而形成循环。
+
+这些细节解释了为什么“resolve 一个 Promise”不一定立即 fulfilled，也解释了跨库 thenable 能接入原生链。业务代码通常不应手写 thenable；但高级工程师需要知道 Promise assimilation 会执行外部对象的 `then`，它不是一次无副作用的字段复制。
+
+`.finally(cleanup)` 不接收成功值或失败原因，正常返回时保留原链状态；若 cleanup 抛错或返回拒绝 Promise，新失败会替代原结果。资源清理要尽量可靠，否则错误处理路径会被清理错误遮蔽。
+
+### 十一、await 会引入可重入边界
+
+`await` 前后的代码不属于同一段连续同步执行。暂停期间，事件、其他任务和微任务都可能修改共享状态；恢复时，之前读取的条件可能已经过期：
+
+```js
+async function saveDraft() {
+  const version = currentVersion;
+  const payload = collectDraft();
+  const result = await sendDraft(payload);
+  if (version !== currentVersion) return; // 恢复时重新验证
+  showSaved(result);
+}
+```
+
+这类问题不是多线程数据竞争，却具有相同的“检查后状态发生变化”特征。每个 `await` 都应被视为可能让出控制权的边界：恢复后重新验证版本、所有权、组件是否仍挂载和操作是否已取消。
+
+串行 `await` 适合有真实数据依赖的步骤；无依赖工作可以先启动后统一等待；数量无界时再加并发限制。正确顺序来自依赖图和业务合同，不来自把所有 `await` 删除或全部塞进 `Promise.all`。
+
+### 十二、任务来源与渲染不是简单轮转表
+
+教学图常画一个任务队列，但 HTML 运行模型区分不同任务来源，浏览器可在约束内选择可运行任务。稳定保证是一个任务运行到栈空、随后完成微任务检查点；不要依赖两个独立来源任务之间未被规范保证的偶然顺序。
+
+渲染也不是每清空一次微任务就必然发生。浏览器会根据刷新节奏、页面可见性和是否需要更新来决定渲染机会。`requestAnimationFrame` 回调位于渲染更新流程中，适合在下一次绘制前更新动画状态；它不是通用后台任务队列，后台标签页还可能被暂停或降频。
+
+MutationObserver 等 API 也与微任务检查点相关，但各自有交付规则。学习新异步 API 时，应查它把回调安排到哪个宿主阶段、是否批处理、能否取消，而不是把所有“稍后执行”都叫作 timer。
 
 ### 学完后的自我检验
 

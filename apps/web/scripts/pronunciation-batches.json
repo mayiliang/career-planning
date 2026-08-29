@@ -21,5 +21,11 @@
     "algorithm-input-size-and-growth.md",
     "javascript-collections-keys-membership.md",
     "browser-main-thread-messages-memory.md"
+  ],
+  "b03": [
+    "js-05-promise-errors-async-control-flow.md",
+    "js-06-es-modules-module-boundaries.md",
+    "ts-01-type-system-structural-strict-mode.md",
+    "ts-02-unions-narrowing-never-exhaustiveness.md"
   ]
 }

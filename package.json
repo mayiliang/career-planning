@@ -20,7 +20,7 @@
     "clean": "pnpm -r clean",
     "db:migrate": "pnpm --filter @career-atlas/server db:migrate",
     "db:generate": "pnpm --filter @career-atlas/server db:generate",
-    "content:check": "pnpm --filter @career-atlas/content-parser content:check && pnpm --filter @career-atlas/web pronunciation:check",
+    "content:check": "pnpm --filter @career-atlas/content-parser content:check && pnpm --filter @career-atlas/web materials:check && pnpm --filter @career-atlas/web pronunciation:check",
     "content:links": "pnpm --filter @career-atlas/content-parser content:links",
     "content:links:strict": "pnpm --filter @career-atlas/content-parser content:links:strict",
     "backup:create": "pnpm --filter @career-atlas/server backup:create",

@@ -140,6 +140,15 @@ const KnowledgeMaterialSchema = z.object({
   markdown: z.string(),
 });
 
+const MaterialReadingProgressSchema = z.object({
+  guide: z.string(),
+  anchor: z.string(),
+  progressPercent: z.number(),
+  completed: z.boolean(),
+  completedAt: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+});
+
 // 知识点列表响应 Schema
 const KnowledgeListResponseSchema = z.object({
   items: z.array(KnowledgePointListItemSchema),
@@ -1145,6 +1154,18 @@ export const apiClient = {
     return request(
       `/knowledge/materials/${encodeURIComponent(guide)}/${encodeURIComponent(anchor)}`,
       KnowledgeMaterialSchema,
+    );
+  },
+
+  async getMaterialReadingProgress() {
+    return request('/knowledge/material-progress', z.array(MaterialReadingProgressSchema));
+  },
+
+  async updateMaterialReadingProgress(guide: string, anchor: string, progressPercent: number) {
+    return request(
+      `/knowledge/materials/${encodeURIComponent(guide)}/${encodeURIComponent(anchor)}/progress`,
+      MaterialReadingProgressSchema,
+      { method: 'PATCH', body: JSON.stringify({ progressPercent }) },
     );
   },
 

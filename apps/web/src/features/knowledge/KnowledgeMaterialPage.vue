@@ -16,9 +16,14 @@ const readingProgress = ref(0);
 const tocOpen = ref(false);
 const copied = ref(false);
 const pronunciationFeedback = ref('');
+type MaterialReading = Awaited<ReturnType<typeof apiClient.getMaterialReadingProgress>>[number];
+const materialReadingByKey = ref<Record<string, MaterialReading>>({});
+const readingSaveFeedback = ref('');
 let headingObserver: IntersectionObserver | null = null;
 let pronunciationAudio: HTMLAudioElement | null = null;
 let activePronunciationButton: HTMLButtonElement | null = null;
+let readingSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingReadingSave: { guide: string; anchor: string; progressPercent: number } | null = null;
 
 interface PronunciationManifest {
   voice: { name: string; culture: string; rate: number };
@@ -27,8 +32,11 @@ interface PronunciationManifest {
 
 const pronunciationManifestPromises = new Map<string, Promise<PronunciationManifest>>();
 
-const headings = computed(() => extractMarkdownHeadings(material.value?.markdown ?? '')
-  .filter(({ level }, index) => index > 0 && level <= 4));
+const headings = computed(() => {
+  const candidates = extractMarkdownHeadings(material.value?.markdown ?? '')
+    .filter(({ level }, index) => index > 0 && level <= 4);
+  return candidates.length > 1 ? candidates : [];
+});
 const characterCount = computed(() => (material.value?.markdown ?? '').replace(/\s/g, '').length);
 const readingMinutes = computed(() => Math.max(1, Math.ceil(characterCount.value / 450)));
 const isBeginnerGuide = computed(() => material.value?.guide === 'beginner-prerequisites-and-glossary.md');
@@ -41,6 +49,10 @@ const scopedMainGuides = new Set([
   'cs-02-data-structures-algorithms-correctness.md',
   'cs-03-large-data-workers-incremental-memory.md',
   'js-04-async-promise-browser-event-loop.md',
+  'js-05-promise-errors-async-control-flow.md',
+  'js-06-es-modules-module-boundaries.md',
+  'ts-01-type-system-structural-strict-mode.md',
+  'ts-02-unions-narrowing-never-exhaustiveness.md',
 ]);
 const atomicPrerequisiteGuides = new Set([
   'javascript-variables-and-bindings.md',
@@ -79,12 +91,36 @@ const pronunciationBatchByGuide = new Map<string, string>([
     'javascript-collections-keys-membership.md',
     'browser-main-thread-messages-memory.md',
   ].map((guide) => [guide, 'b02'] as const),
+  ...[
+    'js-05-promise-errors-async-control-flow.md',
+    'js-06-es-modules-module-boundaries.md',
+    'ts-01-type-system-structural-strict-mode.md',
+    'ts-02-unions-narrowing-never-exhaustiveness.md',
+  ].map((guide) => [guide, 'b03'] as const),
 ]);
 const isScopedMainGuide = computed(() => scopedMainGuides.has(material.value?.guide ?? ''));
 const isAtomicPrerequisite = computed(() => atomicPrerequisiteGuides.has(material.value?.guide ?? ''));
 const usesLinkedPrerequisites = computed(() => isScopedMainGuide.value || isAtomicPrerequisite.value);
 const pronunciationBatch = computed(() => pronunciationBatchByGuide.get(material.value?.guide ?? '') ?? '');
 const hasPronunciations = computed(() => Boolean(pronunciationBatch.value));
+const tracksReadingProgress = computed(() => pronunciationBatchByGuide.has(material.value?.guide ?? ''));
+const currentReading = computed<MaterialReading>(() => {
+  const guide = material.value?.guide ?? '';
+  const anchor = material.value?.anchor ?? '';
+  return materialReadingByKey.value[`${guide}#${anchor}`] ?? {
+    guide,
+    anchor,
+    progressPercent: 0,
+    completed: false,
+    completedAt: null,
+    updatedAt: null,
+  };
+});
+const readingStateLabel = computed(() => currentReading.value.completed
+  ? '已看完'
+  : currentReading.value.progressPercent > 0
+    ? `已读 ${currentReading.value.progressPercent}%`
+    : '未读');
 const materialDescription = computed(() => isAtomicPrerequisite.value
   ? '这是一份只解释一个前置概念的短文。读懂后可按文末链接返回相关知识点，不会把多个领域术语混在一起。'
   : isScopedMainGuide.value
@@ -96,11 +132,17 @@ async function load() {
   loading.value = true;
   error.value = '';
   activeHeading.value = '';
+  readingSaveFeedback.value = '';
   try {
-    material.value = await apiClient.getKnowledgeMaterial(
-      String(route.params.guide ?? ''),
-      String(route.params.anchor ?? ''),
-    );
+    const guide = String(route.params.guide ?? '');
+    const anchor = String(route.params.anchor ?? '');
+    const [materialData, readingRecords] = await Promise.all([
+      apiClient.getKnowledgeMaterial(guide, anchor),
+      pronunciationBatchByGuide.has(guide) ? apiClient.getMaterialReadingProgress() : Promise.resolve([]),
+    ]);
+    materialReadingByKey.value = Object.fromEntries(readingRecords.map((record) => [`${record.guide}#${record.anchor}`, record]));
+    material.value = materialData;
+    readingProgress.value = materialReadingByKey.value[`${materialData.guide}#${materialData.anchor}`]?.progressPercent ?? 0;
   } catch (reason) {
     material.value = null;
     error.value = reason instanceof Error ? reason.message : '学习资料加载失败';
@@ -111,10 +153,83 @@ async function load() {
 
 function updateReadingProgress() {
   const root = readerRoot.value;
-  if (!root) return;
-  const start = root.getBoundingClientRect().top + window.scrollY;
-  const distance = Math.max(1, root.offsetHeight - window.innerHeight);
-  readingProgress.value = Math.min(100, Math.max(0, ((window.scrollY - start + 120) / distance) * 100));
+  const markdownRoot = root?.querySelector<HTMLElement>('.markdown-body');
+  if (!root || !markdownRoot) return;
+  const rect = markdownRoot.getBoundingClientRect();
+  const start = rect.top + window.scrollY;
+  const visibleBottom = window.scrollY + window.innerHeight;
+  const viewportCoverage = Math.min(100, Math.max(0, ((visibleBottom - start) / Math.max(1, rect.height)) * 100));
+  const nextProgress = Math.max(currentReading.value.progressPercent, Math.floor(viewportCoverage));
+  readingProgress.value = nextProgress;
+  scheduleReadingProgressSave(nextProgress);
+}
+
+function scheduleReadingProgressSave(progressPercent: number) {
+  if (!tracksReadingProgress.value || !material.value || currentReading.value.completed) return;
+  if (progressPercent <= currentReading.value.progressPercent) return;
+  pendingReadingSave = {
+    guide: material.value.guide,
+    anchor: material.value.anchor,
+    progressPercent: Math.max(pendingReadingSave?.progressPercent ?? 0, progressPercent),
+  };
+  if (readingSaveTimer) clearTimeout(readingSaveTimer);
+  if (pendingReadingSave.progressPercent > 80) {
+    void flushReadingProgressSave();
+    return;
+  }
+  readingSaveTimer = setTimeout(() => { void flushReadingProgressSave(); }, 650);
+}
+
+async function flushReadingProgressSave() {
+  if (readingSaveTimer) clearTimeout(readingSaveTimer);
+  readingSaveTimer = null;
+  const pending = pendingReadingSave;
+  pendingReadingSave = null;
+  if (!pending) return;
+  try {
+    const saved = await apiClient.updateMaterialReadingProgress(pending.guide, pending.anchor, pending.progressPercent);
+    materialReadingByKey.value = { ...materialReadingByKey.value, [`${saved.guide}#${saved.anchor}`]: saved };
+    readingProgress.value = Math.max(readingProgress.value, saved.progressPercent);
+    readingSaveFeedback.value = saved.completed ? '阅读超过 80%，已自动标记为看完' : `阅读进度已保存到 ${saved.progressPercent}%`;
+    decorateMaterialReadingStatuses();
+  } catch {
+    readingSaveFeedback.value = '阅读进度暂时没有保存，继续阅读时会重试';
+  }
+}
+
+function materialReadingFromHref(href: string): MaterialReading | null {
+  const match = href.match(/^\/knowledge\/materials\/([^/]+)\/([^/#?]+)/u);
+  if (!match?.[1] || !match[2]) return null;
+  try {
+    const guide = decodeURIComponent(match[1]);
+    const anchor = decodeURIComponent(match[2]).toLocaleLowerCase('en-US');
+    return materialReadingByKey.value[`${guide}#${anchor}`] ?? {
+      guide,
+      anchor,
+      progressPercent: 0,
+      completed: false,
+      completedAt: null,
+      updatedAt: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function decorateMaterialReadingStatuses() {
+  if (!tracksReadingProgress.value) return;
+  const markdownRoot = readerRoot.value?.querySelector<HTMLElement>('.markdown-body');
+  if (!markdownRoot) return;
+  for (const link of markdownRoot.querySelectorAll<HTMLAnchorElement>('a[href^="/knowledge/materials/"]')) {
+    const reading = materialReadingFromHref(link.getAttribute('href') ?? '');
+    if (!reading) continue;
+    link.querySelector('.material-reading-badge')?.remove();
+    const badge = document.createElement('span');
+    badge.className = 'material-reading-badge';
+    badge.dataset.state = reading.completed ? 'completed' : reading.progressPercent > 0 ? 'reading' : 'unread';
+    badge.textContent = reading.completed ? '已看完' : reading.progressPercent > 0 ? `${reading.progressPercent}%` : '未读';
+    link.append(badge);
+  }
 }
 
 function observeHeadings() {
@@ -253,6 +368,8 @@ function handleRendered() {
   const batch = pronunciationBatch.value;
   void nextTick(async () => {
     observeHeadings();
+    decorateMaterialReadingStatuses();
+    updateReadingProgress();
     if (hasPronunciations.value) {
       try {
         await decoratePronunciations(guide, batch);
@@ -304,6 +421,7 @@ onMounted(() => {
 });
 watch(() => [route.params.guide, route.params.anchor], load);
 onBeforeUnmount(() => {
+  void flushReadingProgressSave();
   headingObserver?.disconnect();
   pronunciationAudio?.pause();
   window.removeEventListener('scroll', updateReadingProgress);
@@ -336,6 +454,7 @@ onBeforeUnmount(() => {
           <div><dt>预计阅读</dt><dd>{{ readingMinutes }} 分钟</dd></div>
           <div><dt>正文规模</dt><dd>{{ characterCount.toLocaleString('zh-CN') }} 字</dd></div>
           <div><dt>内容定位</dt><dd>{{ materialKind }}</dd></div>
+          <div v-if="tracksReadingProgress" class="reading-state" :data-state="currentReading.completed ? 'completed' : currentReading.progressPercent > 0 ? 'reading' : 'unread'"><dt>阅读状态</dt><dd>{{ readingStateLabel }}</dd></div>
         </dl>
       </header>
 
@@ -364,10 +483,11 @@ onBeforeUnmount(() => {
           </div>
           <MarkdownRenderer class="reader-content" :source="material.markdown" @rendered="handleRendered" />
           <footer>
-            <span>你已读到本讲义末尾</span>
+            <span>{{ currentReading.completed ? '本资料已自动标记为看完' : '正文阅读超过 80% 后会自动标记为看完' }}</span>
             <button type="button" @click="router.back()">带着理解返回知识点 →</button>
           </footer>
           <span class="pronunciation-feedback" aria-live="polite">{{ pronunciationFeedback }}</span>
+          <span class="reading-save-feedback" aria-live="polite">{{ readingSaveFeedback }}</span>
         </article>
 
         <aside class="support-rail">
@@ -402,9 +522,9 @@ onBeforeUnmount(() => {
 .page-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.page-actions>div{display:flex;gap:8px}.page-actions button{padding:8px 11px;color:#385b4f;font-weight:750;background:rgba(255,255,255,.72);border:1px solid #d6e1db;border-radius:9px;cursor:pointer}.page-actions button:hover{border-color:#91b2a6;background:#fff}.back-link{border-color:transparent!important;background:transparent!important}
 .state-panel{padding:28px;border:1px solid #d7e0dc;border-radius:16px;background:#fff}.state-panel.error{color:#9b302b;background:#fff4f2}
 .material-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:30px;align-items:end;overflow:hidden;margin-bottom:18px;padding:34px 38px;border:1px solid #d6e3dc;border-radius:24px;background:linear-gradient(135deg,#f8fcfa 0%,#eef7f3 68%,#fff5ef 100%);box-shadow:0 18px 52px rgba(31,67,54,.08)}.material-hero::after{position:absolute;right:-70px;bottom:-100px;width:300px;height:300px;content:'';background:radial-gradient(circle,rgba(200,93,55,.12),transparent 68%);pointer-events:none}.material-hero>*{position:relative;z-index:1}.material-hero p{margin:0;color:#397664;font:800 .7rem ui-monospace;letter-spacing:.11em;text-transform:uppercase}.material-hero p span{color:#bd6a4c}.material-hero h1{max-width:920px;margin:9px 0 10px;font-size:clamp(1.85rem,3.7vw,3.4rem);line-height:1.12;letter-spacing:-.045em}.without-toc .material-hero h1{font-size:clamp(1.85rem,3vw,3rem)}.material-hero>div>span{display:block;max-width:760px;color:#60736b;line-height:1.7}.material-hero dl{display:grid;grid-template-columns:repeat(3,minmax(92px,1fr));gap:1px;margin:0;overflow:hidden;border:1px solid rgba(125,157,145,.25);border-radius:14px;background:rgba(125,157,145,.2)}.material-hero dl div{padding:13px 15px;background:rgba(255,255,255,.74)}.material-hero dt{color:#7a8983;font-size:.66rem}.material-hero dd{margin:5px 0 0;color:#274c40;font-size:.82rem;font-weight:800;white-space:nowrap}
-.reading-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}.reading-layout.has-toc{grid-template-columns:220px minmax(0,850px) 230px;justify-content:center}.toc-rail,.support-rail{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto}.toc-rail{padding:16px 0}.toc-rail>small,.support-rail small{display:block;margin-bottom:10px;color:#71827b;font:800 .66rem ui-monospace;letter-spacing:.1em;text-transform:uppercase}.toc-rail nav{display:grid;gap:3px;border-left:1px solid #d9e3de}.toc-rail button{width:100%;padding:7px 10px;color:#60726b;font-size:.75rem;line-height:1.4;text-align:left;background:transparent;border:0;border-left:2px solid transparent;cursor:pointer}.toc-rail button.level-4{padding-left:25px;font-size:.7rem}.toc-rail button:hover{color:#234f40}.toc-rail button.active{color:#0f664f;font-weight:800;background:linear-gradient(90deg,rgba(23,106,85,.09),transparent);border-left-color:#1d8064}
+.material-hero dl:has(.reading-state){grid-template-columns:repeat(4,minmax(92px,1fr))}.reading-state[data-state=completed] dd{color:#14704e}.reading-state[data-state=reading] dd{color:#8b5c1d}.reading-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}.reading-layout.has-toc{grid-template-columns:220px minmax(0,850px) 230px;justify-content:center}.toc-rail,.support-rail{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto}.toc-rail{padding:16px 0}.toc-rail>small,.support-rail small{display:block;margin-bottom:10px;color:#71827b;font:800 .66rem ui-monospace;letter-spacing:.1em;text-transform:uppercase}.toc-rail nav{display:grid;gap:3px;border-left:1px solid #d9e3de}.toc-rail button{width:100%;padding:7px 10px;color:#60726b;font-size:.75rem;line-height:1.4;text-align:left;background:transparent;border:0;border-left:2px solid transparent;cursor:pointer}.toc-rail button.level-4{padding-left:25px;font-size:.7rem}.toc-rail button:hover{color:#234f40}.toc-rail button.active{color:#0f664f;font-weight:800;background:linear-gradient(90deg,rgba(23,106,85,.09),transparent);border-left-color:#1d8064}
 .material-sheet{min-width:0;overflow:hidden;border:1px solid #d6e0da;border-radius:22px;background:var(--paper);box-shadow:0 20px 60px rgba(27,54,43,.09)}.sheet-note{display:flex;gap:10px;align-items:baseline;padding:15px 30px;color:#526c61;font-size:.75rem;line-height:1.55;background:#f1f7f4;border-bottom:1px solid #dce7e1}.sheet-note strong{flex:0 0 auto;color:#1c604d}.reader-content{padding:34px 42px 46px}.reader-content :deep(.markdown-body){font-size:1.02rem;line-height:1.9}.reader-content :deep(.markdown-body>h2:first-child){display:none}.reader-content :deep(h2),.reader-content :deep(h3),.reader-content :deep(h4){scroll-margin-top:90px}.reader-content :deep(h2){margin-top:2.2em;padding-top:.25em;border-top:1px solid #e3e9e5}.reader-content :deep(h3){position:relative;padding-left:.75rem}.reader-content :deep(h3)::before{position:absolute;top:.35em;bottom:.22em;left:0;width:3px;content:'';background:linear-gradient(#2c8068,#d27a59);border-radius:3px}.material-sheet>footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 30px;color:#6b7c75;font-size:.76rem;background:#f7faf8;border-top:1px solid #e0e7e3}.material-sheet>footer button{padding:9px 12px;color:#fff;font-weight:800;background:#245f4e;border:0;border-radius:9px;cursor:pointer}
-.reader-content :deep(.pronunciation-button){display:inline-grid;width:1.35rem;height:1.35rem;margin:0 .12rem;padding:0;place-items:center;vertical-align:.12rem;color:#8a4c38;background:linear-gradient(145deg,#fff8f1,#eef8f4);border:1px solid #d7e4dd;border-radius:999px;box-shadow:0 2px 7px rgba(44,86,70,.12);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}.reader-content :deep(.pronunciation-button span){font-size:.68rem;line-height:1}.reader-content :deep(.pronunciation-button:hover){background:linear-gradient(145deg,#fff0e5,#e4f5ed);box-shadow:0 3px 10px rgba(44,86,70,.2);transform:translateY(-1px) scale(1.06)}.reader-content :deep(.pronunciation-button:focus-visible){outline:2px solid #2c8068;outline-offset:2px}.reader-content :deep(.pronunciation-button.is-playing){background:#dff3e9;border-color:#62a58d;animation:pronunciation-pulse .62s ease-in-out infinite alternate}.reader-content :deep(.pronunciation-button.has-error){background:#fff0ed;border-color:#d98b78}.pronunciation-feedback{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.reader-content :deep(.pronunciation-button){display:inline-grid;width:1.35rem;height:1.35rem;margin:0 .12rem;padding:0;place-items:center;vertical-align:.12rem;color:#8a4c38;background:linear-gradient(145deg,#fff8f1,#eef8f4);border:1px solid #d7e4dd;border-radius:999px;box-shadow:0 2px 7px rgba(44,86,70,.12);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}.reader-content :deep(.pronunciation-button span){font-size:.68rem;line-height:1}.reader-content :deep(.pronunciation-button:hover){background:linear-gradient(145deg,#fff0e5,#e4f5ed);box-shadow:0 3px 10px rgba(44,86,70,.2);transform:translateY(-1px) scale(1.06)}.reader-content :deep(.pronunciation-button:focus-visible){outline:2px solid #2c8068;outline-offset:2px}.reader-content :deep(.pronunciation-button.is-playing){background:#dff3e9;border-color:#62a58d;animation:pronunciation-pulse .62s ease-in-out infinite alternate}.reader-content :deep(.pronunciation-button.has-error){background:#fff0ed;border-color:#d98b78}.reader-content :deep(.material-reading-badge){display:inline-block;margin-left:.38rem;padding:.08rem .38rem;color:#66766f;font-size:.6rem;font-weight:800;line-height:1.5;text-decoration:none;background:#f0f3f1;border:1px solid #dce4df;border-radius:999px;vertical-align:.08rem}.reader-content :deep(.material-reading-badge[data-state=reading]){color:#815a1e;background:#fff7dd;border-color:#eadba7}.reader-content :deep(.material-reading-badge[data-state=completed]){color:#176448;background:#e7f6ee;border-color:#bddfce}.pronunciation-feedback,.reading-save-feedback{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .support-rail{display:grid;gap:12px}.support-rail section{padding:15px;border:1px solid #dbe4df;border-radius:15px;background:rgba(255,255,255,.76)}.support-rail ol{margin:0;padding-left:1.2rem;color:#52665d;font-size:.76rem;line-height:1.7}.support-rail li+li{margin-top:6px}.support-rail p{margin:7px 0 0;color:#64766f;font-size:.75rem;line-height:1.65}.beginner-card{background:linear-gradient(145deg,#f2f8f5,#fff7f2)!important;border-color:#cfded7!important}.beginner-card strong{display:block;color:#254d40;font-size:.86rem}.beginner-card button{margin-top:12px;padding:0;color:#a94e31;font-weight:800;background:transparent;border:0;cursor:pointer}.mobile-toc-trigger{display:none}
 @media(max-width:1180px){.reading-layout{grid-template-columns:minmax(0,1fr)}.reading-layout.has-toc{grid-template-columns:190px minmax(0,1fr)}.support-rail{position:static;grid-column:1;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));max-height:none}.reading-layout.has-toc .support-rail{grid-column:2}.material-hero{grid-template-columns:1fr}.material-hero dl{width:max-content}}
 @media(max-width:800px){.material-page{width:min(100% - 22px,1460px);padding-top:12px}.page-actions{display:grid;grid-template-columns:1fr;align-items:start;gap:8px}.page-actions>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.page-actions button{width:100%;white-space:nowrap}.page-actions .back-link{width:max-content;padding-left:0}.material-hero{padding:25px 22px;border-radius:19px}.material-hero dl{width:100%;grid-template-columns:1fr}.reading-layout{display:block}.mobile-toc-trigger{display:block;width:100%;margin:0 0 10px;padding:11px;color:#315c4d;font-weight:800;background:#f3f8f5;border:1px solid #d7e2dc;border-radius:11px}.toc-rail{display:none;position:static;max-height:none;margin-bottom:10px;padding:10px 0;background:#fff;border:1px solid #dce5e0;border-radius:12px}.toc-open .toc-rail{display:block}.toc-rail>small{padding:0 12px}.support-rail{display:grid;grid-template-columns:1fr;margin-top:12px}.reader-content{padding:26px 21px 34px}.sheet-note{display:grid;padding:14px 20px}.material-sheet>footer{align-items:flex-start;flex-direction:column;padding:18px 20px}}

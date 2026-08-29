@@ -53,19 +53,49 @@ export const FRAMEWORK_ROUTE_CANDIDATES = [
 ] as const;
 
 /**
+ * 求职优先路线只把会阻塞框架理解的底座放在 React/Vue 之前。
+ * B01～B03 保留已经验证过的 JavaScript、复杂度、异步、模块与 TypeScript 主线；
+ * 再补语义化 Web 基础，避免先学完整个平台/安全体系才接触框架。
+ */
+const JOB_FIRST_FOUNDATION_CANDIDATES = [
+  'JS-01', 'JS-02', 'JS-03', 'JS-07',
+  'CS-01', 'CS-02', 'CS-03', 'JS-04',
+  'JS-05', 'JS-06',
+  'TS-01', 'TS-02', 'TS-03',
+  'WEB-01',
+] as const;
+
+/**
+ * 框架之后优先形成投递和面试可展示的工程证据：版本协作、构建、测试、
+ * 故障表达与代码评审。它们仍是知识点，不生成泛化的“面试周”占位任务。
+ */
+const JOB_INTERVIEW_EVIDENCE_CANDIDATES = [
+  'GIT-01', 'GIT-02', 'GIT-03', 'DEBUG-01',
+  'ENG-01', 'ENG-02', 'ENG-03', 'ENG-05',
+  'TEST-01', 'TEST-02', 'TEST-03',
+  'CAREER-01', 'CAREER-02', 'CAREER-04', 'CAREER-05',
+] as const;
+
+const EARLY_ROUTE_CODES = new Set<string>([
+  ...JOB_FIRST_FOUNDATION_CANDIDATES,
+  ...FRAMEWORK_ROUTE_CANDIDATES,
+  ...JOB_INTERVIEW_EVIDENCE_CANDIDATES,
+]);
+
+/**
  * 完整候选顺序用于知识图谱和分支编排；默认核心路线只纳入全员必修，
  * 加上同等优先的 React、Vue 与 Agent/MCP 主修轨，避免把其他专项误标成必修。
  */
 const COMPLETE_ROUTE_CANDIDATES = [
-  ...(KNOWLEDGE_PATHS[0] ?? []).filter((code) => code !== 'DEBUG-01'),
-  ...(KNOWLEDGE_PATHS[1] ?? []),
-  'IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02',
-  'GIT-01', 'GIT-02', 'GIT-03',
-  'DEBUG-01',
-  'NODE-01', 'NODE-02', 'NODE-04', 'NODE-03', 'API-01',
-  'ENG-01', 'ENG-02', 'ENG-03', 'ENG-04', 'ENG-05', 'TEST-01', 'TEST-02', 'TEST-03',
-  'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
+  ...JOB_FIRST_FOUNDATION_CANDIDATES,
   ...FRAMEWORK_ROUTE_CANDIDATES,
+  ...JOB_INTERVIEW_EVIDENCE_CANDIDATES,
+  ...(KNOWLEDGE_PATHS[0] ?? []).filter((code) => !EARLY_ROUTE_CODES.has(code)),
+  ...(KNOWLEDGE_PATHS[1] ?? []).filter((code) => !EARLY_ROUTE_CODES.has(code)),
+  'IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02',
+  'NODE-01', 'NODE-02', 'NODE-04', 'NODE-03', 'API-01',
+  'ENG-04',
+  'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
   'BIZ-01', 'BIZ-02', 'BIZ-03',
   ...(KNOWLEDGE_PATHS[3] ?? []),
   'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08', 'TEST-04',
@@ -86,7 +116,7 @@ const COMPLETE_ROUTE_CANDIDATES = [
   'AIDEV-04', 'AIDEV-06', 'AIDEV-07', 'AIDEV-08', 'AIDEV-09', 'AIDEV-10', 'AIDEV-11',
   ...(KNOWLEDGE_PATHS[17] ?? []).filter((code) => code !== 'EDITOR-01'),
   'ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'ARCH-05', 'LEAD-01', 'SUSTAIN-01',
-  ...(KNOWLEDGE_PATHS[9] ?? []),
+  ...(KNOWLEDGE_PATHS[9] ?? []).filter((code) => !EARLY_ROUTE_CODES.has(code)),
 ];
 
 const DOMAIN_CODE_BY_POINT = new Map(

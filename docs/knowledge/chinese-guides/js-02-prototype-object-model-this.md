@@ -6,10 +6,7 @@ JavaScript 对象看似简单：读取属性、调用方法、创建实例。困
 
 ### 学习前先确认
 
-- 必需：[对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)
-- 必需：[函数、参数、返回值与回调](../chinese-guides/javascript-functions-and-callbacks.md#prejs-02)
-- 阅读普通函数直接调用示例前：[严格模式](../chinese-guides/javascript-strict-mode.md#prejs-05)
-- 如果“箭头函数沿外层读取 `this`”难以理解，可回看 [JS-01 的词法环境](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)
+- 直接前置：[对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)。函数与变量基础已经由这份短文逐层链接，不在这里重复列出。
 
 原型链、构造调用和 `this` 绑定都在本讲从头解释。
 
@@ -101,6 +98,20 @@ console.log(user.describe()); // Ada
 
 这说明“方法从哪里找到”与“调用时 `this` 是谁”是两个步骤；后一个步骤形成**调用接收者绑定（this binding）**。把函数从对象上取出来会保留同一个函数值，却不保留点号左边的接收者：
 
+接收者不只影响普通方法，也影响原型上的 getter 和 setter。下面的 getter 定义在 `userMethods` 上，但读取 `user.label` 时，getter 内的 `this` 仍是最初发起读取的 `user`：
+
+```js
+Object.defineProperty(userMethods, 'label', {
+  get() {
+    return `用户：${this.name}`;
+  },
+});
+
+console.log(user.label); // 用户：Ada
+```
+
+这也是 `Reflect.get(target, key, receiver)` 和 `Reflect.set(target, key, value, receiver)` 提供 `receiver` 参数的原因：代理或转发层若擅自把接收者换成目标对象，原型访问器里的 `this` 就会改变，透明转发也随之失真。
+
 ```js
 'use strict';
 
@@ -111,6 +122,8 @@ describe(); // this 是 undefined，读取 this.name 会抛错
 函数没有把 `user` 永久记在自己身上。`this` 也不是由函数写在什么对象里决定；对普通函数来说，主要由这一次如何调用决定。
 
 ### 六种常见调用形式
+
+本节会比较普通调用在严格与非严格代码中的差异；需要时就近打开 [PREJS-05 严格模式](../chinese-guides/javascript-strict-mode.md#prejs-05)。理解箭头函数的外层 `this` 时若卡住，再回看 [JS-01 的词法环境](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。这些是对应小节的补充，不是整篇讲义的重复硬前置。
 
 #### 1. 普通调用
 
@@ -145,6 +158,8 @@ console.log(boundGreet('!'));
 ```
 
 绑定函数还具有被 `new` 调用、`length`、`name` 等规范行为。下面这种教学实现只说明普通调用和参数拼接，不是完整替代品：
+
+若绑定函数被 `new` 调用，构造调用创建的新实例会成为 `this`，`bind` 时提供的 `thisArg` 会被忽略；预设参数仍会排在构造参数之前。也就是说，显式绑定能固定普通调用的接收者，却不能把构造实例替换成绑定对象。判断优先级时应先识别“是否由 `new` 构造”，再讨论普通调用中的绑定。
 
 ```js
 function simpleBind(fn, thisArg, ...preset) {

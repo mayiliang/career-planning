@@ -6,10 +6,8 @@
 
 ### 学习前先确认
 
-- 必需：[函数、参数、返回值与回调](../chinese-guides/javascript-functions-and-callbacks.md#prejs-02)
-- 必需：[对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)
-- 必需：[JS-03 的对象身份与引用图](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)
-- 读资源清理前：[异常、try/catch 与 finally](../chinese-guides/javascript-exceptions-and-finally.md#prejs-06)
+- 直接前置：[属性描述符与对象不变量](../chinese-guides/javascript-property-descriptors.md#prejs-08)。它会继续链接对象身份、属性和函数基础。
+- 直接前置：[异常、try/catch 与 finally](../chinese-guides/javascript-exceptions-and-finally.md#prejs-06)。
 
 异步迭代一节还会使用 Promise 和取消信号；不熟悉时到该节再打开 [Promise、异步函数与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。Proxy 不变量一节会链接一份单独的[属性描述符](../chinese-guides/javascript-property-descriptors.md#prejs-08)短文。无需在开始前一次读完它们。
 
@@ -128,6 +126,8 @@ for (const line of readLines(openFile)) {
 
 如果没有关闭协议，消费者虽然停止读取，文件、游标、锁或监听器却可能继续占用。资源型迭代器不能只实现“正常读到 done”这条路径。
 
+还要避免把“调用生成器的 `return()`”误解成必然一步到达 `done: true`。若生成器在 `finally` 中再次 `yield`，这次关闭请求可以先返回 `done: false`，生成器仍暂停在清理块中；只调用一次 `return()` 的消费者不会替你继续推进。依赖自动关闭释放资源时，不应在负责清理的 `finally` 中产出新值，关闭协议也应测试返回结果是否真的完成。
+
 手写迭代器可以显式实现 `return()`：
 
 ```js
@@ -219,6 +219,8 @@ for await (const page of pages(loadPage, controller.signal)) {
 
 `break` 会请求关闭异步迭代器，使生成器执行 `finally`。但正在进行的底层请求是否真正停止，仍取决于 `loadPage` 是否使用同一个 `AbortSignal`。迭代器关闭、网络取消和资源释放是相互配合的三层协议，不能只实现其中一层。
 
+`for await...of` 也可以消费同步可迭代对象。语言会为同步迭代器建立异步适配，并等待每个迭代结果里的 `value`；因此一个同步迭代器若产出 Promise，循环变量拿到的是兑现值，而不是原 Promise。这种便利也意味着每一步都会经过异步等待，不能把它与普通 `for...of` 的同步时序和开销视为相同。
+
 异步迭代也要考虑背压：消费者一次等待一项，生产者通常不应无限提前拉取。如果设计了预取，应明确最大并发、缓冲区和取消后如何处理已开始的工作。
 
 ### Symbol 为协议提供不易冲突的键
@@ -257,6 +259,10 @@ const proxy = new Proxy(target, {
 ```
 
 Proxy 常用于观察、校验、虚拟化或兼容层。它不是普通对象的另一种语法，也不是通用状态管理方案。每个陷阱都会进入关键访问路径，错误的返回值、递归访问和身份变化都可能产生难以定位的问题。
+
+代理与目标还是两个不同身份：`proxy !== target`，以目标为键的 Map/WeakMap 也不会自动命中代理。若系统有缓存、去重、私有状态或所有权表，必须规定边界上保存哪一种身份。类私有字段和许多依赖内部槽的内建对象也不会因为代理转发属性就把代理当成原目标。
+
+需要明确撤销代理能力时可使用 `Proxy.revocable`，撤销后代理上的操作会抛错。它适合表达临时授权或生命周期边界，但撤销不会自动清理目标、监听器和外部资源；这些仍需由应用自己的关闭协议负责。
 
 ### Reflect 帮助表达默认内部操作
 

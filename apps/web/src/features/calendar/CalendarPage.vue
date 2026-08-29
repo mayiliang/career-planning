@@ -55,7 +55,14 @@ function toggleAll() {
 }
 function weekTheme(items: KnowledgePointListItem[]) {
   const domains = [...new Set(items.map((item) => item.domainTitle))];
-  return domains.slice(0, 2).join(' × ') + (domains.length > 2 ? ` 等 ${domains.length} 个领域` : '');
+  const codes = items.map((item) => item.code);
+  const stage = codes.some((code) => code.startsWith('REACT-') || code.startsWith('VUE-'))
+    ? 'React / Vue 求职主线'
+    : codes.some((code) => /^(?:GIT|ENG|TEST|CAREER)-/.test(code))
+      ? '工程与面试证据'
+      : '';
+  const domainLabel = domains.slice(0, 2).join(' × ') + (domains.length > 2 ? ` 等 ${domains.length} 个领域` : '');
+  return stage ? `${stage} · ${domainLabel}` : domainLabel;
 }
 function stateLabel(item: KnowledgePointListItem) {
   return item.learningState === 'LEARNED' ? `已学完 · M${item.masteryLevel}`
@@ -68,10 +75,10 @@ onMounted(load);
 <template>
   <div class="route-reference">
     <header class="route-hero">
-      <div class="hero-copy"><p>COMPACT CORE ROUTE · {{ routeBatchCount }} BATCHES</p><h1>从初级前端，到 AI 时代的高级工程师</h1><span>{{ stats.total }} 个主干知识点被组织成连续批次。批次只表达可靠的学习顺序，不绑定自然周，也不会用“赶进度”替代真正掌握。</span><div class="hero-actions"><button type="button" class="primary" @click="router.push('/')">继续当前学习 <span>→</span></button><button type="button" @click="router.push('/knowledge')">查看完整知识清单</button></div></div>
+      <div class="hero-copy"><p>JOB-FIRST CORE ROUTE · {{ routeBatchCount }} BATCHES</p><h1>先建立面试竞争力，再走向高级工程师</h1><span>{{ stats.total }} 个主干知识点按求职优先重新排序：保留框架真正需要的 JavaScript、TypeScript 前置，随后尽早进入 React、Vue、工程化、测试和项目表达；安全、AI 与架构能力继续层层递进。</span><div class="hero-actions"><button type="button" class="primary" @click="router.push('/')">继续当前学习 <span>→</span></button><button type="button" @click="router.push('/knowledge')">查看完整知识清单</button></div></div>
       <aside aria-label="核心路线完成情况"><div class="route-orbit" :style="{ '--progress': `${completionPercent * 3.6}deg` }"><div><strong>{{ completionPercent }}%</strong><span>主干完成度</span></div></div><dl><div><dt>当前批次</dt><dd>B{{ String(activeBatch).padStart(2, '0') }}</dd></div><div><dt>已学完</dt><dd>{{ stats.learned }} / {{ stats.total }}</dd></div><div><dt>M3+ 掌握</dt><dd>{{ stats.mastered }}</dd></div></dl></aside>
     </header>
-    <section class="route-principles"><strong><small>ROUTE CONTRACT</small>这条路线如何使用</strong><span><b>主干优先，但不删除选择。</b>全员必修与 React、Vue、Agent/MCP 默认主修进入主线；{{ stats.optional }} 个专项选修仍在完整知识清单中。</span><span><b>逐点学习，证据验收。</b>每个条目都连接中文资料、站内练习与掌握挑战；是否掌握由明确交付物和验证证据决定。</span></section>
+    <section class="route-principles"><strong><small>ROUTE CONTRACT</small>这条路线如何使用</strong><span><b>求职优先，但不制造知识断层。</b>先学框架不可缺少的底座，B04 起进入 React/Vue；{{ stats.optional }} 个专项选修仍保留在完整知识清单中。</span><span><b>用真实工程证据准备面试。</b>框架之后紧接 Git、构建、测试和项目表达；学习完成与 M3+ 掌握仍分别记录。</span></section>
     <section class="route-stats" aria-label="路线统计"><div><small>CORE</small><strong>{{ stats.total }}</strong><span>主干知识点</span></div><div><small>DONE</small><strong>{{ stats.learned }}</strong><span>已学完</span></div><div><small>MASTERED</small><strong>{{ stats.mastered }}</strong><span>M3+ 已掌握</span></div><div><small>OPTIONAL</small><strong>{{ stats.optional }}</strong><span>专项路线知识点</span></div></section>
     <section class="route-toolbar"><label class="route-search"><span>在核心路线中查找</span><div><i aria-hidden="true">⌕</i><input v-model="search" type="search" placeholder="主干知识点、编号或领域"></div></label><div><span>当前显示 {{ visiblePointCount }} 个知识点</span><button type="button" @click="toggleAll">{{ expandedWeeks.size === weeks.length ? '全部收起' : '全部展开' }}</button></div></section>
     <div v-if="loading" class="state">正在整理路线参考…</div><div v-else-if="error" class="state error">{{ error }}</div>

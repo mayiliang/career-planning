@@ -61,7 +61,7 @@ const routes = [
     path: '/plan',
     name: 'Plan',
     component: () => import('@/features/calendar/CalendarPage.vue'),
-    meta: { title: '紧凑核心路线' },
+    meta: { title: '求职优先核心路线' },
   },
   {
     path: '/notes',
