@@ -32,7 +32,7 @@ function directPrerequisites(markdown, guideName) {
     problems.push(`${guideName}：直接前置列表存在重复链接`);
   }
   for (const prerequisite of prerequisites) {
-    if (!guideSet.has(prerequisite)) problems.push(`${guideName}：直接前置 ${prerequisite} 超出 B01～B03 资料范围`);
+    if (!guideSet.has(prerequisite)) problems.push(`${guideName}：直接前置 ${prerequisite} 超出 B01～B35 资料范围`);
     if (prerequisite === guideName) problems.push(`${guideName}：不能把自己列为前置`);
   }
   return [...new Set(prerequisites)];
@@ -41,7 +41,7 @@ function directPrerequisites(markdown, guideName) {
 for (const guideName of guideNames) {
   const markdown = readFileSync(join(guideRoot, guideName), 'utf8');
   const compactLength = markdown.replace(/\s/g, '').length;
-  const isMainGuide = /^(?:js|ts|cs)-\d{2}-/i.test(guideName);
+  const isMainGuide = /^(?:js|ts|cs|web|react|vue|git|debug|eng|test|career|a11y|browser|net|sec|identity|privacy|node|aidev|biz|render|data|realtime|comp|ux|linux|docker|deploy|obs|perf|h5|mcp|aiprod|aisafe|aigov|aiapp|aiui|agent|compat|arch|lead)-\d{2}-/i.test(guideName);
   const minimum = isMainGuide ? 5_000 : 1_200;
   if (compactLength < minimum) {
     problems.push(`${guideName}：正文仅 ${compactLength} 字符，低于${isMainGuide ? '主讲义' : '前置短文'}深度门槛 ${minimum}`);
@@ -77,10 +77,10 @@ for (const guideName of guideNames) {
 }
 
 if (problems.length) {
-  console.error('B01～B03 学习资料结构检查失败：');
+  console.error('B01～B35 学习资料结构检查失败：');
   for (const problem of [...new Set(problems)]) console.error(`- ${problem}`);
   process.exit(1);
 }
 
 const edgeCount = [...graph.values()].reduce((sum, prerequisites) => sum + prerequisites.length, 0);
-console.log(`B01～B03 学习资料结构检查通过：${guideNames.length} 份资料，${edgeCount} 条直接前置，无环且无传递性重复。`);
+console.log(`B01～B35 学习资料结构检查通过：${guideNames.length} 份资料，${edgeCount} 条直接前置，无环且无传递性重复。`);

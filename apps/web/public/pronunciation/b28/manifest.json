@@ -1,0 +1,97 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "aisafe-01-output-validation-content-safety-guardrails.md",
+    "aisafe-02-threat-modeling-red-teaming-abuse-defense.md",
+    "aigov-01-data-model-change-audit-accountability.md",
+    "aiapp-01-model-interface-instructions-context-boundaries.md",
+    "aiapp-02-streaming-sse-incremental-rendering.md"
+  ],
+  "terms": {
+    "accountability": {
+      "file": "03939fbeaa4a9d85.wav",
+      "text": "Accountability"
+    },
+    "backpressure": {
+      "file": "6a06ac7024efc018.wav",
+      "text": "Backpressure"
+    },
+    "capability negotiation": {
+      "file": "223e530b64e44af2.wav",
+      "text": "Capability Negotiation"
+    },
+    "content credentials": {
+      "file": "48edf81a996f74c0.wav",
+      "text": "Content Credentials"
+    },
+    "context window": {
+      "file": "6764434518d37f01.wav",
+      "text": "Context Window"
+    },
+    "data lineage": {
+      "file": "380fb1b24da835b4.wav",
+      "text": "Data Lineage"
+    },
+    "defense in depth": {
+      "file": "1d6f51021c1e1b07.wav",
+      "text": "Defense in Depth"
+    },
+    "excessive agency": {
+      "file": "d2d4336d0ae42e11.wav",
+      "text": "Excessive Agency"
+    },
+    "fail closed": {
+      "file": "a6769f97ea7eb540.wav",
+      "text": "Fail Closed"
+    },
+    "guardrail": {
+      "file": "2f0a9e4fec74e596.wav",
+      "text": "Guardrail"
+    },
+    "incremental rendering": {
+      "file": "eac86404299cdc8b.wav",
+      "text": "Incremental Rendering"
+    },
+    "kill switch": {
+      "file": "7a969d01863ff55a.wav",
+      "text": "Kill Switch"
+    },
+    "model card": {
+      "file": "ce5e2b4dda7404eb.wav",
+      "text": "Model Card"
+    },
+    "output validation": {
+      "file": "931815b4bd27fefb.wav",
+      "text": "Output Validation"
+    },
+    "prompt asset": {
+      "file": "861edeb96171e3fd.wav",
+      "text": "Prompt Asset"
+    },
+    "prompt injection": {
+      "file": "3173623593e219d7.wav",
+      "text": "Prompt Injection"
+    },
+    "provider adapter": {
+      "file": "e6cdab8d20d530ce.wav",
+      "text": "Provider Adapter"
+    },
+    "server-sent events": {
+      "file": "f589f41e7262c1da.wav",
+      "text": "Server-Sent Events"
+    },
+    "threat modeling": {
+      "file": "f021a140fa74f3d1.wav",
+      "text": "Threat Modeling"
+    },
+    "time to first token": {
+      "file": "3ff9f8f2ecc1f925.wav",
+      "text": "Time to First Token"
+    }
+  }
+}

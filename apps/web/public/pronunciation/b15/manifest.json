@@ -1,0 +1,56 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "sec-04-cross-origin-isolation-embedding-permissions.md",
+    "sec-03-webauthn-passkeys-authentication.md",
+    "sec-05-web-crypto-key-lifecycle.md",
+    "ts-04-mapped-utility-template-literal-types.md"
+  ],
+  "terms": {
+    "aes-gcm": {
+      "file": "836a17b0446f9c5e.wav",
+      "text": "AES-GCM"
+    },
+    "challenge": {
+      "file": "2dd00bd77e0222ce.wav",
+      "text": "Challenge"
+    },
+    "cryptographic envelope": {
+      "file": "cd35ba48d8ffebfb.wav",
+      "text": "Cryptographic Envelope"
+    },
+    "cryptokey": {
+      "file": "2b41e07e61d5915f.wav",
+      "text": "CryptoKey"
+    },
+    "mapped type": {
+      "file": "b1a780be7767e7df.wav",
+      "text": "Mapped Type"
+    },
+    "passkey": {
+      "file": "4b949c1309045061.wav",
+      "text": "Passkey"
+    },
+    "permissions policy": {
+      "file": "7040aacf787da8bf.wav",
+      "text": "Permissions Policy"
+    },
+    "relying party": {
+      "file": "aeb0388497c8c3d3.wav",
+      "text": "Relying Party"
+    },
+    "template literal type": {
+      "file": "dd0a17059e83147e.wav",
+      "text": "Template Literal Type"
+    },
+    "web authentication": {
+      "file": "08228665281c65bf.wav",
+      "text": "Web Authentication"
+    }
+  }
+}

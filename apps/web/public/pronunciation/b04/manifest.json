@@ -1,0 +1,121 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "ts-03-generics-constraints-keyof-indexed-access.md",
+    "web-01-html-semantics-forms-accessibility.md",
+    "react-01-render-purity-state-snapshot.md",
+    "vue-01-vite-sfc-project-structure.md",
+    "vue-02-ref-reactive-computed-boundaries.md"
+  ],
+  "terms": {
+    "accessibility tree": {
+      "file": "c003f76881dfe9e6.wav",
+      "text": "accessibility tree"
+    },
+    "accessible description": {
+      "file": "6caeff685f09a7df.wav",
+      "text": "accessible description"
+    },
+    "accessible name": {
+      "file": "17296f529646faec.wav",
+      "text": "accessible name"
+    },
+    "batching": {
+      "file": "8224dd5d5f8f3db2.wav",
+      "text": "batching"
+    },
+    "commit phase": {
+      "file": "ef53927d08dacaa6.wav",
+      "text": "commit phase"
+    },
+    "component purity": {
+      "file": "5de9cf15f2b9de55.wav",
+      "text": "component purity"
+    },
+    "computed property": {
+      "file": "571469644d70f25c.wav",
+      "text": "computed property"
+    },
+    "dependency pre-bundling": {
+      "file": "4e2f4a14f24c91f6.wav",
+      "text": "dependency pre-bundling"
+    },
+    "dependency tracking": {
+      "file": "dd5795a7909bc843.wav",
+      "text": "dependency tracking"
+    },
+    "environment variable": {
+      "file": "9489846378282357.wav",
+      "text": "environment variable"
+    },
+    "focus loop": {
+      "file": "aa3969d28dede614.wav",
+      "text": "focus loop"
+    },
+    "focus management": {
+      "file": "b5d69c42c4e9efd1.wav",
+      "text": "focus management"
+    },
+    "generic constraint": {
+      "file": "0420be13bcbf2536.wav",
+      "text": "generic constraint"
+    },
+    "generics": {
+      "file": "0908675d690a4278.wav",
+      "text": "generics"
+    },
+    "hot module replacement": {
+      "file": "721bae641373633e.wav",
+      "text": "hot module replacement"
+    },
+    "indexed access type": {
+      "file": "a919f30595ee058d.wav",
+      "text": "indexed access type"
+    },
+    "keyof operator": {
+      "file": "9ea68039b2ec9664.wav",
+      "text": "keyof operator"
+    },
+    "native semantics first": {
+      "file": "c7f3c81d114c345a.wav",
+      "text": "native semantics first"
+    },
+    "production build": {
+      "file": "ac5acd12ed5352a1.wav",
+      "text": "production build"
+    },
+    "proxy": {
+      "file": "1241936d4dd3aad6.wav",
+      "text": "proxy"
+    },
+    "render phase": {
+      "file": "7390df961a9c6587.wav",
+      "text": "render phase"
+    },
+    "shallow reactivity": {
+      "file": "958316db0743a398.wav",
+      "text": "shallow reactivity"
+    },
+    "single-file component": {
+      "file": "7ee45bbe33e454a1.wav",
+      "text": "single-file component"
+    },
+    "state snapshot": {
+      "file": "11bd0b627bee4e94.wav",
+      "text": "state snapshot"
+    },
+    "trigger": {
+      "file": "683259feabbf5eb3.wav",
+      "text": "trigger"
+    },
+    "type inference": {
+      "file": "421538364c200eb2.wav",
+      "text": "type inference"
+    }
+  }
+}

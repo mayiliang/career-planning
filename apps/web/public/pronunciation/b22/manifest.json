@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "data-01-server-state-cache-keys-invalidation-deduplication.md",
+    "data-02-optimistic-updates-conflicts-offline-mutations.md",
+    "realtime-01-sse-websocket-webtransport-reliability.md",
+    "comp-01-component-responsibility-api-composition.md"
+  ],
+  "terms": {
+    "backpressure": {
+      "file": "6a06ac7024efc018.wav",
+      "text": "Backpressure"
+    },
+    "cache invalidation": {
+      "file": "d3d1b3f8d3576615.wav",
+      "text": "Cache Invalidation"
+    },
+    "component contract": {
+      "file": "5d9c27499a24997d.wav",
+      "text": "Component Contract"
+    },
+    "composition": {
+      "file": "730d725c8a59d3a7.wav",
+      "text": "Composition"
+    },
+    "conflict resolution": {
+      "file": "284c622fae433459.wav",
+      "text": "Conflict Resolution"
+    },
+    "escape hatch": {
+      "file": "189d31b588392ad6.wav",
+      "text": "Escape Hatch"
+    },
+    "idempotency key": {
+      "file": "8a3f6aee00f005cd.wav",
+      "text": "Idempotency Key"
+    },
+    "optimistic update": {
+      "file": "5754d7b712bdd395.wav",
+      "text": "Optimistic Update"
+    },
+    "outbox": {
+      "file": "7772189a259534b2.wav",
+      "text": "Outbox"
+    },
+    "query key": {
+      "file": "55b7b94dc0769e18.wav",
+      "text": "Query Key"
+    },
+    "semantic variant": {
+      "file": "e481aee4fc8803fe.wav",
+      "text": "Semantic Variant"
+    },
+    "server sent events": {
+      "file": "d908e0944e8ce678.wav",
+      "text": "Server Sent Events"
+    },
+    "server state": {
+      "file": "914b2780464926d9.wav",
+      "text": "Server State"
+    },
+    "stale time": {
+      "file": "e00ae27ad848eee0.wav",
+      "text": "Stale Time"
+    },
+    "websocket": {
+      "file": "7ce54cbababdd648.wav",
+      "text": "WebSocket"
+    },
+    "webtransport": {
+      "file": "fe0a486142ce853d.wav",
+      "text": "WebTransport"
+    }
+  }
+}

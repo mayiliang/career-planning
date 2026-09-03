@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "comp-02-controlled-uncontrolled-state-imperative.md",
+    "ux-01-interaction-states-usability-validation.md",
+    "eng-08-software-supply-chain-sbom-provenance.md",
+    "linux-01-filesystem-permissions-safe-commands.md"
+  ],
+  "terms": {
+    "artifact attestation": {
+      "file": "9a149304bb22ee19.wav",
+      "text": "Artifact Attestation"
+    },
+    "controlled component": {
+      "file": "40257da5fcb476ec.wav",
+      "text": "Controlled Component"
+    },
+    "filesystem hierarchy": {
+      "file": "0ea08bcbd0b93aa6.wav",
+      "text": "Filesystem Hierarchy"
+    },
+    "imperative handle": {
+      "file": "661a79381f5449e8.wav",
+      "text": "Imperative Handle"
+    },
+    "information architecture": {
+      "file": "a53708a8a9ae121e.wav",
+      "text": "Information Architecture"
+    },
+    "interaction design": {
+      "file": "3c61f99530dc2ecf.wav",
+      "text": "Interaction Design"
+    },
+    "permission bits": {
+      "file": "fdb338d480c48efb.wav",
+      "text": "Permission Bits"
+    },
+    "progressive disclosure": {
+      "file": "6da46646b127888c.wav",
+      "text": "Progressive Disclosure"
+    },
+    "provenance": {
+      "file": "96d815328a42cb4e.wav",
+      "text": "Provenance"
+    },
+    "single source of truth": {
+      "file": "664669247e13abc2.wav",
+      "text": "Single Source of Truth"
+    },
+    "slsa": {
+      "file": "a2492840045afb23.wav",
+      "text": "SLSA"
+    },
+    "software bill of materials": {
+      "file": "b9f436d832701075.wav",
+      "text": "Software Bill of Materials"
+    },
+    "symbolic link": {
+      "file": "5a0a9e195d052bf0.wav",
+      "text": "Symbolic Link"
+    },
+    "umask": {
+      "file": "7417f3919c25b2d9.wav",
+      "text": "Umask"
+    },
+    "uncontrolled component": {
+      "file": "addb6470bbd0412c.wav",
+      "text": "Uncontrolled Component"
+    },
+    "usability testing": {
+      "file": "70a3490242c69147.wav",
+      "text": "Usability Testing"
+    }
+  }
+}

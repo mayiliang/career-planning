@@ -1,0 +1,96 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "react-02-component-boundaries-data-flow-composition.md",
+    "vue-03-template-directives-events-forms.md",
+    "vue-04-typed-components-slots-model-teleport.md",
+    "react-03-state-model-derived-controlled.md"
+  ],
+  "terms": {
+    "component event": {
+      "file": "554e8677fe0bcfe8.wav",
+      "text": "component event"
+    },
+    "composition": {
+      "file": "730d725c8a59d3a7.wav",
+      "text": "composition"
+    },
+    "controlled component": {
+      "file": "40257da5fcb476ec.wav",
+      "text": "controlled component"
+    },
+    "controlled pattern": {
+      "file": "fc6a22a1de92a4b7.wav",
+      "text": "controlled pattern"
+    },
+    "derived state": {
+      "file": "49265ea9e8548426.wav",
+      "text": "derived state"
+    },
+    "directive": {
+      "file": "16bdd7451e20a9b0.wav",
+      "text": "directive"
+    },
+    "event modifier": {
+      "file": "7404d574d477125c.wav",
+      "text": "event modifier"
+    },
+    "form binding": {
+      "file": "94e9368ce774354e.wav",
+      "text": "form binding"
+    },
+    "input method editor": {
+      "file": "1752cab0e7421a75.wav",
+      "text": "input method editor"
+    },
+    "lifting state up": {
+      "file": "7ea6c03beb123419.wav",
+      "text": "lifting state up"
+    },
+    "one-way data flow": {
+      "file": "c0407c568ed924a8.wav",
+      "text": "one-way data flow"
+    },
+    "property input": {
+      "file": "8253e211257870a8.wav",
+      "text": "property input"
+    },
+    "render prop": {
+      "file": "e1960f4c29bd7639.wav",
+      "text": "render prop"
+    },
+    "scoped slot": {
+      "file": "50c529ff56e520e7.wav",
+      "text": "scoped slot"
+    },
+    "slot": {
+      "file": "6558838331b742a6.wav",
+      "text": "slot"
+    },
+    "state normalization": {
+      "file": "0b57d38660a56495.wav",
+      "text": "state normalization"
+    },
+    "state ownership": {
+      "file": "dfd892ad9e7ceb39.wav",
+      "text": "state ownership"
+    },
+    "teleport": {
+      "file": "e99f7ff1ebb40a91.wav",
+      "text": "Teleport"
+    },
+    "template syntax": {
+      "file": "a5734dfc287a098f.wav",
+      "text": "template syntax"
+    },
+    "two-way binding protocol": {
+      "file": "4c2864b5b571c6d3.wav",
+      "text": "two-way binding protocol"
+    }
+  }
+}

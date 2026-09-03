@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "aiapp-03-structured-output-schema-validation.md",
+    "aiapp-04-tool-calling-execution-result-ui.md",
+    "aiapp-05-generative-ui-view-model-host-safety.md",
+    "aiui-01-agent-ui-protocol-interoperability.md"
+  ],
+  "terms": {
+    "capability matrix": {
+      "file": "eb92341736203e17.wav",
+      "text": "Capability Matrix"
+    },
+    "component registry": {
+      "file": "cb2312c4cff12f1a.wav",
+      "text": "Component Registry"
+    },
+    "event protocol": {
+      "file": "1e850ee63101f5bc.wav",
+      "text": "Event Protocol"
+    },
+    "generative ui": {
+      "file": "6dfad1aae3db2663.wav",
+      "text": "Generative UI"
+    },
+    "graceful degradation": {
+      "file": "c57207bd6fa789df.wav",
+      "text": "Graceful Degradation"
+    },
+    "host boundary": {
+      "file": "2dbb505c80394bb0.wav",
+      "text": "Host Boundary"
+    },
+    "idempotency key": {
+      "file": "8a3f6aee00f005cd.wav",
+      "text": "Idempotency Key"
+    },
+    "protocol adapter": {
+      "file": "f93169dc7a2df2dc.wav",
+      "text": "Protocol Adapter"
+    },
+    "repair budget": {
+      "file": "9dbbd8e53db41db8.wav",
+      "text": "Repair Budget"
+    },
+    "runtime schema": {
+      "file": "ec565d4f3241eb46.wav",
+      "text": "Runtime Schema"
+    },
+    "semantic validation": {
+      "file": "f0d794bff6adaca9.wav",
+      "text": "Semantic Validation"
+    },
+    "side effect": {
+      "file": "7106fc2760fbbc51.wav",
+      "text": "Side Effect"
+    },
+    "structured output": {
+      "file": "976f65320fdbb2f6.wav",
+      "text": "Structured Output"
+    },
+    "tool calling": {
+      "file": "20eeaee3de70dbdf.wav",
+      "text": "Tool Calling"
+    },
+    "unknown outcome": {
+      "file": "fb13906fcbe458c5.wav",
+      "text": "Unknown Outcome"
+    },
+    "view model": {
+      "file": "944121e6a14d71f8.wav",
+      "text": "View Model"
+    }
+  }
+}

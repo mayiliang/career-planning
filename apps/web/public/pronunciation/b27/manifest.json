@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "h5-02-scroll-soft-keyboard-pointer-gestures.md",
+    "mcp-01-server-tools-resources-prompts-schema.md",
+    "aiprod-01-ai-task-model-selection-value-validation.md",
+    "aiprod-02-high-risk-automation-human-in-the-loop.md"
+  ],
+  "terms": {
+    "baseline": {
+      "file": "8ba8496a2525ae17.wav",
+      "text": "Baseline"
+    },
+    "four eyes principle": {
+      "file": "156f12d05d698d9e.wav",
+      "text": "Four Eyes Principle"
+    },
+    "guardrail metric": {
+      "file": "963ba49aaf1001ea.wav",
+      "text": "Guardrail Metric"
+    },
+    "human in the loop": {
+      "file": "f48b4ff85cbb5107.wav",
+      "text": "Human in the Loop"
+    },
+    "human override": {
+      "file": "ef1f3bc1ace2b379.wav",
+      "text": "Human Override"
+    },
+    "model context protocol": {
+      "file": "9c5da690faad4836.wav",
+      "text": "Model Context Protocol"
+    },
+    "passive listener": {
+      "file": "c4caf650d701410e.wav",
+      "text": "Passive Listener"
+    },
+    "pointer capture": {
+      "file": "44a4472774087fe8.wav",
+      "text": "Pointer Capture"
+    },
+    "pointer events": {
+      "file": "f81297bb9a2bd2ac.wav",
+      "text": "Pointer Events"
+    },
+    "problem solution fit": {
+      "file": "953b6b37816a1c3f.wav",
+      "text": "Problem Solution Fit"
+    },
+    "prompt": {
+      "file": "cf07194ee232eb53.wav",
+      "text": "Prompt"
+    },
+    "resource": {
+      "file": "5de95319f17467ed.wav",
+      "text": "Resource"
+    },
+    "reversibility": {
+      "file": "c4c74fe06e5725b2.wav",
+      "text": "Reversibility"
+    },
+    "scroll chaining": {
+      "file": "62f45b96f7213bb8.wav",
+      "text": "Scroll Chaining"
+    },
+    "stop criterion": {
+      "file": "f46d01424e6a5fcf.wav",
+      "text": "Stop Criterion"
+    },
+    "tool": {
+      "file": "7c9bbe5ec9b3fb77.wav",
+      "text": "Tool"
+    }
+  }
+}

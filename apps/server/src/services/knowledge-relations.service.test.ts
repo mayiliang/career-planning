@@ -95,13 +95,35 @@ describe('知识关系与求职优先核心路线编排', () => {
     expect(relationKeys.has('GIT-01->GIT-02')).toBe(true);
     expect(relationKeys.has('GIT-02->DEBUG-01')).toBe(false);
     expect(relationKeys.has('MCP-01->AGENT-08')).toBe(true);
+    expect(relationKeys.has('AGENT-01->AGENT-09')).toBe(true);
+    expect(relationKeys.has('OBS-01->AGENT-09')).toBe(true);
     expect(relationKeys.has('A11Y-01->UX-01')).toBe(true);
     expect(relationKeys.has('ENG-04->ENG-07')).toBe(false);
     expect(relationKeys.has('ENG-02->ENG-07')).toBe(true);
     expect(relationKeys.has('CS-02->CS-03')).toBe(true);
     expect(relationKeys.has('SEC-04->WEBAGENT-01')).toBe(true);
-    expect(relationKeys.has('AIAPP-01->AIAPP-12')).toBe(true);
+    expect(relationKeys.has('AIAPP-01->AIAPP-12')).toBe(false);
+    expect(relationKeys.has('AIAPP-02->AIAPP-12')).toBe(true);
+    expect(relationKeys.has('IDENTITY-01->AIAPP-12')).toBe(true);
+    expect(relationKeys.has('PRIVACY-01->AIAPP-12')).toBe(false);
     expect(relationKeys.has('AIAPP-12->AIAPP-13')).toBe(true);
+    expect(relationKeys.has('IDENTITY-01->AIAPP-13')).toBe(false);
+    expect(relationKeys.has('PRIVACY-01->AIAPP-13')).toBe(false);
+    expect(relationKeys.has('AIAPP-04->AIAPP-05')).toBe(true);
+    expect(relationKeys.has('SEC-04->AIAPP-05')).toBe(true);
+    expect(relationKeys.has('AIAPP-05->AIUI-01')).toBe(true);
+    expect(relationKeys.has('AIAPP-02->AIUI-01')).toBe(true);
+    expect(relationKeys.has('AIAPP-01->AIAPP-06')).toBe(true);
+    expect(relationKeys.has('PRIVACY-01->AIAPP-06')).toBe(false);
+    expect(relationKeys.has('AIPROD-01->AIAPP-08')).toBe(true);
+    expect(relationKeys.has('OBS-01->AIAPP-08')).toBe(true);
+    expect(relationKeys.has('AIAPP-01->AIAPP-09')).toBe(true);
+    expect(relationKeys.has('NET-01->AIAPP-09')).toBe(true);
+    expect(relationKeys.has('AIAPP-02->AIAPP-10')).toBe(true);
+    expect(relationKeys.has('AGENT-03->AGENT-04')).toBe(true);
+    expect(relationKeys.has('MCP-01->AGENT-04')).toBe(false);
+    expect(relationKeys.has('AGENT-03->AGENT-05')).toBe(false);
+    expect(relationKeys.has('AGENT-03->AGENT-06')).toBe(false);
     expect(relationKeys.has('AGENT-07->AGENT-11')).toBe(true);
     expect(relationKeys.has('WEBAI-03->WEBAI-11')).toBe(false);
     expect(relationKeys.has('PWA-01->PWA-02')).toBe(true);
@@ -113,7 +135,56 @@ describe('知识关系与求职优先核心路线编排', () => {
     expect(relationKeys.has('MEDIA-02->AIAPP-11')).toBe(true);
     expect(relationKeys.has('WASM-01->WEBAI-03')).toBe(true);
     expect(relationKeys.has('AIDEV-03->AIDEV-11')).toBe(true);
+    expect(relationKeys.has('AIDEV-01->AIDEV-02')).toBe(true);
+    expect(relationKeys.has('AIDEV-01->AIDEV-03')).toBe(true);
+    expect(relationKeys.has('AIDEV-03->AIDEV-04')).toBe(true);
+    expect(relationKeys.has('CAREER-05->AIDEV-04')).toBe(true);
+    expect(relationKeys.has('AIDEV-03->AIDEV-07')).toBe(true);
+    expect(relationKeys.has('ENG-08->AIDEV-07')).toBe(true);
+    expect(relationKeys.has('ENG-05->AIDEV-03')).toBe(false);
+    expect(relationKeys.has('JS-04->NODE-01')).toBe(true);
+    expect(relationKeys.has('NODE-01->NODE-02')).toBe(true);
+    expect(relationKeys.has('JS-05->NODE-02')).toBe(true);
     expect(relationKeys.has('NODE-02->NODE-04')).toBe(true);
+    expect(relationKeys.has('NODE-01->NODE-04')).toBe(false);
+    expect(relationKeys.has('BIZ-01->BIZ-02')).toBe(true);
+    expect(relationKeys.has('TS-02->BIZ-02')).toBe(true);
+    expect(relationKeys.has('BIZ-01->BIZ-03')).toBe(true);
+    expect(relationKeys.has('TS-07->BIZ-04')).toBe(true);
+    expect(relationKeys.has('BIZ-04->BIZ-05')).toBe(true);
+    expect(relationKeys.has('JS-05->BIZ-06')).toBe(true);
+    expect(relationKeys.has('BIZ-04->BIZ-07')).toBe(true);
+    expect(relationKeys.has('ENG-05->BIZ-08')).toBe(true);
+    expect(relationKeys.has('TEST-01->TEST-04')).toBe(true);
+    expect(relationKeys.has('A11Y-01->COMP-01')).toBe(true);
+    expect(relationKeys.has('COMP-01->COMP-02')).toBe(true);
+    expect(relationKeys.has('BIZ-02->UX-01')).toBe(true);
+    expect(relationKeys.has('BIZ-07->DATA-02')).toBe(true);
+    expect(relationKeys.has('BIZ-07->REALTIME-01')).toBe(true);
+    expect(relationKeys.has('LINUX-01->LINUX-02')).toBe(true);
+    expect(relationKeys.has('LINUX-01->LINUX-03')).toBe(true);
+    expect(relationKeys.has('LINUX-01->LINUX-04')).toBe(true);
+    expect(relationKeys.has('LINUX-01->DOCKER-01')).toBe(true);
+    expect(relationKeys.has('LINUX-02->DOCKER-02')).toBe(true);
+    expect(relationKeys.has('LINUX-02->DEPLOY-01')).toBe(true);
+    expect(relationKeys.has('ENG-06->OBS-01')).toBe(true);
+    expect(relationKeys.has('OBS-01->PERF-01')).toBe(true);
+    expect(relationKeys.has('PERF-01->PERF-02')).toBe(true);
+    expect(relationKeys.has('PERF-01->PERF-03')).toBe(true);
+    expect(relationKeys.has('BROWSER-02->PERF-04')).toBe(true);
+    expect(relationKeys.has('WEB-02->H5-01')).toBe(true);
+    expect(relationKeys.has('H5-01->H5-02')).toBe(true);
+    expect(relationKeys.has('TS-07->MCP-01')).toBe(false);
+    expect(relationKeys.has('BIZ-07->MCP-01')).toBe(true);
+    expect(relationKeys.has('BIZ-08->AIPROD-01')).toBe(true);
+    expect(relationKeys.has('AIPROD-01->AIPROD-02')).toBe(true);
+    expect(relationKeys.has('UX-01->AIPROD-02')).toBe(true);
+    expect(relationKeys.has('SEC-01->AISAFE-01')).toBe(true);
+    expect(relationKeys.has('AISAFE-01->AISAFE-02')).toBe(true);
+    expect(relationKeys.has('AIPROD-02->AIGOV-01')).toBe(true);
+    expect(relationKeys.has('PRIVACY-02->AIGOV-01')).toBe(true);
+    expect(relationKeys.has('AIPROD-01->AIAPP-01')).toBe(true);
+    expect(relationKeys.has('NET-01->AIAPP-02')).toBe(true);
     expect(relationKeys.has('SEC-04->EMBED-01')).toBe(true);
     expect(relationKeys.has('PWA-01->LOCALFIRST-01')).toBe(false);
     expect(relationKeys.has('API-01->API-02')).toBe(true);
@@ -137,7 +208,33 @@ describe('知识关系与求职优先核心路线编排', () => {
     expect(relationKeys.has('VUE-05->VUE-06')).toBe(true);
     expect(relationKeys.has('VUE-02->VUE-08')).toBe(true);
     expect(relationKeys.has('VUE-07->VUE-11')).toBe(true);
+    expect(relationKeys.has('WEB-01->BROWSER-01')).toBe(true);
+    expect(relationKeys.has('BROWSER-01->NET-01')).toBe(true);
+    expect(relationKeys.has('NET-01->SEC-01')).toBe(true);
+    expect(relationKeys.has('SEC-01->SEC-02')).toBe(true);
+    expect(relationKeys.has('SEC-02->SEC-04')).toBe(true);
+    expect(relationKeys.has('SEC-01->IDENTITY-01')).toBe(true);
+    expect(relationKeys.has('IDENTITY-01->IDENTITY-02')).toBe(true);
+    expect(relationKeys.has('PRIVACY-01->PRIVACY-02')).toBe(true);
+    expect(relationKeys.has('WEB-01->WEB-05')).toBe(false);
+    expect(relationKeys.has('BROWSER-01->SEC-04')).toBe(false);
+    expect(relationKeys.has('TS-03->TS-04')).toBe(true);
+    expect(relationKeys.has('TS-03->TS-05')).toBe(true);
+    expect(relationKeys.has('TS-03->TS-06')).toBe(true);
+    expect(relationKeys.has('TS-02->TS-07')).toBe(true);
+    expect(relationKeys.has('TS-07->TS-08')).toBe(true);
+    expect(relationKeys.has('TS-01->TS-09')).toBe(true);
+    expect(relationKeys.has('ENG-03->TS-09')).toBe(true);
     expect(relationKeys.has('ARCH-04->ARCH-05')).toBe(true);
+    expect(relationKeys.has('TEST-03->COMPAT-01')).toBe(true);
+    expect(relationKeys.has('WEB-03->COMPAT-01')).toBe(true);
+    expect(relationKeys.has('BIZ-08->ARCH-01')).toBe(true);
+    expect(relationKeys.has('OBS-01->ARCH-01')).toBe(true);
+    expect(relationKeys.has('ARCH-01->ARCH-02')).toBe(true);
+    expect(relationKeys.has('ARCH-02->ARCH-03')).toBe(true);
+    expect(relationKeys.has('ARCH-01->ARCH-04')).toBe(true);
+    expect(relationKeys.has('ARCH-03->ARCH-05')).toBe(true);
+    expect(relationKeys.has('ARCH-02->LEAD-01')).toBe(true);
     expect(relationKeys.has('WEB-01->EDITOR-01')).toBe(true);
     expect(relationKeys.has('AGENT-09->AGENT-10')).toBe(false);
   });
@@ -187,6 +284,42 @@ describe('知识关系与求职优先核心路线编排', () => {
       }
     }
     expect(visited, '硬前置关系中存在循环依赖').toBe(codes.length);
+  });
+
+  it('B29～B32 只声明直接前置，不重复列出可递归到达的间接前置', () => {
+    const scopedTargets = new Set([
+      'AIAPP-03', 'AIAPP-04', 'AIAPP-05', 'AIUI-01',
+      'AIAPP-06', 'AIAPP-07', 'AIAPP-08', 'AIAPP-09',
+      'AIAPP-10', 'AIAPP-12', 'AIAPP-13', 'AGENT-01',
+      'AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07',
+    ]);
+    const prerequisites = buildRelationDefinitions().filter((item) => item.type === 'PREREQUISITE');
+    const adjacency = new Map<string, string[]>();
+    for (const relation of prerequisites) {
+      const targets = adjacency.get(relation.source) ?? [];
+      targets.push(relation.target);
+      adjacency.set(relation.source, targets);
+    }
+
+    const hasAlternativePath = (source: string, target: string) => {
+      const queue = (adjacency.get(source) ?? []).filter((next) => next !== target);
+      const visited = new Set<string>();
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (current === target) return true;
+        if (visited.has(current)) continue;
+        visited.add(current);
+        queue.push(...(adjacency.get(current) ?? []));
+      }
+      return false;
+    };
+
+    for (const relation of prerequisites.filter((item) => scopedTargets.has(item.target))) {
+      expect(
+        hasAlternativePath(relation.source, relation.target),
+        `${relation.source}->${relation.target} 是可由其他直接前置递归到达的重复边`,
+      ).toBe(false);
+    }
   });
 
   it('所有跨批次前置知识都排在依赖知识之前', () => {

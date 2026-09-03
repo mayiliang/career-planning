@@ -1,0 +1,97 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "agent-03-mcp-transport-stateless-state-versioning.md",
+    "agent-04-mcp-client-discovery-compatibility.md",
+    "agent-05-human-in-the-loop-risk-approval.md",
+    "agent-06-tasks-long-running-recovery-idempotency.md",
+    "agent-07-multi-agent-coordination-context-isolation.md"
+  ],
+  "terms": {
+    "approval token": {
+      "file": "562668881eddd7a4.wav",
+      "text": "Approval Token"
+    },
+    "cache scope": {
+      "file": "a986144506649a26.wav",
+      "text": "Cache Scope"
+    },
+    "capability negotiation": {
+      "file": "223e530b64e44af2.wav",
+      "text": "Capability Negotiation"
+    },
+    "compatibility adapter": {
+      "file": "9abed2a1a02f745d.wav",
+      "text": "Compatibility Adapter"
+    },
+    "conflict arbitration": {
+      "file": "3f81e813d592a8d7.wav",
+      "text": "Conflict Arbitration"
+    },
+    "context isolation": {
+      "file": "1d5e852d90464eaf.wav",
+      "text": "Context Isolation"
+    },
+    "cooperative cancellation": {
+      "file": "a971aa6d87c2c855.wav",
+      "text": "Cooperative Cancellation"
+    },
+    "explicit handle": {
+      "file": "3218c811adcdcc7c.wav",
+      "text": "Explicit Handle"
+    },
+    "human in the loop": {
+      "file": "f48b4ff85cbb5107.wav",
+      "text": "Human in the Loop"
+    },
+    "idempotency key": {
+      "file": "8a3f6aee00f005cd.wav",
+      "text": "Idempotency Key"
+    },
+    "long-running task": {
+      "file": "f2bf09ad938b86b0.wav",
+      "text": "Long-Running Task"
+    },
+    "multi-agent system": {
+      "file": "62b251cd4e17183f.wav",
+      "text": "Multi-Agent System"
+    },
+    "multi-round-trip request": {
+      "file": "888c96a1cf452b61.wav",
+      "text": "Multi-Round-Trip Request"
+    },
+    "risk tier": {
+      "file": "5bb87d96644d3856.wav",
+      "text": "Risk Tier"
+    },
+    "scope of authorization": {
+      "file": "87280f6e5c0a9504.wav",
+      "text": "Scope of Authorization"
+    },
+    "service discovery": {
+      "file": "07eda4f8c0e8b199.wav",
+      "text": "Service Discovery"
+    },
+    "stateless protocol": {
+      "file": "8995b20ddea8d9c9.wav",
+      "text": "Stateless Protocol"
+    },
+    "streamable http": {
+      "file": "74e67d84ad09eff7.wav",
+      "text": "Streamable HTTP"
+    },
+    "task envelope": {
+      "file": "3618c1d1d73a3285.wav",
+      "text": "Task Envelope"
+    },
+    "task handle": {
+      "file": "7a55b929f94a919d.wav",
+      "text": "Task Handle"
+    }
+  }
+}

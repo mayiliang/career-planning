@@ -1,0 +1,48 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "web-05-web-components-shadow-dom-interoperability.md",
+    "net-01-browser-network-fetch-reliability.md",
+    "sec-01-xss-csrf-trust-boundaries.md",
+    "sec-02-csp-trusted-types-reporting.md"
+  ],
+  "terms": {
+    "nonce": {
+      "file": "78377b525757b494.wav",
+      "text": "Nonce"
+    },
+    "shadow dom": {
+      "file": "aa6c1570010aa4a3.wav",
+      "text": "Shadow DOM"
+    },
+    "singleflight": {
+      "file": "b54223b66181efb9.wav",
+      "text": "Singleflight"
+    },
+    "threat model": {
+      "file": "d292a62567f67220.wav",
+      "text": "Threat Model"
+    },
+    "trust boundary": {
+      "file": "0c983266f8307390.wav",
+      "text": "Trust Boundary"
+    },
+    "trusted types": {
+      "file": "be49875b36656615.wav",
+      "text": "Trusted Types"
+    },
+    "upgrade": {
+      "file": "7fef9479c8bc5a3c.wav",
+      "text": "Upgrade"
+    },
+    "web components": {
+      "file": "4462ce8986035340.wav",
+      "text": "Web Components"
+    }
+  }
+}

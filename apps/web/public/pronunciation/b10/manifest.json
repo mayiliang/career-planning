@@ -1,0 +1,84 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "eng-01-module-graph-build-output-source-maps.md",
+    "eng-02-dev-production-environments-assets-cache.md",
+    "eng-03-dependencies-lockfile-workspaces-peer.md",
+    "eng-05-quality-gates-lint-types-tests-ci.md"
+  ],
+  "terms": {
+    "atomic deployment": {
+      "file": "0922ac6db609cb0f.wav",
+      "text": "atomic deployment"
+    },
+    "bundling": {
+      "file": "3797d3d963dd86ac.wav",
+      "text": "bundling"
+    },
+    "chunk": {
+      "file": "6c87f68371b28954.wav",
+      "text": "chunk"
+    },
+    "continuous integration": {
+      "file": "02f53fd47961035f.wav",
+      "text": "continuous integration"
+    },
+    "formatting": {
+      "file": "6c7aa935c55c6724.wav",
+      "text": "formatting"
+    },
+    "hot module replacement": {
+      "file": "721bae641373633e.wav",
+      "text": "hot module replacement"
+    },
+    "lint": {
+      "file": "da966368ea663ea5.wav",
+      "text": "lint"
+    },
+    "lockfile": {
+      "file": "d6f5483103ee386e.wav",
+      "text": "lockfile"
+    },
+    "manifest": {
+      "file": "05b3abf2579a5eb6.wav",
+      "text": "manifest"
+    },
+    "module graph": {
+      "file": "8da23d7d57439dfd.wav",
+      "text": "module graph"
+    },
+    "peer dependency": {
+      "file": "4ec1cbc0972856c1.wav",
+      "text": "peer dependency"
+    },
+    "phantom dependency": {
+      "file": "4a807ff70e8537f4.wav",
+      "text": "phantom dependency"
+    },
+    "semantic versioning": {
+      "file": "74baa68f217dab64.wav",
+      "text": "semantic versioning"
+    },
+    "source map": {
+      "file": "a53cb7b2cd9ae3de.wav",
+      "text": "source map"
+    },
+    "tree-shaking": {
+      "file": "72e1629aaba5e6ed.wav",
+      "text": "tree-shaking"
+    },
+    "type checking": {
+      "file": "f554304bc7bef783.wav",
+      "text": "type checking"
+    },
+    "workspace": {
+      "file": "21a3230e03772a58.wav",
+      "text": "workspace"
+    }
+  }
+}

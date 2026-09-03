@@ -1,0 +1,97 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "biz-03-rbac-abac-data-permissions.md",
+    "biz-04-api-contract-dto-frontend-model.md",
+    "biz-05-form-table-detail-state-consistency.md",
+    "biz-06-async-jobs-import-export-progress.md",
+    "biz-07-errors-idempotency-eventual-consistency.md"
+  ],
+  "terms": {
+    "anti corruption layer": {
+      "file": "f18e8444334587fe.wav",
+      "text": "Anti Corruption Layer"
+    },
+    "api contract": {
+      "file": "7bf80414eb7648ce.wav",
+      "text": "API Contract"
+    },
+    "attribute based access control": {
+      "file": "7e36ab275fafc0d0.wav",
+      "text": "Attribute Based Access Control"
+    },
+    "baseline": {
+      "file": "8ba8496a2525ae17.wav",
+      "text": "Baseline"
+    },
+    "cancellation": {
+      "file": "80812d7992dd498c.wav",
+      "text": "Cancellation"
+    },
+    "compatibility": {
+      "file": "fa528d3adef61d19.wav",
+      "text": "Compatibility"
+    },
+    "compensation": {
+      "file": "b66ecab57861b722.wav",
+      "text": "Compensation"
+    },
+    "conditional request": {
+      "file": "58bef71c42159d6d.wav",
+      "text": "Conditional Request"
+    },
+    "data transfer object": {
+      "file": "656998b42c9c2e57.wav",
+      "text": "Data Transfer Object"
+    },
+    "deny by default": {
+      "file": "f8c13f9454927172.wav",
+      "text": "Deny by Default"
+    },
+    "dirty state": {
+      "file": "9f7b69847ed44d34.wav",
+      "text": "Dirty State"
+    },
+    "draft": {
+      "file": "7743ce348d9284d6.wav",
+      "text": "Draft"
+    },
+    "eventual consistency": {
+      "file": "f7a085bb86bb332f.wav",
+      "text": "Eventual Consistency"
+    },
+    "idempotency key": {
+      "file": "8a3f6aee00f005cd.wav",
+      "text": "Idempotency Key"
+    },
+    "long running operation": {
+      "file": "8125e0693bbc27a1.wav",
+      "text": "Long Running Operation"
+    },
+    "optimistic concurrency control": {
+      "file": "db5df9c03b8526eb.wav",
+      "text": "Optimistic Concurrency Control"
+    },
+    "policy decision point": {
+      "file": "63f43bcc5199630f.wav",
+      "text": "Policy Decision Point"
+    },
+    "polling": {
+      "file": "34fcd7b19518d43e.wav",
+      "text": "Polling"
+    },
+    "push": {
+      "file": "d107ea3629c32671.wav",
+      "text": "Push"
+    },
+    "role based access control": {
+      "file": "1b0bde278cb33095.wav",
+      "text": "Role Based Access Control"
+    }
+  }
+}

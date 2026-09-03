@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "agent-08-tool-contract-schema-discoverability.md",
+    "agent-09-observability-read-only-replay.md",
+    "agent-10-identity-authorization-runtime-isolation.md",
+    "aidev-04-ai-code-review-risk-evidence.md"
+  ],
+  "terms": {
+    "audience binding": {
+      "file": "437a03f9fd505aee.wav",
+      "text": "Audience Binding"
+    },
+    "capability discovery": {
+      "file": "66c339fdc734af0d.wav",
+      "text": "Capability Discovery"
+    },
+    "context propagation": {
+      "file": "40c5abe06841e84e.wav",
+      "text": "Context Propagation"
+    },
+    "data minimization": {
+      "file": "bbaf7a09ee7c66c9.wav",
+      "text": "Data Minimization"
+    },
+    "delegated authority": {
+      "file": "2a0342053f32207b.wav",
+      "text": "Delegated Authority"
+    },
+    "distributed trace": {
+      "file": "f72a1fb222d1885c.wav",
+      "text": "Distributed Trace"
+    },
+    "human accountability": {
+      "file": "14488f632975a7f4.wav",
+      "text": "Human Accountability"
+    },
+    "json schema": {
+      "file": "f67bec99ccebee1b.wav",
+      "text": "JSON Schema"
+    },
+    "least privilege": {
+      "file": "5b9cc3a4da689a7c.wav",
+      "text": "Least Privilege"
+    },
+    "read-only replay": {
+      "file": "68e3660c8f3af2ff.wav",
+      "text": "Read-Only Replay"
+    },
+    "review hypothesis": {
+      "file": "d1af21abcbe605f9.wav",
+      "text": "Review Hypothesis"
+    },
+    "risk severity": {
+      "file": "d4ea0ba44aac5a63.wav",
+      "text": "Risk Severity"
+    },
+    "runtime isolation": {
+      "file": "47a4fbfd8979d2fc.wav",
+      "text": "Runtime Isolation"
+    },
+    "structured content": {
+      "file": "890c52038b6a9b24.wav",
+      "text": "Structured Content"
+    },
+    "tool contract": {
+      "file": "41b8acf99510e5b2.wav",
+      "text": "Tool Contract"
+    },
+    "trigger path": {
+      "file": "52948bbfc48a4a5c.wav",
+      "text": "Trigger Path"
+    }
+  }
+}

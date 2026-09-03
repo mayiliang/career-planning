@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "perf-02-network-resource-loading-cache-optimization.md",
+    "perf-03-main-thread-rendering-long-tasks-inp.md",
+    "perf-04-memory-listeners-resource-leaks.md",
+    "h5-01-viewport-responsive-safe-area-orientation.md"
+  ],
+  "terms": {
+    "back forward cache": {
+      "file": "0a1a3f70753ca2f5.wav",
+      "text": "Back Forward Cache"
+    },
+    "critical rendering path": {
+      "file": "3b2f7fdc390d08e6.wav",
+      "text": "Critical Rendering Path"
+    },
+    "detached dom": {
+      "file": "a840c82d2331d040.wav",
+      "text": "Detached DOM"
+    },
+    "device pixel ratio": {
+      "file": "1e3e9ba72b565904.wav",
+      "text": "Device Pixel Ratio"
+    },
+    "garbage collection": {
+      "file": "4f76b35955d6c947.wav",
+      "text": "Garbage Collection"
+    },
+    "layout viewport": {
+      "file": "dd0dfb6a0113dc2e.wav",
+      "text": "Layout Viewport"
+    },
+    "long animation frame": {
+      "file": "6b59832029dcd4ab.wav",
+      "text": "Long Animation Frame"
+    },
+    "long task": {
+      "file": "6cbf63f3932cf99e.wav",
+      "text": "Long Task"
+    },
+    "main thread": {
+      "file": "006295de1193b4fa.wav",
+      "text": "Main Thread"
+    },
+    "reachability": {
+      "file": "62f9e3e7d06eb58a.wav",
+      "text": "Reachability"
+    },
+    "retaining path": {
+      "file": "d892839c3994c97c.wav",
+      "text": "Retaining Path"
+    },
+    "safe area": {
+      "file": "36ae99a17f838eb0.wav",
+      "text": "Safe Area"
+    },
+    "scheduling": {
+      "file": "a919b4a6cdd925a9.wav",
+      "text": "Scheduling"
+    },
+    "speculative loading": {
+      "file": "119da5c7c1eaa325.wav",
+      "text": "Speculative Loading"
+    },
+    "time to first byte": {
+      "file": "e6f60a16fdef31ac.wav",
+      "text": "Time to First Byte"
+    },
+    "visual viewport": {
+      "file": "02f1cce05b2507f1.wav",
+      "text": "Visual Viewport"
+    }
+  }
+}

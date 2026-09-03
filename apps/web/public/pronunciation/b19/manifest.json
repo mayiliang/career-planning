@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "aidev-02-context-engineering-repository-instructions.md",
+    "aidev-03-ai-generated-code-verification.md",
+    "biz-01-domain-objects-relations-ubiquitous-language.md",
+    "biz-02-state-machines-business-invariants.md"
+  ],
+  "terms": {
+    "aggregate": {
+      "file": "ee3c65b5c7f4dd0e.wav",
+      "text": "Aggregate"
+    },
+    "business invariant": {
+      "file": "ff64a9f172a36441.wav",
+      "text": "Business Invariant"
+    },
+    "compensation": {
+      "file": "b66ecab57861b722.wav",
+      "text": "Compensation"
+    },
+    "context budget": {
+      "file": "727916cb6a25896a.wav",
+      "text": "Context Budget"
+    },
+    "context engineering": {
+      "file": "a2f7c635002aa981.wav",
+      "text": "Context Engineering"
+    },
+    "entity": {
+      "file": "bca3685fea8acd4e.wav",
+      "text": "Entity"
+    },
+    "guard": {
+      "file": "a9d4034da07d8ef3.wav",
+      "text": "Guard"
+    },
+    "instruction scope": {
+      "file": "a5f97d0bc45091a2.wav",
+      "text": "Instruction Scope"
+    },
+    "metamorphic testing": {
+      "file": "2ce9470821a01a87.wav",
+      "text": "Metamorphic Testing"
+    },
+    "minimal counterexample": {
+      "file": "08343e80a4b49483.wav",
+      "text": "Minimal Counterexample"
+    },
+    "mutation testing": {
+      "file": "638d2d923b3d2160.wav",
+      "text": "Mutation Testing"
+    },
+    "provenance": {
+      "file": "96d815328a42cb4e.wav",
+      "text": "Provenance"
+    },
+    "state machine": {
+      "file": "84495362da680d61.wav",
+      "text": "State Machine"
+    },
+    "test oracle": {
+      "file": "bd4d06160a515212.wav",
+      "text": "Test Oracle"
+    },
+    "ubiquitous language": {
+      "file": "f57fa1da27b7a9c4.wav",
+      "text": "Ubiquitous Language"
+    },
+    "value object": {
+      "file": "e8ea2100b49b1160.wav",
+      "text": "Value Object"
+    }
+  }
+}

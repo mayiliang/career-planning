@@ -232,7 +232,7 @@ describe('逐题合同评分门禁', () => {
   it('JS 与 AI 点的本地中文讲义正文会进入评分上下文，而非只给 Markdown 链接', () => {
     const examples = [
       ['[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#js-07)', 'core-and-ecosystem-topics.md#js-07', 'JS-07'],
-      ['[中文核心讲义](../chinese-guides/core-and-ecosystem-topics.md#aiapp-01)', 'core-and-ecosystem-topics.md#aiapp-01', 'AIAPP-01'],
+      ['[AIAPP-01 中文核心讲义](../chinese-guides/aiapp-01-model-interface-instructions-context-boundaries.md#aiapp-01)', 'aiapp-01-model-interface-instructions-context-boundaries.md#aiapp-01', 'AIAPP-01'],
     ] as const;
     for (const [markdown, source, marker] of examples) {
       const context = extractLocalMaterialContext(markdown);

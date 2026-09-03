@@ -8,8 +8,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[Microsoft DDD 领域模型](https://learn.microsoft.com/zh-cn/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)、[中文核心讲义：BIZ-01](../chinese-guides/business-modeling-and-ux-workbench.md#biz-01)。覆盖范围：实体、值对象、聚合、关系、标识和统一语言；把需求名词映射为稳定业务模型，并覆盖同名异义、跨上下文复用和 UI 临时状态。考核必须提供完整的需求、路由、接口、类型、枚举和页面 fixture；个人项目仅可作为自选练习证据。
-- 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《Microsoft DDD 领域模型》《中文核心讲义：BIZ-01》，分别定位实体/值对象/聚合边界，以及统一语言、前端映射、反例与验证依据；首考题 2（机制解释）：给定 `Course{c1,capacity:1}`、`Student{s1,s2}` 与两次 enroll 请求，解释 Enrollment 为带身份和状态的实体、capacity 为 Course 聚合不变量、`WAITLIST` 是业务状态而非 CourseCard 文案；说明「把 Enrollment 扁平成 DTO 或由 EnrollDialog 直接扣容量」为何会让第二次请求越界，并回指《Microsoft DDD 领域模型》的聚合边界与讲义的统一语言章节；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-01/enrollment.json`（c1 容量 1、s1/s2）和 `src/enrollment/map.ts`，执行 `pnpm vitest fixtures/biz-01/enrollment.test.ts`。交付对象关系图、术语表、`Course.enroll` 不变量测试与 DTO→展示模型转换器；预期首个请求为 `ENROLLED`、第二个为 `WAITLIST`，且页面只读取转换后的标签；首考题 4（受限排错）：失败日志为 `POST /courses/c1/enroll s2 200 {status:"WAITLIST"}`，而 `EnrollmentList` 显示“已报名”。候选仅限：①展示层把非空 status 当成功；②术语表把 waitlist 翻成报名；③聚合外先改了容量。分别以状态映射单测、术语快照、`Course.enroll` 调用计数证伪；修复单一 mapper 或聚合入口后，用同一 JSON 重跑两次报名回归；首考题 5（学习复述）：针对该 fixture 解释为什么 Enrollment 不能由 `CourseCard` 替代、为什么 capacity 只能在 Course 内变更，并给出「课程已满但 UI 仍可显示候补」这一反例及其资料依据；复测变式：只将 `Course.capacity` 从 1 改为 2，保持两个学生、术语和 mapper 不变；预期 s2 由 `WAITLIST` 变 `ENROLLED`，仍由 Course 检查不变量，提交新的状态轨迹和 mapper 测试输出。命题边界：只在「业务对象、关系与统一语言」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。
+- 学习资料：[中文主讲义：BIZ-01](../chinese-guides/biz-01-domain-objects-relations-ubiquitous-language.md#biz-01)、[Microsoft DDD 领域模型](https://learn.microsoft.com/zh-cn/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)。覆盖范围：独立主讲义从业务决策与语言自然推进到实体、值对象、聚合、不变量、限界上下文、关系、DTO/领域/展示模型、事件、并发、前端映射和模型演进；Microsoft 中文资料用于核对实体、聚合根与事务一致性边界。正文不以某个固定报名题例组织，例子只用于解释机制。
+- 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《Microsoft DDD 领域模型》《中文主讲义：BIZ-01》，分别定位实体/值对象/聚合边界，以及统一语言、前端映射、反例与验证依据；首考题 2（机制解释）：给定 `Course{c1,capacity:1}`、`Student{s1,s2}` 与两次 enroll 请求，解释 Enrollment 为带身份和状态的实体、capacity 为 Course 聚合不变量、`WAITLIST` 是业务状态而非 CourseCard 文案；说明「把 Enrollment 扁平成 DTO 或由 EnrollDialog 直接扣容量」为何会让第二次请求越界，并回指《Microsoft DDD 领域模型》的聚合边界与讲义的统一语言章节；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-01/enrollment.json`（c1 容量 1、s1/s2）和 `src/enrollment/map.ts`，执行 `pnpm vitest fixtures/biz-01/enrollment.test.ts`。交付对象关系图、术语表、`Course.enroll` 不变量测试与 DTO→展示模型转换器；预期首个请求为 `ENROLLED`、第二个为 `WAITLIST`，且页面只读取转换后的标签；首考题 4（受限排错）：失败日志为 `POST /courses/c1/enroll s2 200 {status:"WAITLIST"}`，而 `EnrollmentList` 显示“已报名”。候选仅限：①展示层把非空 status 当成功；②术语表把 waitlist 翻成报名；③聚合外先改了容量。分别以状态映射单测、术语快照、`Course.enroll` 调用计数证伪；修复单一 mapper 或聚合入口后，用同一 JSON 重跑两次报名回归；首考题 5（学习复述）：针对该 fixture 解释为什么 Enrollment 不能由 `CourseCard` 替代、为什么 capacity 只能在 Course 内变更，并给出「课程已满但 UI 仍可显示候补」这一反例及其资料依据；复测变式：只将 `Course.capacity` 从 1 改为 2，保持两个学生、术语和 mapper 不变；预期 s2 由 `WAITLIST` 变 `ENROLLED`，仍由 Course 检查不变量，提交新的状态轨迹和 mapper 测试输出。命题边界：只在「业务对象、关系与统一语言」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。
 - 通过标准：验证证据：提交上述 JSON、对象图、术语表、转换器 diff、两次请求的测试输出及修复前后日志；证据必须显示实体、值对象、流程记录和展示模型的不同职责。否决项：把 DTO 字段逐项当领域对象、容量在 UI 中直接修改、没有业务人员可读术语表、或无法复现 `WAITLIST` 映射错误即不通过。评估边界：仅评估本 fixture 的对象关系、聚合不变量和统一语言，不评 API 代码生成或权限策略。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -17,8 +17,8 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-02](../chinese-guides/business-modeling-and-ux-workbench.md#biz-02)、[XState Statecharts 概念](https://stately.ai/docs/state-machines-and-statecharts)（英文原文，仅用于版本核验）。英文原文仅用于版本核验，不作为必读或独立首考题源。覆盖范围：状态、事件、命令、转移、守卫和业务不变量；覆盖非法转移、并发事件、补偿、终态和状态机版本演进；业务状态枚举与操作接口必须由题目显式给出。
-- 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-02》，定位能支撑「状态机与业务不变量」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：给事件序列 `submit→approve→expire→paymentCallback(k9)×2`，说明状态、命令、守卫的因果：EXPIRED 是终态、回调必须以 k9 幂等、过期事件不能被迟到回调逆转；反例是用无状态 `if` 直接把任意回调写为 APPROVED，并回指讲义的非法转移与并发补偿章节；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-02/order-events.json`（订单 o7、过期时间 10:00、两条 k9 回调）及 `src/order/machine.ts`，运行 `pnpm vitest fixtures/biz-02/machine.test.ts` 验证事件轨迹。交付状态图、事件—守卫—副作用表和转移实现；预期第二条回调被拒绝、最终仍为 EXPIRED，并输出每步 state trace；首考题 4（受限排错）：失败日志为 `10:02 expire o7=>EXPIRED` 后 `10:03 callback k9=>APPROVED`。候选仅限：①终态守卫缺失；②幂等键未持久化；③过期与回调使用了陈旧版本。分别用非法转移断言、k9 重放断言、版本号对比证伪；最小修复是在状态机入口拒绝终态转移或原子记录 k9，并用原事件文件回归；首考题 5（学习复述）：说明为何回调“成功到达”不等于可以批准、为何 EXPIRED 的终态守卫优先于 UI 操作，并以撤回后补款这一反例说明补偿不是回写历史状态；复测变式：仅新增 `APPROVED→APPEALING` 转移，并以 fixture 固定该转移的 24 小时撤销守卫；保持 DRAFT/SUBMITTED/REVOKED/EXPIRED 规则和 k9 幂等处理不变；预期仅窗口内的该转移可达、窗口外路径被拒绝；提交新的转移表、被拒绝路径与事件轨迹作为新证据。命题边界：只在「状态机与业务不变量」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
+- 学习资料：[中文主讲义：BIZ-02](../chinese-guides/biz-02-state-machines-business-invariants.md#biz-02)、[XState Statecharts 概念](https://stately.ai/docs/state-machines-and-statecharts)（英文原文，仅用于版本核验）。覆盖范围：独立主讲义讲清命令/事件/状态、转移表、不变量、纯守卫、终态、幂等、版本并发、领域时间、outbox/补偿、层级与并行、演进、UI 投影、可观测与状态空间；英文原文只用于核验 statechart 术语和当前框架能力，不作为必读或独立题源。
+- 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文主讲义：BIZ-02》，定位能支撑「状态机与业务不变量」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：给事件序列 `submit→approve→expire→paymentCallback(k9)×2`，说明状态、命令、守卫的因果：EXPIRED 是终态、回调必须以 k9 幂等、过期事件不能被迟到回调逆转；反例是用无状态 `if` 直接把任意回调写为 APPROVED，并回指讲义的非法转移与并发补偿章节；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-02/order-events.json`（订单 o7、过期时间 10:00、两条 k9 回调）及 `src/order/machine.ts`，运行 `pnpm vitest fixtures/biz-02/machine.test.ts` 验证事件轨迹。交付状态图、事件—守卫—副作用表和转移实现；预期第二条回调被拒绝、最终仍为 EXPIRED，并输出每步 state trace；首考题 4（受限排错）：失败日志为 `10:02 expire o7=>EXPIRED` 后 `10:03 callback k9=>APPROVED`。候选仅限：①终态守卫缺失；②幂等键未持久化；③过期与回调使用了陈旧版本。分别用非法转移断言、k9 重放断言、版本号对比证伪；最小修复是在状态机入口拒绝终态转移或原子记录 k9，并用原事件文件回归；首考题 5（学习复述）：说明为何回调“成功到达”不等于可以批准、为何 EXPIRED 的终态守卫优先于 UI 操作，并以撤回后补款这一反例说明补偿不是回写历史状态；复测变式：仅新增 `APPROVED→APPEALING` 转移，并以 fixture 固定该转移的 24 小时撤销守卫；保持 DRAFT/SUBMITTED/REVOKED/EXPIRED 规则和 k9 幂等处理不变；预期仅窗口内的该转移可达、窗口外路径被拒绝；提交新的转移表、被拒绝路径与事件轨迹作为新证据。命题边界：只在「状态机与业务不变量」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。英文原文仅用于版本核验，不作为独立首考题源。
 - 通过标准：验证证据：状态图、守卫表、固定事件文件的 trace、重复 k9 与过期竞态测试、修复 diff 均齐全。否决项：只写 if/else 而无状态和守卫、允许 EXPIRED 回写 APPROVED、无法解释重复回调结果或未重跑同一事件文件即不通过。评估边界：只评状态、事件、守卫、补偿与不变量，不评具体工作流框架实现。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
 
@@ -28,7 +28,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-03](../chinese-guides/business-modeling-and-ux-workbench.md#biz-03)。覆盖范围：RBAC、ABAC、资源/动作、数据范围和默认拒绝；区分前端可见性、请求上下文与服务端授权，覆盖租户和缓存失效；权限规则必须由题目显式给出。
+- 学习资料：[中文核心讲义：BIZ-03](../chinese-guides/biz-03-rbac-abac-data-permissions.md#biz-03)。覆盖范围：独立讲义从主体、资源、动作和环境建立授权语言，解释 RBAC/ABAC、默认拒绝、PDP/PEP、租户与数据范围、前后端边界、缓存撤权、审计、策略演进和故障验证；权限规则由具体业务显式提供，不围绕某道挑战组织。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-03》，定位能支撑「RBAC、ABAC 与数据权限」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：给 `school-a/school-b`、teacher/auditor/student、grade/report 与 read/export/edit，解释角色授予动作、租户和班级属性收窄数据范围、服务端作最终默认拒绝；反例是“隐藏导出按钮”仍让跨租户请求成功，回指讲义的 RBAC/ABAC 与默认拒绝段；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-03/policy.json`（a 校审计员 a9、b 校成绩 g2）与 `src/auth/evaluate.ts`，运行 `pnpm vitest fixtures/biz-03/policy.test.ts`。交付角色—资源—动作—属性矩阵、前端可见性函数和服务端断言；预期 a9 读 g2 返回 403，a 校教师仅读本班；首考题 4（受限排错）：日志为 `GET /grades/g2 user=a9 cacheKey=role:auditor 200`。候选仅限：①缓存键缺 tenant；②只在前端拦截；③班级属性未传服务端。用缓存键快照、绕过 UI 请求、请求上下文断言分别证伪；修复键或授权入口后重跑同一 policy 文件；首考题 5（学习复述）：用本例说明 RBAC 决定“谁可 export”、ABAC 决定“哪些班级”，并说明“同角色即可跨校”为什么是违反默认拒绝的反例；复测变式：只给 teacher t1 增加 30 分钟代班属性，保持其余班级默认拒绝；预期到期前 200、到期后 403，提交前后服务端测试和缓存失效日志。命题边界：只在「RBAC、ABAC 与数据权限」的完整讲义、题目输入和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。
 - 通过标准：验证证据：矩阵、policy JSON、服务端 403/200 断言、缓存修复 diff 与到期复测完整。否决项：只隐藏按钮、默认放行、缓存不含租户、或未证明服务端拒绝跨校请求即不通过。评估边界：只评授权语义和数据范围，不评身份认证协议或 UI 视觉设计。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
@@ -37,7 +37,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-04](../chinese-guides/business-modeling-and-ux-workbench.md#biz-04)。覆盖范围：业务操作、请求/响应/错误/Webhook 的语义契约，DTO 到领域/UI 模型的防腐层，缺失/空值/未知枚举/默认值的业务解释，以及 HTTP+JSON、gRPC-Web、异步消息的最小选型边界。OpenAPI/JSON Schema 解析和代码生成归 `API-01/02`，消费者兼容发布门禁归 `TEST-04`。
+- 学习资料：[中文核心讲义：BIZ-04](../chinese-guides/biz-04-api-contract-dto-frontend-model.md#biz-04)。覆盖范围：独立讲义从业务操作自然推进到请求/响应/错误/异步契约、DTO 防腐层、缺失与空值、未知枚举、时间金额、分页、错误恢复、协议选择和演进；OpenAPI/JSON Schema 解析与生成归 `API-01/02`，可执行消费者兼容门禁归 `TEST-04`。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-04》，定位 HTTP/JSON 与 Protobuf/gRPC-Web 的业务语义、DTO 防腐和未知值规则；首考题 2（机制解释）：给 JSON `{progress:null,status:"PAUSED"}`、未知 `BLOCKED` 和 gRPC `RESOURCE_EXHAUSTED` 流尾，解释缺失、null、未知枚举和传输错误为何必须在 DTO→领域→UI 边界分别处理；反例是将 null 归零并把未知状态显示完成，回指讲义防腐层和降级规则；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-04/progress.json`、`fixtures/biz-04/stream-tail.json` 与 `src/progress/map.ts`，运行 `pnpm vitest fixtures/biz-04/map.test.ts` 验证四类映射。交付操作合同、REST/gRPC-Web 选型表、唯一转换器和四类值测试；预期 PAUSED 显示暂停、BLOCKED 显示待确认、RESOURCE_EXHAUSTED 给可行动错误；首考题 4（受限排错）：日志为 `mapProgress undefined=>0; mapStatus BLOCKED=>completed`。候选仅限：①把缺失当业务默认值；②未知枚举兜底为成功；③页面直接消费 DTO。以输入快照、未知枚举测试、禁止页面 import DTO 的审阅证伪；修复 mapper 后重跑两 fixture；首考题 5（学习复述）：说明为何 transport 的 `RESOURCE_EXHAUSTED` 不能等同业务完成、为何未知枚举要保留可理解的降级，并以“新字段 eta 未被使用”作为允许兼容的反例；复测变式：只将服务端响应由 `reason` 改为新增 `eta` 并删除 reason，保持状态和流尾不变；预期旧 UI 不误报完成，提交新旧 mapper 测试与输出。命题边界：不得实现 OpenAPI 解析/代码生成或发布兼容 CI；它们分别由 API-01/02 与 TEST-04 考核。
 - 通过标准：验证证据：合同、选型理由、mapper diff、null/缺失/未知/流尾四类断言与修复日志齐全。否决项：页面直接使用 DTO、把未知枚举当成功、将协议默认值当业务值、或只证明最新客户端可连通即不通过。评估边界：只评业务契约和前端防腐边界，不评规范解析、代码生成和多消费者发布门禁。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
@@ -48,7 +48,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-05](../chinese-guides/business-modeling-and-ux-workbench.md#biz-05)、题目提供的同一业务对象新建、列表、详情和编辑样例。覆盖范围：表单、表格、详情、草稿和服务端实体之间的状态映射；覆盖刷新、撤销、并发编辑、部分保存、脏标记、版本冲突和失败后的状态恢复。
+- 学习资料：[中文核心讲义：BIZ-05](../chinese-guides/biz-05-form-table-detail-state-consistency.md#biz-05)。覆盖范围：独立讲义解释服务端事实、查询快照、界面投影和草稿的分层，覆盖列表/详情/表单/缓存、语义脏检查、部分保存、版本冲突、乱序、跨标签与身份切换；示例用于解释机制，不是题目专用资料。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-05》，定位能支撑「表单、表格、详情的状态一致性」的定义、关键机制、边界与反例并标明章节；首考题 2（机制解释）：给资助申请 a1 的 `amount:0,eligible:false,note:"",version:null` 与缺失 version，解释列表、详情、编辑、草稿为何共享同一事实转换，及 truthy 判断为什么会丢 0/false；反例为各页面各写格式化，回指讲义的状态映射与冲突恢复；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-05/application.json` 和四个页面 `List/Detail/Edit/Draft`，运行 `pnpm vitest fixtures/biz-05/pages.test.ts` 验证四页表示。交付字段对照表、唯一 formatter、保存后刷新脚本；预期四页均保留 0/false/空串语义且缺失 version 不冒充 null；首考题 4（受限排错）：日志为 `List amount=0 => "—"; PATCH dropped eligible=false; Detail version=undefined=>null`。候选仅限：①truthy 格式化；②页面私有转换；③缺失/null 混淆。分别以共享 formatter 单测、import 审阅、序列化快照证伪；最小修复后回归四页；首考题 5（学习复述）：说明草稿可有本地脏状态、实体是服务端事实、四页展示是派生；以“空串备注应显示为空而不是无数据”说明边界；复测变式：只令编辑保存返回 `409` 和 `version:4`，保持字段值不变；预期保留脏标记并显示恢复路径，提交前后页面断言和请求日志。命题边界：只在「表单、表格、详情的状态一致性」的完整讲义、题目样例和覆盖范围内命题。
 - 通过标准：验证证据：字段对照、共享转换器、四页断言、409 恢复记录和修复 diff 可复核。否决项：任一页面把 0/false/空串/null/缺失混同、各页复制转换器、或冲突后静默覆盖用户输入即不通过。评估边界：只评状态映射和一致性，不评表单视觉设计。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
@@ -57,7 +57,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-06](../chinese-guides/business-modeling-and-ux-workbench.md#biz-06)、[MDN AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)。覆盖范围：异步任务状态、轮询/推送、进度、取消、重试、导入导出和结果领取；覆盖断线恢复、重复触发、过期文件与部分成功；`taskId -> ProgressBar -> downloadFile(token)` 这类流程必须由题目显式给出。
+- 学习资料：[中文核心讲义：BIZ-06](../chinese-guides/biz-06-async-jobs-import-export-progress.md#biz-06)、[MDN AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)。覆盖范围：主讲义建立长任务资源、状态机、轮询/推送、进度语义、取消边界、幂等创建、导入导出、结果领取、断线恢复、过期与部分成功；MDN 用于查证浏览器取消信号，不把 Abort 误作服务端回滚。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-06》《MDN AbortController》，分别定位异步任务状态/恢复与客户端取消信号的依据，并说明取消不等于服务端任务回滚；首考题 2（机制解释）：给 t1 的 `QUEUED→RUNNING(80)→SUCCEEDED`、下载 token d1 有效 10 分钟，解释轮询退避、终态停止、重开恢复与 Abort 只取消浏览器请求的因果；反例是固定 1 秒无限轮询，回指 Abort 与讲义恢复边界；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-06/t1.json`、fake timer 和 `src/tasks/poll.ts`，运行 `pnpm vitest fixtures/biz-06/poll.test.ts`。交付状态表、指数退避轮询器、session 恢复记录、领取函数；预期重复点击只创建 t1 一次、SUCCEEDED 后停止、d1 到期显示重新领取；首考题 4（受限排错）：日志为 `reopen t1 polling each 1000ms after SUCCEEDED; GET d1 410`。候选仅限：①终态未停止；②过期 token 当有效；③Abort 被当作服务端回滚。用计时器计数、410 响应断言、取消后服务端状态快照证伪；修复后同 fixture 回归；首考题 5（学习复述）：解释“取消下载请求”和“取消导入任务”的不同责任，并以部分成功导入仍可下载错误行作为反例；复测变式：只在 RUNNING 80% 后断网 2 分钟，保持 taskId 和 token 规则不变；预期退避、恢复后查询同一 t1，提交时间线和重连测试。命题边界：只在「异步任务、导入导出与进度」所列资料和覆盖范围内命题。
 - 通过标准：验证证据：状态表、fake-timer 输出、重复点击计数、410 和断网复测、修复后请求日志完整。否决项：同步等待长任务、无限轮询、重复创建任务、或声称 Abort 回滚服务端任务即不通过。评估边界：只评任务协议、进度与恢复，不评文件格式解析。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
@@ -66,7 +66,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-07](../chinese-guides/business-modeling-and-ux-workbench.md#biz-07)、[MDN 条件请求：乐观锁与 412](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Conditional_requests#使用乐观锁避免更新丢失问题)、题目提供的错误码、日志与故障样例。覆盖范围：错误分类、幂等键、重试条件、最终一致性、补偿与用户反馈；覆盖超时后未知结果、重复写入、并发冲突、可观测恢复和前后端状态收敛。
+- 学习资料：[中文核心讲义：BIZ-07](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#biz-07)、[MDN 条件请求：乐观锁与 412](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Conditional_requests#使用乐观锁避免更新丢失问题)。覆盖范围：主讲义从失败分类和未知结果推进到幂等键、重试预算、条件写入、最终一致、补偿、前端状态与观测；MDN 用于查证 ETag/If-Match 的 HTTP 机制。
 - 严格考核：挑战类型：DEBUGGING；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-07》《MDN 条件请求：乐观锁与 412》，分别定位幂等/未知结果/补偿机制与 ETag/If-Match 并发冲突依据；首考题 2（机制解释）：给 `Idempotency-Key:k1`、`If-Match:v3`、入账后 504 与 412，解释“请求超时”是未知结果、同 k1 才可安全查询/重试、ETag 决定并发写入；反例是 UI 提示再扣一次，回指条件请求和讲义的最终一致性章节；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-07/payment.json`（账本已有 k1、版本 v3/v4）和 `src/payment/recover.ts`，运行 `pnpm vitest fixtures/biz-07/recover.test.ts`。交付失败模式表、UI 文案、重试/补偿表和 k1/ETag 断言；预期 504 后显示“结果确认中”而非失败，412 进入冲突恢复；首考题 4（受限排错）：日志为 `POST /pay k1 504; ledger k1=SETTLED; UI=retry charge`。候选仅限：①未知结果当失败；②重试更换 key；③请求漏传 If-Match。分别用账本查询、相同 key 重放、请求头快照证伪；最小修复 UI 状态与请求封装后同 fixture 回归；首考题 5（学习复述）：说明可重试、待确认和补偿三者的界限，并以“补偿首次 503 不表示原扣款不存在”作为反例；复测变式：只将补偿接口首响改为 503，保持 k1 和账本不变；预期待处理后用同 k1 安全重试，提交两次请求与账本轨迹。命题边界：只在「异常边界、幂等与一致性」所列资料和覆盖范围内命题。
 - 通过标准：验证证据：请求、账本、UI 三方轨迹，k1/ETag 断言及补偿回归齐全。否决项：504 后伪造失败或成功、盲目新 key 重试写操作、漏传 If-Match、或没有排障上下文即不通过。评估边界：只评异常语义、幂等和一致性，不评支付渠道实现。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟
@@ -77,7 +77,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：UX-01](../chinese-guides/business-modeling-and-ux-workbench.md#ux-01)。覆盖范围：用户目标、任务流、信息架构、渐进披露和认知负荷；默认、加载、空、成功、错误、离线、权限不足和部分完成状态；反馈、可撤销操作、错误预防、文案、动效与 reduced-motion；低/高保真原型、可用性测试任务、观察记录、问题严重度和迭代验证；全部必读资料均为中文。
+- 学习资料：[中文核心讲义：UX-01](../chinese-guides/ux-01-interaction-states-usability-validation.md#ux-01)。覆盖范围：独立讲义围绕用户任务、信息架构、完整状态、反馈、错误预防、渐进披露、响应式、可访问性、原型、可用性研究、指标、内容与工程交付逐层展开；不以界面变少为目标，而以理解无歧义和任务可验证为准。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：UX-01》，定位一致性、及时反馈、表单、错误和无障碍约束；首考题 2（机制解释）：给“找到第 8 行失败、修正并再提交”任务和 loading/empty/error/offline/partial 等八态，解释状态反馈、恢复入口和焦点转移怎样降低误操作；反例是把“重新导入”和“重新提交”合成同一按钮，回指资料的错误恢复和表单反馈；首考题 3（最小产出）：固定 fixture 为 `fixtures/ux-01/import-errors.csv`（第 8/11 行失败）及 `ImportReview` 原型，执行键盘脚本 `Tab→错误行→修正→重新提交` 验证焦点路径。交付任务流、八态原型、3 名目标用户逐人观察表和两轮完成率/错误数；预期焦点落在错误摘要、读屏读出失败行；首考题 4（受限排错）：观察记录为“2/3 点击重新导入；焦点留在关闭按钮”。候选仅限：①按钮文案；②错误行恢复路径；③对话框焦点管理。分别以文案 A/B、任务录屏、键盘焦点日志证伪；只修改被证据支持的一项后复测同任务；首考题 5（学习复述）：说明为什么部分成功要保留成功行、为什么可撤销和二次确认的适用条件不同，并以“漂亮截图但键盘无法回到错误行”为反例；复测变式：只增加离线恢复且保留第 8 行失败，其他状态不变；预期完成率对比使用同一任务，提交新观察表和键盘记录。命题边界：不得用个人偏好、截图还原度、点击量或 AI 自评替代真实任务和用户证据。
 - 通过标准：验证证据：八态原型、原始观察、两轮指标、焦点/读屏记录和修复前后录屏可复核。否决项：只给视觉稿、让非目标用户随意体验、无错误恢复路径、或用 AI 自评替代观察即不通过。评估边界：只评任务完成与可用性证据，不评品牌视觉。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
@@ -88,7 +88,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文核心讲义：BIZ-08](../chinese-guides/business-modeling-and-ux-workbench.md#biz-08)。覆盖范围：需求、业务规则、方案、实现、测试与验收证据的通用可追踪链；覆盖变更影响、验收歧义、非功能约束和可回归标准。PRD、原型、接口文档和验收记录必须由题目显式给出；AI Agent 的上下文封装、执行循环和权限约束归 `AIDEV-01`。
+- 学习资料：[中文核心讲义：BIZ-08](../chinese-guides/biz-08-requirement-acceptance-traceability.md#biz-08)。覆盖范围：独立讲义建立目标、需求、业务规则、方案、实现、验证与证据的双向追踪，覆盖歧义消除、验收条件、非功能约束、变更影响、版本、审计和持续维护；AI Agent 执行合同另归 `AIDEV-01`。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文核心讲义：BIZ-08》，定位规则—实现—测试—验收双向链、变更影响与反例依据；首考题 2（机制解释）：给导师审批、7 天失效、拒绝原因和 48 小时代班规则，解释规则 ID 如何同时映射接口守卫、页面提示、测试与验收，及“只有 Issue 标题”为什么不能证明行为；回指讲义双向追踪章节；首考题 3（最小产出）：固定 fixture 为 `fixtures/biz-08/approval-rules.md` 和 `issues/481`，其中代班自 `2026-08-01T09:00Z` 起 48 小时。交付规则 ID 矩阵、状态表、API/页面/测试/验收映射和影响清单，运行 `pnpm vitest fixtures/biz-08/approval.test.ts`；预期到期后 API 返回 403 且验收项可反查规则；首考题 4（受限排错）：日志为 `substitute expired 2026-08-03T09:00Z; POST approve 200`，Issue 只关联页面。候选仅限：①规则未拆成 ID；②服务端未映射到期守卫；③测试未含到期时间。分别用矩阵反查、API 断言、时间冻结测试证伪；修复最小缺口后同 fixture 回归；首考题 5（学习复述）：说明规则、实现、测试、验收各自承载什么证据，并以“页面禁用但直接请求仍审批”为反例；复测变式：只将拒绝原因改为“仅合规命中必填”，保持失效与代班期限不变；预期矩阵、接口校验、页面文案、测试和验收五处同时出现该规则 ID，提交差异与复测输出。命题边界：只在「需求到验收的可追踪性」所列资料和覆盖范围内命题；资料外经验不能替代题目要求的机制与证据。
 - 通过标准：验证证据：可检索规则矩阵、固定时间测试、API/页面/验收映射和变更 diff 完整，任一验收项可反查规则 ID。否决项：只有需求标题、页面禁用代替服务端守卫、测试无法反查规则、或变更未更新影响清单即不通过。评估边界：只评通用追踪链和验收，不评 Agent 上下文封装或执行流程。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 165 分钟；考核 90 分钟；复测 75 分钟

@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "node-01-runtime-event-loop-nonblocking-io.md",
+    "node-02-files-streams-buffers-errors.md",
+    "node-04-http-bff-production-engineering.md",
+    "aidev-01-specification-controlled-agent-loop.md"
+  ],
+  "terms": {
+    "atomic replacement": {
+      "file": "1ba9081b821669a7.wav",
+      "text": "Atomic Replacement"
+    },
+    "backend for frontend": {
+      "file": "385f35c9f82f8ea6.wav",
+      "text": "Backend for Frontend"
+    },
+    "backpressure": {
+      "file": "6a06ac7024efc018.wav",
+      "text": "Backpressure"
+    },
+    "buffer": {
+      "file": "d0ca8c2ac0dab879.wav",
+      "text": "Buffer"
+    },
+    "checkpoint": {
+      "file": "47320987f9a49d5b.wav",
+      "text": "Checkpoint"
+    },
+    "deadline": {
+      "file": "dfc8aeb39828e31c.wav",
+      "text": "Deadline"
+    },
+    "event loop": {
+      "file": "4f84e8f471009022.wav",
+      "text": "Event Loop"
+    },
+    "event loop utilization": {
+      "file": "97bf4eef62c24ee0.wav",
+      "text": "Event Loop Utilization"
+    },
+    "graceful shutdown": {
+      "file": "9cbfa8fc89d1c6a3.wav",
+      "text": "Graceful Shutdown"
+    },
+    "idempotency key": {
+      "file": "8a3f6aee00f005cd.wav",
+      "text": "Idempotency Key"
+    },
+    "nonblocking input output": {
+      "file": "5af6add6fdd00efe.wav",
+      "text": "Nonblocking Input Output"
+    },
+    "stop condition": {
+      "file": "b4b9244601930745.wav",
+      "text": "Stop Condition"
+    },
+    "stream pipeline": {
+      "file": "5ee73f4c45d4dfaa.wav",
+      "text": "Stream Pipeline"
+    },
+    "task packet": {
+      "file": "f7e486340749f477.wav",
+      "text": "Task Packet"
+    },
+    "tool boundary": {
+      "file": "7e5810e7704bfc08.wav",
+      "text": "Tool Boundary"
+    },
+    "worker thread": {
+      "file": "bb1228ceb74c0dac.wav",
+      "text": "Worker Thread"
+    }
+  }
+}

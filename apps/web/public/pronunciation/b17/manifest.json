@@ -1,0 +1,76 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "identity-01-session-cookie-token-browser-boundaries.md",
+    "identity-02-oauth-oidc-pkce-security.md",
+    "privacy-01-data-minimization-consent-retention-rights.md",
+    "privacy-02-cross-region-classification-engineering-controls.md"
+  ],
+  "terms": {
+    "authorization code": {
+      "file": "85c1d3b4619c0bfc.wav",
+      "text": "Authorization Code"
+    },
+    "bearer token": {
+      "file": "0063f0d1147604f6.wav",
+      "text": "Bearer Token"
+    },
+    "cross-border data transfer": {
+      "file": "5dc144be69c6d33f.wav",
+      "text": "Cross-border Data Transfer"
+    },
+    "data classification": {
+      "file": "2ed7f5ec3bbd2d7a.wav",
+      "text": "Data Classification"
+    },
+    "data minimization": {
+      "file": "bbaf7a09ee7c66c9.wav",
+      "text": "Data Minimization"
+    },
+    "data residency": {
+      "file": "64273f7c6957db4a.wav",
+      "text": "Data Residency"
+    },
+    "deletion tombstone": {
+      "file": "632636d3c0f7945f.wav",
+      "text": "Deletion Tombstone"
+    },
+    "federated credential management": {
+      "file": "e101053de699a2bd.wav",
+      "text": "Federated Credential Management"
+    },
+    "id token": {
+      "file": "8b5382cf6fb16690.wav",
+      "text": "ID Token"
+    },
+    "partitioned cookie": {
+      "file": "ffd9431fa447cf98.wav",
+      "text": "Partitioned Cookie"
+    },
+    "privacy engineering control": {
+      "file": "26300d96eac4bb7a.wav",
+      "text": "Privacy Engineering Control"
+    },
+    "proof key for code exchange": {
+      "file": "1f47fa648c50a243.wav",
+      "text": "Proof Key for Code Exchange"
+    },
+    "purpose limitation": {
+      "file": "f1136c941208bffc.wav",
+      "text": "Purpose Limitation"
+    },
+    "refresh token rotation": {
+      "file": "de189a2ecfd92fa6.wav",
+      "text": "Refresh Token Rotation"
+    },
+    "session fixation": {
+      "file": "4988a0fe5be87163.wav",
+      "text": "Session Fixation"
+    }
+  }
+}

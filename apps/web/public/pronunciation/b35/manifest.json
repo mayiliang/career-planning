@@ -1,0 +1,97 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "arch-02-technical-proposal-adr-review.md",
+    "arch-03-progressive-migration-strangler-compatibility.md",
+    "arch-04-technical-debt-prioritization-governance.md",
+    "arch-05-framework-selection-lifecycle-migration.md",
+    "lead-01-technical-roadmap-delegation-influence.md"
+  ],
+  "terms": {
+    "anti-corruption layer": {
+      "file": "9ead436f3ebe5fb1.wav",
+      "text": "Anti-Corruption Layer"
+    },
+    "architecture decision record": {
+      "file": "7c9c1b4d98829ba0.wav",
+      "text": "Architecture Decision Record"
+    },
+    "calibration loop": {
+      "file": "2c2df27068c6fec8.wav",
+      "text": "Calibration Loop"
+    },
+    "debt interest": {
+      "file": "3e34c6d77823c4e3.wav",
+      "text": "Debt Interest"
+    },
+    "decision driver": {
+      "file": "f472041f76436a0f.wav",
+      "text": "Decision Driver"
+    },
+    "delegation contract": {
+      "file": "6ab9626c5a80dc51.wav",
+      "text": "Delegation Contract"
+    },
+    "dissent record": {
+      "file": "f1e07a7d489daa21.wav",
+      "text": "Dissent Record"
+    },
+    "dual-run period": {
+      "file": "0d6adbc040b394ea.wav",
+      "text": "Dual-Run Period"
+    },
+    "evidence matrix": {
+      "file": "936a6bc9dfee158e.wav",
+      "text": "Evidence Matrix"
+    },
+    "exit criteria": {
+      "file": "febad46f040085ed.wav",
+      "text": "Exit Criteria"
+    },
+    "migration gate": {
+      "file": "331588df1f246d2d.wav",
+      "text": "Migration Gate"
+    },
+    "outcome roadmap": {
+      "file": "2d7680ea34b50f1e.wav",
+      "text": "Outcome Roadmap"
+    },
+    "reversibility": {
+      "file": "c4c74fe06e5725b2.wav",
+      "text": "Reversibility"
+    },
+    "strangler fig": {
+      "file": "69cac29165ba7550.wav",
+      "text": "Strangler Fig"
+    },
+    "support matrix": {
+      "file": "63197e04cbae23fc.wav",
+      "text": "Support Matrix"
+    },
+    "technical debt": {
+      "file": "7175b4c61c689ff2.wav",
+      "text": "Technical Debt"
+    },
+    "technical debt register": {
+      "file": "70ed0b05de01bbd5.wav",
+      "text": "Technical Debt Register"
+    },
+    "technical leadership": {
+      "file": "1613073a15ad7eaa.wav",
+      "text": "Technical Leadership"
+    },
+    "total cost of ownership": {
+      "file": "88f0e259c3432e43.wav",
+      "text": "Total Cost of Ownership"
+    },
+    "vertical slice": {
+      "file": "2421de13eb193419.wav",
+      "text": "Vertical Slice"
+    }
+  }
+}

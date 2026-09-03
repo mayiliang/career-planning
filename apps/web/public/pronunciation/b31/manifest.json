@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "aiapp-10-ai-interaction-trust-recovery.md",
+    "aiapp-12-conversation-state-context-compression-privacy.md",
+    "aiapp-13-long-term-memory-personalization-forgetting.md",
+    "agent-01-loop-planning-stopping-recovery.md"
+  ],
+  "terms": {
+    "agent loop": {
+      "file": "a0431480a985bde0.wav",
+      "text": "Agent Loop"
+    },
+    "checkpoint": {
+      "file": "47320987f9a49d5b.wav",
+      "text": "Checkpoint"
+    },
+    "context assembly": {
+      "file": "269858303a65a30f.wav",
+      "text": "Context Assembly"
+    },
+    "conversation state": {
+      "file": "31643f884926764d.wav",
+      "text": "Conversation State"
+    },
+    "human handoff": {
+      "file": "9cd3136159b6516d.wav",
+      "text": "Human Handoff"
+    },
+    "long-term memory": {
+      "file": "36c3576c3e1dc15d.wav",
+      "text": "Long-Term Memory"
+    },
+    "memory candidate": {
+      "file": "5e0643d533769416.wav",
+      "text": "Memory Candidate"
+    },
+    "optimistic concurrency control": {
+      "file": "db5df9c03b8526eb.wav",
+      "text": "Optimistic Concurrency Control"
+    },
+    "planner": {
+      "file": "244b8435061420f6.wav",
+      "text": "Planner"
+    },
+    "progressive disclosure": {
+      "file": "6da46646b127888c.wav",
+      "text": "Progressive Disclosure"
+    },
+    "provenance": {
+      "file": "96d815328a42cb4e.wav",
+      "text": "Provenance"
+    },
+    "recoverability": {
+      "file": "c4fc8f60a945eda6.wav",
+      "text": "Recoverability"
+    },
+    "right to be forgotten": {
+      "file": "954b2fe1db94217b.wav",
+      "text": "Right to Be Forgotten"
+    },
+    "stop condition": {
+      "file": "b4b9244601930745.wav",
+      "text": "Stop Condition"
+    },
+    "summarization drift": {
+      "file": "a343875345ac7f5f.wav",
+      "text": "Summarization Drift"
+    },
+    "trust calibration": {
+      "file": "3930618bdde018fa.wav",
+      "text": "Trust Calibration"
+    }
+  }
+}

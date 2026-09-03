@@ -65,7 +65,7 @@ for (const [batch, guideNames] of Object.entries(batches)) {
     const path = join(assetRoot, fileName);
     try {
       const header = readFileSync(path).subarray(0, 4).toString('ascii');
-      if (statSync(path).size <= 44 || header !== 'RIFF') problems.push(`发音文件损坏：${entry.text}`);
+      if (statSync(path).size <= 1_024 || header !== 'RIFF') problems.push(`发音文件损坏：${entry.text}`);
     } catch {
       problems.push(`发音文件缺失：${entry.text}`);
     }

@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "aiapp-06-rag-citations-source-trust.md",
+    "aiapp-07-prompt-injection-untrusted-content.md",
+    "aiapp-08-evaluation-observability-release-gates.md",
+    "aiapp-09-cost-quota-cache-reliability.md"
+  ],
+  "terms": {
+    "cache key": {
+      "file": "d44a753e71377fa7.wav",
+      "text": "Cache Key"
+    },
+    "chunk": {
+      "file": "6c87f68371b28954.wav",
+      "text": "Chunk"
+    },
+    "circuit breaker": {
+      "file": "72f9497ec7d235e6.wav",
+      "text": "Circuit Breaker"
+    },
+    "citation grounding": {
+      "file": "f6e2c8c221bbbec7.wav",
+      "text": "Citation Grounding"
+    },
+    "cost ledger": {
+      "file": "81f5f1b00f4b2c4d.wav",
+      "text": "Cost Ledger"
+    },
+    "evaluation": {
+      "file": "efe77b201dc216c0.wav",
+      "text": "Evaluation"
+    },
+    "gold set": {
+      "file": "da72c3068b965adb.wav",
+      "text": "Gold Set"
+    },
+    "least privilege": {
+      "file": "5b9cc3a4da689a7c.wav",
+      "text": "Least Privilege"
+    },
+    "model as judge": {
+      "file": "cd2b86c56d8b52d5.wav",
+      "text": "Model as Judge"
+    },
+    "prompt injection": {
+      "file": "3173623593e219d7.wav",
+      "text": "Prompt Injection"
+    },
+    "rate limit": {
+      "file": "a0f3a11be6415e8f.wav",
+      "text": "Rate Limit"
+    },
+    "release gate": {
+      "file": "36ad965e0ab7ad7f.wav",
+      "text": "Release Gate"
+    },
+    "reranking": {
+      "file": "c02576fcc9651de5.wav",
+      "text": "Reranking"
+    },
+    "retrieval-augmented generation": {
+      "file": "1917e406080cd1b2.wav",
+      "text": "Retrieval-Augmented Generation"
+    },
+    "taint tracking": {
+      "file": "00e28242608ddaff.wav",
+      "text": "Taint Tracking"
+    },
+    "trust boundary": {
+      "file": "0c983266f8307390.wav",
+      "text": "Trust Boundary"
+    }
+  }
+}

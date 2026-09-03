@@ -1,0 +1,97 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "linux-02-process-port-log-network-diagnostics.md",
+    "linux-03-shell-environment-automation.md",
+    "linux-04-server-security-ssh-users-firewall.md",
+    "docker-01-images-containers-dockerfile-cache.md",
+    "docker-02-compose-network-volumes-environments.md"
+  ],
+  "terms": {
+    "build context": {
+      "file": "7e47285113262edb.wav",
+      "text": "Build Context"
+    },
+    "container": {
+      "file": "a42d519714d616e9.wav",
+      "text": "Container"
+    },
+    "defense in depth": {
+      "file": "1d6f51021c1e1b07.wav",
+      "text": "Defense in Depth"
+    },
+    "docker compose": {
+      "file": "75ddf920195c71e2.wav",
+      "text": "Docker Compose"
+    },
+    "health check": {
+      "file": "753ed007e6df33c2.wav",
+      "text": "Health Check"
+    },
+    "idempotency": {
+      "file": "f5d39a07e87f63da.wav",
+      "text": "Idempotency"
+    },
+    "image": {
+      "file": "6105d6cc76af4003.wav",
+      "text": "Image"
+    },
+    "journal": {
+      "file": "81dd6b775afcccb6.wav",
+      "text": "Journal"
+    },
+    "layer cache": {
+      "file": "6ed381666a228100.wav",
+      "text": "Layer Cache"
+    },
+    "least privilege": {
+      "file": "5b9cc3a4da689a7c.wav",
+      "text": "Least Privilege"
+    },
+    "named volume": {
+      "file": "4e161dee366ec1a8.wav",
+      "text": "Named Volume"
+    },
+    "pipefail": {
+      "file": "8e3c081d66fbfdb7.wav",
+      "text": "Pipefail"
+    },
+    "process": {
+      "file": "19ed40bf62c399b8.wav",
+      "text": "Process"
+    },
+    "quoting": {
+      "file": "878decf4e545b404.wav",
+      "text": "Quoting"
+    },
+    "secure shell": {
+      "file": "1e8bae6c0cb550bf.wav",
+      "text": "Secure Shell"
+    },
+    "service discovery": {
+      "file": "07eda4f8c0e8b199.wav",
+      "text": "Service Discovery"
+    },
+    "shell expansion": {
+      "file": "67df56cf8ddff59c.wav",
+      "text": "Shell Expansion"
+    },
+    "signal": {
+      "file": "d041924c15885af6.wav",
+      "text": "Signal"
+    },
+    "socket": {
+      "file": "47dd56c2c7a7f7aa.wav",
+      "text": "Socket"
+    },
+    "sudoers": {
+      "file": "f5ba91605c1884f0.wav",
+      "text": "Sudoers"
+    }
+  }
+}

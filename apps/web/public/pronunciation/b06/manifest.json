@@ -1,0 +1,96 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "react-04-effects-external-sync-cleanup.md",
+    "vue-05-lifecycle-effects-async-recovery.md",
+    "react-05-hooks-rules-custom-hooks.md",
+    "vue-06-composables-injection-reuse.md"
+  ],
+  "terms": {
+    "abort controller": {
+      "file": "7e36f63e7bca2096.wav",
+      "text": "abort controller"
+    },
+    "async component": {
+      "file": "83847f1e31d6d886.wav",
+      "text": "async component"
+    },
+    "cleanup function": {
+      "file": "92c07a4587df6dd7.wav",
+      "text": "cleanup function"
+    },
+    "composable": {
+      "file": "2a434b12bce97fd6.wav",
+      "text": "composable"
+    },
+    "custom hook": {
+      "file": "9a79abe9d93aacfb.wav",
+      "text": "custom hook"
+    },
+    "dependency array": {
+      "file": "8dbeae28f990a74d.wav",
+      "text": "dependency array"
+    },
+    "dependency injection": {
+      "file": "23e55f6dcfc7bf02.wav",
+      "text": "dependency injection"
+    },
+    "effect scope": {
+      "file": "2be369c597edf238.wav",
+      "text": "effect scope"
+    },
+    "external system": {
+      "file": "081ed4c686f2e8d7.wav",
+      "text": "external system"
+    },
+    "hook contract": {
+      "file": "db3967aa6a5817ca.wav",
+      "text": "hook contract"
+    },
+    "keep alive": {
+      "file": "d715438128bdd356.wav",
+      "text": "keep alive"
+    },
+    "lifecycle hook": {
+      "file": "f8ba5936e92dc901.wav",
+      "text": "lifecycle hook"
+    },
+    "race condition": {
+      "file": "410597f2897b3019.wav",
+      "text": "race condition"
+    },
+    "reactive effect lifecycle": {
+      "file": "eaf0ca592508db25.wav",
+      "text": "reactive effect lifecycle"
+    },
+    "readonly state": {
+      "file": "3158ae65d1759493.wav",
+      "text": "readonly state"
+    },
+    "reference counting": {
+      "file": "e043a5e0d99cfe40.wav",
+      "text": "reference counting"
+    },
+    "rules of hooks": {
+      "file": "3def3baa91af283c.wav",
+      "text": "Rules of Hooks"
+    },
+    "stale closure": {
+      "file": "2d9fc5c7e302c671.wav",
+      "text": "stale closure"
+    },
+    "suspense boundary": {
+      "file": "3aa621caf5472c9d.wav",
+      "text": "suspense boundary"
+    },
+    "watcher": {
+      "file": "0e7f3c5c909ce8af.wav",
+      "text": "watcher"
+    }
+  }
+}

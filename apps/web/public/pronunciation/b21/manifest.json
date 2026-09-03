@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "biz-08-requirement-acceptance-traceability.md",
+    "test-04-api-contract-consumer-driven-testing.md",
+    "render-01-spa-ssr-ssg-isr-hybrid-decisions.md",
+    "render-02-streaming-ssr-hydration-islands.md"
+  ],
+  "terms": {
+    "acceptance criteria": {
+      "file": "ca02a7161f884baf.wav",
+      "text": "Acceptance Criteria"
+    },
+    "backward compatibility": {
+      "file": "10d3577519466d2f.wav",
+      "text": "Backward Compatibility"
+    },
+    "backward traceability": {
+      "file": "d9a4f557a41314c3.wav",
+      "text": "Backward Traceability"
+    },
+    "client side rendering": {
+      "file": "6f6cfc3586508a4f.wav",
+      "text": "Client Side Rendering"
+    },
+    "consumer driven contract": {
+      "file": "b197bb844da8a9fa.wav",
+      "text": "Consumer Driven Contract"
+    },
+    "forward traceability": {
+      "file": "8bd3201b042dfb72.wav",
+      "text": "Forward Traceability"
+    },
+    "hydration": {
+      "file": "4163fe8dc2507164.wav",
+      "text": "Hydration"
+    },
+    "hydration mismatch": {
+      "file": "cc744b2896302fcc.wav",
+      "text": "Hydration Mismatch"
+    },
+    "incremental static regeneration": {
+      "file": "3cd9ff12510a1e18.wav",
+      "text": "Incremental Static Regeneration"
+    },
+    "islands architecture": {
+      "file": "46ba6c85ecd98304.wav",
+      "text": "Islands Architecture"
+    },
+    "pact broker": {
+      "file": "9fc33183fd18c37d.wav",
+      "text": "Pact Broker"
+    },
+    "provider state": {
+      "file": "48c84d879c6ab0ae.wav",
+      "text": "Provider State"
+    },
+    "server side rendering": {
+      "file": "91de977cf03a6c6b.wav",
+      "text": "Server Side Rendering"
+    },
+    "static site generation": {
+      "file": "876da7cc854bc9b0.wav",
+      "text": "Static Site Generation"
+    },
+    "streaming server rendering": {
+      "file": "5b5067ee15b21e08.wav",
+      "text": "Streaming Server Rendering"
+    },
+    "traceability": {
+      "file": "30dd2e1b99d3c8a2.wav",
+      "text": "Traceability"
+    }
+  }
+}

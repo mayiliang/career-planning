@@ -47,7 +47,31 @@ const aiRelationLabels = { NONE: '非 AI 专属', AI_ASSISTED: 'AI 辅助', AI_N
 const portabilityLabels = { PORTABLE: '可迁移', FRAMEWORK_SPECIFIC: '框架特定', VENDOR_SPECIFIC: '厂商特定', PLATFORM_SPECIFIC: '平台特定', JURISDICTION_SPECIFIC: '地区规则' } as const;
 
 const code = computed(() => String(route.params.code));
-const usesLinkedPrerequisites = computed(() => ['JS-01', 'JS-02', 'JS-03', 'JS-07', 'CS-01', 'CS-02', 'CS-03', 'JS-04', 'JS-05', 'JS-06', 'TS-01', 'TS-02'].includes(point.value?.code ?? ''));
+const usesLinkedPrerequisites = computed(() => [
+  'JS-01', 'JS-02', 'JS-03', 'JS-07', 'CS-01', 'CS-02', 'CS-03', 'JS-04', 'JS-05', 'JS-06',
+  'TS-01', 'TS-02', 'TS-03', 'WEB-01',
+  'REACT-01', 'REACT-02', 'REACT-03', 'REACT-04', 'REACT-05', 'REACT-06', 'REACT-07', 'REACT-08', 'REACT-09', 'REACT-10',
+  'VUE-01', 'VUE-02', 'VUE-03', 'VUE-04', 'VUE-05', 'VUE-06', 'VUE-07', 'VUE-08', 'VUE-10', 'VUE-11',
+  'GIT-01', 'GIT-02', 'GIT-03', 'DEBUG-01',
+  'ENG-01', 'ENG-02', 'ENG-03', 'ENG-05',
+  'TEST-01', 'TEST-02', 'TEST-03',
+  'CAREER-01', 'CAREER-02', 'CAREER-04', 'CAREER-05', 'WEB-02', 'WEB-03',
+  'A11Y-01', 'BROWSER-01', 'BROWSER-02', 'WEB-04', 'WEB-05', 'NET-01',
+  'SEC-01', 'SEC-02', 'SEC-04', 'SEC-03', 'SEC-05',
+  'TS-04', 'TS-05', 'TS-06', 'TS-07', 'TS-08', 'TS-09',
+  'IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02',
+  'NODE-01', 'NODE-02', 'NODE-04', 'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
+  'BIZ-01', 'BIZ-02', 'BIZ-03', 'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08',
+  'TEST-04', 'RENDER-01', 'RENDER-02', 'DATA-01', 'DATA-02', 'REALTIME-01',
+  'COMP-01', 'COMP-02', 'UX-01', 'ENG-08', 'LINUX-01', 'LINUX-02', 'LINUX-03', 'LINUX-04', 'DOCKER-01', 'DOCKER-02',
+  'ENG-06', 'DEPLOY-01', 'OBS-01', 'PERF-01', 'PERF-02', 'PERF-03', 'PERF-04',
+  'H5-01', 'H5-02', 'MCP-01', 'AIPROD-01', 'AIPROD-02',
+  'AISAFE-01', 'AISAFE-02', 'AIGOV-01', 'AIAPP-01', 'AIAPP-02',
+  'AIAPP-03', 'AIAPP-04', 'AIAPP-05', 'AIUI-01', 'AIAPP-06', 'AIAPP-07', 'AIAPP-08', 'AIAPP-09',
+  'AIAPP-10', 'AIAPP-12', 'AIAPP-13', 'AGENT-01', 'AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07',
+  'AGENT-08', 'AGENT-09', 'AGENT-10', 'AIDEV-04', 'AIDEV-07', 'AIDEV-10',
+  'COMPAT-01', 'ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'ARCH-05', 'LEAD-01',
+].includes(point.value?.code ?? ''));
 const organizedDisplayMd = computed(() => organizing.value ? streamingOrganizedMd.value : note.value?.organizedMd || '');
 const masteryCopy = computed(() => [
   ['M0', '未评估', '还没有系统证据，不代表没有学过'],
@@ -376,7 +400,7 @@ onBeforeUnmount(() => {
             <li>由你点击“已学完”；掌握挑战完全可选</li>
           </ol>
           <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
-          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01～B03 前置学习</small><strong>只列直接前置，下一层会继续展开</strong><p>主讲义不会重复列出间接依赖；每个链接会显示未读、阅读进度或已看完，正文超过 80% 后自动完成。</p></div></aside>
+          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01～B32 前置学习</small><strong>只列直接前置，下一层会继续展开</strong><p>主讲义不会重复列出间接依赖；每个链接会显示未读、阅读进度或已看完，正文超过 80% 后自动完成。</p></div></aside>
           <aside v-else class="beginner-assist"><div><small>初学者阅读辅助</small><strong>遇到陌生术语或隐含前置知识时，先补台阶</strong><p>中文译名与英文原名同时保留；这份辅助讲义不扩张当前知识点，也不单独作为考核题源。</p></div><button type="button" @click="openBeginnerGuide">打开前置与术语讲义 →</button></aside>
         </div>
       </details>

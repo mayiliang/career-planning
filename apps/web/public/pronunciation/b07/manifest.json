@@ -1,0 +1,104 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "react-06-reducer-context-state-domains.md",
+    "vue-08-pinia-state-layers.md",
+    "react-08-error-boundaries-suspense-recovery.md",
+    "react-10-router-data-framework-modes.md"
+  ],
+  "terms": {
+    "action": {
+      "file": "bd938c688f49b77c.wav",
+      "text": "action"
+    },
+    "context": {
+      "file": "ea7792a26f405e2a.wav",
+      "text": "context"
+    },
+    "data router": {
+      "file": "5d1fa0c5a7146b39.wav",
+      "text": "data router"
+    },
+    "deep link": {
+      "file": "f46c0e1f7158cae8.wav",
+      "text": "deep link"
+    },
+    "error boundary": {
+      "file": "e84666a5f9202f2f.wav",
+      "text": "error boundary"
+    },
+    "fallback": {
+      "file": "5c7ee2074b65853f.wav",
+      "text": "fallback"
+    },
+    "getter": {
+      "file": "d665a09c95ebbc70.wav",
+      "text": "getter"
+    },
+    "nested route": {
+      "file": "e634a17082cedf9e.wav",
+      "text": "nested route"
+    },
+    "provider": {
+      "file": "5c4c1964340aca5b.wav",
+      "text": "provider"
+    },
+    "reducer": {
+      "file": "d5bb10afb69497ff.wav",
+      "text": "reducer"
+    },
+    "resource cache": {
+      "file": "7a8dba7ffd0a7d47.wav",
+      "text": "resource cache"
+    },
+    "retry": {
+      "file": "06b29bb318814108.wav",
+      "text": "retry"
+    },
+    "revalidation": {
+      "file": "feba645991f3c95d.wav",
+      "text": "revalidation"
+    },
+    "route action": {
+      "file": "e73d147dab60cdd8.wav",
+      "text": "route action"
+    },
+    "route loader": {
+      "file": "94f67c3b10e23b27.wav",
+      "text": "route loader"
+    },
+    "server state": {
+      "file": "914b2780464926d9.wav",
+      "text": "server state"
+    },
+    "state": {
+      "file": "4ba69735ca53765e.wav",
+      "text": "state"
+    },
+    "state persistence": {
+      "file": "151bdf9164a72729.wav",
+      "text": "state persistence"
+    },
+    "state transition": {
+      "file": "924c2079254c1338.wav",
+      "text": "state transition"
+    },
+    "store": {
+      "file": "824d80d71985f082.wav",
+      "text": "store"
+    },
+    "suspense boundary": {
+      "file": "3aa621caf5472c9d.wav",
+      "text": "Suspense boundary"
+    },
+    "transition": {
+      "file": "70dd37c11434d9c5.wav",
+      "text": "transition"
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "vue-07-router-navigation-boundaries.md",
+    "react-07-performance-memo-large-lists.md",
+    "vue-10-testing-performance-production-build.md",
+    "react-09-compiler-rsc-security-upgrades.md",
+    "vue-11-nuxt-rendering-data-performance.md"
+  ],
+  "terms": {
+    "client-side rendering": {
+      "file": "9c7553523e6b3b6d.wav",
+      "text": "client-side rendering"
+    },
+    "code splitting": {
+      "file": "1bb1913b14194478.wav",
+      "text": "code splitting"
+    },
+    "component testing": {
+      "file": "1296c4186c3e264e.wav",
+      "text": "component testing"
+    },
+    "denial of service": {
+      "file": "b12a9b1fc2ac43d1.wav",
+      "text": "denial of service"
+    },
+    "end-to-end testing": {
+      "file": "24151b21976a92a9.wav",
+      "text": "end-to-end testing"
+    },
+    "hydration": {
+      "file": "4163fe8dc2507164.wav",
+      "text": "hydration"
+    },
+    "layout thrashing": {
+      "file": "8c13896a1c1020b5.wav",
+      "text": "layout thrashing"
+    },
+    "lazy loading": {
+      "file": "f70cbea892ed0479.wav",
+      "text": "lazy loading"
+    },
+    "long task": {
+      "file": "6cbf63f3932cf99e.wav",
+      "text": "long task"
+    },
+    "memoization": {
+      "file": "6ff225cb1dfb5185.wav",
+      "text": "memoization"
+    },
+    "navigation failure": {
+      "file": "95d596bab0d24e42.wav",
+      "text": "navigation failure"
+    },
+    "navigation guard": {
+      "file": "9a75872d5e2c5359.wav",
+      "text": "navigation guard"
+    },
+    "page payload": {
+      "file": "fc957b73b2d72b6d.wav",
+      "text": "page payload"
+    },
+    "performance budget": {
+      "file": "39605983e6c911ef.wav",
+      "text": "performance budget"
+    },
+    "profiler": {
+      "file": "74a9d35712f8cefd.wav",
+      "text": "profiler"
+    },
+    "react compiler": {
+      "file": "4ef3c38b395ed76a.wav",
+      "text": "React Compiler"
+    },
+    "referential equality": {
+      "file": "0110c8c58e31ed97.wav",
+      "text": "referential equality"
+    },
+    "remote code execution": {
+      "file": "09e4eadfb9a436eb.wav",
+      "text": "remote code execution"
+    },
+    "route record": {
+      "file": "b76adfd0352afdf5.wav",
+      "text": "route record"
+    },
+    "route rules": {
+      "file": "c77fdb3169b86f07.wav",
+      "text": "route rules"
+    },
+    "runtime configuration": {
+      "file": "4a9b6d891e08d5a5.wav",
+      "text": "runtime configuration"
+    },
+    "server component": {
+      "file": "9e1fb3261c315492.wav",
+      "text": "server component"
+    },
+    "server function": {
+      "file": "7ffb5efe72b49701.wav",
+      "text": "server function"
+    },
+    "server-side rendering": {
+      "file": "96a21147db355f7e.wav",
+      "text": "server-side rendering"
+    },
+    "software bill of materials": {
+      "file": "b9f436d832701075.wav",
+      "text": "software bill of materials"
+    },
+    "source map": {
+      "file": "a53cb7b2cd9ae3de.wav",
+      "text": "source map"
+    },
+    "static site generation": {
+      "file": "876da7cc854bc9b0.wav",
+      "text": "static site generation"
+    },
+    "typed routes": {
+      "file": "c672a563a4d93c28.wav",
+      "text": "typed routes"
+    },
+    "virtualization": {
+      "file": "0b7635b2568f0d2e.wav",
+      "text": "virtualization"
+    }
+  }
+}

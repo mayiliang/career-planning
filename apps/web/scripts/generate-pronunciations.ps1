@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('all', 'b01', 'b02', 'b03')]
+  [ValidateSet('all', 'b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'b25', 'b26', 'b27', 'b28', 'b29', 'b30', 'b31', 'b32', 'b33', 'b34', 'b35')]
   [string]$Batch = 'all',
   [string]$VoiceName = 'Microsoft Zira Desktop',
   [int]$Rate = -1
@@ -23,6 +23,20 @@ function Add-Term([System.Collections.Generic.Dictionary[string,string]]$Terms, 
   if (-not $display -or $display.Length -gt 80 -or $display -notmatch '[A-Za-z]') { return }
   $key = Normalize-Term $display
   if (-not $Terms.ContainsKey($key)) { $Terms.Add($key, $display) }
+}
+
+function Test-WaveAsset([string]$Path) {
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+  $info = Get-Item -LiteralPath $Path
+  if ($info.Length -le 1024) { return $false }
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $header = New-Object byte[] 4
+    if ($stream.Read($header, 0, 4) -ne 4) { return $false }
+    return [System.Text.Encoding]::ASCII.GetString($header) -eq 'RIFF'
+  } finally {
+    $stream.Dispose()
+  }
 }
 
 $synthesizer = New-Object -ComObject SAPI.SpVoice
@@ -71,7 +85,8 @@ try {
       $hash = ([System.BitConverter]::ToString($sha256.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant().Substring(0, 16)
       $fileName = "$hash.wav"
       $target = Join-Path $outputRoot $fileName
-      if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+      if (-not (Test-WaveAsset $target)) {
+        if (Test-Path -LiteralPath $target -PathType Leaf) { Remove-Item -LiteralPath $target -Force }
         $stream = New-Object -ComObject SAPI.SpFileStream
         try {
           $stream.Open($target, 3, $false)

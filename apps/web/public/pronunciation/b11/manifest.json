@@ -1,0 +1,96 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "test-01-test-design-oracles-properties-mutation.md",
+    "test-02-component-testing-user-behavior-accessibility.md",
+    "test-03-e2e-visual-regression-isolation-flakiness.md",
+    "career-01-project-evidence-causal-storytelling.md"
+  ],
+  "terms": {
+    "accessible query": {
+      "file": "298e82a771049421.wav",
+      "text": "accessible query"
+    },
+    "boundary value analysis": {
+      "file": "0328f9a2816edc3a.wav",
+      "text": "boundary value analysis"
+    },
+    "browser context": {
+      "file": "6844ebcbd8ac3733.wav",
+      "text": "browser context"
+    },
+    "counterfactual": {
+      "file": "9e6864835aee0364.wav",
+      "text": "counterfactual"
+    },
+    "differential testing": {
+      "file": "444c1708b271d2ea.wav",
+      "text": "differential testing"
+    },
+    "end-to-end test": {
+      "file": "da71894dbc4dec9e.wav",
+      "text": "end-to-end test"
+    },
+    "equivalence partition": {
+      "file": "c1867c9aabb8df83.wav",
+      "text": "equivalence partition"
+    },
+    "evidence chain": {
+      "file": "d0a3d04d5ef7961c.wav",
+      "text": "evidence chain"
+    },
+    "flaky test": {
+      "file": "c4b007dfff2c7e4d.wav",
+      "text": "flaky test"
+    },
+    "fuzz testing": {
+      "file": "584bc60d123139f5.wav",
+      "text": "fuzz testing"
+    },
+    "invariant": {
+      "file": "c94ad2d92135458a.wav",
+      "text": "invariant"
+    },
+    "locator": {
+      "file": "64b36c4d06e4a517.wav",
+      "text": "locator"
+    },
+    "metamorphic testing": {
+      "file": "2ce9470821a01a87.wav",
+      "text": "metamorphic testing"
+    },
+    "mutation testing": {
+      "file": "638d2d923b3d2160.wav",
+      "text": "mutation testing"
+    },
+    "property-based testing": {
+      "file": "510953c105ea0e48.wav",
+      "text": "property-based testing"
+    },
+    "test double": {
+      "file": "df15abb3073535eb.wav",
+      "text": "test double"
+    },
+    "test oracle": {
+      "file": "bd4d06160a515212.wav",
+      "text": "test oracle"
+    },
+    "trace": {
+      "file": "eafe895eb8119e6e.wav",
+      "text": "trace"
+    },
+    "user-event": {
+      "file": "1a43b20c4c345dee.wav",
+      "text": "user-event"
+    },
+    "visual regression": {
+      "file": "b67662ac92e0f588.wav",
+      "text": "visual regression"
+    }
+  }
+}

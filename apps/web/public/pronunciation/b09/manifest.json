@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "git-01-object-index-references-recovery.md",
+    "git-02-branches-merge-rebase-conflicts.md",
+    "git-03-commits-remotes-pr-worktrees-collaboration.md",
+    "debug-01-systematic-debugging-evidence-causality.md"
+  ],
+  "terms": {
+    "content-addressed storage": {
+      "file": "30f8e09df0c65f20.wav",
+      "text": "content-addressed storage"
+    },
+    "correlation id": {
+      "file": "961f8d94c2a23df3.wav",
+      "text": "correlation ID"
+    },
+    "detached head": {
+      "file": "375c8206b1565f71.wav",
+      "text": "detached HEAD"
+    },
+    "fast-forward": {
+      "file": "cb5d6bd5b9e79220.wav",
+      "text": "fast-forward"
+    },
+    "heisenbug": {
+      "file": "897efe1f4ac56a1d.wav",
+      "text": "Heisenbug"
+    },
+    "index": {
+      "file": "1bc04b5291c26a46.wav",
+      "text": "index"
+    },
+    "merge base": {
+      "file": "f1a9367174869fe5.wav",
+      "text": "merge base"
+    },
+    "minimal reproducible example": {
+      "file": "85271507fd5ed25c.wav",
+      "text": "minimal reproducible example"
+    },
+    "pull request": {
+      "file": "763fae517f52dd0c.wav",
+      "text": "pull request"
+    },
+    "rebase": {
+      "file": "a66eb0bb9047722f.wav",
+      "text": "rebase"
+    },
+    "reflog": {
+      "file": "ee76b4b3c543947a.wav",
+      "text": "reflog"
+    },
+    "reproduction": {
+      "file": "b634bf17f5a7a32f.wav",
+      "text": "reproduction"
+    },
+    "rerere": {
+      "file": "d714791e3d876524.wav",
+      "text": "rerere"
+    },
+    "semantic conflict": {
+      "file": "720ea567935e1bde.wav",
+      "text": "semantic conflict"
+    },
+    "source map": {
+      "file": "a53cb7b2cd9ae3de.wav",
+      "text": "source map"
+    },
+    "worktree": {
+      "file": "d63516bc98983230.wav",
+      "text": "worktree"
+    }
+  }
+}

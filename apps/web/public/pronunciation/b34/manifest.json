@@ -1,0 +1,80 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "aidev-07-dependency-source-security.md",
+    "aidev-10-ai-tool-data-team-governance.md",
+    "compat-01-baseline-progressive-enhancement-device-testing.md",
+    "arch-01-quality-attributes-constraints-tradeoffs.md"
+  ],
+  "terms": {
+    "approved tool": {
+      "file": "a7449acc86159c68.wav",
+      "text": "Approved Tool"
+    },
+    "architecture tradeoff": {
+      "file": "4986379467627434.wav",
+      "text": "Architecture Tradeoff"
+    },
+    "baseline": {
+      "file": "8ba8496a2525ae17.wav",
+      "text": "Baseline"
+    },
+    "data classification": {
+      "file": "2ed7f5ec3bbd2d7a.wav",
+      "text": "Data Classification"
+    },
+    "dependency provenance": {
+      "file": "2c9b426d7e974f97.wav",
+      "text": "Dependency Provenance"
+    },
+    "exception lifecycle": {
+      "file": "3447ad675e93cc01.wav",
+      "text": "Exception Lifecycle"
+    },
+    "feature detection": {
+      "file": "b70093bfed3c71c0.wav",
+      "text": "Feature Detection"
+    },
+    "fitness function": {
+      "file": "d1e89ac153784576.wav",
+      "text": "Fitness Function"
+    },
+    "install script": {
+      "file": "7f0e6139ec0510d9.wav",
+      "text": "Install Script"
+    },
+    "lockfile diff": {
+      "file": "20c9c44490e226c3.wav",
+      "text": "Lockfile Diff"
+    },
+    "policy enforcement": {
+      "file": "fd20f02b85c90392.wav",
+      "text": "Policy Enforcement"
+    },
+    "progressive enhancement": {
+      "file": "e1c3f6b34fe91345.wav",
+      "text": "Progressive Enhancement"
+    },
+    "quality attribute": {
+      "file": "a86e5759c03b0202.wav",
+      "text": "Quality Attribute"
+    },
+    "quality attribute scenario": {
+      "file": "ad67570ffd36f37b.wav",
+      "text": "Quality Attribute Scenario"
+    },
+    "source attribution": {
+      "file": "0168ae04a5608115.wav",
+      "text": "Source Attribution"
+    },
+    "support matrix": {
+      "file": "63197e04cbae23fc.wav",
+      "text": "Support Matrix"
+    }
+  }
+}

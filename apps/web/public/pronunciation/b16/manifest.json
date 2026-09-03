@@ -1,0 +1,69 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "ts-05-conditional-infer-distribution.md",
+    "ts-06-functions-overloads-variance-component-apis.md",
+    "ts-07-runtime-contracts-validation-error-models.md",
+    "ts-08-domain-state-permission-modeling.md",
+    "ts-09-version-migration-module-governance.md"
+  ],
+  "terms": {
+    "api contract": {
+      "file": "7bf80414eb7648ce.wav",
+      "text": "API Contract"
+    },
+    "authorization": {
+      "file": "cbb82ebec6051b78.wav",
+      "text": "Authorization"
+    },
+    "conditional type": {
+      "file": "902f7276101558d3.wav",
+      "text": "Conditional Type"
+    },
+    "contravariance": {
+      "file": "0c0eb80b92ec9c51.wav",
+      "text": "Contravariance"
+    },
+    "covariance": {
+      "file": "285ae0043925796c.wav",
+      "text": "Covariance"
+    },
+    "distributive conditional type": {
+      "file": "cefd91e2799619dc.wav",
+      "text": "Distributive Conditional Type"
+    },
+    "infer": {
+      "file": "92bc2e4121158762.wav",
+      "text": "infer"
+    },
+    "language server protocol": {
+      "file": "a2ae557528a3a777.wav",
+      "text": "Language Server Protocol"
+    },
+    "module resolution": {
+      "file": "d54f19372a647173.wav",
+      "text": "Module Resolution"
+    },
+    "optimistic concurrency control": {
+      "file": "db5df9c03b8526eb.wav",
+      "text": "Optimistic Concurrency Control"
+    },
+    "programmatic compiler api": {
+      "file": "2934c81059e79519.wav",
+      "text": "Programmatic Compiler API"
+    },
+    "runtime schema": {
+      "file": "ec565d4f3241eb46.wav",
+      "text": "Runtime Schema"
+    },
+    "state machine": {
+      "file": "84495362da680d61.wav",
+      "text": "State Machine"
+    }
+  }
+}

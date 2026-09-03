@@ -1,0 +1,76 @@
+{
+  "voice": {
+    "name": "Microsoft Zira Desktop",
+    "culture": "en-US",
+    "gender": "Female",
+    "rate": -1
+  },
+  "sourceGuides": [
+    "a11y-01-wcag-testing-governance.md",
+    "browser-01-render-events-storage.md",
+    "browser-02-observers-scheduling-lifecycle-coordination.md",
+    "web-04-native-layered-ui-view-transitions.md"
+  ],
+  "terms": {
+    "accessibility": {
+      "file": "714db89df42bdb7c.wav",
+      "text": "Accessibility"
+    },
+    "accessibility tree": {
+      "file": "c003f76881dfe9e6.wav",
+      "text": "Accessibility Tree"
+    },
+    "composite": {
+      "file": "ad1e26066637d18f.wav",
+      "text": "Composite"
+    },
+    "event delegation": {
+      "file": "9011f464eae8e788.wav",
+      "text": "Event Delegation"
+    },
+    "layout": {
+      "file": "1dc5ae5b68174891.wav",
+      "text": "Layout"
+    },
+    "live region": {
+      "file": "5e17a9573ab71867.wav",
+      "text": "Live Region"
+    },
+    "navigation api": {
+      "file": "2decc6ebf07758dd.wav",
+      "text": "Navigation API"
+    },
+    "observer": {
+      "file": "e41f1d834710df8c.wav",
+      "text": "Observer"
+    },
+    "page lifecycle": {
+      "file": "029ac7f689c6e54b.wav",
+      "text": "Page Lifecycle"
+    },
+    "paint": {
+      "file": "297e619db5ee855a.wav",
+      "text": "Paint"
+    },
+    "style calculation": {
+      "file": "153e3254d3dabbb3.wav",
+      "text": "Style Calculation"
+    },
+    "top layer": {
+      "file": "092c11ac60a6a9cb.wav",
+      "text": "Top Layer"
+    },
+    "view transition": {
+      "file": "43ef4d160eff9c0c.wav",
+      "text": "View Transition"
+    },
+    "web locks api": {
+      "file": "f1b14612c89ceade.wav",
+      "text": "Web Locks API"
+    },
+    "yield": {
+      "file": "8bbcba42d48dcffe.wav",
+      "text": "Yield"
+    }
+  }
+}
