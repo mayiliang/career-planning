@@ -24,13 +24,21 @@
       "file": "1f840e7d0ca40bdb.wav",
       "text": "AbortSignal"
     },
-    "async iteration": {
-      "file": "07d85040abaea5b4.wav",
-      "text": "async iteration"
+    "accessor": {
+      "file": "4fc565ab79d6764d.wav",
+      "text": "accessor"
+    },
+    "async iterator": {
+      "file": "f4a7bba6bba87fc1.wav",
+      "text": "async iterator"
     },
     "binding": {
       "file": "80f70afeef3caa57.wav",
       "text": "binding"
+    },
+    "bound function": {
+      "file": "4e71e396d902b302.wav",
+      "text": "bound function"
     },
     "call stack": {
       "file": "895930fc6596c35f.wav",
@@ -47,14 +55,6 @@
     "closure": {
       "file": "6d4cb937d6d22521.wav",
       "text": "closure"
-    },
-    "constructor": {
-      "file": "e3c1703abf8a6b3d.wav",
-      "text": "constructor"
-    },
-    "deep clone": {
-      "file": "48bf6a1c49238c93.wav",
-      "text": "deep clone"
     },
     "event listener": {
       "file": "31cdd69d54839d9b.wav",
@@ -84,37 +84,29 @@
       "file": "c94ad2d92135458a.wav",
       "text": "invariant"
     },
-    "iterable": {
-      "file": "1000d7ffa3524e51.wav",
-      "text": "iterable"
+    "iterable protocol": {
+      "file": "38d2027e737ad817.wav",
+      "text": "iterable protocol"
     },
     "iterator": {
       "file": "ef9baedff2f457dd.wav",
       "text": "iterator"
     },
-    "iterator result": {
-      "file": "01bf6c3cfda7b5d4.wav",
-      "text": "iterator result"
+    "lexical scope": {
+      "file": "e636e288262d2d65.wav",
+      "text": "lexical scope"
     },
-    "lazy": {
-      "file": "81fd67d02f679b81.wav",
-      "text": "lazy"
-    },
-    "lexical environment": {
-      "file": "5fe366c5d30b2066.wav",
-      "text": "lexical environment"
+    "metaprogramming": {
+      "file": "22e550364a31d5a9.wav",
+      "text": "metaprogramming"
     },
     "method": {
       "file": "5b7e6bf2dc4a32a6.wav",
       "text": "method"
     },
-    "object invariant": {
-      "file": "995acf91a32504c2.wav",
-      "text": "object invariant"
-    },
-    "primitive value": {
-      "file": "f55b2a0594b2cc96.wav",
-      "text": "primitive value"
+    "primitive": {
+      "file": "db1946d32afb3d7b.wav",
+      "text": "primitive"
     },
     "promise": {
       "file": "3513d9452af7c176.wav",
@@ -123,14 +115,6 @@
     "property descriptor": {
       "file": "02351f2f677f8973.wav",
       "text": "property descriptor"
-    },
-    "property shadowing": {
-      "file": "1df11f4fb490183c.wav",
-      "text": "property shadowing"
-    },
-    "prototype": {
-      "file": "b34563e2ebeb7717.wav",
-      "text": "prototype"
     },
     "prototype chain": {
       "file": "6e63496d6872b31a.wav",
@@ -156,9 +140,9 @@
       "file": "bc305bb7669419e4.wav",
       "text": "SameValueZero"
     },
-    "scope chain": {
-      "file": "a4c23af87e4ef907.wav",
-      "text": "scope chain"
+    "scope": {
+      "file": "5f161c9149882e0e.wav",
+      "text": "scope"
     },
     "shadowing": {
       "file": "6dd015a84cac1a9a.wav",
@@ -180,17 +164,9 @@
       "file": "bfda4ac5e6feb89d.wav",
       "text": "structured clone"
     },
-    "symbol": {
-      "file": "b76a7ca153c24671.wav",
-      "text": "Symbol"
-    },
     "temporal dead zone": {
       "file": "f84cc66d508c00a3.wav",
       "text": "temporal dead zone"
-    },
-    "this binding": {
-      "file": "ce29a8a2e4944469.wav",
-      "text": "this binding"
     },
     "timer": {
       "file": "cd94ec90364da372.wav",

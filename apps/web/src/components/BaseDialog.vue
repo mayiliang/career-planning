@@ -11,9 +11,10 @@ const props = withDefaults(defineProps<{
   tone?: 'primary' | 'danger';
   busy?: boolean;
   confirmDisabled?: boolean;
+  size?: 'default' | 'wide';
 }>(), {
   eyebrow: 'CONFIRM ACTION', description: '', confirmLabel: '确认', cancelLabel: '取消',
-  tone: 'primary', busy: false, confirmDisabled: false,
+  tone: 'primary', busy: false, confirmDisabled: false, size: 'default',
 });
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
 const panel = ref<HTMLElement | null>(null);
@@ -67,7 +68,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <Transition name="dialog-pop">
       <div v-if="open" class="dialog-scrim" @click.self="!busy && emit('cancel')">
-        <section ref="panel" class="dialog-panel" role="dialog" aria-modal="true" :aria-labelledby="titleId" :aria-describedby="description ? descriptionId : undefined" tabindex="-1">
+        <section ref="panel" class="dialog-panel" :class="{ 'dialog-wide': size === 'wide' }" role="dialog" aria-modal="true" :aria-busy="busy" :aria-labelledby="titleId" :aria-describedby="description ? descriptionId : undefined" tabindex="-1">
           <header>
             <div class="dialog-symbol" :data-tone="tone">{{ tone === 'danger' ? '!' : '✓' }}</div>
             <div><p>{{ eyebrow }}</p><h2 :id="titleId">{{ title }}</h2><span v-if="description" :id="descriptionId">{{ description }}</span></div>
@@ -87,9 +88,13 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.dialog-scrim{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(9,18,32,.56);backdrop-filter:blur(14px) saturate(115%)}
+.dialog-scrim{position:fixed;inset:0;z-index:2200;display:grid;place-items:center;padding:24px;background:rgba(9,18,32,.46);backdrop-filter:blur(8px)}
 .dialog-panel{width:min(540px,100%);overflow:hidden;background:rgba(255,255,255,.98);border:1px solid rgba(255,255,255,.82);border-radius:24px;box-shadow:0 30px 90px rgba(13,28,52,.3),0 0 0 1px rgba(29,63,119,.08)}
 .dialog-panel:focus{outline:none}
+.dialog-panel{display:flex;flex-direction:column;max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px)}
+.dialog-panel.dialog-wide{width:min(720px,100%)}
+.dialog-panel>header,.dialog-panel>footer{flex-shrink:0}
+.dialog-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .dialog-panel>header{display:grid;grid-template-columns:48px 1fr 36px;gap:14px;align-items:start;padding:24px 24px 19px;background:linear-gradient(145deg,#f8fbff,#fff)}
 .dialog-symbol{display:grid;place-items:center;width:46px;height:46px;color:#fff;font-weight:850;background:linear-gradient(145deg,#3e76dc,#2456b5);border-radius:15px;box-shadow:0 10px 24px rgba(47,99,191,.24)}
 .dialog-symbol[data-tone=danger]{background:linear-gradient(145deg,#dc6a62,#b84345);box-shadow:0 10px 24px rgba(185,67,69,.23)}

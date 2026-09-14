@@ -2,302 +2,275 @@
 
 ## JS-02 原型、对象模型与 `this`
 
-JavaScript 对象看似简单：读取属性、调用方法、创建实例。困难通常来自三套规则被混在一起——属性可以从原型继承，函数对象有一个名为 `prototype` 的属性，普通函数调用又会根据调用形式得到 `this`。这一讲按“先找属性，再调用函数”的顺序，把三套规则拆开。
+你可能写过这样的代码：`user.sayHello()` 能正常运行，把 `user.sayHello` 交给另一个函数却报错。也可能见过一个对象明明没有某个方法，调用时却找得到。前者与调用方式有关，后者与原型查找有关；把它们分开看，许多规则会自然连起来。
+
+本文沿着“读取属性 → 找到函数 → 调用函数 → 创建对象”的顺序展开。你会理解方法为什么能共享、`this` 为什么会变化，以及 `class` 和原型之间的关系。
 
 ### 学习前先确认
 
-- 直接前置：[对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)。函数与变量基础已经由这份短文逐层链接，不在这里重复列出。
+- 直接前置：[对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)。需要能读懂属性访问、函数值，以及两个变量可能指向同一个对象。
 
-原型链、构造调用和 `this` 绑定都在本讲从头解释。
+示例可以分别复制到现代浏览器控制台运行，`// =>` 标出输出。涉及普通函数的 `this` 时，示例会在函数内明确开启严格模式，避免控制台运行方式影响结果。严格模式的基础见[这篇短文](../chinese-guides/javascript-strict-mode.md#prejs-05)。
 
-### 属性读取不只看对象自己
+### 对象自己没有的属性从哪里来
 
-每个普通对象都有一个内部的**原型关联（prototype）**，存放在 `[[Prototype]]` 槽位中；它要么指向另一个对象，要么是 `null`。代码不能直接用 `obj.[[Prototype]]` 这种语法读取它；应使用 `Object.getPrototypeOf(obj)`。
+设想几个用户都需要同一种问候方式。我们可以把公共行为放在一个对象上，再让用户对象沿着原型找到它。
 
-```js
-const parent = { role: 'parent', shared: 1 };
-const child = Object.create(parent);
-child.name = 'child';
-
-console.log(child.name);   // child 自己的属性
-console.log(child.shared); // 从 parent 找到
-console.log(child.missing); // 原型链走到尽头，undefined
-```
-
-读取 `child.shared` 时，运行时大致依次检查：
-
-1. `child` 是否有自有属性 `shared`。
-2. 没有，就到 `Object.getPrototypeOf(child)`，也就是 `parent` 上查找。
-3. 仍没有就继续沿 `parent` 的原型查找，直到原型为 `null`。
-
-这条逐级委托属性查找的路径称为**原型链（prototype chain）**。
-
-`Object.hasOwn(child, 'shared')` 是 `false`，`'shared' in child` 是 `true`。前者只问自有属性，后者会考虑整个原型链。
-
-### 属性遮蔽不是覆盖原型对象
-
-给 `child` 写入一个与原型同名的普通可写属性，通常会在 `child` 上建立自有属性：
-
-```js
-child.shared = 2;
-
-console.log(child.shared);  // 2
-console.log(parent.shared); // 1
-console.log(Object.hasOwn(child, 'shared')); // true
-```
-
-新的自有属性先被找到，所以原型上的 `shared` 暂时看不见，这叫**属性遮蔽（property shadowing）**。它没有修改 `parent.shared`。访问器属性、不可写属性和 Proxy 会让写入规则更复杂，不能把所有赋值都概括为“必然在子对象上新建属性”。
-
-删除 `child.shared` 后，读取又会落到 `parent.shared`。因此排查属性来源时，应同时查看对象本身与原型链，而不是只看最终读到的值。
-
-### `[[Prototype]]` 与函数的 `.prototype` 是两件事
-
-函数也是对象，所以函数对象也有自己的内部 `[[Prototype]]`。此外，大多数可构造的普通函数还有一个名为 `prototype` 的普通属性：
-
-```js
-function User(name) {
-  this.name = name;
-}
-
-console.log(typeof User.prototype); // object
-```
-
-能被 `new` 调用并创建实例的函数称为**构造函数（constructor）**。当 `User` 被 `new` 调用时，`User.prototype` 用来成为新实例的原型：
-
-```js
-const ada = new User('Ada');
-console.log(Object.getPrototypeOf(ada) === User.prototype); // true
-```
-
-所以应区分：
-
-- `Object.getPrototypeOf(ada)`：实例在属性查找时委托给谁。
-- `User.prototype`：函数对象上一个用于构造实例的属性。
-- `Object.getPrototypeOf(User)`：函数对象 `User` 自己的原型。
-
-它们有联系，但不是同一个槽位。箭头函数没有供 `new` 使用的 `prototype` 属性，也不能当作构造函数。
-
-### 方法先按原型查找，再按调用形式决定 `this`
-
-方法只是值为函数的属性。下面的 `describe` 可以位于原型上：
-
-```js
+```js example=js02-prototype
 const userMethods = {
   describe() {
-    return this.name;
+    return `我是${this.name}`;
   },
 };
 
 const user = Object.create(userMethods);
-user.name = 'Ada';
+user.name = '小林';
 
-console.log(user.describe()); // Ada
+console.log(user.describe()); // => 我是小林
+console.log(Object.hasOwn(user, 'name')); // => true
+console.log(Object.hasOwn(user, 'describe')); // => false
+console.log(Object.getPrototypeOf(user) === userMethods); // => true
 ```
 
-运行 `user.describe()` 时先沿原型找到函数 `describe`，再以 `user` 作为本次调用的**接收者（receiver）**。因此函数里的 `this` 是 `user`，不是保存方法的 `userMethods`。
+`name` 是 `user` 的自有属性，`describe` 则来自 `userMethods`。`Object.create(userMethods)` 创建一个新对象，并把它的内部原型指向 `userMethods`。读取 `user.describe` 时，JavaScript 先检查 `user` 自己；没有找到，再到原型上查找。
 
-这说明“方法从哪里找到”与“调用时 `this` 是谁”是两个步骤；后一个步骤形成**调用接收者绑定（this binding）**。把函数从对象上取出来会保留同一个函数值，却不保留点号左边的接收者：
+这个继续查找的路径就是**原型链（prototype chain）**。原型也可以有自己的原型，一层层查到 `null` 为止。整条链都没有这个属性，普通读取才得到 `undefined`。读取到值为 `undefined` 的自有属性就已经找到了，不会因为值看起来“空”而继续向上查找。
 
-接收者不只影响普通方法，也影响原型上的 getter 和 setter。下面的 getter 定义在 `userMethods` 上，但读取 `user.label` 时，getter 内的 `this` 仍是最初发起读取的 `user`：
+`Object.hasOwn(user, 'describe')` 只问对象自己有没有属性；`'describe' in user` 则会连原型链一起查。前者适合判断输入对象明确提供了什么，后者适合判断整个对象是否支持某个属性名。两者都不是在判断读取结果的真假，值为 `false` 或 `0` 的属性仍然可以存在。
 
-```js
-Object.defineProperty(userMethods, 'label', {
-  get() {
-    return `用户：${this.name}`;
-  },
-});
+### 共享方法不等于共享所有状态
 
-console.log(user.label); // 用户：Ada
+普通、可写的数据属性可以被同名自有属性遮住。删除这条自有属性以后，原型上的属性又会被看到。
+
+```js example=js02-shadow
+const defaults = { theme: '浅色' };
+const settings = Object.create(defaults);
+settings.theme = '深色';
+console.log(settings.theme); // => 深色
+console.log(defaults.theme); // => 浅色
+
+delete settings.theme;
+console.log(settings.theme); // => 浅色
 ```
 
-这也是 `Reflect.get(target, key, receiver)` 和 `Reflect.set(target, key, value, receiver)` 提供 `receiver` 参数的原因：代理或转发层若擅自把接收者换成目标对象，原型访问器里的 `this` 就会改变，透明转发也随之失真。
+这里的赋值没有改动 `defaults.theme`，而是在 `settings` 上建立了自己的属性。不过，不要把它背成“赋值永远只改自己”：如果原型上对应的是 setter，赋值可能调用它；如果继承的数据属性不可写，赋值可能失败。理解普通情况以后，再用[属性描述符](../chinese-guides/javascript-property-descriptors.md#prejs-08)查看这些额外规则。
 
-```js
-'use strict';
+还有一种更常见的共享：原型属性本身存放可变对象。
 
-const describe = user.describe;
-describe(); // this 是 undefined，读取 this.name 会抛错
+```js example=js02-shared-array
+const defaults = { tags: [] };
+const first = Object.create(defaults);
+const second = Object.create(defaults);
+first.tags.push('置顶');
+console.log(second.tags.join(',')); // => 置顶
+console.log(Object.hasOwn(first, 'tags')); // => false
 ```
 
-函数没有把 `user` 永久记在自己身上。`this` 也不是由函数写在什么对象里决定；对普通函数来说，主要由这一次如何调用决定。
+`first.tags.push()` 先读取 `tags`，得到原型上的数组，再修改这个数组。它没有给 `first.tags` 重新赋值，因此没有产生独立数组。需要各实例独立的数据时，应在创建实例时为它们分别准备；适合共享的通常是方法，而不是会被每个实例改动的列表。
 
-### 六种常见调用形式
+这与闭包中的状态是否独立是同一个判断习惯：先确认究竟是哪次创建得到的对象。想继续检查共享和复制，见 [JS-03：赋值之后谁和谁共用对象](../chinese-guides/js-03-types-equality-copy-immutability.md#赋值之后谁和谁共用对象)。
 
-本节会比较普通调用在严格与非严格代码中的差异；需要时就近打开 [PREJS-05 严格模式](../chinese-guides/javascript-strict-mode.md#prejs-05)。理解箭头函数的外层 `this` 时若卡住，再回看 [JS-01 的词法环境](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。这些是对应小节的补充，不是整篇讲义的重复硬前置。
+### 先找到函数再看怎样调用
 
-#### 1. 普通调用
+读取方法和调用方法是两个步骤。读取 `user.describe` 找到一个函数；随后采用什么调用方式，才决定普通函数的 `this`。
 
-在严格模式下，`fn()` 中的 `this` 是 `undefined`。非严格旧脚本可能把它替换成全局对象，这种差异容易隐藏错误，现代模块代码应按严格模式理解。
-
-#### 2. 方法调用
-
-`receiver.fn()` 中，`this` 通常是点号或方括号左侧的 `receiver`。即使函数是沿原型找到的，接收者仍是本次表达式中的对象。
-
-#### 3. `call` 与 `apply`
-
-它们立即调用函数，并显式提供 `this`：
-
-```js
-function greet(greeting, punctuation) {
-  return `${greeting}，${this.name}${punctuation}`;
-}
-
-greet.call({ name: 'Lin' }, '你好', '!');
-greet.apply({ name: 'Lin' }, ['你好', '!']);
-```
-
-两者主要差在后续参数的提供形式。
-
-#### 4. `bind`
-
-`bind` 不立即执行原函数，而是返回一个新的绑定函数：
-
-```js
-const boundGreet = greet.bind({ name: 'Lin' }, '你好');
-console.log(boundGreet('!'));
-```
-
-绑定函数还具有被 `new` 调用、`length`、`name` 等规范行为。下面这种教学实现只说明普通调用和参数拼接，不是完整替代品：
-
-若绑定函数被 `new` 调用，构造调用创建的新实例会成为 `this`，`bind` 时提供的 `thisArg` 会被忽略；预设参数仍会排在构造参数之前。也就是说，显式绑定能固定普通调用的接收者，却不能把构造实例替换成绑定对象。判断优先级时应先识别“是否由 `new` 构造”，再讨论普通调用中的绑定。
-
-```js
-function simpleBind(fn, thisArg, ...preset) {
-  return (...later) => Reflect.apply(fn, thisArg, [...preset, ...later]);
-}
-```
-
-#### 5. 构造调用
-
-`new Fn()` 会创建一个新对象，并让构造函数执行时的 `this` 指向它。构造返回规则将在下一节完整解释。
-
-#### 6. 箭头函数
-
-箭头函数没有自己的 `this`。它在词法环境中读取外层的 `this`，`call`、`apply`、`bind` 不能为它建立另一个 `this`：
-
-```js
-const group = {
-  name: 'team',
-  members: ['Ada', 'Lin'],
-  labels() {
-    return this.members.map(member => `${this.name}:${member}`);
+```js example=js02-this
+const user = {
+  name: '小林',
+  describe() {
+    'use strict';
+    return this === undefined ? '没有接收对象' : this.name;
   },
 };
+
+const describe = user.describe;
+console.log(user.describe()); // => 小林
+console.log(describe()); // => 没有接收对象
+console.log(describe.call({ name: '小周' })); // => 小周
 ```
 
-`map` 的箭头回调使用 `labels` 这次方法调用的 `this`。如果把 `labels` 本身写成箭头属性，它就不会获得 `group` 作为自己的 `this`。
+`user.describe()` 是通过 `user` 调用，`this` 为 `user`。`describe()` 是独立调用，这个严格模式函数的 `this` 为 `undefined`。`call` 则显式指定 `this`。同一个函数值，三种调用，三种上下文；函数不会因为最初被存放在 `user` 上，就永远记住 `user`。
 
-### 回调为什么容易丢失 `this`
+阅读英文资料时，你会遇到 **receiver**，本文保留这个词。在普通方法调用中，可以先把它理解为“本次调用接收方法的那个对象”。在 `user.describe()` 里，就是 `user`。不要把它和“方法最早定义在哪个对象上”混在一起：原型上的共享方法，也会以本次实际调用的对象作为 `this`。
 
-把 `user.describe` 传给另一个系统时，传递的是函数值：
+::: note 严格模式看函数的定义环境
+非严格的普通函数在独立调用时，通常会把 `undefined` 或 `null` 的 `this` 替换为全局对象；严格函数不会。是否严格由函数自身决定，并不是严格的调用者可以临时改变被调用函数。ES Module 与 `class` 中的代码本身就处于严格模式。
+:::
 
-```js
-button.addEventListener('click', user.describe);
+将方法传给回调时，同样要看调用方怎样调用它。数组方法通常按自身规则传入参数，事件 API 也有各自的 `this` 约定；“回调中的 `this` 一律丢失”不是通用规则。要保证结果稳定，就让回调本身明确地选定需要的对象。
+
+### call 和 bind 怎样明确调用对象
+
+`call` 立即执行函数，参数逐个传入；`apply` 也立即执行，但把后续参数放在一个类数组对象中。**绑定函数（bound function）**由 `bind` 创建，它稍后被调用时会使用预先指定的 `this`，也可以预先固定一部分参数。
+
+```js example=js02-bind
+function greet(prefix) {
+  'use strict';
+  return `${prefix}，${this.name}`;
+}
+const user = { name: '小林' };
+const hello = greet.bind(user, '你好');
+
+console.log(greet.call(user, '早上好')); // => 早上好，小林
+console.log(greet.apply(user, ['晚上好'])); // => 晚上好，小林
+console.log(hello()); // => 你好，小林
+console.log(hello.call({ name: '小周' })); // => 你好，小林
 ```
 
-以后如何调用它，由事件系统决定。浏览器 `addEventListener` 对普通监听函数会使用事件的 `currentTarget` 作为 `this`；某些工具函数会以 `undefined` 调用，另一些库有自己的约定。无论哪种，都不能假设原来的 `user.` 会跟着函数值一起传走。
+普通调用绑定函数时，再通过 `call` 传另一个对象，不会覆盖已经绑定的 `this`。但绑定并没有复制 `user`。如果之后改了 `user.name`，`hello()` 仍会从同一个对象读取新值。这一点又回到了对象身份与可变性。
 
-如果方法必须使用 `user`，可以在登记前绑定并保存同一个绑定函数，以便以后撤销：
+`bind` 每次会创建一个新的函数对象。因此 `removeEventListener('click', obj.handle.bind(obj))` 不能移除先前通过另一次 `bind` 登记的监听。正确做法是保存绑定结果，用同一个函数登记和撤销；或者使用一条保存下来的箭头回调。清理细节可接着读 [JS-01：回调结束使用后要解除谁的引用](../chinese-guides/js-01-execution-context-scope-closure.md#回调结束使用后要解除谁的引用)。
 
-```js
-const handleClick = user.describe.bind(user);
-button.addEventListener('click', handleClick);
-button.removeEventListener('click', handleClick);
+### 箭头函数从外层取得 this
+
+箭头函数不建立自己的 `this`。它使用的是创建位置外层的 `this`，因此很适合在普通方法内部保留本次调用对象。
+
+```js example=js02-arrow
+const user = {
+  name: '小林',
+  createReader() {
+    'use strict';
+    return () => this.name;
+  },
+};
+
+const readName = user.createReader();
+console.log(readName()); // => 小林
+console.log(readName.call({ name: '小周' })); // => 小林
 ```
 
-也可以用显式适配器 `event => user.describe(event)`。选择哪种方式取决于是否需要参数适配、撤销和测试替换。
+调用 `user.createReader()` 时，外层方法的 `this` 是 `user`。返回的箭头函数沿着外层环境取得这个 `this`，之后用 `call` 也改不了它。这个规则与 [JS-01 的词法作用域](../chinese-guides/js-01-execution-context-scope-closure.md#名字沿源码的位置查找)相连：决定外层环境的是创建位置。
 
-### `new` 的可观察过程
+因此，直接把依赖对象自身的字面量方法改成箭头函数，通常不合适。对象字面量不会建立自己的词法 `this`；`{ read: () => this.name }` 中的 `this` 来自对象外部，并不因为箭头被放进这个对象就指向它。
 
-把 `new Constructor(...args)` 作为一个整体理解更安全。为了学习对象模型，可以观察到四个关键步骤：
+箭头函数还没有自己的 `arguments`，也不能被 `new` 调用。需要动态调用对象、构造实例或独立的 `arguments` 时，应选择普通函数。选择依据是需要怎样的行为，而不是哪种写法短。
 
-1. 创建一个新对象。
-2. 如果 `Constructor.prototype` 是对象，就把它作为新对象的原型；否则使用 `Object.prototype`。
-3. 以新对象作为 `this` 调用构造函数。
-4. 构造函数显式返回对象或函数时，最终结果改用该返回值；返回原始值或没有返回时，使用步骤 1 的新对象。
+### getter 为什么也要关心接收对象
 
-```js
+属性不一定只是存储一个值。**访问器（accessor）**可以在读取时执行 getter，在写入时执行 setter。继承的 getter 同样需要知道最初是对哪个对象发起读取。
+
+```js example=js02-getter
+const profile = {
+  get displayName() {
+    return `${this.lastName}同学`;
+  },
+};
+const student = Object.create(profile);
+student.lastName = '林';
+
+console.log(student.displayName); // => 林同学
+console.log(Reflect.get(profile, 'displayName', { lastName: '周' })); // => 周同学
+```
+
+第一条读取在 `student` 上开始，沿原型找到 getter，却仍然以 `student` 作为 getter 的 `this`。第二条通过 `Reflect.get` 单独指定 receiver，所以 getter 读到 `'周'`。
+
+此时只需记住：查到属性的位置和 getter 使用的 `this` 可以是两个对象。到 [JS-07：Reflect 保留原本的读取关系](../chinese-guides/js-07-iteration-metaprogramming-resources.md#reflect-保留原本的读取关系)，这个区分会解释为什么代理转发时不能总写 `target[key]`。
+
+### new 怎样把实例接到原型上
+
+普通构造函数与它创建的实例之间，可以通过 `prototype` 建立共享行为。
+
+```js example=js02-new
 function User(name) {
   this.name = name;
 }
-
-User.prototype.greet = function greet() {
-  return `你好，${this.name}`;
+User.prototype.describe = function describe() {
+  return `我是${this.name}`;
 };
 
-const ada = new User('Ada');
-console.log(ada.greet());
+const first = new User('小林');
+const second = new User('小周');
+console.log(first.describe()); // => 我是小林
+console.log(Object.getPrototypeOf(first) === User.prototype); // => true
+console.log(first.describe === second.describe); // => true
 ```
 
-构造返回覆盖常被漏掉：
+对这样的普通构造函数执行 `new User('小林')`，可以抓住四步理解：创建实例对象；把实例的内部原型连接到 `User.prototype`；以实例作为 `this` 执行构造函数并传入参数；根据构造函数返回值决定最后结果。
 
-```js
-function Override() {
-  this.kind = 'instance';
-  return { kind: 'override' };
+最后一步有个例外：构造函数显式返回对象或函数时，那个返回值会成为 `new` 的结果；返回普通原始值通常会被忽略。构造函数的 `prototype` 不是对象时，普通构造过程会使用默认原型。内置构造器、派生类还有各自的细节，不应把这四步当成适用于所有情况的手写 `new` 实现。
+
+```js example=js02-new-return
+function ReturnObject() {
+  this.name = '新实例';
+  return { name: '另一个对象' };
 }
-
-console.log(new Override().kind); // override
-```
-
-教学版 `simpleNew` 可以帮助观察这些步骤：
-
-```js
-function simpleNew(Constructor, ...args) {
-  const prototype =
-    typeof Constructor.prototype === 'object' && Constructor.prototype !== null
-      ? Constructor.prototype
-      : Object.prototype;
-  const instance = Object.create(prototype);
-  const returned = Reflect.apply(Constructor, instance, args);
-  const returnedObject = returned !== null
-    && (typeof returned === 'object' || typeof returned === 'function');
-  return returnedObject ? returned : instance;
+function ReturnNumber() {
+  this.name = '新实例';
+  return 42;
 }
+console.log(new ReturnObject().name); // => 另一个对象
+console.log(new ReturnNumber().name); // => 新实例
 ```
 
-它用于理解普通可构造函数的可观察结果，不模拟 class 构造器、Proxy 构造陷阱、内建构造器和所有规范内部槽。
+这里要区分两个名字很像的东西。实例的内部原型用 `Object.getPrototypeOf(instance)` 观察；构造函数的 `.prototype` 则是一个普通属性，在创建实例时提供原型对象。`User.prototype` 不表示“User 函数对象自己的原型”。函数本身也是对象，也有内部原型，两条关系不是同一条。
 
-### `class` 没有消灭原型
+一般不需要通过旧式 `__proto__` 访问器操作原型，也不建议在对象已被大量使用后频繁修改原型。尽量在创建时确定结构，更容易读懂，也更容易避免意外影响所有共享该原型的对象。
 
-类语法让构造器、实例方法、继承和私有字段更集中：
+### class 把构造和共享方法放在一起
 
-```js
-class User {
-  constructor(name) {
-    this.name = name;
+`class` 提供了更集中的声明方式。实例方法放在原型上，实例字段则在每次创建实例时分别建立。
+
+```js example=js02-class
+class Notebook {
+  notes = [];
+  constructor(owner) {
+    this.owner = owner;
   }
-
-  greet() {
-    return `你好，${this.name}`;
+  add(text) {
+    this.notes.push(text);
   }
 }
+
+const first = new Notebook('小林');
+const second = new Notebook('小周');
+first.add('读到原型了');
+console.log(first.notes.length); // => 1
+console.log(second.notes.length); // => 0
+console.log(first.add === second.add); // => true
 ```
 
-`User.prototype.greet` 仍然存在，实例仍沿原型链找到方法。类不只是把构造函数换个拼写：类体按严格模式运行，类不能不带 `new` 直接调用，派生类在 `super()` 前不能使用 `this`，私有字段也有独立规则。
+每次创建都会得到独立的 `notes` 数组，而 `add` 方法由两个实例共享。普通实例方法不会自动绑定 `this`，取出来独立调用仍然要处理调用对象。若把方法写成箭头函数字段，则每个实例会创建自己的函数，换来的是捕获实例 `this`；这是一项明确的取舍。
 
-理解原型以后，才能判断 class 的共享方法来自哪里；理解 `this` 以后，才能解释把类方法直接作为回调为何仍会丢失接收者。
+`class` 也不只是把旧语法换个样子：它必须通过 `new` 调用，类体默认严格，声明有初始化限制；继承中的 `super`、私有字段也有额外语义。把它理解为“建立在原型模型之上的类语法”更合适，不必强行把每种行为都还原成几行构造函数代码。
 
-### 继承与组合的边界
+继承适合表达稳定的“是一种”关系，但不是所有复用都需要增加一层父类。如果笔记本只是“需要一个保存器”，可以把保存函数或保存器对象传进来，由笔记本调用它。这种组合让存储方式与笔记行为分别变化，也避免为了复用几行方法让所有类被迫继承同一种结构。选择时先看业务关系是否稳定，再决定共享代码放在原型、普通函数还是独立对象中。
 
-原型委托适合表达稳定的“是一种”关系和共享行为。例如不同用户实例共享 `User.prototype.greet`，不必为每个实例复制一份函数。
+### 进一步理解绑定函数与构造调用
 
-当行为需要频繁替换、同时组合多个能力，或继承层级开始依赖祖先内部细节时，组合通常更清晰：把需要的能力作为普通对象或函数传入，而不是继续加深原型链。组合不是永远优于继承；判断标准是所有权、替换性和依赖方向是否清楚。
+对可构造的函数做 `bind`，所得函数仍可能被 `new` 调用。这时预先绑定的参数有效，但绑定的 `this` 会被忽略，因为构造调用要使用新实例。
 
-### 常见误解
+```js example=js02-bound-new
+function User(name) {
+  this.name = name;
+}
+const existing = { name: '原对象' };
+const CreateLin = User.bind(existing, '小林');
+const created = new CreateLin();
 
-- **“对象的方法属于对象，所以 `this` 永远是那个对象。”** 方法是函数值；普通函数的 `this` 由本次调用形式决定。
-- **“`obj.__proto__` 就是 `Fn.prototype`。”** 前者是历史访问器，后者是函数对象上的普通属性；应使用标准反射 API 区分关系。
-- **“从原型找到方法后，`this` 是原型。”** `child.method()` 的接收者是 `child`。
-- **“箭头函数可以解决所有 `this` 问题。”** 箭头没有自己的 `this`，用于需要动态接收者的方法反而会失效。
-- **“教学版 bind/new 等同原生实现。”** 它们只展示部分可观察规则，不能替代完整规范行为。
+console.log(created.name); // => 小林
+console.log(existing.name); // => 原对象
+console.log(created instanceof User); // => true
+```
 
-### 学完后应能说明
+这不是“bind 失效”，而是普通调用和构造调用有不同规则。遇到组合写法时，先识别最外层操作：它到底是 `fn()`、`obj.fn()`、显式 `call`，还是 `new fn()`？再看函数是否为箭头、是否已经绑定。不要把各种场景压缩成一句“this 永远指向……”来猜。
 
-1. 对 `child → parent → Object.prototype → null` 的链，逐步说明一个属性在哪里命中。
-2. 区分实例的 `[[Prototype]]`、构造函数的 `.prototype` 和函数对象自己的原型。
-3. 对普通调用、方法调用、`call`、`bind`、`new` 与箭头函数分别判断 `this`。
-4. 解释构造函数显式返回对象时，为什么新建实例会被替换。
-5. 说明一个真实设计中为何选择原型共享、class 或组合，而不是只凭语法长短。
+默认情况下，`instanceof` 检查构造函数的 `prototype` 是否出现在对象原型链中，而不是核对对象有几个同名字段。它也不是跨窗口数据类型判断的万能工具；不同 Realm 的构造器可能不同，且 `Symbol.hasInstance` 可以定制行为。判断数组时优先使用 `Array.isArray` 这样的专门 API。
 
-接下来学习 [JS-03 类型、相等、拷贝与不可变更新](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)时，会继续使用这里的对象身份和属性模型。
+### 回看属性查找与函数调用
+
+| 看到的表达式 | 先问什么 | 应关注的关系 |
+| --- | --- | --- |
+| `name` | 这个变量在哪里声明 | 词法作用域 |
+| `user.name` | 自身有没有，原型上有没有 | 属性查找与访问器 |
+| `user.read()` | 找到的是哪个函数，怎样调用 | 查找结果与本次 `this` |
+| `read()` | 函数是否严格、绑定或为箭头 | 函数自身规则 |
+| `new User()` | 是否可构造，实例接到哪里 | 构造过程与原型 |
+
+如果一个行为看起来反常，先把表达式拆成“取值”和“调用”两步。原型负责共享和查找，普通方法的 `this` 由调用方式提供，箭头函数的 `this` 则沿创建处向外找。接着读 [JS-03](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)，把对象身份、相等比较和更新方式补齐。
+
+### 参考与延伸阅读
+
+- [MDN：Inheritance and the prototype chain](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain)——查阅原型链、属性遮蔽与不同创建方式。
+- [MDN：this](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this)——按调用场景查询 `this`，尤其留意严格函数与箭头函数。
+- [MDN：Function.prototype.bind](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind)——核对参数预置和构造调用的边界。
+- [MDN：new](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new)——进一步查阅构造函数返回值与实例原型。

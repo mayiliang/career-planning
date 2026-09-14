@@ -1,177 +1,339 @@
 # 测试知识点讲义
 
-## TEST-02 React 组件测试、用户行为与可访问查询
+## TEST-02 用用户行为检查 React 组件
 
-React 组件测试的目标不是证明某个 state 变量变成了预期值，而是证明用户能看见、操作并从错误中恢复。测试通过角色、名称、焦点和可见反馈与组件交互，既更接近真实使用，也允许内部从 state 改为 reducer、从手写控件改为组件库而不重写所有断言。
+一个表单的 state 变成 `saved`，不代表用户完成了保存。按钮可能没有名称，错误可能只写进控制台，草稿可能在失败时被清空，键盘用户也可能到不了提交按钮。
+
+这一讲把上篇的标题规则放进 React 表单。我们通过用户能看见和操作的界面检查结果：输入、提交、等待、失败、重试和成功。内部从 useState 改成 reducer 时，只要这些行为仍成立，用例就不应跟着大改。
 
 ### 学习前先确认
 
-- 直接前置：[TEST-01 测试设计、预言、不变量与变异验证](../chinese-guides/test-01-test-design-oracles-properties-mutation.md#test-01)、[REACT-02 组件边界、单向数据流与组合](../chinese-guides/react-02-component-boundaries-data-flow-composition.md#react-02)。两份资料分别提供测试预言与 React 组件合同；React 更早的渲染、TypeScript 和 HTML 语义会继续递归链接。
+- 直接前置：[TEST-01 从规则到测试证据](../chinese-guides/test-01-test-design-oracles-properties-mutation.md#test-01)、[REACT-02 组件边界与数据流](../chinese-guides/react-02-component-boundaries-data-flow-composition.md#react-02)。前者提供预言与可控替身，后者提供公开 props 和组件协作的基础。
 
-### 一、组件测试处在纯函数与真实浏览器之间
+本例使用 React 19.2.8、Vitest 2.1.8、React Testing Library 16.3.0、user-event 14.6.1、jest-dom 6.6.3 与 jsdom 26.1.0。版本用于固定练习环境，不要求调整业务项目。新建独立目录 `reader-lab`，后续 TEST-03 会继续补齐同一项目的浏览器入口和本地服务。
 
-组件测试通常在 DOM 模拟环境中 render 组件，触发用户动作并断言可观察输出。它适合表单、校验、条件内容、异步反馈、焦点和组件间数据流。真实布局、浏览器兼容、多页面导航、下载和 Service Worker 仍需浏览器级测试。
+### 先确定这一次组件检查的边界
 
-测试范围可以包含真实子组件和 Context，只替换网络等外部边界。把所有子组件 mock 成空标签，会失去组合、语义和焦点行为；完全挂载整个应用又让失败难定位。边界应跟随本次要证明的用户任务。
+**组件测试（component test）**可以挂载一组真实组件，提供公开输入，操作 DOM，再检查可观察结果。本例保留 React 渲染、表单、校验和状态变化，把保存能力作为 `saveTitle` 参数注入。
 
-### 二、render 创建一棵可查询的界面
-
-测试初始化应提供组件实际需要的 props、router、query client、国际化和主题。可将稳定 provider 组合成自定义 render，但不要隐藏重要前提。
-
-每个测试应获得新的容器和状态，结束后清理订阅、计时器与网络替身。模块级单例和缓存若跨测试共享，会产生顺序依赖。需要持久状态时，在测试内明确建立和清除。
-
-Strict Mode 或开发检查可能额外执行渲染与 Effect，测试应以最终合同断言，不依赖“函数恰好调用一次”，除非单次调用本身是外部副作用合同。
-
-### 三、查询优先级体现用户可感知信息
-
-**可访问查询（accessible query）**优先使用角色和名称：
-
-```ts
-screen.getByRole('button', { name: '保存' });
-screen.getByRole('textbox', { name: '课程名称' });
-screen.getByLabelText('邮箱');
+```text
+用户操作 → 真实表单 → 真实标题校验 → saveTitle 替身
+                    ← 成功或拒绝 ← 受控 Promise
 ```
 
-这些查询依赖语义 HTML 和可访问名称，既接近键盘/读屏用户，也更抗 DOM 结构变化。文本查询适合没有角色的内容；placeholder 不是稳定标签；`data-testid` 留给画布、无语义技术节点或确实无法通过用户界面定位的情况。
+这里能证明组件面对指定保存结果如何表现，不能证明真实 HTTP 方法、后端授权或持久化正确。替身的范围写清以后，下一层该验证什么就很明确了。真实接口与刷新后的读取会在 [TEST-03](../chinese-guides/test-03-e2e-visual-regression-isolation-flakiness.md#test-03) 接起来。
 
-测试找不到元素时先检查真实 DOM 角色、名称与 label 关系，不应立刻添加测试专用选择器。可访问名称可能来自文本、label、`aria-label` 或 `aria-labelledby`，冲突时浏览器算法有明确优先规则。
+jsdom 提供 DOM 模拟，适合检查语义、内容和许多事件行为，但不实现真实浏览器布局。元素有文本，不代表没有被遮挡；`toHaveFocus` 成功，也不证明焦点轮廓的颜色足够清楚。这些边界要留给浏览器和人工观察。
 
-### 四、getBy、queryBy 和 findBy 表达不同时间假设
+### 把环境与文件准备完整
 
-- `getBy*`：元素此刻必须存在，否则立即抛错；
-- `queryBy*`：用于断言当前不存在；
-- `findBy*`：等待异步出现，并在超时后失败。
+保存下面的 `package.json`，执行 `npm install` 并保留锁文件。本讲先使用 `npm test`；dev、build、start 和 e2e 的页面与服务文件会在下一讲交付。
 
-选择器本身表达界面时序。对点击后出现的状态使用 `findByRole`；对删除后消失可用 `waitForElementToBeRemoved`；不要把所有查询都包在 waitFor 中模糊责任。
-
-多元素查询需要说明为什么允许多个，以及如何按语义缩小区域。用 `within(dialog)` 比 `.nth(2)` 更能表达目标。
-
-### 五、用户事件是一组浏览器动作
-
-**用户事件模拟（user-event）**会展开点击、输入、Tab 等动作，并检查元素可交互。创建 user 后应 await 每次动作：
-
-```tsx
-const user = userEvent.setup();
-render(<CourseForm onSave={save} />);
-
-await user.type(screen.getByRole('textbox', { name: '课程名称' }), 'AI 工程');
-await user.click(screen.getByRole('button', { name: '保存' }));
+```json example=test02-package runtime=project file=package.json
+{
+  "name": "reader-test-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "start": "node server.mjs",
+    "e2e": "playwright test"
+  },
+  "dependencies": { "react": "19.2.8", "react-dom": "19.2.8" },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "fast-check": "4.3.0",
+    "jsdom": "26.1.0",
+    "vite": "6.4.3",
+    "vitest": "2.1.8"
+  }
+}
 ```
 
-直接 `fireEvent.change` 只派发底层事件，可能绕过 focus、keydown、input 和约束。只有 user-event 暂不支持的特殊事件才使用 fireEvent，并写明原因。
+将 [TEST-01 的 title.mjs](../chinese-guides/test-01-test-design-oracles-properties-mutation.md#预期结果先从需求里找) 原样复制到 `src/title.mjs`。它仍是同一份规则，不另写一个“专供测试使用”的校验函数。
 
-禁用元素不能通过强行派发点击来测试；那证明的是测试工具可以调用监听器，不是用户可以操作。
+保存 `vite.config.js` 和 `test/setup.js`：
 
-### 六、焦点是可观察行为
+```js example=test02-config runtime=project file=vite.config.js
+import { defineConfig } from 'vitest/config';
 
-表单错误后焦点移到第一个无效字段、对话框打开后进入标题或安全动作、关闭后返回触发器，这些都是组件合同。
-
-使用 `user.tab()` 沿真实顺序移动，并断言 `toHaveFocus()`。不要直接调用元素 `.focus()` 来证明 Tab 路径。焦点陷阱和 inert 背景在 DOM 模拟环境的支持可能有限，关键模态流程还需真实浏览器测试。
-
-`:focus-visible` 的视觉样式需要截图或浏览器检查，组件测试只能证明 DOM focus 和可访问属性。
-
-### 七、断言界面状态而不是内部 state
-
-提交中应显示忙碌、禁止重复操作、成功后更新内容或失败后提供恢复。测试这些输出即可推断状态机合同，无需访问 Hook state。
-
-```tsx
-await user.click(screen.getByRole('button', { name: '保存' }));
-expect(screen.getByRole('button', { name: '保存中…' })).toBeDisabled();
-expect(await screen.findByRole('status')).toHaveTextContent('保存成功');
+export default defineConfig({
+  esbuild: { jsx: 'automatic' },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./test/setup.js'],
+    include: ['test/**/*.test.jsx'],
+  },
+});
 ```
 
-私有方法调用次数、组件实例、CSS 类名和具体 DOM 层级通常是实现细节。若样式类承载真正合同，如错误状态必须有特定 design token，可在更合适的视觉或样式测试验证。
+```js example=test02-setup runtime=project file=test/setup.js
+import '@testing-library/jest-dom/vitest';
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
 
-### 八、异步断言等待业务信号
+afterEach(() => cleanup());
+```
 
-React 更新、Promise 和网络替身可能跨任务完成。固定 sleep 只是押注机器速度；等待用户可观察结果或特定请求合同。
+这里明确限制组件用例的发现目录，避免 Vitest 把下一讲的 Playwright 文件当作自己的测试。清理负责卸载当前界面；如果另外创建了全局 mock、定时器或缓存，还要在拥有它的用例中恢复，不能假设 cleanup 包办所有资源。
 
-`waitFor` 中应放最终可能通过的断言，回调保持无副作用。不要在重试回调里点击或修改数据。超时应足以诊断，但不通过无限延长隐藏死锁。
+### 组件公开的约定要在界面上看得见
 
-出现 act 警告通常说明测试触发的更新尚未由工具等待、计时器未推进或外部 Promise 在测试结束后完成。不要全局屏蔽；找到未关闭生命周期。
+保存 `src/TitleForm.jsx`。表单接收初始标题、保存函数和可选只读状态。初始值用于这一次编辑会话；切换资料时应由父组件用资料身份重新挂载，不能假设 initialTitle 变化会自动覆盖本地草稿。
 
-### 九、网络替身放在协议边界
+```jsx example=test02-form runtime=project file=src/TitleForm.jsx
+import { useId, useRef, useState } from 'react';
+import { parseTitle } from './title.mjs';
 
-推荐拦截真实 fetch/XHR 层，以请求方法、URL、body 和响应合同工作，而不是 mock 组件内部 `loadData` 函数。这样组件的 loading、错误解析、取消和重试仍走真实代码。
+export function TitleForm({ initialTitle, saveTitle, readOnly = false }) {
+  const id = useId();
+  const field = useRef(null);
+  const busy = useRef(false);
+  const [draft, setDraft] = useState(initialTitle);
+  const [saved, setSaved] = useState(initialTitle);
+  const [phase, setPhase] = useState('editing');
+  const [fieldError, setFieldError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
-处理器应按测试覆盖成功、字段错误、服务器失败、超时和异常 payload。默认未匹配请求可直接失败，防止用例意外访问网络或漏写合同。
+  async function submit(event) {
+    event.preventDefault();
+    if (busy.current || readOnly) return;
+    const result = parseTitle(draft);
+    setSaveError('');
+    if (!result.ok) {
+      setFieldError(result.message);
+      field.current.focus();
+      return;
+    }
+    busy.current = true;
+    setFieldError('');
+    setPhase('saving');
+    try {
+      const record = await saveTitle(result.title);
+      setSaved(record.title);
+      setDraft(record.title);
+      setPhase('saved');
+    } catch (error) {
+      setSaveError(error?.code === 'FORBIDDEN'
+        ? '没有编辑权限，请联系资料负责人。草稿已保留。'
+        : '保存失败，草稿已保留。请重试。');
+      setPhase('error');
+    } finally {
+      busy.current = false;
+    }
+  }
 
-请求断言只针对业务必要字段；过度比较完整 headers 或序列化顺序会使无关重构失败。敏感值使用合成数据。
+  return (
+    <section className="editor" aria-label="资料编辑区">
+      <h1>修改资料标题</h1>
+      <section aria-label="已保存内容">
+        <h2>已保存内容</h2>
+        <p>{saved}</p>
+      </section>
+      <form aria-label="编辑资料标题" onSubmit={submit} noValidate>
+        <label htmlFor={id}>资料标题</label>
+        <p id={`${id}-hint`}>去掉首尾空白后，标题需为 2～20 个字符。</p>
+        <input id={id} ref={field} value={draft}
+          readOnly={readOnly || phase === 'saving'}
+          aria-invalid={fieldError ? 'true' : undefined}
+          aria-describedby={`${id}-hint${fieldError ? ` ${id}-error` : ''}`}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            setFieldError('');
+            setSaveError('');
+            setPhase('editing');
+          }} />
+        {fieldError && <p id={`${id}-error`} role="alert">{fieldError}</p>}
+        {saveError && <p role="alert">{saveError}</p>}
+        <button type="submit" disabled={readOnly || phase === 'saving'}>
+          {phase === 'saving' ? '保存中…' : phase === 'error' ? '重试保存' : '保存标题'}
+        </button>
+        <p role="status">
+          {readOnly ? '当前仅可查看' : phase === 'saving' ? '正在保存'
+            : phase === 'saved' ? '保存成功' : '可以编辑'}
+        </p>
+      </form>
+    </section>
+  );
+}
+```
 
-### 十、竞态通过受控 Promise 验证
+错误关联到字段，字段无效时焦点回到输入框；保存期间输入只读，按钮禁用；保存失败不改草稿，成功才使用已交付结果。`busy` 还保护同一轮提交在界面更新之前被重复触发的窗口。两种保护都服务“不要重复写入”的约定。
 
-要证明旧响应不会覆盖新响应，不应依赖真实 30/10ms timer。创建两个可控响应，先发 A、再发 B，然后按 B→A 顺序完成，断言最终界面保持 B，旧结果被丢弃或标记 stale。
+客户端只读不等于服务端授权。只读 prop 决定界面如何呈现，服务端仍要检查请求主体和资源权限。权限拒绝与普通故障也不应给出相同原因，虽然两种情况下都需要保留用户输入。
 
-同时覆盖组件卸载、参数改变和取消不生效，因为 Abort 不是所有后端和中间层都能保证。测试提交边界的身份守卫，而不是只断言调用了 `abort()`。
+### 角色名称和标签让查询接近真实使用
 
-这类测试验证的是状态机不变量，可与 TEST-01 的并发模型结合。
+**可访问名称（accessible name）**回答“用户如何辨认这个控件”。本例的 label 与 input 关联，所以可以通过“文本框，资料标题”找到输入；按钮自身文字提供了名称。
 
-### 十一、表单测试覆盖名称、错误和恢复
+```jsx example=test02-queries runtime=project
+const input = screen.getByRole('textbox', { name: '资料标题' });
+const submit = screen.getByRole('button', { name: '保存标题' });
+const savedArea = screen.getByRole('region', { name: '已保存内容' });
+```
 
-至少验证键盘填写、浏览器/业务约束、提交状态、字段错误关联、错误摘要和修正后成功。字段错误不仅要显示文字，还要通过 `aria-invalid`、描述关系或焦点让用户知道属于哪个控件。
+这三行是查询写法说明，依赖后面完整测试里的 screen 与已挂载组件，不作为独立脚本运行。角色与名称来自公开界面，比 `.editor > form > button:nth-child(4)` 更能经受布局重构。
 
-不要只调用 submit handler。通过 form 和按钮触发，才能覆盖 Enter 提交、按钮类型和禁用。服务端仍应验证，组件测试只检查客户端如何表达服务端拒绝。
+如果有两个同名按钮，先用 `within` 缩小到“资料编辑区”或某个对话框，而不是随意取第一个。单元素查询匹配多个节点也会抛错；`queryBy` 不会把歧义默默当成不存在。
 
-对于受控和非受控组件，测试同一用户合同；实现方式变化不应迫使期望跟着重写。
+`data-testid` 适合确实缺少语义入口的技术节点，但不是默认逃生口。找不到输入时先检查 label、角色和当前状态。placeholder 是提示，不能替代持久标签；role/name 能被查询，也不等于已经完整通过无障碍审查。语义基础可回到 [WEB-01](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)。
 
-### 十二、Context 和 provider 测试保持真实边界
+### 查询方式也在表达你对时间的判断
 
-组件依赖 Router、Theme 或业务 Context 时，可提供最小真实 provider。不要 mock `useContext` 返回任意对象，因为这会绕过 provider 默认值、更新传播和缺失边界。
+| 方式 | 它表达什么 | 本例适用场景 |
+| --- | --- | --- |
+| `getBy*` | 现在应有且唯一 | 表单刚挂载后找到标题输入 |
+| `queryBy*` | 现在可以不存在 | 尚未出错时确认没有 alert |
+| `findBy*` | 等待元素出现 | 保存拒绝后等待 alert |
+| `waitFor` 内放断言 | 等待某个条件成立 | 已有 status 元素的文字改为保存成功 |
 
-自定义 render 可接受明确选项，如初始 route、登录身份和 query cache。每次创建独立实例，避免缓存数据让后续用例跳过 loading。
+注意最后两行的区别：本例的 status 从一开始就存在。`findByRole('status')` 可以立即返回旧状态，不能单独证明它的文字已更新。要等待的是具体内容，而不只是节点存在。
 
-若 provider 逻辑本身复杂，应单独测试其用户影响和 reducer；消费者用例只覆盖需要的组合。
+`waitFor` 可能多次执行回调，所以只放查询和断言，不在里面点击或提交。否则一次等待可能重复执行多次业务动作。等待时限用于失败诊断，不要不断加长来掩盖没有发生的状态转换。
 
-### 十三、Hook 通常通过使用它的组件验证
+### 一条键盘路径同时检查输入与错误反馈
 
-自定义 Hook 若只是组件逻辑复用，优先通过一个最小组件观察输入输出，而不是断言内部 Effect 数量。纯 reducer 或转换函数可以独立测试。
+保存 `test/TitleForm.test.jsx`。下面三段按顺序放入同一个文件，第一段包含公共导入与第一个用例：
 
-Hook 直接管理外部订阅时，需要验证挂载、依赖变化、清理和卸载。使用 fake 记录订阅集合比 spy 某个内部函数更接近资源合同。
+```jsx example=test02-validation runtime=project file=test/TitleForm.test.jsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, within, act, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { TitleForm } from '../src/TitleForm.jsx';
 
-不要因为工具提供 renderHook 就把所有 Hook 从组件语境剥离；Context、并发渲染和 DOM 交互仍需适当宿主。
+describe('资料标题的用户行为', () => {
+  it('键盘提交过短标题时指出字段且不保存', async () => {
+    const save = vi.fn();
+    const user = userEvent.setup();
+    render(<TitleForm initialTitle="" saveTitle={save} />);
+    const input = screen.getByRole('textbox', { name: '资料标题' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.tab();
+    expect(input).toHaveFocus();
+    await user.type(input, '学');
+    await user.tab();
+    expect(screen.getByRole('button', { name: '保存标题' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('alert')).toHaveTextContent('2～20');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription(/2～20/);
+    expect(input).toHaveFocus();
+    expect(save).not.toHaveBeenCalled();
+  });
+});
+```
 
-### 十四、fake timer 需要理解任务队列
+**user-event** 把输入与点击展开为更接近用户操作的一组事件。每次动作都使用 await，给事件和框架更新留下完成机会。直接调用 submit 函数不能证明 Enter 能提交，也绕过了按钮类型与键盘路径。
 
-防抖、延迟提示和重试可使用 fake timer 加速，但 Promise microtask 与 timer 队列不同。推进时间后还要等待 React 更新与相关微任务。测试结束恢复真实计时器，清除 pending task。
+`fireEvent` 可以用于工具尚未覆盖的底层事件，但要说明所模拟的边界。不要强行向禁用按钮派发事件，再用它推断用户可以重复保存。焦点轮廓和元素遮挡仍需真实浏览器；本例证明的是这条模拟 DOM 路径中的焦点行为。
 
-不要用 fake timer 测浏览器动画流畅度或网络真实性。若业务只关心“输入停止 300ms 后请求”，虚拟时间合适；若关心真实调度与渲染，则交给浏览器测试。
+### 手动交付失败结果才能看清恢复过程
 
-### 十五、错误边界和 Suspense 需要恢复路径
+继续在同一个测试文件末尾追加这段。它通过一个可控 Promise 保持保存尚未结束，以便可靠观察中间状态：
 
-组件抛错时验证 fallback、错误记录边界和用户重试；Suspense 验证 pending 内容、成功揭示和错误处理。不要断言 React 内部调用顺序。
+```jsx example=test02-recovery runtime=project
+it('保存期间不重复提交，失败保留草稿并可重试', async () => {
+  let rejectFirst;
+  const first = new Promise((_, reject) => { rejectFirst = reject; });
+  const save = vi.fn()
+    .mockImplementationOnce(() => first)
+    .mockResolvedValueOnce({ title: '新的笔记' });
+  const user = userEvent.setup();
+  render(<TitleForm initialTitle="学习笔记" saveTitle={save} />);
+  const input = screen.getByRole('textbox', { name: '资料标题' });
+  await user.clear(input);
+  await user.type(input, '  新的笔记  ');
+  await user.click(screen.getByRole('button', { name: '保存标题' }));
+  const busy = screen.getByRole('button', { name: '保存中…' });
+  expect(busy).toBeDisabled();
+  expect(input).toHaveAttribute('readonly');
+  await user.click(busy);
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(save).toHaveBeenCalledWith('新的笔记');
+  await act(async () => { rejectFirst(new Error('模拟保存失败')); });
+  expect(await screen.findByRole('alert')).toHaveTextContent('草稿已保留');
+  expect(input).toHaveValue('  新的笔记  ');
+  expect(within(screen.getByRole('region', { name: '已保存内容' }))
+    .getByText('学习笔记')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: '重试保存' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('保存成功'));
+  expect(input).toHaveValue('新的笔记');
+  expect(screen.getByRole('region', { name: '已保存内容' })).toHaveTextContent('新的笔记');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(save).toHaveBeenCalledTimes(2);
+});
+```
 
-重试应创建新的请求或重置边界身份，并保护已输入数据。测试旧 Promise 迟到不会覆盖恢复后的结果。控制台预期错误可在单个测试窄拦截，并在结束恢复，不能全局吞掉真实 warning。
+这里检查保存调用次数，是因为它对应重复写入风险。并不检查 React 渲染了几次、内部 setter 调了几次，也不要求使用某个特定 Hook。
 
-### 十六、快照只适合稳定且可评审的结构
+显式 `act` 包围测试自己触发的 Promise 拒绝，让 React 处理相关更新；普通 user-event 与 Testing Library 操作已经集成常用更新等待。遇到 act 警告时，检查未等待的动作或测试结束后的更新，不把控制台整段静音。
 
-大型 DOM 快照常在任意属性或格式变化时更新，评审者难以发现真正回归。更好的做法是对角色、名称、内容和状态做针对断言。
+如果组件面对失败会清空 draft，这个用例会在原始草稿处失败；如果只把按钮禁用删掉，它会在忙碌按钮处失败。即使内部 busy 守卫还挡住了第二次写入，禁用反馈本身仍是我们明确要求的用户行为。
 
-小型序列化合同、邮件模板或复杂 ARIA 关系可使用局部快照，但更新必须阅读 diff。视觉像素变化交给真实浏览器截图，不要把 DOM 快照称为视觉回归。
+### 只读和权限拒绝属于不同层
 
-### 十七、判断何时升级到 E2E
+最后追加一个只读案例，然后执行 `npm test`，预期这份文件共 3 项通过：
 
-若问题依赖真实 CSS 布局、文件下载、多标签页、浏览器存储、导航历史、Service Worker 或跨源策略，组件环境不足。保留组件测试覆盖详细业务分支，再以少量 E2E 验证跨层连接。
+```jsx example=test02-readonly runtime=project
+it('只读资料展示现有标题且不能提交', async () => {
+  const save = vi.fn();
+  const user = userEvent.setup();
+  render(<TitleForm initialTitle="只读笔记" saveTitle={save} readOnly />);
+  const input = screen.getByRole('textbox', { name: '资料标题' });
+  expect(input).toHaveAttribute('readonly');
+  await user.type(input, '改写');
+  expect(input).toHaveValue('只读笔记');
+  const button = screen.getByRole('button', { name: '保存标题' });
+  expect(button).toBeDisabled();
+  await user.click(button);
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByRole('status')).toHaveTextContent('当前仅可查看');
+});
+```
 
-同一功能不必把所有案例复制到 E2E。组件层验证十种字段错误，E2E 可以只验证最重要成功与拒绝路径，降低成本和不稳定性。
+这条路径没有调用服务器，因而不能证明权限校验。HTTP 适配层遇到 403 时，可以映射为带 `code: 'FORBIDDEN'` 的错误，组件提供联系负责人的说明；普通服务故障则提供重试。权限变化以后重新确认身份，才可能解决 403，单纯重复请求并不改变授权。
 
-### 十八、失败输出服务定位
+当你需要验证 HTTP 方法、请求体或错误解析时，应把替身移到 fetch/XHR 的协议边界，例如使用 MSW。拦截器校验请求并交付相应响应，未匹配请求应可见，避免意外连到真实服务。只有调用函数替身的本例不宣称完成了这一步，协议适配将在下一讲结合真实服务验证。
 
-查询失败应展示当前可访问角色和 DOM，测试名称说明用户任务。网络替身记录未匹配请求，异步超时保存最后界面状态。避免在断言前打印海量日志，使真正差异被淹没。
+### 异步资源和框架边界各自需要谁负责
 
-测试应能单独、随机顺序和并行运行。若失败只因上一用例留下缓存、计时器或 mock，修隔离而不是固定顺序。
+本例只有一份资料的单次编辑会话，保存期间输入只读。搜索切换资料、组件卸载或先后两次读取时，还需要处理请求身份与清理。先 B 后 A 的可控结果比随机延迟更容易揭示竞态，详见 [TEST-01](../chinese-guides/test-01-test-design-oracles-properties-mutation.md#用可控完成顺序验证异步规则)。
 
-### 进阶：SSR 与 hydration 需要双阶段验证
+Router、Context、Query Client 等边界可以提供最小真实 provider，并为每个用例建立新状态。不要为了方便直接 mock useContext 的返回值，那会绕过真实 provider 的更新与缺省行为。自定义 render 可以收纳重复配置，但重要的身份、路由和初始数据应仍在用例里看得见。
 
-服务端输出可先渲染成 HTML，客户端随后 hydrate 并接管事件。组件测试可检查服务端标记包含关键内容，再在 DOM 中 hydrate，确保没有结构不一致警告、交互生效且用户输入未被覆盖。时间、随机 ID 和仅浏览器条件应在两端产生一致首屏。
+自定义 Hook 通常通过使用它的组件观察；纯 reducer 可以独立检查；管理外部订阅的 Hook 则观察订阅集合与清理。开发模式或 Strict Mode 可能增加检查性调用，所以不要把“渲染只发生一次”写成没有业务依据的预期。
 
-模拟 DOM 无法覆盖所有浏览器解析和流式边界，因此再用一条真实浏览器检查首屏到可交互阶段。不要把 hydration warning 全局静音；它可能表示浏览器重建子树、丢失焦点或造成布局抖动。
+使用 fake timer 检查防抖时，要让 user-event 按所用版本的方式配合时钟推进，并恢复真实计时器。推进计时器不一定已经清空全部 Promise 和框架更新，不能靠删除 await 或无限 timeout 解决。
 
-### 进阶：组件合同跨框架但细节不相同
+### 弹层快照与浏览器能力不要混成一种证明
 
-角色、名称、表单、焦点和网络状态是跨框架用户合同；React 的 state snapshot、Effect 和 Suspense 是具体运行模型。迁移组件时应保留用户行为测试，并重写依赖框架内部调度的测试。
+Portal 把 DOM 放到挂载容器之外时，查询范围可能应使用 screen，再用对话框角色和名称缩小范围。关闭后焦点是否回到触发者属于行为约定，不能只断言弹层节点消失。
 
-把组件测试作为 API 使用者：只传公开 props、触发用户事件和观察 DOM。若只能通过导入私有 Hook 或修改内部 ref 才能验证，先检查组件边界是否把真正行为隐藏得不可观察。
+Error Boundary 和 Suspense 需要分别验证等待、错误与恢复；按钮事件里的异步失败通常需要应用自己捕获，并不会自动变成渲染错误边界的 fallback。重试还要确认使用新的请求或正确重置边界，不能让旧结果覆盖恢复后的内容，可连接 [REACT-08](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#react-08)。
 
-### 学完后应能说明
+大型 DOM 快照很容易变成“实现变了就全部更新”。小型稳定结构或有明确语义的序列化结果可以快照，但必须阅读差异；DOM 快照不包含真实像素布局，不能称为视觉回归。
 
-你应能按角色、名称和标签查询 React 界面，选择 get/query/find 表达时序，通过 user-event 验证键盘、表单和焦点；能在网络边界控制成功、错误和竞态，而不 mock 内部实现。还应知道 DOM 模拟环境的局限，何时把布局、导航和浏览器能力交给 E2E。
+SSR 又有服务端输出与客户端接管两个阶段。服务端 HTML 正确，不代表 hydrate 后事件、焦点和输入仍正确；模拟 DOM 可以检查一部分接管行为，真实解析、样式与浏览器能力仍应按风险补浏览器观察。[VUE-10](../chinese-guides/vue-10-testing-performance-production-build.md#两个行为测试就能保护关键约定) 中的用户约定与这里相通，框架调度细节则不能直接照搬。
+
+### 失败时先问用户约定还是测试假设变了
+
+查询失败时查看当时的角色、名称和 DOM。异步等待失败时查看最后一个界面状态、保存是否被调用、结果是否真的交付。未处理异常和控制台警告要找到来源，预期错误只在相应场景窄范围处理。
+
+如果用例只有跟在另一个用例后才失败，检查未卸载组件、全局 mock、定时器、单例缓存和 provider 状态。固定运行顺序能暂时掩盖问题，但不能修复隔离。
+
+完成本讲后，可以做两次有意义的故障对照：让保存失败时清空输入；让保存中按钮仍可用。现有恢复用例都应报告具体的用户约定损坏。保持这些观察，再重构组件内部，才是组件测试支持维护的方式。
+
+### 参考与延伸阅读
+
+核对日期：2026-09-10，完整项目采用文首所列版本。
+
+- [Testing Library：查询](https://testing-library.com/docs/queries/about/) 与 [React API](https://testing-library.com/docs/react-testing-library/api/)：核对 role/name、查询时序、挂载、清理和作用域。
+- [user-event：介绍](https://testing-library.com/docs/user-event/intro/) 与 [fake timer](https://testing-library.com/docs/using-fake-timers/)：了解用户动作模拟及计时器配合。
+- [React：act](https://react.dev/reference/react/act)：区分 React 更新完成与测试自行触发的外部事件。
+- [MSW：请求拦截与文档入口](https://mswjs.io/)：需要验证协议边界时再引入相应拦截环境。
+- [Vitest 2：环境](https://v2.vitest.dev/guide/environment)：对应本例使用的 jsdom 环境和版本。

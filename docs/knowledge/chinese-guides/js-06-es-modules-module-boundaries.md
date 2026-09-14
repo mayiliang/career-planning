@@ -1,315 +1,319 @@
-# JavaScript 知识点讲义
+# B03 异步边界、模块与类型
 
 ## JS-06 ES Modules 与模块边界
 
-当程序从几个脚本增长为几百个文件，模块首先解决的是“名字和依赖从哪里来”，随后才是打包、按需加载和代码分块。真正成熟的模块设计还要回答：哪些能力属于公开合同，副作用何时发生，依赖能否保持单向，浏览器与 Node.js 怎样解释同一段导入，以及模块失败应在哪个边界被处理。
+同一段金额格式化逻辑被复制到三个页面，后来改规则时只改了两处；一个文件为了读取用户状态导入另一个文件，另一个文件又反过来导入它。代码分成多个文件后，重复与依赖问题并不会自动消失。
+
+模块要解决的是：哪些名字只在内部使用，哪些能力允许外部调用，代码依赖谁，以及导入时到底会发生什么。本篇先用两个文件跑通，再逐步加入共享状态、循环、异步加载和资源清理。
 
 ### 学习前先确认
 
-- 直接前置：[JS-05 Promise 错误处理与异步控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)。它会继续链接 JS-04、函数、变量和对象等基础；理解动态导入的拒绝与恢复只需沿这一条链补齐。
+- 直接前置：[JS-05 Promise 错误处理与异步控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)。动态导入返回 Promise，失败仍需要明确的处理边界。
 
-`import`、`export`、模块图、实时绑定和宿主解析规则都从本讲开始解释，不要求先背模块工具术语。
+本篇示例是多文件程序，不能把含静态 import/export 的片段直接粘到普通 Console 当成一段脚本。每组文件放在各自目录，入口为 `main.mjs`，由同目录 HTML 的 `<script type="module" src="./main.mjs"></script>` 加载。通过本地 HTTP 服务打开；已有前端项目也可以使用自己的开发服务。不同示例不要覆盖后混在同一目录运行。输出按注释核对。
 
-### 一、模块是带边界的代码单元
+### 用两个文件建立公开入口
 
-**ES Module** 是 ECMAScript 定义的标准模块系统。一个模块拥有自己的顶层作用域，通过 `export` 声明对外能力，通过 `import` 显式取得依赖：
+**ES Module** 是 JavaScript 的标准模块形式。模块里的名字默认属于自己，写上 `export` 才允许其他模块导入。
 
-```js
-// currency.js
+文件：`money.mjs`
+
+```js example=js06-exports runtime=browser file=money.mjs
+const centsPerYuan = 100;
 export const currency = 'CNY';
-
-export function formatMoney(cents) {
-  return `${currency} ${(cents / 100).toFixed(2)}`;
+export default function formatMoney(cents) {
+  return `${currency} ${(cents / centsPerYuan).toFixed(2)}`;
 }
 ```
 
-```js
-// order-view.js
-import { formatMoney } from './currency.js';
+文件：`main.mjs`
 
-export function renderOrder(order) {
-  return `${order.id}：${formatMoney(order.totalCents)}`;
-}
+```js example=js06-exports runtime=browser file=main.mjs
+import format, { currency as unit } from './money.mjs';
+import * as money from './money.mjs';
+console.log(format(1250), unit); // => CNY 12.50 CNY
+console.log(typeof money.default); // => function
+console.log(Object.keys(money).sort().join(',')); // => currency,default
 ```
 
-模块顶层声明不会像旧式经典脚本那样自动成为 `window` 属性；模块代码天然使用严格模式，顶层 `this` 是 `undefined`。每个文件显式列出依赖后，工具和读者都能建立**模块图（module graph）**：节点是模块，边表示一个模块依赖另一个模块。
+`currency` 是具名导出；导入时名称应当匹配，也可以用 `as` 改成本地名字 `unit`。`formatMoney` 是默认导出，一个模块最多有一个，导入方可以命名为 `format`。大括号是模块语法的一部分，不是在运行时对对象做解构。
 
-模块不是“把一个大文件切碎”这么简单。如果所有文件都读写同一个全局对象，文件虽多，依赖仍是隐式的；修改顺序、测试隔离和复用都不会自然改善。边界的价值来自限制谁能访问什么，并让依赖关系可以检查。
+`import * as money` 得到**模块命名空间对象（module namespace object）**。可以通过它读取公开导出，默认导出位于 `.default`。没有导出的 `centsPerYuan` 不在这个公开集合里；外部不需要知道内部换算常量怎样组织。
 
-### 二、导入说明符先经过宿主解析
+模块会自动采用 JavaScript 严格模式，顶层 `this` 为 `undefined`。顶层变量不会因为写在文件开头就自动成为 `window` 属性。这使模块内部实现有清晰边界，但并不阻止代码主动写全局对象；如果所有模块仍共同修改 `globalThis.app`，依赖就又藏回全局状态中了。
 
-`import { x } from './math.js'` 中的字符串叫**模块说明符（module specifier）**。ECMAScript 规定模块语法和求值关系，浏览器、Node.js、打包工具则负责把说明符解析成具体模块。
+### 先找到模块再连接导入导出
 
-常见说明符分三类：
+`'./money.mjs'` 这样的字符串叫**模块说明符（module specifier）**。JavaScript 规定导入导出的语法与绑定关系，浏览器、Node.js 和构建工具决定说明符对应哪里。
 
-- 相对说明符：`./math.js`、`../shared/id.js`；
-- 绝对 URL 或绝对路径语义：具体能力取决于宿主；
-- 裸说明符：`react`、`@scope/package/subpath`，需要包解析规则、导入映射或构建工具。
+| 写法 | 在表达什么 | 需要确认什么 |
+| --- | --- | --- |
+| `./money.mjs` | 相对于当前模块的位置 | 相对的是导入者，不是 HTML 所在目录 |
+| `/shared/money.mjs` | 网站根路径下的资源 | 部署到子路径时地址是否仍然成立 |
+| `https://example.com/money.mjs` | 完整资源 URL | 网络、内容类型与跨源策略 |
+| `some-library` | 裸说明符 | 由 import map、包解析或构建工具解释 |
 
-原生浏览器直接加载相对模块时通常要写完整路径和扩展名，服务器还需返回正确的 JavaScript MIME 类型。模块脚本跨源获取要满足 CORS；直接用 `file://` 打开 HTML 常因安全策略失败，应通过本地 HTTP 服务验证。
+浏览器原生模块不会替所有裸说明符自动去某个 node_modules 找包。相对 URL 也没有通用的“自动补 `.js`、自动找 `index.js`”规则，应写能实际请求到的地址。文件扩展名可以由服务器约定，但响应必须具有可接受的 JavaScript MIME 类型。
 
-```html
-<script type="module" src="/assets/main.js"></script>
+这也解释了一种常见报错：请求的路径不存在，开发服务器返回了 HTML 首页，浏览器提示模块 MIME 不正确。问题不是 import 拼写形式错误，而是拿回来的资源根本不是 JavaScript。
+
+跨源模块加载需要满足 CORS。直接双击 HTML 用 `file://` 打开，则可能受到本地文件安全限制。先确认加载方式和响应，再分析模块内部代码，能避免把网络问题误当成语言问题。
+
+### 模块图不是把代码按文字顺序粘起来
+
+如果 `main.mjs` 导入 `settings.mjs`，可以画一条 `main → settings` 的依赖边。多个文件组成**模块图（module graph）**。运行前，宿主需要找到静态依赖，模块系统才能连接它们的导入导出。
+
+可以先分成三个阶段理解：读取与解析源码，确认静态依赖；链接或实例化，为模块建立环境并连接绑定；求值，实际执行顶层语句。加载资源的网络动作与语言层的链接、求值不是同一件事，工具也可能提前预加载资源。
+
+文件：`settings.mjs`
+
+```js example=js06-evaluation runtime=browser file=settings.mjs
+console.log('配置模块开始执行'); // => 配置模块开始执行
+export const language = 'zh-CN';
 ```
 
-模块脚本默认延后到文档解析完成后执行；重复请求同一规范化模块通常只会求值一次。缓存身份以解析后的 URL 为基础，查询参数或片段差异可能产生不同身份。不要把“文件内容相同”误当作“运行时一定是同一模块实例”。
+文件：`main.mjs`
 
-### 三、加载分为解析、实例化和求值
-
-理解循环依赖和顶层等待时，不能只想成“按 import 从上到下一行行复制代码”。可以把模块加载概括为三个阶段：
-
-1. 解析：读取源码，确认语法和静态导入导出；
-2. **实例化（instantiation）**：连接导入与导出的绑定，为模块图建立环境；
-3. **求值（evaluation）**：按依赖关系执行模块顶层代码，初始化绑定并产生副作用。
-
-静态 `import` 必须出现在模块顶层，使依赖在执行前可分析。它不是普通函数调用，不能直接放进 `if`：
-
-```js
-// 错误思路：静态 import 不能这样条件执行
-if (needsEditor) {
-  // import { openEditor } from './editor.js';
-}
+```js example=js06-evaluation runtime=browser file=main.mjs
+import * as first from './settings.mjs';
+console.log(`入口读取：${first.language}`); // => 入口读取：zh-CN
+const second = await import('./settings.mjs');
+console.log(first === second); // => true
 ```
 
-真正按条件加载使用后文的 `import()`。但不要为了躲开不合理依赖而把所有静态导入改为动态导入；那只会把设计错误推迟到运行时。
+入口正文读取配置前，依赖的初始化已经完成。随后动态导入同一个模块得到相同命名空间，这次不会再打印“配置模块开始执行”。在同一执行环境中，成功加载的同一模块通常复用已有实例。
 
-### 四、导入是实时绑定，不是一次复制
+这里的“同一模块”与解析后的模块身份有关，浏览器主要以 URL 等信息识别；不同查询参数、不同执行环境或开发工具热更新，不能一概当作同一个实例。更不能把“顶层只执行一次”误解为“导出的函数调用多少次都只执行一次”。
 
-静态导入连接到导出方的绑定。导出方重新赋值后，导入方下一次读取能观察到新值，这叫**实时绑定（live binding）**：
+由 HTML 解析器遇到、没有 async 属性的普通模块脚本默认延后执行；具体与 HTML 解析和其他脚本的顺序还受脚本属性影响。分析时先区分入口脚本的调度与模块依赖的求值关系，不必把所有情况挤进“从文件第一行开始”的模型。
 
-```js
-// session.js
-export let currentUser = null;
+### 实时绑定让读取跟着导出方变化
 
-export function signIn(user) {
-  currentUser = user;
-}
+静态导入连接的是导出绑定，不是导入瞬间的一份值快照。这叫 **live binding**，可以理解为“以后每次读取，仍然读这一个导出位置”。
+
+文件：`counter.mjs`
+
+```js example=js06-live-binding runtime=browser file=counter.mjs
+export let count = 0;
+export const detail = { label: '未开始' };
+export function increment() { count++; }
 ```
 
-```js
-// header.js
-import { currentUser, signIn } from './session.js';
+文件：`main.mjs`
 
-console.log(currentUser); // null
-signIn({ name: 'Ada' });
-console.log(currentUser); // { name: 'Ada' }
+```js example=js06-live-binding runtime=browser file=main.mjs
+import { count, detail, increment } from './counter.mjs';
+import * as counter from './counter.mjs';
+const snapshot = count;
+const { count: destructured } = counter;
+increment();
+console.log(count, counter.count, snapshot, destructured); // => 1 1 0 0
+detail.label = '已经开始';
+console.log(counter.detail.label); // => 已经开始
 ```
 
-导入方不能直接给 `currentUser` 重新赋值；导入绑定是只读视图，但它指向的值若是可变对象，对象内容仍可能被修改。为了保持边界清晰，状态模块通常不直接导出可任意修改的对象，而是导出读取函数、命令函数或只读快照。
+`count` 与 `counter.count` 继续读取导出位置，因此变成 1；普通赋值的 `snapshot` 和从命名空间解构出的数字，只保留当时读到的 0。这与 [B01 的绑定和快照](../chinese-guides/js-01-execution-context-scope-closure.md#闭包保存的是变量还是快照) 可以放在一起理解。
 
-实时绑定也解释了循环模块为何“有时能工作、有时抛错”：连接可能已经建立，值却尚未在求值阶段初始化。它不同于 CommonJS 把某个导出对象作为结果交给调用者的直觉。
+导入方不能直接给导入的 `count` 重新赋值，应通过导出方提供的命令改变它。但 `detail` 指向可变对象，给 `detail.label` 赋值仍然可以成功。导入绑定只读，不等于对象被深冻结；对象共享见 [B01 的对象身份](../chinese-guides/js-03-types-equality-copy-immutability.md#赋值之后谁和谁共用对象)。
 
-### 五、具名导出、默认导出与命名空间对象
+默认导出也要看语法：`export default count` 会求出该表达式的值；`export { count as default }` 则导出 count 的绑定。不能仅凭“default”一词就判断更新是否会被观察到。默认导出与具名导出的选择，应服务于模块含义和命名一致性。
 
-具名导出要求导入方使用明确名称，重构工具更容易跟踪：
+### 循环依赖为什么会读到尚未初始化的变量
 
-```js
-export function parseOrder() {}
-export function formatOrder() {}
+下面这组文件故意形成循环。`a` 初始化需要 `b`，`b` 初始化又需要 `a`；谁都不能凭空先有值。
 
-import { parseOrder, formatOrder as format } from './orders.js';
-```
+文件：`a.mjs`
 
-默认导出每个模块最多一个，导入方可以自行命名：
-
-```js
-export default function createClient() {}
-
-import makeClient from './client.js';
-```
-
-默认导出适合模块确实只有一个主要概念的情况；在工具库里大量默认导出会让名称不一致，搜索和自动导入变得困难。选择不是风格竞赛，而是公开合同是否稳定清楚。
-
-`import * as orders from './orders.js'` 得到模块命名空间对象。它适合显式聚合或动态选择少量已知成员，不应被当作可任意写入的普通对象。过度使用命名空间导入也可能隐藏真正依赖了哪些能力。
-
-再导出可以建立公共入口：
-
-```js
-export { createOrder } from './create-order.js';
-export { cancelOrder } from './cancel-order.js';
-```
-
-但 `export *` 的“桶文件”会扩大图、隐藏同名冲突并诱发循环依赖。公共入口应经过设计，不是把目录下所有实现自动暴露出去。
-
-### 六、循环依赖的危险来自初始化时机和职责方向
-
-模块 A 依赖 B，B 又直接或间接依赖 A，形成**循环依赖（circular dependency）**。循环本身不必然报错；真正危险的是模块在对方绑定尚未初始化时就读取它：
-
-```js
-// a.js
-import { b } from './b.js';
+```js example=js06-cycle runtime=browser file=a.mjs
+import { b } from './b.mjs';
 export const a = b + 1;
+```
 
-// b.js
-import { a } from './a.js';
+文件：`b.mjs`
+
+```js example=js06-cycle runtime=browser file=b.mjs
+import { a } from './a.mjs';
 export const b = a + 1;
 ```
 
-图在实例化阶段可以连接，但求值时某个绑定仍处于暂时性死区，读取就会抛 `ReferenceError`。若读取被放进稍后才调用的函数，初始化时可能不报错，却仍保留双向职责和脆弱顺序。
+文件：`main.mjs`
 
-诊断循环时画出完整路径，而不是只看两个文件。常见修复按优先顺序考虑：
-
-1. 把双方都依赖的纯类型、常量或协议抽到更低层模块；
-2. 重新分配职责，让高层编排依赖低层能力，低层不反向导入页面或业务入口；
-3. 把顶层副作用改成入口显式调用，并通过参数注入协作者；
-4. 只有模块确实是可选功能边界时，才用动态导入切断初始加载。
-
-用 timer 延迟读取只能改变报错时机，不能修复依赖方向。循环在一种打包顺序中看似正常，也可能在测试、服务端渲染或升级工具后暴露。
-
-### 七、动态导入是异步能力边界
-
-`import(specifier)` 是**动态导入（dynamic import）**表达式，返回 Promise，兑现值是模块命名空间对象：
-
-```js
-async function openEditor() {
-  try {
-    const { createEditor } = await import('./editor.js');
-    return createEditor();
-  } catch (error) {
-    showEditorFallback(normalizeError(error));
-    return null;
-  }
+```js example=js06-cycle runtime=browser file=main.mjs
+try {
+  await import('./a.mjs');
+} catch (error) {
+  console.log(error.name); // => ReferenceError
 }
 ```
 
-失败可能来自网络、路径解析、MIME/CORS、语法错误、依赖模块失败或目标模块求值抛错。错误 UI 应放在真正能降级的功能边界，例如编辑器按钮、报表页或可选可视化组件，而不是在底层把所有导入失败改成空对象。
+| 所处阶段 | 发生什么 |
+| --- | --- |
+| 发现依赖 | a 导入 b，b 又导入 a，形成环 |
+| 连接绑定 | 两边知道对方导出哪个名字 |
+| 执行初始化 | 某一方读取另一方尚未初始化的 const |
+| 观察结果 | 暂时性死区读取失败，入口收到拒绝 |
 
-动态导入常与构建工具的代码分割配合，但两者不是同一概念。语言只规定异步加载模块的语义；构建工具决定产生多少 chunk、文件名、预加载和缓存策略。把变量任意拼成路径还可能超出构建工具可静态发现的集合，应使用明确映射：
+“知道变量在哪”与“变量已经有值”不同。ESM 循环不是一律返回 `undefined`；对于尚未初始化的 let/const 等绑定，这里会抛出 ReferenceError。函数声明、var 和读取时机又有各自规则，不能用一个例子推断所有循环必然同样失败。
 
-```js
-const loaders = {
-  chart: () => import('./widgets/chart.js'),
-  table: () => import('./widgets/table.js'),
-};
+循环也不一定立即报错。如果相互调用被放到初始化结束后才发生，可能运行正常，但双向依赖仍会增加理解和修改难度。依赖图中的环与实际读取时机，需要分别判断。
+
+### 拆开循环先重新划分谁依赖谁
+
+如果两个模块其实都需要同一份基础规则，就把规则放在它们下层，让双方依赖它。下面的例子没有用定时器拖延报错，而是消除了“互相等待初始值”的关系。
+
+文件：`base.mjs`
+
+```js example=js06-directed-dependencies runtime=browser file=base.mjs
+export const baseScore = 10;
 ```
 
-同一模块已成功加载后再次导入通常复用模块实例，但业务初始化函数是否幂等仍由应用负责。模块只求值一次不等于每次调用导出函数都没有副作用。
+文件：`score.mjs`
 
-### 八、顶层 await 会把等待传给依赖者
-
-模块顶层可以使用 `await`，形成**顶层等待（top-level await）**。依赖它的模块必须等待其求值完成：
-
-```js
-// config.js
-export const config = await loadConfig();
+```js example=js06-directed-dependencies runtime=browser file=score.mjs
+import { baseScore } from './base.mjs';
+export function calculateScore(completed) { return baseScore + completed; }
 ```
 
-这能表达模块初始化确实依赖异步结果，却也把延迟和失败传播到整条依赖链。某个深层工具模块的网络请求可能阻塞大量无关模块启动，使入口看不到加载进度；相互等待还可能形成难以诊断的异步循环。
+文件：`main.mjs`
 
-更可控的替代方案是导出显式初始化函数或 Promise，由应用入口决定何时等待、怎样显示状态和如何重试：
+```js example=js06-directed-dependencies runtime=browser file=main.mjs
+import { baseScore } from './base.mjs';
+import { calculateScore } from './score.mjs';
+console.log(baseScore, calculateScore(3)); // => 10 13
+```
 
-```js
-let configPromise;
+现在的图是 `main → score → base`，以及 `main → base`，没有向上的返回边。若底层需要通知上层，不一定要反向 import 页面，可以由上层传入回调、接口或数据。依赖应该跟职责一致，而不是为了方便访问某个变量就随处导入。
 
-export function getConfig() {
-  configPromise ??= loadConfig();
-  return configPromise;
+如果两个值在业务上确实定义为互相加一，抽出公共文件也解决不了矛盾，应先修正业务定义。模块重构能整理依赖，不能替一个无解定义制造答案。
+
+### 动态导入让可选功能有自己的失败入口
+
+静态 import 在模块顶层声明依赖，不能直接放进 if 分支。按需加载可以使用 `import()`，它返回的 Promise 兑现为模块命名空间对象。
+
+文件：`chart.mjs`
+
+```js example=js06-dynamic-failure runtime=browser file=chart.mjs
+throw new Error('图表初始化失败');
+```
+
+文件：`main.mjs`
+
+```js example=js06-dynamic-failure runtime=browser file=main.mjs
+const loaders = { chart: () => import('./chart.mjs') };
+try {
+  await loaders.chart();
+} catch (error) {
+  console.log(`图表暂不可用：${error.message}`); // => 图表暂不可用：图表初始化失败
+}
+console.log('资料正文仍可阅读'); // => 资料正文仍可阅读
+```
+
+这里文件能找到，但顶层执行抛错，动态导入仍然拒绝。实际还可能遇到路径、网络、MIME、CORS、语法或依赖初始化失败。因此“下载完成”不能代表“模块已经可以使用”。
+
+把失败提示放在真正可以降级的功能入口，正文就不必因为一个可选图表失败而消失。捕获后是否允许再试，则要看原因；同一环境中，模块求值失败可能被缓存，反复 import 同一 URL 不等于重新初始化成功。
+
+明确的 loader 映射也比任意拼接路径更容易阅读和构建。动态 import 是语言能力，输出多少文件、怎样拆 chunk、是否预加载，由构建工具决定。按需加载不能代替依赖重构，也不保证模块一定只在用户点击后才开始下载。
+
+### 顶层 await 把初始化等待传给依赖者
+
+模块顶层可以直接 await。如果入口静态依赖这个模块，就要等相关初始化完成才能继续自己的依赖求值。
+
+文件：`config.mjs`
+
+```js example=js06-top-level-await runtime=browser file=config.mjs
+export const config = await Promise.resolve({ language: 'zh-CN' });
+console.log('配置就绪'); // => 配置就绪
+```
+
+文件：`main.mjs`
+
+```js example=js06-top-level-await runtime=browser file=main.mjs
+import { config } from './config.mjs';
+console.log(`入口读取：${config.language}`); // => 入口读取：zh-CN
+```
+
+本例用立即可得的配置展示先后关系。如果改成网络加载，等待和失败也会影响依赖者。它不会冻结整个浏览器，其他任务仍可运行；影响的是需要这份模块初始化结果的部分。
+
+对于可选配置或需要展示加载进度的功能，导出显式 `initialize()` 或 `loadConfig()`，让入口决定何时等待，往往更清楚。若用一个变量缓存初始化 Promise，还要决定失败后是否保留拒绝结果、是否允许清掉后重试。不能只用 `??=` 缓存一次，就默认所有恢复问题都解决了。
+
+若两个模块通过顶层异步初始化相互等待，可能形成更难观察的停滞。先画出“谁等待谁”，比给更多函数加 async 更有帮助。
+
+### 导入时发生的副作用需要有人负责结束
+
+模块顶层注册监听、启动 timer 或写 DOM，都会在求值时产生**副作用（side effect）**。调用方可能只想借用一个工具函数，却顺带启动了长期工作。
+
+把资源启动写成显式函数，并返回停止函数，调用者就能掌握生命周期。
+
+文件：`observer.mjs`
+
+```js example=js06-lifecycle runtime=browser file=observer.mjs
+export function observe(target, onUpdate) {
+  target.addEventListener('update', onUpdate);
+  return () => target.removeEventListener('update', onUpdate);
 }
 ```
 
-顶层 await 适合边界清楚、整张子图确实都依赖结果的模块，不应只是为了少写一个函数。
+文件：`main.mjs`
 
-### 九、副作用决定模块能否安全组合
-
-导入一个模块时执行顶层代码，产生外部可观察变化，这类行为叫**副作用（side effect）**。例如立即登记全局监听器、修改原型、启动 timer、访问网络或写 DOM：
-
-```js
-// 难以控制：只要导入就开始运行
-window.addEventListener('resize', recalculate);
+```js example=js06-lifecycle runtime=browser file=main.mjs
+import { observe } from './observer.mjs';
+const target = new EventTarget();
+let count = 0;
+const stop = observe(target, () => count++);
+target.dispatchEvent(new Event('update'));
+console.log(count); // => 1
+stop();
+target.dispatchEvent(new Event('update'));
+console.log(count); // => 1
 ```
 
-更清楚的模块导出显式启动和停止：
+导入 observer 本身没有开始监听，调用 observe 才开始。结束时调用 stop，之后的事件不再修改计数。页面卸载、功能关闭或启动失败时，都可以在自己的清理路径调用它。资源责任与 [B01 的打开和关闭](../chinese-guides/js-07-iteration-metaprogramming-resources.md#让资源的打开和关闭待在一起) 是同一个问题。
 
-```js
-export function observeLayout() {
-  window.addEventListener('resize', recalculate);
-  return () => window.removeEventListener('resize', recalculate);
-}
-```
+**Tree shaking** 是构建工具尝试移除未使用代码的优化，依赖静态结构、副作用判断和配置。具名导出便于分析，但不保证产物一定删掉某段代码。确实依靠导入完成注册的模块，更不能随便声明为无副作用，否则可能连必要行为一起被删除。
 
-调用者现在拥有生命周期。测试可以导入而不触发全局变化，应用入口也能在组件卸载时清理。某些 polyfill 或注册表模块确实依赖导入副作用，这时应在名称、文档和包元数据中明确，避免被优化器当作可删除代码。
+### 公共导出应该小于内部实现
 
-构建工具的 tree shaking 利用静态结构尝试删除未使用代码，但它受副作用分析、转译格式和工具配置影响。**Tree shaking** 不是 ESM 对最终产物大小的保证；验证应查看生产构建的模块图和产物分析，而不是看到具名导出就宣称一定被删除。
+一个学习进度模块可以公开“记录完成”“读取进度”，内部的 Map、缓存键和存储细节则留在内部。消费者依赖的是稳定能力，内部重构才不必让所有页面一起改路径。
 
-### 十、模块边界应表达依赖方向
+可以用明确的再导出建立公共入口，例如 `export { recordCompleted } from './progress.mjs'`。再导出不会自动在当前模块内部建立同名局部变量；需要在本模块使用时，仍要导入。
 
-大型前端常见层次可以是：
+`export *` 适合已经明确设计过的聚合，但不会再导出默认导出，多个来源的同名导出还可能产生歧义。把整个目录无差别暴露，容易扩大依赖、隐藏冲突，也可能让内部模块反过来导入公共入口，形成意外循环。
 
-```text
-应用入口 / 页面编排
-        ↓
-业务用例 / 状态转换
-        ↓
-领域模型 / 纯规则
-        ↓
-通用语言能力
+模块边界不取决于一个文件只能写几行，而取决于哪些能力一起变化、谁拥有状态、依赖能否沿一个清楚方向流动。纯规则尽量不依赖页面；具体的网络或存储实现，可以由上层组装后传入需要它的业务函数。
 
-基础设施适配器（HTTP、存储、日志）由上层组装后传入业务用例
-```
+### 浏览器和 Node 共享语法但采用不同解析规则
 
-箭头表示源码依赖。领域规则不应为了发送请求而直接导入某个页面或具体全局客户端；页面可以依赖业务用例，业务用例通过参数接收基础设施实现。这样测试能提供替身，浏览器、Node、服务端渲染也能选择不同适配器。
+在 Node 中，`.mjs` 明确表示 ESM，`.cjs` 表示 CommonJS，`.js` 的解释与最近的 package.json 等条件有关。明确填写 `"type": "module"` 比依赖不明确格式的自动判断更容易维护；原生相对 ESM 导入需要完整扩展名，不应直接套用某个打包工具的省略规则。
 
-一个模块对消费者承诺的导出集合叫**公共表面（public surface）**。稳定的公共表面应小于内部实现：
-
-- 只导出消费者真正需要的能力；
-- 不暴露临时缓存、内部路径和可随意修改的共享对象；
-- 返回值和错误保持稳定语义；
-- 公开入口与内部目录分开，重构内部文件不迫使消费者改路径；
-- 破坏性变更有版本或迁移说明。
-
-“一个文件只导出一个函数”并不自动形成好边界；关键是依赖方向、状态所有权和合同是否清楚。
-
-### 十一、浏览器与 Node.js 共享 ESM 语义，但解析边界不同
-
-Node.js 可以通过 `.mjs`、`.cjs` 和 `package.json` 的 `type` 字段明确模块格式。相对或绝对 ESM 导入通常必须写扩展名；包的 `exports` 字段限制消费者可访问的公开子路径：
+包的 `exports` 用来列出公开入口：
 
 ```json
 {
-  "name": "@example/orders",
+  "name": "@example/study",
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./testing": "./dist/testing.js"
+    "./format": "./dist/format.js"
   }
 }
 ```
 
-一旦定义 `exports`，未列出的内部路径就不应被消费者深度导入。这个封装既能保护重构，也意味着新增公开子路径必须显式更新合同。条件导出还能为不同宿主提供入口，但条件顺序、类型声明和构建产物需要联合测试，不能假设工具会自动选到预期文件。
+消费者可以使用 `@example/study` 和 `@example/study/format`。未列出的包子路径通常会被包解析规则拒绝。它为重构提供入口边界，但不是防止他人读取本机文件的安全沙箱。浏览器直接请求静态资源时，也不会自动按 Node 的 exports 检查 URL。
 
-ESM 与 CommonJS 互操作存在方向、版本和工具差异：默认导出怎样映射、具名导出是否能被静态推断、同步 `require` 能否加载某个 ESM 图，都不能只凭一次本地运行下结论。迁移时先明确包格式和支持的 Node 版本，在真实发布产物上分别测试 `import` 与需要支持的 `require` 消费路径。
+原生 ESM 不自动提供 CommonJS 的 `require`、`module.exports` 和 `__dirname`。`import.meta.url` 表示当前模块的 URL，可作为 `new URL('./asset.json', import.meta.url)` 的基准；浏览器中这是资源 URL，Node 中常是 file URL。宿主提供的其他 import.meta 字段，需要分别确认。
 
-ESM 中没有 CommonJS 自动提供的 `require`、`module.exports`、`__filename`、`__dirname`。需要当前模块位置时使用 `import.meta.url`，现代 Node 还提供相应的 `import.meta` 能力；跨环境库应先确认目标宿主，而不是无条件使用某一个运行时扩展。
+ESM 导入 CommonJS 时，Node 通常将 `module.exports` 作为 default 暴露，并可能通过静态分析提供部分具名导出；不能假设任意动态属性都能被具名导入，或这些推断属性总像 ESM 绑定一样实时更新。反方向也受版本影响：较新的 Node 可以 require 满足同步加载条件的 ESM 图，但包含顶层 await 的图不能当作普通同步 require 处理。跨环境迁移应先明确支持的 Node 版本和导出格式，不把某次本地导入成功当作所有宿主的保证。
 
-### 十二、测试模块要覆盖图、边界和产物
+### 顺着依赖和生命周期阅读模块
 
-模块测试不仅是调用导出函数：
+遇到模块问题，先确认请求的资源是否正确，再确认导入导出是否匹配，最后看顶层初始化是否读取了尚未准备好的数据。若只是借用能力却触发了额外工作，检查副作用是否应改为显式启动；若修改内部文件总牵动很多消费者，检查公共入口是否暴露过宽。
 
-1. 静态检查是否存在禁止的反向依赖或循环路径；
-2. 导入模块时验证没有意外启动网络、timer 或全局监听；
-3. 对动态导入构造路径错误、网络失败和求值异常，验证功能级降级；
-4. 对状态模块验证实时绑定的变化来自受控命令，而非任意消费者写共享对象；
-5. 用 Node 与浏览器目标环境验证说明符、扩展名、CORS/MIME 和包 `exports`；
-6. 在打包后的真实产物上检查 chunk 边界、重复依赖和副作用保留；
-7. 对发布包从消费者视角导入公共入口，确认内部路径确实不可达。
+接下来进入 [TS-01](../chinese-guides/ts-01-type-system-structural-strict-mode.md#ts-01)。类型可以帮助描述跨模块的数据与函数，却不会改变模块求值顺序，也不会替你清理导入后创建的资源。
 
-循环依赖工具报告的是图上事实，不会自动判断是否危险；代码评审还要看求值时是否读取未初始化绑定，以及循环是否暴露职责混乱。产物分析同样只是证据，不能把“大 chunk”一律归因于某个 import。
+### 参考与延伸阅读
 
-### 常见误解
-
-- “每个文件都是一个模块，所以项目已经模块化”：隐式全局状态和反向依赖仍会破坏边界。
-- “导入值是在导入时复制”：静态导入连接到实时绑定。
-- “循环依赖一定报错”：是否失败取决于求值时何时读取绑定，但循环仍可能使设计脆弱。
-- “动态 import 可以修复循环”：它只改变加载时机，不能代替职责重构。
-- “使用 ESM 就一定能 tree-shake”：最终删除取决于副作用与构建工具分析。
-- “`exports` 只是路径别名”：它定义包的公开封装，未列子路径会被阻止。
-- “浏览器能导入的说明符，Node 一定同样解析”：宿主解析、包规则和支持协议不同。
-
-### 学完后应能说明
-
-1. 模块图在解析、实例化和求值三个阶段分别发生什么。
-2. 实时绑定为什么能观察导出方更新，又为什么不能由导入方重新赋值。
-3. 循环依赖何时触发未初始化读取，以及如何通过职责和依赖方向修复。
-4. 动态导入、顶层 await、副作用与代码分割怎样影响失败和启动边界。
-5. 浏览器路径、Node `type`/`exports`、ESM/CJS 互操作为什么需要分别验证。
-
-进入 TypeScript 后，模块仍保留这些运行时事实；类型只在编译期帮助描述导入导出合同，不会改变模块求值、副作用或宿主解析规则。
+- [MDN：JavaScript 模块](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)——模块作用域、导入导出和依赖求值。
+- [MDN：import 声明](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)——绑定与说明符规则。
+- [MDN：动态 import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import)——异步加载、命名空间与失败缓存。
+- [Node.js：ECMAScript modules](https://nodejs.org/api/esm.html)——Node 的解析、扩展名和互操作边界。
+- [Node.js：Packages](https://nodejs.org/api/packages.html)——type、exports 与包入口封装。

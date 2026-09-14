@@ -1,168 +1,226 @@
 # Git 知识点讲义
 
-## GIT-01 对象模型、暂存区、引用与安全恢复
+## GIT-01 Git 对象模型、暂存区与安全恢复
 
-很多人把 Git 记成一组命令：修改后 `add`，然后 `commit`，出错就到处尝试 `reset`。这种记忆在顺利流程里勉强够用，一旦遇到误删、误提交、游离 HEAD 或敏感信息进入历史，就很难判断哪个命令会移动引用、改写暂存区或覆盖工作文件。真正可靠的用法从数据模型开始：先判断信息现在位于哪一层，再选择只改变目标层的操作。
+文件明明改了，提交里却没有；已经按了撤销，改动竟然还在；切走一个临时版本后，刚写的提交像是消失了。要解释这些现象，先别急着背“撤销命令大全”。我们需要看清：内容存在哪里，下一次准备提交什么，分支现在指向哪里。
+
+这篇用一个只有 `notes.txt` 的小仓库，把保存、暂存、提交、恢复连成可观察的过程。学完以后，你应该能先说出自己想改变哪一层，再选择命令。
 
 ### 学习前先确认
 
-本讲不要求其他站内前置。只要能识别文件、目录和命令行路径即可开始；哈希、对象、引用、暂存区与可达性都会在正文中解释。
+本讲无站内硬前置。能分清文件、目录和终端当前位置即可。例子使用 **PowerShell** 7 和 Git 2.43 的已有命令；`switch` 与 `restore` 需要 Git 2.23 或以上。命令中的 `$lab` 是练习目录变量，实际提交 ID 每次运行可以不同。
 
-### 一、Git 保存快照关系，不保存“撤销步骤”
+### 先建一个可以放心观察的小仓库
 
-一次提交不是“把上一版文件改成下一版的补丁”。提交记录一棵完整目录树的根、父提交、作者、提交者、时间和说明。Git 会对相同内容去重，所以从使用者角度看是完整快照，从存储实现看却不会机械复制所有文件。
+打开 PowerShell 7，连续执行下面代码。它在系统临时目录中新建随机名称的仓库；只设置这个仓库的身份，不改全局配置。后文命令都在这个新目录里继续。
 
-Git 采用**内容寻址（content-addressed storage）**：对象标识由对象类型、长度和内容计算得到。内容相同就得到相同对象 ID，内容变化则得到新对象。对象创建后不可变；所谓“修改提交”，实际是创建新对象并让某个引用改指向它。
+```powershell example=git01-setup runtime=project
+$lab = Join-Path ([System.IO.Path]::GetTempPath()) ('atlas-git01-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $lab | Out-Null
+Set-Location -LiteralPath $lab
+git init -b main
+git config user.name 'Atlas Learner'
+git config user.email 'learner@example.invalid'
+git config core.autocrlf false
+'version=1' | Set-Content -Encoding utf8NoBOM notes.txt
+git add -- notes.txt
+git commit -m '记录第一版笔记'
+git status --short
+```
 
-这种模型解释了两个事实：提交 ID 不只是版本序号；改动提交消息、父提交或作者信息，也会产生新的提交 ID。另一方面，只要对象尚未被清理且仍能找到 ID，就有机会重新建立引用并恢复它。
+最后一行没有输出，表示 Git 没看到待提交或未跟踪的变化。“干净”只是相对当前提交的状态，不代表内容正确，也不代表已经上传。这个仓库还没有远端。
 
-### 二、四类对象组成历史图
+目录名用随机值，是为了让你反复练习时保留前一次结果。遇到意外输出就停在那一步看 `git status`，不要把真实项目当作下面的练习目录。
 
-Git 的主要对象有四类：
+### 同一个文件可以同时有三个版本
 
-- blob 保存文件内容，不保存原文件名；
-- tree 保存目录条目，把名称和模式连接到 blob 或子 tree；
-- commit 指向一棵 tree 和零个或多个父 commit；
-- annotated tag 保存带签名、说明等元数据的命名标记。
+你用编辑器打开的是**工作区（working tree）**里的文件。**暂存区（staging area）**也叫 **index**，记录下一次普通提交将采用的内容。`HEAD` 指向当前检出的提交，代表已经保存下来的一个版本。
 
 ```text
-commit C2 ──parent──> commit C1
-    │                    │
-    tree                 tree
-   ├─ src/ ─> tree      ├─ src/ ─> tree
-   └─ README ─> blob    └─ README ─> blob
+当前提交 HEAD       暂存区 index        工作区文件
+已经记录的版本  ←   准备记录的版本  ←   正在编辑的版本
+                  commit             add
 ```
 
-普通提交通常只有一个父；合并提交可以有多个父；仓库的第一个提交没有父。历史因此是有向无环图，不是一条天然唯一的时间线。`git log` 只是按选项遍历并呈现可达对象，不能把显示顺序误认为绝对执行顺序。
+`add` 不是“让 Git 从此自动提交这个文件”。它在执行那一刻取走文件内容。继续下面的实验：
 
-可以用 `git cat-file -t <id>` 查看类型，用 `git cat-file -p <id>` 阅读对象。学习对象命令的目的不是日常都使用底层命令，而是能在恢复和排错时看懂 `HEAD`、tree、parent 和对象可达性。
-
-### 三、工作区、暂存区和 HEAD 是三份可比较状态
-
-日常操作可理解为三棵树：
-
-1. 工作区是磁盘上正在编辑的文件；
-2. **暂存区（index）**保存“下一次提交准备采用的树”；
-3. `HEAD` 通常间接指向当前分支的最后一次提交。
-
-`git status` 比较这三者：工作区与暂存区不同，显示为未暂存；暂存区与 `HEAD` 不同，显示为已暂存。一个文件可以同时有两组改动：较早的一部分已经进入暂存区，后来的一部分仍只在工作区。
-
-```sh
-git diff            # 工作区 与 暂存区
-git diff --staged   # 暂存区 与 HEAD
-git diff HEAD       # 工作区 与 HEAD 的总体差异
+```powershell example=git01-three-states runtime=project
+'version=2' | Set-Content -Encoding utf8NoBOM notes.txt
+git add -- notes.txt
+'version=3' | Set-Content -Encoding utf8NoBOM notes.txt
+git status --short
+git show HEAD:notes.txt
+git show :notes.txt
+Get-Content notes.txt
 ```
 
-因此 `git add` 不是“告诉 Git 追踪这个文件一次就够了”，而是把当前选定内容写入对象库，并更新暂存区对应条目。文件继续修改后，需要再次暂存想进入下一次提交的版本。
+你会看到 `MM notes.txt`，以及依次出现的 `version=1`、`version=2`、`version=3`。短状态的第一列比较暂存区和 HEAD，第二列比较工作区和暂存区，所以两个 `M` 可以同时成立。
 
-### 四、提交只读取暂存区
+这解释了一个常见误会：编辑器里的第三版运行正常，不等于即将提交的第二版也运行正常。部分暂存时尤其要留意这一点。
 
-`git commit` 根据暂存区创建 tree 和 commit，再移动当前分支引用。未暂存改动仍留在工作区，不会因为同一文件已有部分暂存就自动进入提交。
+### diff 的关键是两端分别是谁
 
-原子提交依赖可控暂存。`git add -p` 可以按片段选择，但不能为了“看起来原子”把彼此依赖的代码和测试拆开。暂存后应重新查看 `git diff --staged`，确认提交包含完成一个意图所需的实现、测试和文档，同时没有临时日志或无关格式化。
+接着比较三个版本。下表里的命令都限制在同一个文件，便于辨认。
 
-`git commit --amend` 会创建一个新的提交并移动当前分支；旧提交不会被原地修改。若旧提交已经推送，amend 就属于历史改写，需要先评估协作者是否已经基于它工作。
+| 命令 | 比较方向 | 此时会看到什么 |
+| --- | --- | --- |
+| `git diff -- notes.txt` | 暂存区 → 工作区 | 第二版变成第三版 |
+| `git diff --staged -- notes.txt` | HEAD → 暂存区 | 第一版变成第二版 |
+| `git diff HEAD -- notes.txt` | HEAD → 工作区 | 第一版变成第三版 |
 
-### 五、分支、标签和 HEAD 都是引用
-
-分支本质是可移动的提交名称，例如 `refs/heads/main`。提交时当前分支向前移动。轻量标签通常固定指向一个对象，远端跟踪引用记录最近一次 fetch 所见的远端位置。
-
-`HEAD` 通常存放 `ref: refs/heads/main`，表示“当前在 main 分支上”。检出某个提交 ID 而不是分支时，`HEAD` 直接指向提交，形成**游离 HEAD（detached HEAD）**。此时仍能提交，但没有分支名称随之移动。若这段工作要保留，应在切走前或之后依据 reflog 创建分支：
-
-```sh
-git switch -c rescue/my-work
+```powershell example=git01-diffs runtime=project
+git diff -- notes.txt
+git diff --staged -- notes.txt
+git diff HEAD -- notes.txt
+git commit -m '记录已暂存的第二版'
+git show HEAD:notes.txt
+Get-Content notes.txt
+git status --short
 ```
 
-游离不是损坏状态，常用于查看历史、测试旧版本或二分；危险来自误以为已有分支保存新提交，然后切走又找不到名称。
+提交后，HEAD 是第二版，工作区仍是第三版，状态为 ` M notes.txt`：第一列空白，只有未暂存变化。提交没有悄悄包含第三版，也没有把编辑器里的内容退回第二版。
 
-### 六、restore、reset 和 revert 改变的层不同
+`git add -p` 允许按差异块选择内容，适合把修复与无关文案分开。但 Git 判断的是文本块，两个块在业务上可能互相依赖。选择后应重新读暂存差异；怎样确定一个提交的边界，见 [原子提交](../chinese-guides/git-03-commits-remotes-pr-worktrees-collaboration.md#一个提交围绕一个可以解释的变化)。
 
-选择恢复命令前先问：目标改动位于工作区、暂存区、本地提交还是共享历史？
+### 对象保存内容和关系而不是编辑动作
 
-- `git restore <path>` 默认用暂存区内容覆盖工作区目标路径；
-- `git restore --staged <path>` 用指定来源更新暂存区，通常不动工作区；
-- `git reset <commit>` 移动当前分支，并按模式决定是否更新暂存区和工作区；
-- `git revert <commit>` 创建一个抵销既有提交的新提交，保留历史轨迹。
+Git 的核心记录可以按四类理解。**blob** 保存文件内容，**tree** 把文件名、模式和内容对象组织成目录，**commit** 指向一棵根 tree 并记录父提交、作者、提交者和说明。带注释的 **tag** 还有自己的对象，保存目标和注释等信息；轻量标签则只是一个引用。
 
-`reset --soft` 只移动引用；mixed reset 还重置暂存区；`reset --hard` 再覆盖工作区。`--hard` 不是“更彻底的撤销”，而是扩大修改范围。脏工作区里可能包含从未提交且无法由对象库恢复的用户内容，因此执行前必须确认目标、保存证据并查看状态。
-
-已发布历史通常使用 revert，因为协作者仍能沿原图前进。revert 合并提交时还需选择主线父提交，语义不是简单把每个文件反向应用；后续再次合并也会受这次历史决定影响。
-
-### 七、reflog 记录引用曾经指向哪里
-
-**引用日志（reflog）**记录本地引用的移动，例如提交、reset、rebase、切换分支。它不是远端共享审计日志，也不是永久备份，但常能找回“分支刚才还指向哪里”。
-
-```sh
-git reflog --date=iso
-git show HEAD@{2}
-git branch rescue/before-reset <object-id>
+```powershell example=git01-objects runtime=project
+git cat-file -t HEAD
+git cat-file -p HEAD
+git ls-tree HEAD
+git cat-file -p 'HEAD^{tree}'
+git show HEAD:notes.txt
 ```
 
-恢复时先只读查看对象，再创建新分支保护它；不要在不确定时继续 reset，让引用日志和工作区同时产生更多变化。reflog 条目有过期策略，不可达对象也可能被垃圾回收，所以“以后总能找回”不是数据保护方案。远端备份、受保护分支和可重复构建仍然必要。
+依次找这几个线索：第一行是 `commit`；提交内容含 `tree` 与 `parent`；tree 列出 `notes.txt` 对应的 blob；最后读出的仍是第二版。文件名在 tree 中，blob 自己不记得“我叫 notes.txt”。
 
-### 八、未跟踪文件和忽略文件不在同一保护范围
+对象 ID 由对象类型、长度与内容参与计算。相同对象内容可复用；改一个字节可能产生新 ID。提交即使文件内容相同，父提交或说明变化也可能产生不同 ID，因此不要把“文件一样”理解成“提交一样”。ID 长度还取决于仓库的对象格式，不必死记成固定 40 位。
 
-未跟踪文件尚未成为 Git 对象，`restore` 和 reflog 通常无法救回它。忽略规则只影响未跟踪文件的提示与添加，不会自动停止追踪已经入库的文件。
+Git 对外表达的是快照之间的关系。查看差异时，它再比较快照；内部打包可能使用压缩和 delta 节省空间，不改变这个模型。重命名通常也是比较时推断出的相似关系，并不存在专用的“重命名对象”。
 
-`git clean` 会删除未跟踪内容，风险与 `reset --hard` 不同但同样可能不可逆。先使用 dry-run 查看精确目标，并确认构建产物、临时数据库和用户资料是否混在目录中。仓库根、主目录或由不可信变量计算出的路径不应成为模糊清理目标。
+### 分支和 HEAD 是找到提交的入口
 
-`git stash` 可以保存部分工作区和暂存区状态，但默认是否包含未跟踪文件取决于选项。stash 也是引用集合，不是长期分支；重要工作应形成命名分支和可审查提交。
+**引用（reference）**为对象提供容易记住的名字。`main` 是本地分支引用；`HEAD` 通常符号指向当前分支。沿 commit 的 parent 可以继续找到更早的提交，这就是历史可达性。
 
-### 九、敏感信息进入提交后必须处理凭据本身
+```text
+HEAD → main → 第二版提交 → 第一版提交
+                 ↓            ↓
+              第二版 tree   第一版 tree
+```
 
-密钥被提交后，即使随后删除文件，旧 blob 仍可能通过历史、远端、拉取副本、缓存或构建制品访问。处置顺序通常是：停止继续传播，立即吊销或轮换凭据，确定暴露范围，再根据仓库规则决定是否重写历史，最后通知所有副本持有者重新同步并验证扫描结果。
+分支不是一份整目录副本，也不会复制所有历史。查看分支位置可用 `git branch -v`，查看 HEAD 指向哪个分支可用 `git symbolic-ref --short HEAD`。
 
-历史重写会为受影响提交及其后代创建新 ID，不能在没有协调时对共享仓库擅自执行。重写也不能替代轮换，因为无法证明所有副本已经删除。预防上应使用环境注入、密钥管理、提交前扫描和服务端保护；`.gitignore` 只是减少误添加，不是安全边界。
+`origin/main` 则通常是本地保存的远端跟踪引用，表示最近一次相关同步所观察到的远端位置；它不是服务器的实时窗口。这个区别会在 [本地模拟远端](../chinese-guides/git-03-commits-remotes-pr-worktrees-collaboration.md#用两个本地副本看清远端同步) 中实际展示。
 
-### 十、从现象反推安全恢复路径
+提交图有分叉和合流；日志的展示顺序还受选项影响。找“哪个变化包含在哪条历史里”，要看祖先关系，不能只凭时间戳先后。
 
-遇到问题时按层定位：
+### restore 先确定来源再确定落点
 
-- 编辑错但未暂存：比较工作区与暂存区，只恢复目标路径；
-- 暂存了不该提交的内容：先取消对应暂存，保留工作区；
-- 本地提交需要重新组织：确认未共享，再创建保护分支后改写；
-- 共享提交造成业务错误：追加 revert，并验证回滚后的系统状态；
-- reset 或 rebase 后提交消失：先看 reflog 和对象，再创建 rescue 分支；
-- 从未追踪的文件被删除：Git 可能没有副本，应转向编辑器、本地备份或文件恢复。
+现在 HEAD 和暂存区是第二版，工作区是第三版。我们先把第三版暂存，再撤销暂存，最后明确丢弃练习文件中尚未提交的第三版：
 
-恢复完成不等于文件“看起来回来了”。还要核对正确分支、目标 commit、暂存区是否干净、测试是否通过、远端是否需要更新，以及其他协作者是否仍基于旧历史。
+```powershell example=git01-restore runtime=project
+git add -- notes.txt
+git restore --staged -- notes.txt
+git show :notes.txt
+Get-Content notes.txt
+git restore -- notes.txt
+Get-Content notes.txt
+git status --short
+```
 
-### 十一、对象打包与垃圾回收不会改变语义模型
+三个读取结果依次是第二版、第三版、第二版；最后状态为空。`restore --staged` 默认从 HEAD 恢复暂存区，工作文件保持不动；普通 `restore` 默认从暂存区恢复工作文件，第三版就被覆盖了。
 
-为了效率，Git 会把松散对象压缩进 pack，并用 delta 表示相似内容；这些是存储优化，不改变“对象不可变、引用决定可达性”的语义。垃圾回收会处理不可达且超过保留期的对象，所以恢复窗口有限。
+记成“来源 → 落点”更不容易出错：默认来源会随是否包含 `--staged` 改变，需要指定历史来源时写 `--source=某个提交`。若目标路径在来源里不存在，恢复也可能表现为删除该路径，不能把 restore 理解成只会补回文字。
 
-浅克隆、部分克隆和稀疏检出减少本地取得的历史或工作树范围，也会影响某些离线恢复与分析命令。使用它们时应区分“对象远端存在但本地尚未取得”和“对象已经不存在”，不要把网络缺失误判成仓库损坏。
+恢复文件不移动分支。希望移动当前分支时，讨论的才是下一节的 reset。
 
-### 十二、验证 Git 操作要保存状态变化证据
+### reset 和 revert 解决不同层次的问题
 
-可靠验证至少包含操作前后的 `status`、目标引用、暂存差异和提交图。对于恢复操作，先在副本或临时分支演练，并记录原对象 ID；对于共享历史，检查远端引用和协作者同步方案；对于敏感信息，另有凭据轮换与扫描证据。
+以下表格针对**带提交目标、不带路径**的 `git reset <模式> <提交>`，且当前 HEAD 附着在分支上。带路径的 reset 是暂存区操作，不要套用同一张表。
 
-图形客户端可以帮助观察，但按钮名称常隐藏具体组合动作。关键操作应能回答：哪个引用移动了、暂存区来自哪棵 tree、工作区哪些路径被覆盖、是否创建了新提交、旧对象目前是否仍可达。
+| 操作 | 当前分支与 HEAD | 暂存区 | 工作文件 |
+| --- | --- | --- | --- |
+| `reset --soft <提交>` | 移到目标 | 保留 | 保留 |
+| `reset --mixed <提交>`，默认模式 | 移到目标 | 改为目标内容 | 保留 |
+| `reset --hard <提交>` | 移到目标 | 改为目标内容 | 受影响文件被改为目标内容 |
+| `revert <提交>` | 成功后新增一个提交 | 用于生成反向变更 | 应用反向变更，可能冲突 |
 
-### 进阶：引用更新也需要并发保护
+假设自己的未发布历史是 `A—B—C`，soft reset 到 B 后，C 的改动还在暂存区，适合重新整理提交。若 C 已被团队使用，新增一个反向提交 R 通常更好说明发生了什么：历史成为 `A—B—C—R`，其他人的 C 仍能被追溯。
 
-多人同时推送时，远端不是简单接受“我的历史更正确”。一次引用更新应基于调用者预期的旧值：若目标已经被别人推进，普通非快进推送会拒绝。`--force-with-lease` 也是这种比较并交换思想，但前提是本地知道的旧远端引用足够新。它只避免无条件覆盖，不会自动协调重写历史的协作者。
+`reset --hard` 不是“撤销但替我保管所有东西”：未提交的受影响修改会丢失，妨碍写入目标文件的未跟踪路径也可能被覆盖或移除。它也不等于清除所有未跟踪文件。先确认对象、路径和需要保留的内容，再决定是否使用。
 
-本地脚本若连续执行读取引用、生成对象、更新引用，也可能被另一个进程打断。Git 的引用锁和事务帮助保持存储一致，但业务脚本仍应检查退出码和最终端点。不要解析易变的人类日志来判断成功；使用明确对象 ID和机器可读输出。
+`revert` 也不是删除旧提交，后续变更可能使反向补丁冲突。撤销 merge 还要选择主线并理解祖先关系，见 [撤销合并后的再次整合](../chinese-guides/git-02-branches-merge-rebase-conflicts.md#撤销合并后仍要看祖先关系)。
 
-签名提交和标签证明某个密钥对对象内容作出声明，不证明代码安全、评审完成或构建制品就是该对象。签名、分支保护、CI 与制品证明各覆盖一段链路，不能互相替代。
+### 用 reflog 找回被移走的入口
 
-### 进阶：裸仓库、克隆和传输仍遵循同一模型
+继续当前干净的小仓库。我们先记下第二版 ID，再把分支退到第一版。用 mixed 模式是为了保留工作文件，便于同时观察“历史变了，内容还在”。
 
-远端服务器常使用没有工作区的 bare repository，只保存对象与引用。clone 获取引用与可达对象，并建立本地工作区；fetch 通过协商只传输缺失对象。理解这一点能解释为什么“远端有文件”不是概念——远端有对象和引用，文件视图由检出某棵 tree 得到。
+```powershell example=git01-reflog runtime=project
+$second = git rev-parse HEAD
+git reset --mixed HEAD~1
+git log --oneline
+git reflog -3
+git show 'HEAD@{1}:notes.txt'
+git branch codex/rescue 'HEAD@{1}'
+git show codex/rescue:notes.txt
+git rev-parse codex/rescue
+```
 
-浅克隆截断父历史后，merge-base、blame、bisect 和恢复能力会受限；需要时可继续获取历史。部分克隆可能先只取 commit/tree，访问文件时再下载 blob。自动化脚本应声明是否要求完整历史，CI 不能在浅克隆中默默给出不完整审计结论。
+普通日志只从第一版往前走，reflog 还记录刚才第二版所在的位置。这里的 `HEAD@{1}` 是“本次连续操作中，HEAD 的上一条记录”；读者如果又切分支或提交，序号就可能变化，应先查日志再选择。PowerShell 中含花括号的修订表达式要加引号。
 
-备份仓库时既要保存对象也要保存需要的引用与配置，并定期演练恢复。只复制当前工作区会丢失历史，只保留 `.git` 而不验证对象完整性也不等于可恢复。
+两个 `show` 都应读到第二版，救援分支的 ID 应等于 `$second`。先建一个名字把目标固定下来，之后再决定切过去、挑选变更或整理当前分支。不要在找到对象之前继续反复 reset。
 
-### 进阶：部分暂存让一次提交表达一个决定
+**reflog** 是本地引用移动记录，有保留期限，不随普通 clone 自动复制。记录过期、对象被清理后，不能保证恢复。`git fsck --no-reflogs` 可以帮助检查对象及可达性，但“未被引用的对象”可能只是旧实验，仍需读内容辨认；它也不能凭空找回从未被 Git 保存的编辑器文字。
 
-工作区里的一个文件可能同时含有两项无关修改。`git add -p` 可以按差异块选择进入 index 的内容，使提交边界不必等同于文件边界。选择后分别查看 `git diff` 与 `git diff --cached`：前者是尚未暂存的变化，后者才是下一次提交会读取的变化。若一个差异块混合两项意图，应先编辑代码或拆分补丁，而不是依靠提交说明掩盖混合责任。
+### detached HEAD 可以工作但要及时命名
 
-部分暂存也会产生一种危险错觉：工作区运行的代码包含全部修改，但提交只含其中一部分。提交前应从 index 对应的树验证，至少复查已暂存差异；高风险变更可在临时 worktree 检出候选提交再运行测试。这样证明的是“这一个提交可工作”，而不是“开发者当前目录可工作”。
+先把练习仓库 main 恢复到已救回的第二版。此时工作文件恰好与第二版相同，mixed reset 会更新暂存区而保留它。再进入第一版做一次临时提交：
 
-移动或重命名没有独立对象类型。Git 根据删除与新增内容的相似度在比较时推断 rename，因此 `status` 显示的重命名不是永久记录。理解这一点能解释大规模格式化为何降低历史追踪质量：内容同时重写后，相似度不足，blame 与 diff 更难找到来源。结构迁移与行为修改宜分成可独立验证的提交。
+```powershell example=git01-detached runtime=project
+git reset --mixed codex/rescue
+git switch --detach HEAD~1
+'scratch=1' | Set-Content -Encoding utf8NoBOM scratch.txt
+git add -- scratch.txt
+git commit -m '在旧版本试写一条笔记'
+git switch -c codex/scratch
+git status --short
+```
 
-### 学完后应能说明
+**detached HEAD** 表示 HEAD 直接指向提交，没有附着在普通分支上。仍然可以查看、构建和提交；创建 `codex/scratch` 后，临时提交就有了稳定入口。若未命名便切走，它可能只能靠 reflog 等线索找回。
 
-你应能从 blob、tree、commit 与引用解释一次提交，区分工作区、暂存区和 `HEAD`，预测 add、restore、reset、revert 与 amend 分别改变哪些层，并在误操作后先保护对象再恢复。面对敏感信息时，还应明确历史清理、凭据轮换和协作者同步是三件不同的事。
+`commit --amend` 同样值得用对象模型理解：它生成替代提交并移动当前入口，不是原地擦掉旧对象上的文字。修改已共享历史前，先确认他人是否以它为基线；相关协作边界见 [推送保护](../chinese-guides/git-03-commits-remotes-pr-worktrees-collaboration.md#lease-比较的是你明确确认过的远端位置)。
+
+### 未跟踪文件和忽略规则不等于备份
+
+`?? draft.txt` 表示 Git 尚未跟踪这个文件。忽略规则只是让特定未跟踪路径不那么容易进入状态展示和 add；已经跟踪的文件，不会因为后来写入 `.gitignore` 就退出历史。
+
+| 想处理的内容 | 先观察 | 容易误判的地方 |
+| --- | --- | --- |
+| 普通未提交修改 | `git diff` 与 `git diff --staged` | 两层可能保存不同版本 |
+| 未跟踪文件 | `git status --short --untracked-files=all` | 没有 commit 的内容不能靠日志找回 |
+| 临时搁置 | `git stash list`、`git stash show -p` | 默认 stash 不包含未跟踪文件；`-u` 另含未跟踪，`-a` 还含忽略文件 |
+| 清理候选 | `git clean -nd` | 这里只预览；执行删除后 Git 通常无法恢复未跟踪内容 |
+
+stash 适合短时中断，但会把现场移走；共享目录里应先确认改动归属。重要成果更适合有名称的分支和明确提交。多人同时工作时，优先理解 [worktree 的独立范围](../chinese-guides/git-03-commits-remotes-pr-worktrees-collaboration.md#worktree-给每项工作一份独立现场)。
+
+密钥误提交时，删除当前文件不撤销已经泄露的凭据。应先使泄露凭据失效，再按团队流程清理历史、副本与制品；忽略规则只能减少再次误加的机会。签名能用于核验特定密钥对对象的签署，也不证明代码已通过评审或不存在漏洞。
+
+### 恢复完成要同时核对内容与历史
+
+“文件回来了”只是一个结果。恢复后再回答三个问题：目标内容是否正确，目标提交是否仍能从所需分支到达，当前暂存和工作区是否包含预期变化。可以分别用 `git show`、`git log --graph --oneline --all`、两种 `git diff` 查看。
+
+不同仓库形式也会影响观察边界。裸仓库通常用于保存和交换对象与引用，没有普通检出目录；浅克隆可能缺少早期历史；部分克隆可能延后获取某类对象；稀疏检出限制工作目录展开的范围。文件没出现在眼前，不一定表示服务器没有，反过来也不能把一次 clone 当作全部交付数据的完整备份。
+
+继续学习时，先在 [GIT-02](../chinese-guides/git-02-branches-merge-rebase-conflicts.md#git-02) 看分支如何移动和整合，再到 GIT-03 看这些动作在协作中如何约定。调试时遇到“昨天正常，今天坏了”，可以沿 [版本二分](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#用稳定的判定找出首个异常版本) 找变化边界。
+
+### 参考与延伸阅读
+
+- [Pro Git：Git 对象](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects)：查看 blob、tree、commit 的实际结构与对象存储。
+- [git diff](https://git-scm.com/docs/git-diff)：查询比较端点、暂存差异和路径参数。
+- [git restore](https://git-scm.com/docs/git-restore) 与 [git reset](https://git-scm.com/docs/git-reset)：确认来源、目标层和覆盖范围。
+- [git reflog](https://git-scm.com/docs/git-reflog)：查询引用日志、修订写法和保留规则。
+- [git stash](https://git-scm.com/docs/git-stash)、[git clean](https://git-scm.com/docs/git-clean) 与 [gitignore](https://git-scm.com/docs/gitignore)：处理临时修改和未跟踪路径时再查完整选项。
+
+正文以原创小仓库讲清机制，命令细节于 2026-09-09 对照 Git 官方手册；终端提示和对象 ID 以你的实际运行结果为准。

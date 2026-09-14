@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "batch": "B11",
+  "title": "从测试证据到项目表达",
+  "reviewedOn": "2026-09-10",
+  "chapters": [
+    {
+      "id": "TEST-01",
+      "title": "从规则到测试证据",
+      "question": "什么样的测试能发现错误，而不只是执行一遍代码？",
+      "summary": "从资料标题的中文与 emoji 边界，走到属性、受控异步和变异检查。",
+      "outcomes": [
+        "从需求独立写出预期结果",
+        "用边界和性质选择有意义的输入",
+        "解释一项检查能发现什么以及遗漏什么"
+      ],
+      "guide": "test-01-test-design-oracles-properties-mutation.md",
+      "anchor": "test-01",
+      "prerequisites": [],
+      "concepts": [
+        {
+          "id": "test-oracle",
+          "heading": "预期结果先从需求里找"
+        },
+        {
+          "id": "test-boundaries",
+          "heading": "等价类和边界帮你选出有意义的输入"
+        },
+        {
+          "id": "test-state-path",
+          "heading": "从单次返回值走到状态变化"
+        },
+        {
+          "id": "test-invariants",
+          "heading": "不变量说明一组操作都必须遵守什么"
+        },
+        {
+          "id": "test-properties",
+          "heading": "属性测试用生成器寻找反例"
+        },
+        {
+          "id": "test-generative-methods",
+          "heading": "蜕变差分和 fuzz 各自寻找不同问题"
+        },
+        {
+          "id": "test-doubles",
+          "heading": "替身放在需要控制的边界"
+        },
+        {
+          "id": "test-controlled-async",
+          "heading": "用可控完成顺序验证异步规则"
+        },
+        {
+          "id": "test-mutation",
+          "heading": "变异检查问断言是否真的敏感"
+        },
+        {
+          "id": "test-coverage",
+          "heading": "覆盖率与测试数量都不能替代判断"
+        },
+        {
+          "id": "test-failure-evidence",
+          "heading": "失败之后先保留依据再修改预期"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "component-recovery-test",
+          "reason": "把受控异步用于保存失败、草稿保留与重试。"
+        },
+        {
+          "concept": "e2e-real-boundaries",
+          "reason": "沿测试边界继续检查真实请求与服务状态。"
+        },
+        {
+          "concept": "eng-gate-exit",
+          "reason": "让失败结果成为交付检查可以观察的退出信号。"
+        },
+        {
+          "concept": "career-causality",
+          "reason": "把独立预期与反例意识用于项目结果的解释。"
+        }
+      ]
+    },
+    {
+      "id": "TEST-02",
+      "title": "用用户行为检查组件",
+      "question": "用户能否用键盘完成编辑，并在保存失败后继续操作？",
+      "summary": "用完整 React 表单检查公开行为，分清 DOM 语义、请求替身与真实浏览器能力。",
+      "outcomes": [
+        "通过角色与名称定位用户操作",
+        "控制保存完成顺序并验证恢复过程",
+        "区分只读界面与服务端权限"
+      ],
+      "guide": "test-02-component-testing-user-behavior-accessibility.md",
+      "anchor": "test-02",
+      "prerequisites": [
+        "test-01-test-design-oracles-properties-mutation.md#test-01",
+        "react-02-component-boundaries-data-flow-composition.md#react-02"
+      ],
+      "concepts": [
+        {
+          "id": "component-test-scope",
+          "heading": "先确定这一次组件检查的边界"
+        },
+        {
+          "id": "component-test-project",
+          "heading": "把环境与文件准备完整"
+        },
+        {
+          "id": "component-test-contract",
+          "heading": "组件公开的约定要在界面上看得见"
+        },
+        {
+          "id": "component-accessible-query",
+          "heading": "角色名称和标签让查询接近真实使用"
+        },
+        {
+          "id": "component-query-time",
+          "heading": "查询方式也在表达你对时间的判断"
+        },
+        {
+          "id": "component-keyboard-test",
+          "heading": "一条键盘路径同时检查输入与错误反馈"
+        },
+        {
+          "id": "component-recovery-test",
+          "heading": "手动交付失败结果才能看清恢复过程"
+        },
+        {
+          "id": "component-readonly-test",
+          "heading": "只读和权限拒绝属于不同层"
+        },
+        {
+          "id": "component-test-resources",
+          "heading": "异步资源和框架边界各自需要谁负责"
+        },
+        {
+          "id": "component-test-browser-boundary",
+          "heading": "弹层快照与浏览器能力不要混成一种证明"
+        },
+        {
+          "id": "component-test-diagnosis",
+          "heading": "失败时先问用户约定还是测试假设变了"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "test-controlled-async",
+          "reason": "理解为什么手动交付结果比猜测等待时长更清楚。"
+        },
+        {
+          "concept": "e2e-persisted-journey",
+          "reason": "给同一个表单补上真实 HTTP 与刷新后的读取。"
+        },
+        {
+          "concept": "vue-quality-tests",
+          "reason": "将公开行为的检查思路迁移到 Vue 组件。"
+        },
+        {
+          "concept": "http-result",
+          "reason": "让接口状态与解析错误形成可供组件处理的明确结果。"
+        }
+      ]
+    },
+    {
+      "id": "TEST-03",
+      "title": "在浏览器中验证关键任务",
+      "question": "点击保存之后，真实请求、刷新读取和视觉结果是否都符合预期？",
+      "summary": "接上本地 HTTP 服务，观察数据隔离、一次失败后的真实重试，以及可审查的截图差异。",
+      "outcomes": [
+        "沿浏览器到服务的路径验证保存结果",
+        "同时隔离浏览器环境与服务端数据",
+        "用业务信号、Trace 和视觉差异定位失败"
+      ],
+      "guide": "test-03-e2e-visual-regression-isolation-flakiness.md",
+      "anchor": "test-03",
+      "prerequisites": [
+        "test-01-test-design-oracles-properties-mutation.md#test-01",
+        "web-01-html-semantics-forms-accessibility.md#web-01"
+      ],
+      "concepts": [
+        {
+          "id": "e2e-real-boundaries",
+          "heading": "端到端先说明穿过哪些真实边界"
+        },
+        {
+          "id": "e2e-http-client",
+          "heading": "给组件接上真正的 HTTP 保存与读取"
+        },
+        {
+          "id": "e2e-local-service",
+          "heading": "用小型服务观察真实的写入边界"
+        },
+        {
+          "id": "e2e-environment",
+          "heading": "运行配置把浏览器与服务联系起来"
+        },
+        {
+          "id": "e2e-persisted-journey",
+          "heading": "一条保存后刷新路径检查真正的结果"
+        },
+        {
+          "id": "e2e-semantic-waits",
+          "heading": "Locator 的等待要落到业务信号上"
+        },
+        {
+          "id": "e2e-owned-data",
+          "heading": "浏览器隔离和服务数据隔离要同时成立"
+        },
+        {
+          "id": "e2e-fault-injection",
+          "heading": "故障注入必须说明替换了哪一段"
+        },
+        {
+          "id": "e2e-visual-baseline",
+          "heading": "视觉基线要先看过才有比较价值"
+        },
+        {
+          "id": "e2e-trace",
+          "heading": "用 Trace 区分产品错误与等待错误"
+        },
+        {
+          "id": "e2e-flaky",
+          "heading": "重试不是把失败抹掉"
+        },
+        {
+          "id": "e2e-proof-limits",
+          "heading": "哪些结果仍需要其他观察补充"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "component-test-scope",
+          "reason": "对照组件替身与真实接口，明确两层分别证明什么。"
+        },
+        {
+          "concept": "eng-deploy-version",
+          "reason": "把本地正确继续追踪到发布版本和缓存条件。"
+        },
+        {
+          "concept": "debug-facts",
+          "reason": "把 Trace 中的现场转化为可以排除假设的证据。"
+        },
+        {
+          "concept": "career-evidence-table",
+          "reason": "把浏览器结果连同环境和证明边界写进项目台账。"
+        }
+      ]
+    },
+    {
+      "id": "CAREER-01",
+      "title": "把项目经历讲成有依据的判断",
+      "question": "怎样让项目中的选择、个人贡献和结果经得起追问？",
+      "summary": "用明确标注的模拟资料台账，区分测量口径、同时发生的变化和可以支持的结论。",
+      "outcomes": [
+        "为重要主张找到来源与时间线",
+        "区分体积、速度、比率和因果归属",
+        "从同一份事实组织简历与口头说明"
+      ],
+      "guide": "career-01-project-evidence-causal-storytelling.md",
+      "anchor": "career-01",
+      "prerequisites": [],
+      "concepts": [
+        {
+          "id": "career-problem",
+          "heading": "先说清谁遇到了什么问题"
+        },
+        {
+          "id": "career-evidence-table",
+          "heading": "用资料台账把回忆与证据分开"
+        },
+        {
+          "id": "career-timeline",
+          "heading": "时间线先检查故事能否成立"
+        },
+        {
+          "id": "career-tradeoffs",
+          "heading": "约束和备选方案让技术选择有解释力"
+        },
+        {
+          "id": "career-contribution",
+          "heading": "个人贡献用动作和交接点说明"
+        },
+        {
+          "id": "career-metric-denominator",
+          "heading": "数字先写口径再计算比例"
+        },
+        {
+          "id": "career-causality",
+          "heading": "相关贡献与因果不要用同一种语气"
+        },
+        {
+          "id": "career-story-levels",
+          "heading": "同一事实可以压缩成不同长度"
+        },
+        {
+          "id": "career-deep-questions",
+          "heading": "追问时沿机制展开而不是新增事实"
+        },
+        {
+          "id": "career-failed-attempts",
+          "heading": "失败尝试事故与协作都可以形成主线"
+        },
+        {
+          "id": "career-audience",
+          "heading": "给不同听者调整信息层次"
+        },
+        {
+          "id": "career-fact-source",
+          "heading": "事实源保持一份表达可以有多种"
+        },
+        {
+          "id": "career-disclosure",
+          "heading": "可公开范围和 AI 整理都服从事实边界"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "test-oracle",
+          "reason": "用预先明确的判断依据约束结果叙述。"
+        },
+        {
+          "concept": "e2e-proof-limits",
+          "reason": "说明一次浏览器检查尚未覆盖的环境和体验。"
+        },
+        {
+          "concept": "eng-chunk-boundary",
+          "reason": "用真实模块边界解释按需加载为何改变初始文件集合。"
+        },
+        {
+          "concept": "git-pr-evidence",
+          "reason": "从变更记录中找到决策、实施与协作的来源。"
+        }
+      ]
+    }
+  ]
+}

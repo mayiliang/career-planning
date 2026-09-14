@@ -2,278 +2,316 @@
 
 ## JS-03 类型、相等、拷贝与不可变更新
 
-很多状态错误表面上像“复制失败”或“比较不准”，根因却是没有先分清值、对象身份和引用关系。这一讲先建立 JavaScript 的值模型，再依次讨论相等算法、浅拷贝、结构共享、结构化克隆和不可变更新。目标不是记住一种“万能深拷贝”，而是能根据数据边界选择正确策略。
+你复制了一份表单数据，在副本里改地址，原表单也跟着变了；两个字段完全一样的对象，比较结果却是 `false`。这不是两个独立的怪现象，而是同一个基础问题的不同表现：变量保存了什么，两个位置拿到的是否为同一个对象？
+
+本文先区分值与对象身份，再解释相等、类型转换和复制。最后用一次真实的嵌套状态更新，把这些知识连成可以直接用于日常开发的判断方法。
 
 ### 学习前先确认
 
-- 直接前置：[JS-02 的属性查找与对象模型](../chinese-guides/js-02-prototype-object-model-this.md#js-02)。JS-02 已经逐层链接对象、函数和变量基础，因此这里不再重复列出它们。
+- 直接前置：[JS-02 原型、对象模型与 this](../chinese-guides/js-02-prototype-object-model-this.md#js-02)。需要理解对象属性、自有属性和原型查找。普通对象可以互相引用，读取属性也可能执行 getter。
 
-展开语法、相等规则、Map、Set、结构共享和 `structuredClone` 都会在本讲就地解释，不要求预先阅读总术语资料。
+每个示例都可以单独在现代浏览器控制台运行。涉及结构化克隆的示例使用 `structuredClone`；这是运行环境提供的 API，不是某个框架的功能。`// =>` 标出应看到的输出。
 
-### JavaScript 操作的是值
+### 先区分原始值和对象
 
-JavaScript 的运行表达式会产生值。规范中的语言类型包括：
+JavaScript 的原始类型包括 Undefined、Null、Boolean、Number、BigInt、String 和 Symbol。**原始值（primitive）**本身不可被原地修改。你可以给变量重新赋值，但那是让变量关联另一个值。
 
-- `Undefined`
-- `Null`
-- `Boolean`
-- `String`
-- `Symbol`
-- `Number`
-- `BigInt`
-- `Object`
-
-前七类通常称为**原始值（primitive value）**。原始值本身不可变。例如字符串方法会返回新字符串，不会在原字符串内部改掉某个字符。
-
-对象则可以包含可变属性。数组、函数、日期、Map、Set 都属于对象类别，而不是与 Object 平行的原始类型：
-
-```js
-typeof 1;          // 'number'
-typeof 1n;         // 'bigint'
-typeof 'hello';    // 'string'
-typeof Symbol();   // 'symbol'
-typeof {};         // 'object'
-typeof [];         // 'object'
-typeof function () {}; // 'function'，这是 typeof 的特殊结果
-typeof null;       // 'object'，历史遗留结果，不表示 null 是对象
+```js example=js03-primitives
+let title = '草稿';
+const savedTitle = title;
+title = '已发布';
+console.log(title); // => 已发布
+console.log(savedTitle); // => 草稿
+console.log('hello'.toUpperCase()); // => HELLO
 ```
 
-`typeof` 适合做一部分粗粒度判断，却不是完整类型检测器。数组用 `Array.isArray`；日期、Map 等还要结合数据来源、原型或专门 API 判断。跨 Realm 时，单纯依赖 `instanceof` 也可能失效。
+调用字符串方法不会修改原字符串，而是产生结果值。字符串能调用方法，也不意味着字符串原始值已经成为一个普通的可变对象；语言会提供相应的属性访问行为。业务代码通常不需要 `new String()`、`new Number()` 这样的包装对象，它们会引入额外身份和真假判断差异。
 
-### 对象变量保存的是身份关联
+对象则有身份，通常也允许修改属性。数组、函数、日期和 Map 都属于对象这一大类，但它们有各自的内部行为，不应该看到 `typeof value === 'object'` 就采用同一种复制方式。
 
-把对象赋给另一个变量，不会自动复制对象：
+### 赋值之后谁和谁共用对象
 
-```js
-const original = { name: 'Ada' };
+先让两个变量保存同一个对象，再分别观察“改属性”和“重新赋值”。
+
+```js example=js03-alias
+let original = { name: '小林' };
 const alias = original;
+alias.name = '小周';
+console.log(original.name); // => 小周
 
-alias.name = 'Lin';
-console.log(original.name); // Lin
+original = { name: '小陈' };
+console.log(original.name); // => 小陈
+console.log(alias.name); // => 小周
 ```
 
-`original`、`alias` 都能到达同一个对象身份。日常语言常说“变量里存着引用”，这个模型有助于画图；不要进一步假设实现必须暴露某种内存地址。
+`alias = original` 没有复制姓名，也没有复制整个对象。两个变量都能找到同一个对象，改动属性当然能从另一处看见。随后给 `original` 重新赋值，只改变这个变量关联的对象；`alias` 仍指向之前那个对象。
 
-两个分别创建的对象即使属性完全相同，也具有不同身份：
+这可以称为按值传递对象引用：传递的是能找到对象的引用值，不是让两个变量名永远绑在一起。函数参数也一样。给参数重新赋值，不会替调用者重新赋值；通过参数修改共享对象的属性，则会被调用者观察到。
 
-```js
-{ n: 1 } === { n: 1 }; // false
+```js example=js03-parameter
+const profile = { score: 0 };
+function update(value) {
+  value.score = 1;
+  value = { score: 99 };
+  return value;
+}
+const returned = update(profile);
+console.log(profile.score); // => 1
+console.log(returned.score); // => 99
 ```
 
-JavaScript 内建的普通相等运算不会自动递归比较对象内容。需要内容相等时，应先定义哪些属性属于语义、数组顺序是否重要、Map/Set 怎样比较、原型是否参与，以及循环引用怎样避免无限递归，再编写或选择相应比较器。“递归比较所有可枚举属性”本身不是通用业务语义。
+`const profile` 限制的是不能让 `profile` 重新关联另一个值，并没有锁住对象属性。这也解释了为什么 [JS-01 的闭包](../chinese-guides/js-01-execution-context-scope-closure.md#闭包保存的是变量还是快照)可以不断修改 `const` 引用的对象：变量绑定与对象内容处在不同层面。
 
-### 四类常见相等规则
+### 相等比较先决定你想比较什么
 
-#### 宽松相等 `==`
+日常业务通常优先用严格相等 `===`，它不会先把两侧转换成同一种类型。原始值按各自类型的规则比较；对象则看身份，不递归比较字段。
 
-`==` 会在部分类型组合之间执行转换。它的完整规则有确定规范，但读代码时容易漏掉转换路径：
-
-```js
-0 == false;   // true
-'' == 0;      // true
-null == undefined; // true
+```js example=js03-equality
+const first = { id: 7 };
+const second = { id: 7 };
+const alias = first;
+console.log(first === second); // => false
+console.log(first === alias); // => true
+console.log(7 === '7'); // => false
+console.log(7 == '7'); // => true
 ```
 
-业务代码通常优先使用 `===`，不是因为 `==` 随机，而是因为避免隐式转换后更容易从源码看出意图。若刻意使用 `value == null` 同时匹配 `null` 与 `undefined`，应让团队能识别这是有意规则。
+两个对象拥有同样的 `id`，可能代表业务上的同一个用户，却仍然是两个 JavaScript 对象。要判断用户是否相同，就明确比较稳定的用户标识；要判断对象是否共享，就比较引用。用深比较代替所有身份判断，不仅可能昂贵，也可能掩盖业务定义不清的问题。
 
-#### 严格相等 `===`
+宽松相等 `==` 会遵循类型转换规则。它并不是把所有东西都转成字符串，也不能仅靠直觉预测。一处常见的刻意用法是 `value == null` 同时匹配 `null` 与 `undefined`；团队若使用这种写法，应明确约定。其余业务判断通常先在输入边界完成类型转换，再用 `===`，更容易解释。
 
-两边类型不同就不相等，不做上述类型转换。对象按身份比较。两个特殊数字规则需要记住：
+`===`、**同值比较（SameValue）**与 **SameValueZero** 在两个数字边界上不同。`Object.is` 实现 SameValue；Map 的键、Set 的元素，以及数组 `includes` 使用 SameValueZero。
 
-```js
-NaN === NaN; // false
-+0 === -0;   // true
-```
-
-#### `Object.is`
-
-`Object.is` 接近**同值比较（SameValue）**：
-
-```js
-Object.is(NaN, NaN); // true
-Object.is(+0, -0);   // false
-```
-
-它仍不会递归比较两个对象的内容。
-
-#### SameValueZero
-
-`Array.prototype.includes` 以及 Map、Set 的键匹配采用 **SameValueZero**：`NaN` 与自身相等，但 `+0`、`-0` 不区分。
-
-| 场景 | `NaN` 与 `NaN` | `+0` 与 `-0` | 对象比较 |
+| 比较情形 | `===` | `Object.is` | SameValueZero |
 | --- | --- | --- | --- |
-| `===` | 不相等 | 相等 | 按身份 |
-| `Object.is` | 相等 | 不相等 | 按身份 |
-| SameValueZero | 相等 | 相等 | 按身份 |
+| `NaN` 与 `NaN` | 不相等 | 相等 | 相等 |
+| `+0` 与 `-0` | 相等 | 不相等 | 相等 |
+| 两个不同的普通对象 | 不相等 | 不相等 | 不相等 |
 
-选比较方法时应从业务问题出发：是在判断同一实体、检测数值变化、查找集合键，还是比较序列化后的领域内容。
-
-### 浅拷贝到底复制了什么
-
-对象展开语法会创建一个新的外层普通对象，并把来源对象的可枚举自有属性值复制过去：
-
-```js
-const child = { score: 1 };
-const first = { name: 'A', child };
-const second = { ...first, name: 'B' };
-
-console.log(first === second);       // false
-console.log(first.child === second.child); // true
+```js example=js03-samevalue
+console.log(NaN === NaN); // => false
+console.log(Object.is(NaN, NaN)); // => true
+console.log(Object.is(0, -0)); // => false
+console.log([NaN].includes(NaN)); // => true
+console.log([NaN].indexOf(NaN)); // => -1
+console.log(new Set([0, -0, NaN, NaN]).size); // => 2
 ```
 
-外层身份变了，`child` 属性中的对象值仍指向原来的嵌套对象。这就是**浅拷贝（shallow copy）**：只复制当前容器这一层的属性槽位，不递归复制所有后代。
+这张表适合查阅，不必当作每日编码的记忆负担。遇到去重、缓存键和数值边界时，再确认具体 API 使用哪套规则。`Object.is` 不是“更严格的深比较”，它同样不会递归比较对象内容。
 
-因此下面的修改会同时从 `first` 观察到：
+### typeof 和真假判断各自能告诉你什么
 
-```js
-second.child.score = 2;
-console.log(first.child.score); // 2
+`typeof` 很适合做初步分支，但它不会给所有对象返回具体类别。`typeof null` 的结果是 `'object'`，这是历史行为；数组也返回 `'object'`，函数则返回 `'function'`。
+
+```js example=js03-typeof
+console.log(typeof null); // => object
+console.log(typeof []); // => object
+console.log(typeof (() => {})); // => function
+console.log(Array.isArray([])); // => true
+console.log(Number.isNaN('不是数字')); // => false
+console.log(Number.isNaN(Number('不是数字'))); // => true
 ```
 
-`Object.assign({}, source)` 也是浅层复制。数组的展开 `[...items]`、`slice()` 等会创建新数组，但数组元素若是对象，仍保留相同对象身份。
+因此，“非 null 的对象”至少要写成 `value !== null && typeof value === 'object'`；这仍然没有确认它是否为你期待的普通记录、日期或数组。外部 JSON、表单与接口数据还需要按字段验证，单个 `typeof` 无法证明完整结构正确。
 
-对象展开与 `Object.assign` 的结果常常相似，写入语义却不完全相同：两者读取来源属性时都可能触发 getter；`Object.assign(target, source)` 使用目标对象的普通属性赋值，可能触发目标或其原型上的 setter，而对象展开会在新对象上定义数据属性。若复制过程带有访问器、副作用或既有目标对象，就不能把二者当成纯粹的字节搬运或无条件互换。
+**真假值（truthy / falsy）**解决的是条件分支的问题，与相等比较不同。`false`、`0`、`-0`、`0n`、空字符串、`null`、`undefined` 和 `NaN` 都是假值。普通对象即使没有任何字段也是真值，空数组同样是真值。浏览器遗留的 `document.all` 是特殊例外，普通业务对象不应按它的行为推断。
 
-对象展开不是属性描述符和原型的完整克隆。访问器可能在复制时被读取，结果通常成为目标对象上的普通数据属性；不可枚举属性不会被复制；原型也不会因 `{ ...source }` 自动变成来源原型。
+所以不能用 `if (items)` 判断数组是否有元素，也不能用 `count || 10` 保留合法的 `0`。如果只想在 `null` 或 `undefined` 时补默认值，使用 `??`；如果空字符串也算“未填写”，则应另外明确这一条业务规则。
 
-### 不可变更新只复制发生变化的路径
+```js example=js03-default
+const count = 0;
+console.log(count || 10); // => 10
+console.log(count ?? 10); // => 0
+console.log(Boolean([])); // => true
+console.log(Boolean('false')); // => true
+```
 
-**不可变更新（immutable update）**不是让 JavaScript 对象突然不可变，而是一种更新纪律：不修改旧状态所能到达的目标节点，构造一个能表达新状态的新根。
+字符串 `'false'` 有内容，因此是真值，不会因为单词拼成 false 就变成布尔值。接口若把布尔状态编码成字符串，应在读取边界做明确解析，不要用 `Boolean(value)` 代替业务转换。
 
-```js
+### 转换类型时把意图写出来
+
+加号既能做数值加法，也能做字符串拼接，这使表单输入中的隐式转换格外容易出错。
+
+```js example=js03-conversion
+const input = '12';
+console.log(input + 3); // => 123
+console.log(Number(input) + 3); // => 15
+console.log(Number('')); // => 0
+console.log(Number('12px')); // => NaN
+console.log(Number.parseInt('12px', 10)); // => 12
+```
+
+`Number('12px')` 不能把整个字符串解释为数字，而 `parseInt` 会读取可识别的整数前缀。两者回答的问题不同。`Number('')` 得到 `0` 也说明：如果空输入应该报“必填”，就要先检查是否为空，不能先转换再期待数字 API 替你识别业务含义。
+
+对象参与转换时，可能通过 `Symbol.toPrimitive`、`valueOf` 或 `toString` 执行自定义代码。大多数业务不需要主动设计这种隐式行为；看到对象参与 `+` 或 `==`，应意识到那里可能发生方法调用，而不是简单地比较一块内存。
+
+Number 使用浮点表示，某些十进制小数无法精确表示。相等比较不会自动为金额或测量值提供容差；需要根据业务单位、舍入规则或误差范围处理。BigInt 用于任意精度整数，不是“小数更精确的 Number”，也不能在常见算术中与 Number 随意混用。这些都是数值模型问题，不应归咎于 `===` 太严格。
+
+### 浅拷贝只复制一层
+
+对象展开可以新建一个外层对象，但嵌套对象仍然共享。先同时观察身份与内容，差别会非常清楚。
+
+```js example=js03-shallow
+const original = {
+  name: '小林',
+  address: { city: '杭州' },
+};
+const copy = { ...original };
+copy.name = '小周';
+copy.address.city = '成都';
+
+console.log(copy === original); // => false
+console.log(copy.address === original.address); // => true
+console.log(original.name); // => 小林
+console.log(original.address.city); // => 成都
+```
+
+**浅拷贝（shallow copy）**只创建了新的外层容器。`name` 保存的是字符串值，给副本的 `name` 重新赋值不会影响原对象；`address` 保存的是同一个对象引用，通过它改 `city` 就会影响两边。
+
+数组的 `slice()`、`[...items]` 也只复制外层数组。复制后 `push` 新元素不会让原数组变长，但修改 `copy[0].name` 仍可能影响原数组中的那个对象。判断复制是否足够，要沿着将要修改的路径逐层检查，不要只看到最外层 `copy !== original` 就停止。
+
+对象展开复制自有的可枚举属性，包括符合条件的 Symbol 属性。它不复制原型，也不原样保留 getter、setter 和属性描述符；读取源 getter 时会执行它，结果以普通数据属性进入新对象。`Object.assign` 同样会读取源属性，但它还会向已有目标赋值，因此可能触发目标 setter。
+
+```js example=js03-getter-copy
+let reads = 0;
+const source = {
+  get price() {
+    reads += 1;
+    return 20;
+  },
+};
+const copy = { ...source };
+console.log(reads); // => 1
+console.log(copy.price); // => 20
+console.log(reads); // => 1
+console.log(Object.getOwnPropertyDescriptor(copy, 'price').get); // => undefined
+```
+
+复制因此不一定是无副作用的“搬数据”。需要保留属性规则时，要单独考虑描述符；需要复制实例时，还要考虑内部状态。普通记录数据、具有访问器的对象、浏览器节点和类实例，不应共享一个含糊的“万能深拷贝”约定。
+
+### structuredClone 能解决什么不能解决什么
+
+**结构化克隆（structured clone）**适合复制受支持的数据图。它支持普通对象、数组以及 Date、Map、Set 等多种类型，能处理循环引用，也会保留副本内部原有的共享关系。
+
+```js example=js03-clone
+const address = { city: '杭州' };
+const source = {
+  primary: address,
+  backup: address,
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+};
+source.self = source;
+const copy = structuredClone(source);
+
+console.log(copy !== source); // => true
+console.log(copy.primary !== address); // => true
+console.log(copy.primary === copy.backup); // => true
+console.log(copy.self === copy); // => true
+console.log(copy.createdAt instanceof Date); // => true
+```
+
+“副本独立”不等于“副本中的所有引用都必须互不相同”。源对象的两个字段原本指向同一个地址对象，副本也应该保留这种关系，只是共同指向克隆出来的新地址。这是数据图中的关系保真，与逐层随意递归创建对象不同。
+
+`structuredClone` 不能复制函数或 DOM 节点，也不能当作保留自定义类行为的工具。自定义原型链、属性描述符和私有字段等不会按原样重建。对于带方法、代理或宿主资源的复杂对象，应先提取明确的数据结构，再根据业务需要重新构造行为。
+
+```js example=js03-clone-error
+try {
+  structuredClone({ run() {} });
+} catch (error) {
+  console.log(error.name); // => DataCloneError
+}
+```
+
+它还提供某些可转移对象的 `transfer` 选项。转移 ArrayBuffer 等资源会让源端失去对应数据的使用能力，这已经不是无影响地“多复制一份”。没有明确的所有权交接需求时，不要为了看起来更快就添加 transfer。
+
+JSON 序列化适合交换符合约定的 JSON 数据，不适合作为通用对象复制工具。它会改变或丢弃部分值，循环引用会报错，BigInt 默认也无法直接序列化。
+
+```js example=js03-json
+const source = {
+  missing: undefined,
+  amount: NaN,
+  date: new Date('2026-01-01T00:00:00Z'),
+};
+const copy = JSON.parse(JSON.stringify(source));
+console.log(Object.hasOwn(copy, 'missing')); // => false
+console.log(copy.amount); // => null
+console.log(typeof copy.date); // => string
+```
+
+如果数据本来就来自严格约定的 JSON，来回序列化可能足够；但“当前例子能跑”不等于“将来加一个 Date、函数或循环关系仍保持原语义”。先写清要保留什么，再选复制方法。
+
+### 不可变更新沿修改路径创建新对象
+
+**不可变更新（immutable update）**的重点是保留旧状态，让更新产生新的结果。它通常不要求把整棵数据全部深拷贝。只沿着变化的路径创建新容器，未变化的分支继续共享，就能同时表达变化和减少无谓复制。
+
+```js example=js03-update
 const previous = {
   profile: {
-    name: 'Ada',
-    address: { city: 'Hong Kong' },
+    name: '小林',
+    address: { city: '杭州', street: '湖滨路' },
   },
-  preferences: { theme: 'dark' },
+  preferences: { theme: '浅色' },
 };
 
 const next = {
   ...previous,
   profile: {
     ...previous.profile,
-    address: {
-      ...previous.profile.address,
-      city: 'Taipei',
-    },
+    address: { ...previous.profile.address, city: '成都' },
   },
 };
+
+console.log(previous.profile.address.city); // => 杭州
+console.log(next.profile.address.city); // => 成都
+console.log(next !== previous); // => true
+console.log(next.profile !== previous.profile); // => true
+console.log(next.preferences === previous.preferences); // => true
 ```
 
-这里从根到 `city` 的路径都创建了新对象，而没有变化的 `preferences` 被安全复用：
+变化发生在 `profile.address.city`，所以新建根对象、`profile` 和 `address`。`preferences` 没有变化，因此与旧状态共享。这叫**结构共享（structural sharing）**。
 
-```js
-next !== previous; // true
-next.profile !== previous.profile; // true
-next.profile.address !== previous.profile.address; // true
-next.preferences === previous.preferences; // true
+但共享有前提：之后也不能绕过更新规则，直接修改 `next.preferences.theme`，否则旧状态看到的同一对象仍然会变。不可变更新是一套持续遵守的使用方式，不是写过一次展开语法就自动获得的保护。
+
+数组中的单项更新通常也遵循同一原则：用 `map` 新建数组，只为目标项创建新对象，其他项原样返回。不要先改旧项再把它放进新数组，那样只是换了外层容器，旧数据已经被修改了。若业务关系较复杂，还应先决定是否用实体 ID 统一管理，避免同一实体被散落复制后出现互相矛盾的版本。
+
+### freeze 是保护措施不是更新策略
+
+`Object.freeze` 会限制对象自有属性的新增、删除和某些修改，但它是浅层操作，不递归冻结嵌套对象。严格模式下，对冻结对象的普通只读属性赋值会抛错；非严格代码可能静默失败。
+
+```js example=js03-freeze
+function inspectFreeze() {
+  'use strict';
+  const settings = Object.freeze({ theme: '浅色', nested: { size: 1 } });
+  try {
+    settings.theme = '深色';
+  } catch (error) {
+    console.log(error.name); // => TypeError
+  }
+  settings.nested.size = 2;
+  console.log(settings.nested.size); // => 2
+}
+inspectFreeze();
 ```
 
-这种“变化路径复制、未变分支复用”称为**结构共享（structural sharing）**。它保留旧快照，减少不必要复制，也让依赖身份比较的界面和缓存能快速判断哪些分支变化。
+冻结 Map 对象也不等于禁止 `map.set()` 改变内部条目，因为这些条目不是普通自有数据属性。通用的深冻结还要处理循环引用、各种内置对象及性能成本；业务中更常见的是对自己明确掌控的数据结构使用开发期保护，而不是随意递归整个对象世界。
 
-结构共享安全的前提是之后不再去修改被复用的旧分支。如果多个独立领域对象本来就不应共享某个子对象，应在它们建立所有权的边界上分离，而不是等污染发生后才对其中一个做表面浅拷贝。
+### 按需要选择比较和复制方式
 
-路径复制最容易在树状状态上理解；真实状态也可能是带别名甚至循环的对象图。同一实体从多条路径可达时，只复制其中一条路径可能破坏“这些路径应指向同一实体”的业务不变量。大型应用常把实体按 ID 规范化存储，让引用关系显式化，再按所有权和变更边界更新，而不是对任意对象图盲目套用树状展开模板。
+| 你的实际需求 | 通常从哪里开始 | 需要确认的边界 |
+| --- | --- | --- |
+| 判断是否为同一对象 | `===` | 字段相同不代表身份相同 |
+| 判断是否为同一个业务实体 | 比较稳定 ID | ID 的类型和所属范围 |
+| 新建普通记录的外层容器 | 对象展开 | 嵌套引用与 getter |
+| 更新嵌套状态并保留旧版本 | 沿路径复制，其他分支共享 | 后续不能直接修改共享分支 |
+| 克隆可支持的数据图 | `structuredClone` | 支持的类型及转移副作用 |
+| 与接口交换数据 | 明确 JSON 结构 | 丢失的类型是否符合约定 |
 
-`Object.freeze` 也不是不可变更新的同义词。它只冻结当前对象自身的属性描述符，默认不会递归冻结嵌套对象；冻结能阻止部分就地修改，却不会自动生成新状态、维护结构共享或定义领域所有权。开发期冻结可以帮助尽早暴露误修改，但更新策略仍需单独设计。
+值、身份、复制和更新并不是四套孤立知识。判断一次修改会影响谁，先找共享引用；判断两份数据是否相同，先定义你要比较的是身份还是业务内容；需要副本时，再决定应该保留哪些类型与关系。下一篇 [JS-07](../chinese-guides/js-07-iteration-metaprogramming-resources.md#js-07)会在这个对象模型上继续解释迭代协议与代理。
 
-### 浅拷贝、深克隆与不可变更新不是一组同义词
+### 参考与延伸阅读
 
-- **浅拷贝**描述复制深度：只新建当前容器。
-- **深克隆（deep clone）**试图为一张数据图创建独立副本，但“支持哪些类型、保留哪些语义”必须由具体算法定义。
-- **不可变更新**描述是否保留旧状态不被修改，通常通过路径复制和结构共享实现，不要求整张图都复制。
-
-如果只是把 `profile.name` 从 A 改成 B，整张状态树深克隆通常比路径复制更昂贵，也会让所有对象身份都改变，破坏本可复用的缓存与渲染优化。
-
-### `structuredClone` 适合复制结构化数据
-
-浏览器和现代 Node.js 提供 `structuredClone`。它实现**结构化克隆（structured clone）**算法，能处理循环引用，也能支持 Date、Map、Set、ArrayBuffer、类型化数组等多种内建数据类型：
-
-```js
-const source = {
-  createdAt: new Date(0),
-  labels: new Set(['js']),
-  scores: new Map([['Ada', 10]]),
-  child: { n: 1 },
-};
-source.self = source;
-
-const cloned = structuredClone(source);
-
-console.log(cloned !== source); // true
-console.log(cloned.self === cloned); // true
-console.log(cloned.createdAt instanceof Date); // true
-console.log(cloned.scores instanceof Map); // true
-```
-
-循环图不是无限嵌套文本，而是节点之间有边重新指向已存在节点。结构化克隆会记住已经访问的对象，让新图中的对应边指向新图的对应节点。
-
-例如 Map 的值也指向根对象：
-
-```js
-source.scores.set('root', source);
-const cloneWithMapCycle = structuredClone(source);
-
-console.log(cloneWithMapCycle.self === cloneWithMapCycle);
-console.log(cloneWithMapCycle.scores.get('root') === cloneWithMapCycle);
-```
-
-两个断言验证的是克隆图中的身份关系，而不只是“打印出来看着一样”。
-
-### `structuredClone` 的边界
-
-结构化克隆不是任意 JavaScript 对象的镜像工具：
-
-- 函数不能被克隆，会触发 `DataCloneError`。
-- DOM 节点等不在支持范围内的宿主对象通常不能克隆。
-- 普通属性描述符、getter/setter、对象原型和类的私有状态不能假定原样保留。
-- Proxy 对象不能作为普通透明数据随意克隆。
-- 大数据图的完整复制有时间和内存成本。
-
-部分可转移对象还可以通过 `transfer` 转移底层资源，原一侧会失去使用能力。这适合明确的线程或消息所有权转移，不是普通状态更新的默认选择。
-
-调用克隆前先定义数据契约：允许哪些类型，遇到不支持值是拒绝、预处理，还是改用领域专用序列化。静默丢字段通常比明确失败更危险。
-
-### JSON 往返不是通用深拷贝
-
-`JSON.parse(JSON.stringify(value))` 只适用于明确属于 JSON 数据模型的内容。它有许多可观察变化：
-
-- 循环引用会让 `JSON.stringify` 抛错。
-- Date 通常变成字符串。
-- Map、Set 不会按原集合语义保存。
-- 对象属性中的 `undefined`、函数、symbol 可能被省略。
-- `NaN`、`Infinity` 可能变成 `null`。
-- BigInt 不能直接序列化。
-
-如果边界本来就是“发送 JSON 请求”，这些限制可能正是协议的一部分；如果目的是保存 JavaScript 对象语义，它就不是可靠的通用克隆方案。
-
-### 选择策略时先问所有权
-
-面对“要不要复制”时，可以依次问：
-
-1. 我是在创建一个新的领域实体，还是更新同一实体的新快照？
-2. 哪些嵌套对象允许共享，哪些必须拥有独立身份？
-3. 数据只包含 JSON 类型，还是包含 Date、Map、Set、循环、二进制等结构？
-4. 消费者是否依赖对象身份检测变化？
-5. 不支持的值应明确拒绝，还是有经过设计的转换协议？
-
-这些问题决定使用直接复用、浅拷贝、路径复制、`structuredClone`、转移，还是领域专用序列化。
-
-### 常见误解
-
-- **“展开语法就是深拷贝。”** 它只复制当前层的可枚举自有属性值。
-- **“不可变更新必须复制整棵树。”** 通常只复制变化路径，安全复用未变分支。
-- **“两个对象内容相同，`===` 就应该相等。”** 对象按身份比较；内容相等需要单独定义。
-- **“JSON 能复制所有前端数据。”** JSON 有明确而有限的数据模型。
-- **“structuredClone 保留任何类实例和方法。”** 它面向可结构化克隆的数据，不是任意运行时对象镜像。
-
-### 学完后应能说明
-
-1. 原始值与对象在可变性和身份比较上的差异。
-2. `===`、`Object.is` 与 SameValueZero 如何处理 `NaN`、正负零和对象。
-3. 一次嵌套状态更新中，哪些路径必须新建，哪些分支可以结构共享。
-4. Date、Map、Set、循环引用、函数和 DOM 节点分别能否由 `structuredClone` 处理。
-5. 为什么某个具体业务边界选择路径复制、结构化克隆或 JSON，而不是背诵“深拷贝最好”。
-
-本讲的对象身份语义是 [JS-07 迭代协议、元编程与资源生命周期](../chinese-guides/js-07-iteration-metaprogramming-resources.md#js-07)的直接前置：迭代器和 Proxy 都是对象协议，代理也必须遵守目标对象已经存在的事实。
+- [MDN：Data types and data structures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Data_structures)——查阅原始类型、对象与类型转换的基础。
+- [MDN：Equality comparisons and sameness](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness)——需要确认某个 API 的相等规则时查表。
+- [MDN：The structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)——核对支持的数据类型及不会保留的对象特征。
+- [MDN：Object.assign](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)——进一步理解属性复制、getter 与 setter。
+- [MDN：Object.freeze](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze)——查阅冻结的范围与浅层限制。

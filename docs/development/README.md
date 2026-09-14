@@ -35,6 +35,7 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 11. [商用品质发布检查表](commercial-release-checklist.md)
 12. [隐私与数据说明](../../PRIVACY.md)
 13. [实施状态](implementation-status.md)
+14. [学习资料的组织与写作（B01–B03）](11-learning-material-system.md)
 
 早期的阶段实施路线、生成提示词、固定周历任务模板和重复职业路线已经移除。Git 历史可用于追溯，当前文档只维护实际产品口径。
 

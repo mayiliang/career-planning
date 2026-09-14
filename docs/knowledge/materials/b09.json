@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 1,
+  "batch": "B09",
+  "title": "从保存变化到协作交付与系统化调试",
+  "reviewedOn": "2026-09-09",
+  "chapters": [
+    {
+      "id": "GIT-01",
+      "title": "对象、暂存与恢复",
+      "question": "文件、暂存区和提交各保存了什么，改错以后怎样找回？",
+      "summary": "让一个文件同时保留三个版本，沿内容、引用和历史选择恢复动作。",
+      "outcomes": [
+        "读懂三层状态与差异的比较方向",
+        "用对象与引用解释提交、分支和临时历史",
+        "按来源和落点选择恢复动作并核对结果"
+      ],
+      "guide": "git-01-object-index-references-recovery.md",
+      "prerequisites": [],
+      "connections": [
+        {
+          "concept": "git-merge-graph",
+          "reason": "观察引用在分叉与汇合时怎样变化。"
+        },
+        {
+          "concept": "git-atomic-commit",
+          "reason": "用暂存区组织一个完整、可解释的变化。"
+        },
+        {
+          "concept": "git-worktree",
+          "reason": "把同一仓库扩展为多个独立工作现场。"
+        },
+        {
+          "concept": "debug-bisect",
+          "reason": "沿提交历史定位行为首次发生变化的位置。"
+        }
+      ],
+      "anchor": "git-01",
+      "concepts": [
+        {
+          "id": "git-lab",
+          "heading": "先建一个可以放心观察的小仓库"
+        },
+        {
+          "id": "git-index",
+          "heading": "同一个文件可以同时有三个版本"
+        },
+        {
+          "id": "git-diff",
+          "heading": "diff 的关键是两端分别是谁"
+        },
+        {
+          "id": "git-objects",
+          "heading": "对象保存内容和关系而不是编辑动作"
+        },
+        {
+          "id": "git-refs",
+          "heading": "分支和 HEAD 是找到提交的入口"
+        },
+        {
+          "id": "git-restore",
+          "heading": "restore 先确定来源再确定落点"
+        },
+        {
+          "id": "git-reset-revert",
+          "heading": "reset 和 revert 解决不同层次的问题"
+        },
+        {
+          "id": "git-reflog",
+          "heading": "用 reflog 找回被移走的入口"
+        },
+        {
+          "id": "git-detached",
+          "heading": "detached HEAD 可以工作但要及时命名"
+        },
+        {
+          "id": "git-untracked",
+          "heading": "未跟踪文件和忽略规则不等于备份"
+        },
+        {
+          "id": "git-recovery-evidence",
+          "heading": "恢复完成要同时核对内容与历史"
+        }
+      ]
+    },
+    {
+      "id": "GIT-02",
+      "title": "分支整合与冲突",
+      "question": "相同的文件结果，为什么会留下不同的历史？",
+      "summary": "在同一分叉上对照 merge、rebase 与 cherry-pick，从双方需求写出冲突解决方案。",
+      "outcomes": [
+        "从共同祖先区分端点差异与独有提交",
+        "解释合并、重放和挑选变化后的父子关系",
+        "核对冲突双方意图、退出方式与最终组合行为"
+      ],
+      "guide": "git-02-branches-merge-rebase-conflicts.md",
+      "prerequisites": [
+        "git-01-object-index-references-recovery.md#git-01"
+      ],
+      "connections": [
+        {
+          "concept": "git-objects",
+          "reason": "从提交父关系解释文件相同但历史不同。"
+        },
+        {
+          "concept": "git-reflog",
+          "reason": "整理历史前后为重要提交保留恢复入口。"
+        },
+        {
+          "concept": "git-lease",
+          "reason": "将重写历史的个人操作放回远端协作条件。"
+        },
+        {
+          "concept": "debug-hypotheses",
+          "reason": "自动合并通过后，仍按可观察行为排查语义问题。"
+        }
+      ],
+      "anchor": "git-02",
+      "concepts": [
+        {
+          "id": "git-merge-graph",
+          "heading": "先画关系再选择整合方式"
+        },
+        {
+          "id": "git-conflict-lab",
+          "heading": "建立一份确实会分叉的配置历史"
+        },
+        {
+          "id": "git-compare-range",
+          "heading": "两个点和三个点要连同命令一起读"
+        },
+        {
+          "id": "git-three-way",
+          "heading": "merge 保留两条线并记录一次汇合"
+        },
+        {
+          "id": "git-conflict-intent",
+          "heading": "冲突解决先保留需求再决定文本"
+        },
+        {
+          "id": "git-rebase",
+          "heading": "rebase 重放变化并建立新的父子关系"
+        },
+        {
+          "id": "git-conflict-sides",
+          "heading": "ours 和 theirs 要看当前正在做什么"
+        },
+        {
+          "id": "git-fast-pick",
+          "heading": "fast-forward 和 cherry-pick 各自省略了什么"
+        },
+        {
+          "id": "git-history-edit",
+          "heading": "整理本地提交时保留可恢复的起点"
+        },
+        {
+          "id": "git-revert-merge",
+          "heading": "撤销合并后仍要看祖先关系"
+        },
+        {
+          "id": "git-combined-behavior",
+          "heading": "最终检查围绕组合后的行为"
+        }
+      ]
+    },
+    {
+      "id": "GIT-03",
+      "title": "远端协作与独立工作区",
+      "question": "怎样让别人接得住、审得清，也恢复得了你的变化？",
+      "summary": "用本地远端、两个协作副本与独立工作区，串起提交、同步、评审和交付。",
+      "outcomes": [
+        "组织可独立理解的提交与有证据的 PR",
+        "区分 fetch、集成与带明确预期值的推送保护",
+        "解释 worktree 的共享范围和交付时的资源约定"
+      ],
+      "guide": "git-03-commits-remotes-pr-worktrees-collaboration.md",
+      "prerequisites": [
+        "git-02-branches-merge-rebase-conflicts.md#git-02"
+      ],
+      "connections": [
+        {
+          "concept": "git-index",
+          "reason": "部分暂存后要区分工作文件与候选提交。"
+        },
+        {
+          "concept": "git-conflict-intent",
+          "reason": "同步时先理解双方需求，再解决冲突。"
+        },
+        {
+          "concept": "debug-race",
+          "reason": "把可控复现和行为证据放进修复说明。"
+        },
+        {
+          "concept": "rsc-artifact-evidence",
+          "reason": "将源代码记录继续连接到真正部署的制品。"
+        }
+      ],
+      "anchor": "git-03",
+      "concepts": [
+        {
+          "id": "git-atomic-commit",
+          "heading": "一个提交围绕一个可以解释的变化"
+        },
+        {
+          "id": "git-commit-message",
+          "heading": "提交说明解释用户能观察到的变化"
+        },
+        {
+          "id": "git-remote-lab",
+          "heading": "用两个本地副本看清远端同步"
+        },
+        {
+          "id": "git-fetch-integrate",
+          "heading": "fetch 更新观察而整合改变当前开发线"
+        },
+        {
+          "id": "git-lease",
+          "heading": "lease 比较的是你明确确认过的远端位置"
+        },
+        {
+          "id": "git-pr-evidence",
+          "heading": "PR 帮助别人完成一次有依据的决定"
+        },
+        {
+          "id": "git-merge-policy",
+          "heading": "合入方式应该服务于以后如何追踪"
+        },
+        {
+          "id": "git-worktree",
+          "heading": "worktree 给每项工作一份独立现场"
+        },
+        {
+          "id": "git-worktree-resources",
+          "heading": "工作目录独立还需要运行资源独立"
+        },
+        {
+          "id": "git-delivery-chain",
+          "heading": "跨仓库依赖与发布记录补齐交付链条"
+        }
+      ]
+    },
+    {
+      "id": "DEBUG-01",
+      "title": "系统化调试与因果定位",
+      "question": "怎样把“似乎修好了”变成能复核的原因与修复？",
+      "summary": "用零值、响应逆序、语言缓存和版本二分，练习提出假设、控制变量与核对结果。",
+      "outcomes": [
+        "把模糊故障改写成可复现事实与可证伪假设",
+        "按边界理解断点、网络、日志和 Source Map 的证据",
+        "用确定顺序和版本二分支持最小修复"
+      ],
+      "guide": "debug-01-systematic-debugging-evidence-causality.md",
+      "prerequisites": [],
+      "connections": [
+        {
+          "concept": "effect-request-eligibility",
+          "reason": "把独立竞态实验连接到页面请求的完整生命周期。"
+        },
+        {
+          "concept": "git-reflog",
+          "reason": "检查历史时保留能回到原现场的入口。"
+        },
+        {
+          "concept": "git-pr-evidence",
+          "reason": "让复现、修复与证据随评审一起流转。"
+        },
+        {
+          "concept": "react-perf-layers",
+          "reason": "按用户等待拆分框架工作与浏览器成本。"
+        }
+      ],
+      "anchor": "debug-01",
+      "concepts": [
+        {
+          "id": "debug-facts",
+          "heading": "先把现象写成别人能重现的事实"
+        },
+        {
+          "id": "debug-defaults",
+          "heading": "从一个零值例子练习单变量实验"
+        },
+        {
+          "id": "debug-hypotheses",
+          "heading": "每个假设都要有能推翻它的观察"
+        },
+        {
+          "id": "debug-race",
+          "heading": "用可控顺序把偶发现象变成确定过程"
+        },
+        {
+          "id": "debug-dom-writer",
+          "heading": "在一个小页面里找到最后写入的人"
+        },
+        {
+          "id": "debug-tool-boundaries",
+          "heading": "工具显示的现场有各自的边界"
+        },
+        {
+          "id": "debug-cache-key",
+          "heading": "网络和缓存要沿数据来源逐层区分"
+        },
+        {
+          "id": "debug-source-map",
+          "heading": "Source Map 必须和实际运行的制品配对"
+        },
+        {
+          "id": "debug-logs",
+          "heading": "日志应该连接状态变化而不是堆文字"
+        },
+        {
+          "id": "debug-bisect",
+          "heading": "用稳定的判定找出首个异常版本"
+        },
+        {
+          "id": "debug-performance",
+          "heading": "性能和内存问题先建立可比较的口径"
+        },
+        {
+          "id": "debug-fix-evidence",
+          "heading": "用最小修复和可复核记录结束排查"
+        }
+      ]
+    }
+  ]
+}

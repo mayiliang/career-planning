@@ -2,163 +2,274 @@
 
 ## REACT-08 错误边界、异步 UI 与可恢复体验
 
-真实界面不会只有成功态。代码可能在 render 抛错，数据可能 pending、拒绝或取消，动态 chunk 可能因发布切换加载失败。React 的 Error Boundary、Suspense 和 `use` 分别处理不同信号。把它们放在正确层级，才能让局部功能失败时用户仍能继续、理解发生了什么并安全重试。
+报告区域出错时，旁边写到一半的笔记是否还能保留？点击重试后，究竟重新做了什么？页面正在切换时，旧内容能否继续显示？这些问题比“加一个 loading 和 error”更接近用户真正需要的恢复体验。
+
+本篇把渲染失败、异步等待、事件结果和导航过渡分开，再用完整页面把它们连接起来。读者可以主动制造失败、交付结果并重试，不需要等待偶发故障。
 
 ### 学习前先确认
 
-- 直接前置：[REACT-06 Reducer、Context 与跨组件状态](../chinese-guides/react-06-reducer-context-state-domains.md#react-06)。它会递归包含 Hook、Effect、Promise 错误/取消与状态模型。
+- 直接前置：[REACT-06 Reducer、Context 与跨组件状态](../chinese-guides/react-06-reducer-context-state-domains.md#react-06)。先明确区域的状态所有者和需要保留的任务，再选择错误边界的位置。
 
-路由数据边界在 REACT-10，服务端组件和安全升级在 REACT-09。本讲先建立原生错误与 pending 模型。
+示例使用 React 19 的 use 与常规 Error Boundary、Suspense API。每个 App.tsx 独立运行，后续小节复用本篇给出的辅助文件。所有故障与资源均为本地演示，不执行真实保存。
 
-### 一、先区分三条故障通路
+### 先看错误发生在哪个执行阶段
 
-捕获后代渲染异常并显示替代 UI 的组件是**错误边界（error boundary）**；等待内容时显示的是**后备界面（fallback）**。Suspense 读取的数据需要稳定的**资源缓存（resource cache）**，失败后的**重试（retry）**必须改变失败资源身份；非紧急揭示可放入**过渡更新（transition）**。
+**Error Boundary** 负责隔离后代组件无法正常渲染的错误，**Suspense** 负责等待支持它的内容准备好。它们不是两种不同颜色的通用提示框。
 
-1. render/生命周期中抛出的错误，可由最近 Error Boundary 捕获；
-2. 支持 Suspense 的数据源或 lazy 组件抛出 Promise，最近 Suspense 显示 fallback；
-3. 事件处理器、Effect、timer、普通 Promise 回调中的错误不会自动进入 render Error Boundary，需要局部 catch 后转成 state 或上报。
+| 发生的情况 | 通常怎样处理 |
+| --- | --- |
+| 后代渲染时抛错 | 最近的错误边界显示替代界面 |
+| React 执行后代 Effect 的同步 setup 时抛错 | 可交给错误边界 |
+| 普通事件中请求失败、定时器或 Promise 回调抛错 | 由对应异步过程捕获，更新局部状态或报告 |
+| use 读取尚未完成的 Promise | 最近 Suspense 处理等待 |
+| use 读取已拒绝的 Promise | 拒绝原因进入最近错误边界 |
+| 表单值不合法、业务冲突 | 优先用明确的字段或操作结果表达 |
 
-“外面包了一个边界”不能统一处理所有异步失败。先确定错误发生阶段和责任主体。
+不要笼统地说“Effect 的错误一概抓不到”。同步 setup 是 React 调用的执行路径；它之后另行启动的普通异步回调，则不自动沿同一条错误通路返回。现代 React 的 transition action 也有自己的错误处理语义，不能把普通异步代码的规则随意推广。
 
-### 二、Error Boundary 保护渲染子树
+### 一个简单边界保护一块可以独立恢复的区域
 
-React 目前仍以类组件 API 实现通用错误边界：
+先创建 `src/ReadingBoundary.tsx`，后续相关例子都保留这个文件：
 
-```tsx
-class ErrorBoundary extends Component<PropsWithChildren, { error: Error | null }> {
-  state = { error: null };
-  static getDerivedStateFromError(error: Error) { return { error }; }
-  componentDidCatch(error: Error, info: ErrorInfo) { report(error, info); }
+```tsx example=react08-boundary runtime=project file=src/ReadingBoundary.tsx
+import { Component, type ReactNode } from 'react';
+type Props = { children: ReactNode; onRetry: () => void };
+export default class ReadingBoundary extends Component<Props, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    return this.state.error
-      ? <RecoveryPanel onRetry={() => this.setState({ error: null })} />
-      : this.props.children;
+    if (this.state.failed) return <section aria-label="阅读恢复区域">
+      <p role="alert">这部分内容暂时无法显示，其他区域仍可使用。</p>
+      <button onClick={this.props.onRetry}>重新读取本区域</button>
+    </section>;
+    return this.props.children;
   }
 }
 ```
 
-边界不能捕获自己 render 的错误、事件处理器错误或多数异步回调。框架/库可能提供函数式封装，但底层责任不变。
+类组件的 getDerivedStateFromError 切换渲染结果；需要诊断时，可以在 componentDidCatch 对接已有报告入口，记录错误身份、组件栈与发布版本。示例不把堆栈显示给用户，也不依赖尚未定义的报告函数。
 
-### 三、边界位置应对应用户可恢复任务
+边界不能捕获自身 fallback 再次抛出的错误，也不直接处理服务端渲染失败；如果 fallback 又读取相同的坏资源，就可能继续向外层失败。替代界面应尽量少依赖、保留合理的下一步动作。
 
-全局根边界防止白屏并提供刷新/反馈入口；页面或区域边界让侧栏失败时编辑器仍可用；过细边界会让页面充满碎片 fallback。按“这部分失败后用户还能完成什么、能否独立重试”划分。
+### 对比渲染错误同步 Effect 错误与事件失败
 
-边界 fallback 自身必须简单、可访问且低依赖，不能再次读取同一坏数据。提供清晰标题、错误摘要、重试/返回动作和焦点管理。不要向用户展示堆栈、内部路径或敏感请求信息。
+把下面作为 `src/App.tsx`：
 
-### 四、重试必须改变失败资源
-
-只把 boundary 的 error state 设 null，若子树再次读取同一拒绝 Promise 或同一损坏缓存，会立即再失败。重试需要使资源失效、创建新 request key 或改变边界 key：
-
-```tsx
-<ErrorBoundary key={retryVersion}>
-  <Suspense fallback={<Pending />}>
-    <OrderDetails resource={resource} />
-  </Suspense>
-</ErrorBoundary>
+```tsx example=react08-capture-app runtime=project file=src/App.tsx
+import { useEffect, useRef, useState } from 'react';
+import ReadingBoundary from './ReadingBoundary';
+type Mode = 'ok' | 'render' | 'effect';
+function Report({ mode, focusOnMount }: { mode: Mode; focusOnMount: boolean }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    if (mode === 'effect') throw new Error('模拟 Effect 同步 setup 失败');
+    if (focusOnMount) heading.current?.focus();
+  }, [mode, focusOnMount]);
+  async function submit() {
+    try { await Promise.reject(new Error('模拟提交失败，内容仍可阅读')); }
+    catch (error) { setMessage(error instanceof Error ? error.message : '提交失败'); }
+  }
+  if (mode === 'render') throw new Error('模拟报告渲染失败');
+  return <section>
+    <h2 ref={heading} tabIndex={-1}>阅读报告</h2><p>报告内容可用。</p>
+    <button onClick={submit}>模拟提交失败</button>
+    {message && <p role="alert">{message}</p>}
+  </section>;
+}
+export default function App() {
+  const [mode, setMode] = useState<Mode>('ok');
+  const [attempt, setAttempt] = useState(0);
+  const [draft, setDraft] = useState('');
+  function retry() { setMode('ok'); setAttempt(value => value + 1); }
+  return <main>
+    <label>区域外的笔记 <textarea value={draft} onChange={e => setDraft(e.target.value)} /></label>
+    <button onClick={() => setMode('render')}>制造渲染错误</button>
+    <button onClick={() => setMode('effect')}>制造 Effect 错误</button>
+    <ReadingBoundary key={attempt} onRetry={retry}>
+      <Report mode={mode} focusOnMount={attempt > 0} />
+    </ReadingBoundary>
+  </main>;
+}
 ```
 
-重试次数、退避、离线和不可重试错误应分类。写操作结果未知时不能盲目重放。
+先写笔记，再制造渲染错误。只有报告区域被替换，笔记保留；点击重新读取，恢复正常内容并聚焦报告标题。再制造 Effect 错误，同样进入边界。正常报告里的模拟提交失败只显示操作错误，报告不会消失。
 
-### 五、Suspense 表示子树尚未准备好
+这里的恢复做了两件事：把故障条件改回 ok，并通过新 key 重建边界。如果只重置边界，却保留 mode='render'，它会立刻再次失败。边界里的局部状态也会随重建丢失；需要保留的笔记因此放在边界之外。
 
-当支持的读取在 render 中遇到 pending Promise，React 找到最近 Suspense，显示 fallback，并在 Promise 敲定后重试渲染。**悬停边界（Suspense boundary）**管理的是显示时序，不是通用数据请求函数。
+异常出现时使用 alert 通知，并不自动抢走区域外正在编辑的焦点；用户主动重试后，再把焦点交给恢复的内容。边界的位置应对应“这项任务失败后，用户还能做什么”。
 
-```tsx
-<Suspense fallback={<OrderSkeleton />}>
-  <OrderPage />
-</Suspense>
+### Suspense 等待的是支持它的读取
+
+普通 useEffect 中发请求，然后 setState，不会因为外面包着 Suspense 就自动出现 fallback。Suspense 不扫描页面里所有 Promise，也不负责启动和取消所有异步工作。
+
+它响应支持 Suspense 的读取，例如 React.lazy 的代码加载、框架集成的数据读取，以及 use(promise)。等待中的资源会让对应子树暂停，React 在资源状态改变后重新尝试渲染。
+
+第一次挂载就暂停的组件，尚未建立可依赖的本地状态。不能把“正在等待的 Promise 必须稳定”寄托在一个还没成功挂载的子组件初始化里。资源应由已存在的拥有者、框架缓存或明确的外部入口创建。
+
+### 手动交付结果让 Promise 的三种状态清楚可见
+
+创建 `src/readingTask.ts`。它只是本地演示控制器，用按钮决定何时完成，没有网络或缓存功能。
+
+```ts example=react08-task runtime=project file=src/readingTask.ts
+export function createReadingTask() {
+  let resolveTask: (text: string) => void = () => {};
+  let rejectTask: (error: Error) => void = () => {};
+  const promise = new Promise<string>((resolve, reject) => {
+    resolveTask = resolve;
+    rejectTask = reject;
+  });
+  // 即使演示者很快交付失败，也让这份原始 Promise 有拒绝观察者。
+  void promise.catch(() => undefined);
+  return { promise, resolve: resolveTask, reject: rejectTask };
+}
 ```
 
-Effect 中普通 fetch 不会自动 suspend。把每次 render 都新建 Promise 也会无限 pending；资源身份必须稳定，并由框架/缓存或模块外资源层管理。
+再使用 `src/App.tsx`，并保留 ReadingBoundary.tsx：
 
-### 六、`use` 在 render 中读取 Promise/Context
+```tsx example=react08-resource-app runtime=project file=src/App.tsx
+import { Suspense, use, useState } from 'react';
+import ReadingBoundary from './ReadingBoundary';
+import { createReadingTask } from './readingTask';
+type Task = ReturnType<typeof createReadingTask>;
+function Reading({ promise }: { promise: Promise<string> }) { return <p>正文：{use(promise)}</p>; }
+export default function App() {
+  const [task, setTask] = useState<Task | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [draft, setDraft] = useState('');
+  function start() { setTask(createReadingTask()); setAttempt(value => value + 1); }
+  return <main>
+    <label>阅读笔记 <input value={draft} onChange={e => setDraft(e.target.value)} /></label>
+    <button onClick={start}>{task ? '开始新一轮读取' : '开始读取'}</button>
+    <button disabled={!task} onClick={() => task?.resolve('组件恢复机制')}>交付正文</button>
+    <button disabled={!task} onClick={() => task?.reject(new Error('模拟读取失败'))}>交付失败</button>
+    <button disabled={!task} onClick={() => setAttempt(value => value + 1)}>只重置边界</button>
+    {task && <ReadingBoundary key={attempt} onRetry={start}>
+      <Suspense fallback={<p role="status">正文还没有准备好</p>}>
+        <Reading promise={task.promise} />
+      </Suspense>
+    </ReadingBoundary>}
+  </main>;
+}
+```
 
-现代 React 的 `use(promise)` 可以读取 Promise：pending 时 suspend，拒绝时抛给 Error Boundary，兑现时返回值。Promise 应来自稳定缓存、服务器传入或框架数据层，不能在组件 render 中无缓存创建。
+开始读取后显示等待；交付正文后显示内容；再开始一轮并交付失败，进入错误边界。这对应 **pending**、fulfilled 和 rejected 三种结果。
 
-`use` 有不同于普通 Hook 的部分调用规则，但仍必须在 React 组件/Hook 语义内使用。项目采用前按锁定 React/框架版本核对服务器与客户端支持，不把实验示例当普遍数据架构。
+辅助控制器给原始 Promise 添加了观察者，但传给 use 的仍是原始 Promise，因此失败不会被偷偷转换成成功。use 在组件中读取它的结果，而不是通过 Effect 复制到另一份 state。
 
-### 七、Pending 布局要避免整页闪烁
+### 只清错误标记不一定真的重新读取
 
-边界层级决定 reveal：一个大 Suspense 会一起显示，多个嵌套边界可以先显示稳定 shell，再逐块出现。fallback 应与最终布局尺寸相近，避免 cumulative layout shift；短操作可延迟显示，避免瞬时闪烁。
+失败后点“只重置边界”，仍会再次失败，因为 task.promise 仍是同一个已拒绝的资源。点“重新读取本区域”才创建新 Promise，再交付正文即可恢复。已经敲定的 Promise 不能被后来的 resolve 改成另一种结果。
 
-导航中保留旧内容并显示 pending 指示，有时比清空为骨架更好。是否保留取决于新旧数据是否仍可安全交互。旧用户权限或租户数据不应在身份切换时继续显示。
+**retry** 要针对失败原因采取行动：新建读取、使缓存失效、重新装配损坏组件，或提示用户改变输入。单纯把 error 清空只改变了展示条件。
 
-### 八、取消不是错误 UI
+生产缓存的 key 应包含影响内容的资料身份、参数及必要的账号范围；同一 key 等待期间需要稳定资源，失败后也有明确失效入口。缓存容量、过期和 SSR 每请求隔离不是这个演示控制器提供的能力。真实项目优先采用框架或已经验证的数据层，不自行拼一个永久全局 Promise Map。
 
-用户导航、输入替换或组件卸载引起的 abort 通常表示旧工作不再需要。它应停止 pending 或由新导航接管，不显示“系统出错”。但取消也不能静默掩盖真正失败：检查 signal、错误分类和 requestId。
+### use 有自己的规则不能套用到所有 Hook
 
-React/路由框架可能自动取消 loader；底层 fetch 必须接收 signal，结果层仍要防迟到提交。UI 要区分离线、权限、404、500、解析错误和代码缺陷。
+use 可以在某些条件与循环中读取资源，但仍需在 React 组件或 Hook 中调用，并且不能用普通 try/catch 包住它来截获暂停过程。希望处理拒绝时，使用最近错误边界，或在创建资源时明确转换失败结果。
 
-### 九、错误状态与异常边界不是二选一
+Promise 应在当前渲染之外已经具有稳定身份。每次 render 都调用一个返回新 Promise 的读取函数，可能反复暂停、触发未缓存 Promise 提示或造成重复工作；并不是加一个 use 就拥有了缓存。
 
-可预期业务结果适合显式 state：表单校验、权限拒绝、空数据、冲突。不可在当前局部正常渲染的程序/资源错误可以抛给 Error Boundary。不要把所有 404 都 throw，也不要把 render 缺陷 catch 后返回 null。
+读取 Context 时的 use 与 useContext 也不要和异步数据架构混为一谈。先说明资源来自哪里，再选择读取 API。
 
-数据层可以把 HTTP/解析失败归一化，再由页面决定 inline error、保留旧数据、路由错误页或异常边界。错误分类是产品协议。
+### Transition 可以让已可用的内容暂时保留
 
-### 十、动态导入失败需要发布恢复策略
+**transition** 表示这次更新可以在准备好后再揭示。它不会加快请求，也不会自动取消旧任务。下面的 A 已经可读，切到 B 时保留 A，直到手动交付 B。
 
-`lazy(() => import(...))` 与 Suspense 处理代码加载 pending，导入拒绝可进入 Error Boundary。部署时旧 HTML 引用已删除 chunk 会失败；可保留多版本静态资源、原子发布，或在识别 chunk mismatch 后提示安全刷新。
+继续使用 readingTask.ts，把 App.tsx 改为：
 
-自动 reload 必须限次，避免离线或真实代码错误造成循环。记录当前 build ID、请求 URL 和缓存状态，有助于区分发布漂移与网络故障。
+```tsx example=react08-transition-app runtime=project file=src/App.tsx
+import { Suspense, use, useState, useTransition } from 'react';
+import { createReadingTask } from './readingTask';
+const initialPromise = Promise.resolve('A 的正文');
+type Resource = { id: string; promise: Promise<string> };
+function Reading({ resource }: { resource: Resource }) {
+  const text = use(resource.promise);
+  return <section><h2>当前资料：{resource.id}</h2><p>{text}</p></section>;
+}
+export default function App() {
+  const [resource, setResource] = useState<Resource>({ id: 'A', promise: initialPromise });
+  const [task, setTask] = useState<ReturnType<typeof createReadingTask> | null>(null);
+  const [pending, startTransition] = useTransition();
+  function chooseB() {
+    const next = createReadingTask();
+    setTask(next);
+    startTransition(() => setResource({ id: 'B', promise: next.promise }));
+  }
+  return <main>
+    <button disabled={pending} onClick={chooseB}>切换到 B</button>
+    <button disabled={!pending} onClick={() => task?.resolve('B 的正文')}>交付 B 的正文</button>
+    <p role="status">{pending ? '正在切换，下面仍是原来的资料' : '当前内容已就绪'}</p>
+    <Suspense fallback={<p>首次准备内容</p>}><Reading resource={resource} /></Suspense>
+  </main>;
+}
+```
 
-### 十一、服务端渲染与流式揭示增加边界责任
+先等 A 出现，再切换 B。等待时标题仍是 A，也明确说明正在切换；交付以后，标题与正文一起变成 B。这里是只读内容，没有把 B 的标题提前贴到 A 的正文上。
 
-框架可在服务器流式发送 Suspense 边界，客户端再 hydrate。服务器错误、客户端 hydration 错误和后续事件错误发生在不同环境。fallback HTML 必须可访问，边界 ID 与数据缓存应按请求隔离。
+如果是账号或租户切换，旧内容可能已不适合继续展示，就应立即隔离，而不是为减少闪烁继续保留。文本输入的即时反馈也不应直接靠 transition 延后；它适合非紧急的揭示过程。
 
-不要把服务器敏感错误或堆栈序列化给浏览器。服务端组件/Function 仍需授权，边界只改善恢复。具体框架协议在 REACT-09/10 讲解。
+现代 React 可以处理 transition action 中的某些错误，但异步等待之后的状态更新、多个并发写入的顺序仍有具体规则。不要据此认为任意 Promise 回调都会自动进入边界；本例只在同步 transition 回调里提交资源切换。
 
-### 十二、日志要关联边界、资源与发布版本
+### lazy 管的是代码资源而不是业务数据
 
-componentDidCatch 可提供组件栈，数据错误应有请求/资源 ID，chunk 错误应有 build ID。去重同一根因，避免每层重复上报。用户取消、已知 404 和程序缺陷使用不同等级。
+创建 `src/LazyReport.tsx`：
 
-日志必须脱敏；Error.cause 可保留内部链，但 UI 不直接展示。边界命中率、重试成功率和退出率能告诉你恢复是否真的有效。
+```tsx example=react08-lazy-report runtime=project file=src/LazyReport.tsx
+export default function LazyReport() { return <section><h2>按需报告</h2><p>组件代码已经加载。</p></section>; }
+```
 
-### 十三、可访问恢复体验
+独立的 `src/App.tsx`：
 
-错误出现后用合适 `role="alert"` 或焦点移动通知，但避免多个嵌套边界同时强提醒。重试按钮名称包含对象，例如“重新加载订单”；键盘焦点应落在错误标题或主要动作，并在恢复后回到合理位置。
+```tsx example=react08-lazy-app runtime=project file=src/App.tsx
+import { lazy, Suspense, useState } from 'react';
+const Report = lazy(async () => {
+  await new Promise<void>(resolve => window.setTimeout(resolve, 350));
+  return import('./LazyReport');
+});
+export default function App() {
+  const [open, setOpen] = useState(false);
+  return <main>
+    <button onClick={() => setOpen(value => !value)}>{open ? '关闭报告' : '打开报告'}</button>
+    {open && <Suspense fallback={<p role="status">正在加载报告代码</p>}><Report /></Suspense>}
+  </main>;
+}
+```
 
-Skeleton 不应伪装可点击控件；加载指示可用 `aria-busy` 标记区域。若保留旧数据，明确显示“正在更新”，不要让读屏用户误以为结果已是最新。
+第一次打开能看到人工延迟的等待；关闭后再打开，同一个 lazy 类型可以复用已经成功加载的代码。lazy 定义在组件外，避免每次 render 创建一个新组件类型。
 
-### 十四、测试必须注入不同故障阶段
+导入拒绝会交给最近错误边界，但失败的 lazy 资源也可能被缓存。仅重建边界不能保证重新调用同一 loader；真正恢复要由框架的加载策略或明确的新资源身份负责。旧页面引用已删除分块时，应通过保留多版本静态资源、合适的发布方式或有保护的刷新恢复，而不是无限 reload。
 
-分别让：render 抛错、资源 Promise pending/resolve/reject、请求 abort、HTTP 500、动态导入拒绝和 retry 成功。验证最近边界而非全局接管、无关区域仍可用、错误只报告一次、重试创建新资源且调用次数符合预期。
+### 等待失败和取消要提供不同的下一步
 
-普通 Effect 请求应作为反证：外层 Suspense 不应自动显示 fallback。用可控 Promise 而非 sleep，确保每条时序可复现。
+等待界面告诉用户还没准备好，失败界面说明哪部分不能继续，取消则表示这轮工作不再需要。把它们都显示成“系统错误，请重试”，会让正常导航也显得像故障。
 
-### 十五、边界审查问题
+表单字段不合法，应保留输入并指出具体字段；资源被删除，可以提供返回列表；临时读取失败可以局部重试；写入超时可能结果未知，需要查询确认或使用幂等协议，不能盲目再次提交。
 
-这个失败属于 render、数据、事件还是代码加载？最近能恢复的区域在哪里？fallback 是否独立可靠？重试会让什么资源失效？取消怎样处理？旧内容是否可安全保留？SSR 是否泄漏信息？没有答案就不应只加一个通用 ErrorBoundary。
+局部错误状态与错误边界可以共存。能正常渲染的业务结果不一定要 throw；无法继续渲染的程序缺陷也不应 catch 后悄悄返回空白。
 
-### 十六、资源缓存必须把 Promise、数据和错误放在同一身份下
+### 边界层级影响草稿布局和提示数量
 
-Suspense 数据源的关键不是“看到 Promise 就抛出”，而是同一资源 key 在 pending 时返回同一个 Promise，成功后返回缓存数据，失败后稳定地抛出对应错误。若每次 render 都创建新 Promise，组件会不断暂停；若重试仍复用失败项，按钮不会产生任何恢复。
+一块任务能独立恢复，就可以有自己的边界；把每个小图标都包起来，会让页面充满零散提示。所有区域共用一个根边界，又可能因侧栏错误清掉整页编辑器。
 
-资源 key 必须包含影响结果的参数与身份，失效要精确到所属数据。缓存容量、过期、请求取消和 SSR 每请求隔离同样属于协议。应用通常应采用框架支持的缓存/数据层，而不是临时写一个无法治理的全局 Map。
+fallback 尽量接近最终区域尺寸，避免大幅布局跳动，但不要用假的可点击控件装饰骨架。已有内容保留时，说明它仍属于哪个对象、是否正在更新，并限制可能写错对象的动作。
 
-### 十七、Transition 可以避免已经可用的界面突然退回大面积 fallback
+嵌套边界不要每层都播报同一错误。优先让最近能恢复的区域接管，必要时向上交还；日志使用错误、请求和发布身份去重。用户可见文案保持具体，不展示内部路径或完整异常堆栈。
 
-用户在已有页面发起非紧急导航或筛选时，可把更新放进 transition，让旧内容暂时保留，并用 pending 标识说明正在切换。它改善的是揭示顺序，不会让网络更快，也不能掩盖提交按钮这类紧急反馈。
+### 服务端流式渲染与客户端恢复有不同责任
 
-旧内容保留期间必须避免误操作：展示旧数据身份、限制会写错对象的动作，并在新结果完成后恢复合理焦点。若内容已不再安全，例如退出登录或切租户，就应立即清空而非继续展示。
+客户端 Error Boundary 不是服务端错误处理的替代品。流式 SSR 可以结合 Suspense 输出 fallback，客户端 hydration 还可能经历代码下载失败、版本不一致或非确定性渲染；这些路径由渲染框架和服务端共同处理。
 
-### 十八、Hydration 恢复要区分服务器输出与客户端失败
+状态与资源缓存需要按请求隔离，不把用户数据放进跨请求单例。服务端错误信息也不应完整序列化到浏览器。实际数据路由如何把 loader/action 错误交到对应区域，见 [REACT-10](../chinese-guides/react-10-router-data-framework-modes.md#react-10)。
 
-服务端可能已把 fallback 或部分内容发给浏览器，客户端随后下载代码并 hydrate。版本漂移、非确定性渲染和 chunk 404 会在这一阶段失败。可恢复设计要保存多版本静态资源、监测 hydration 错误，并允许刷新到同一发布版本；仅在客户端包一层边界未必能修复服务器生成的错误内容。
+本篇的四个场景分别回答：哪类错误进入边界，等待资源何时改变状态，重试是否换了失败资源，以及旧内容何时可以继续显示。先把这些关系讲清楚，再增加框架特有的能力。
 
-错误遥测至少关联 server request、boundary、build 与资源 key，同时对用户隐藏内部堆栈。这样团队才能判断是数据失败、客户端版本漂移还是服务器渲染缺陷。
+### 参考与延伸阅读
 
-### 进阶：恢复策略要按故障持续时间和数据风险分级
-
-瞬时网络失败可原地重试并保留旧数据，权限失效应进入重新认证，资源删除进入稳定 404，程序缺陷则隔离区域并关联发布版本。统一显示“出错了，请重试”会让永久错误形成死循环，也无法告诉用户草稿是否安全。
-
-为每类错误定义自动重试次数、人工动作、是否保留旧内容、日志等级和升级通路。写操作超时可能结果未知，先查询或使用幂等键，不能直接再次提交。错误边界负责 UI 生存性，业务恢复仍需领域协议。
-
-### 进阶：嵌套边界要避免 fallback 瀑布和重复上报
-
-页面、区域、资源可以嵌套边界，但每层都显示 skeleton/alert 会产生闪烁和多次读屏通知。外层负责页面骨架，内层只接管可独立恢复单元；错误冒泡到首个能处理它的边界，遥测用 error/request ID 去重。
-
-测试父子同时 pending、内层失败后重试、fallback 自身失败和 route 切换。确认无关区域持续可操作，恢复后焦点和草稿仍属于正确任务。
-
-### 学完后应能说明
-
-你应能区分 Error Boundary、Suspense、`use` 和显式错误 state，选择与用户任务一致的边界层级，设计稳定资源与真实重试，处理取消和 chunk 漂移，并用多阶段失败注入验证局部恢复与可访问体验。
+- [React：Component 与错误边界](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)：查捕获范围、替代界面及日志入口。
+- [React：Suspense](https://react.dev/reference/react/Suspense)：查受支持的数据源、等待与再次揭示。
+- [React：use](https://react.dev/reference/react/use)：查 Promise 状态和调用限制。
+- [React：useTransition](https://react.dev/reference/react/useTransition)：查过渡更新、错误及异步限制。
+- [React：lazy](https://react.dev/reference/react/lazy)：查模块加载、缓存和组件类型身份。
+- [React：renderToPipeableStream](https://react.dev/reference/react-dom/server/renderToPipeableStream)：查流式 SSR 与错误处理的不同阶段。

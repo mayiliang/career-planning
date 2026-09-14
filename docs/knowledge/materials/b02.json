@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "batch": "B02",
+  "title": "从数据规模到异步协作",
+  "reviewedOn": "2026-09-07",
+  "chapters": [
+    {
+      "id": "CS-01",
+      "guide": "cs-01-complexity-scale-engineering-cost.md",
+      "anchor": "cs-01",
+      "title": "复杂度与工程成本",
+      "question": "数据变多后，程序多做了哪些事？",
+      "summary": "从订单查找数起，把增长趋势、内存成本和页面响应放在一起判断。",
+      "outcomes": ["定义输入规模并数出主要重复操作", "区分复杂度的界、最坏情况与摊还成本", "根据总耗时、分配和连续占用时间选择改进方向"],
+      "prerequisites": ["algorithm-input-size-and-growth.md#precs-01"],
+      "concepts": [
+        { "id": "repeated-lookup", "heading": "同一个问题为什么会越算越费力" },
+        { "id": "input-size", "heading": "先定义 n 再谈复杂度" },
+        { "id": "complexity-growth", "heading": "把常见增长方式数出来" },
+        { "id": "loop-cost", "heading": "不能只数代码里有几层循环" },
+        { "id": "asymptotic-bounds", "heading": "O 表示上界不表示最坏情况这个词" },
+        { "id": "amortized-cost", "heading": "平均和摊还各自在平均什么" },
+        { "id": "allocation-cost", "heading": "相同复杂度为什么仍然有快慢差别" },
+        { "id": "latency-responsiveness", "heading": "总耗时和页面响应要分开看" },
+        { "id": "performance-measurement", "heading": "测量先保证比较的是同一件事" }
+      ],
+      "connections": [
+        { "concept": "indexed-records", "reason": "用索引减少查找之前，先确认重复键与记录更新的含义。" },
+        { "concept": "main-thread-chunking", "reason": "计算量暂时无法减少时，分段执行可以改善响应。" },
+        { "concept": "memory-lifetime", "reason": "把额外空间分析扩展到多份数据同时存活的过程。" },
+        { "concept": "execution-context", "reason": "递归调用为什么也需要计入执行过程的空间。" }
+      ]
+    },
+    {
+      "id": "CS-02",
+      "guide": "cs-02-data-structures-algorithms-correctness.md",
+      "anchor": "cs-02",
+      "title": "数据结构与算法",
+      "question": "怎样组织数据，才能少做事又算对结果？",
+      "summary": "用撤销、查找、依赖排序与找零钱，逐步理解结构选择、区间变化和状态转移。",
+      "outcomes": ["根据访问顺序和查找方式选择数据结构", "逐步推演二分、双指针、图遍历与拓扑排序", "说明贪心成立的原因，并写清动态规划的状态含义"],
+      "prerequisites": ["javascript-collections-keys-membership.md#precs-02"],
+      "concepts": [
+        { "id": "stack-queue", "heading": "撤销和排队为什么需要不同的顺序" },
+        { "id": "indexed-records", "heading": "数组和索引可以各自保留一种关系" },
+        { "id": "heap-priority", "heading": "堆只负责把最重要的一项放到顶部" },
+        { "id": "binary-search", "heading": "二分查找每一步都排除一段候选" },
+        { "id": "two-pointers", "heading": "双指针为什么能一次排除多个答案" },
+        { "id": "sliding-window", "heading": "滑动窗口怎样保留连续区间的信息" },
+        { "id": "graph-traversal", "heading": "树和图怎样表达数据之间的关系" },
+        { "id": "topological-order", "heading": "拓扑排序把先后依赖变成可执行顺序" },
+        { "id": "greedy-choice", "heading": "贪心选择为什么有时成立有时失败" },
+        { "id": "dynamic-programming", "heading": "动态规划把重复的小问题保存下来" }
+      ],
+      "connections": [
+        { "concept": "complexity-growth", "reason": "把查找和遍历的步骤数放回规模变化中比较。" },
+        { "concept": "object-identity", "reason": "数组和 Map 中的同一条记录可能共享一个对象。" },
+        { "concept": "incremental-computation", "reason": "记录变化后，索引和统计也需要同步更新。" },
+        { "concept": "concurrency-limit", "reason": "把排队与领取任务的顺序用于限制同时启动的工作。" }
+      ]
+    },
+    {
+      "id": "CS-03",
+      "guide": "cs-03-large-data-workers-incremental-memory.md",
+      "anchor": "cs-03",
+      "title": "大数据与 Worker",
+      "question": "大量数据怎样算、怎样交接，页面才不会一直等待？",
+      "summary": "沿数据进入、计算、显示和释放的过程，理解增量、分块、Worker 与内存边界。",
+      "outcomes": ["区分少计算、少渲染、分块和 Worker 的作用", "完成消息往返并解释克隆与转移后的数据归属", "限制积压，拒绝旧结果，并追踪数据的释放条件"],
+      "prerequisites": ["browser-main-thread-messages-memory.md#precs-03", "cs-01-complexity-scale-engineering-cost.md#cs-01"],
+      "concepts": [
+        { "id": "data-pipeline", "heading": "先沿着一条数据路径寻找多余工作" },
+        { "id": "incremental-computation", "heading": "少渲染和少计算分别解决什么" },
+        { "id": "main-thread-chunking", "heading": "把工作拆开让界面有机会响应" },
+        { "id": "worker-messages", "heading": "用一条完整消息理解 Worker" },
+        { "id": "transfer-ownership", "heading": "复制和转移会留下什么" },
+        { "id": "worker-backpressure", "heading": "限制在途批次才能避免越排越多" },
+        { "id": "worker-cancellation", "heading": "停止旧工作和拒绝旧结果需要分别处理" },
+        { "id": "memory-lifetime", "heading": "用数据的同时存活时间解释内存峰值" }
+      ],
+      "connections": [
+        { "concept": "structured-clone", "reason": "确认跨环境复制能保留哪些类型与关系。" },
+        { "concept": "render-opportunity", "reason": "理解为什么 await 已兑现的 Promise 不能保证让出渲染机会。" },
+        { "concept": "latest-result", "reason": "同一种版本检查也能避免旧请求覆盖新查询。" },
+        { "concept": "callback-lifetime", "reason": "沿回调和缓存的引用找到仍然存活的大数据。" }
+      ]
+    },
+    {
+      "id": "JS-04",
+      "guide": "js-04-async-promise-browser-event-loop.md",
+      "anchor": "js-04",
+      "title": "Promise 与事件循环",
+      "question": "异步代码什么时候继续，结果什么时候可以显示？",
+      "summary": "从同步调用和稍后回调出发，用执行顺序表理解 Promise、微任务、并发与取消。",
+      "outcomes": ["推演同步代码、任务和微任务的执行关系", "解释 Promise 链、结果接纳和 await 的恢复时机", "控制任务启动，处理失败，并防止旧结果覆盖界面"],
+      "prerequisites": ["javascript-promises-and-cancellation.md#prejs-07", "js-01-execution-context-scope-closure.md#js-01"],
+      "concepts": [
+        { "id": "callback-scheduling", "heading": "先区分现在调用和以后回调" },
+        { "id": "promise-executor", "heading": "Promise 的执行器现在就会运行" },
+        { "id": "promise-adoption", "heading": "状态已决定和结果已到手不是同一件事" },
+        { "id": "promise-chain", "heading": "链上的返回值决定下一步收到什么" },
+        { "id": "task-microtask", "heading": "用调用栈任务和微任务推演顺序" },
+        { "id": "await-continuation", "heading": "await 暂停的是当前异步函数" },
+        { "id": "render-opportunity", "heading": "微任务执行完不等于浏览器已经绘制" },
+        { "id": "concurrent-start", "heading": "并发从启动动作开始" },
+        { "id": "promise-combinators", "heading": "组合 Promise 不会自动取消工作" },
+        { "id": "concurrency-limit", "heading": "限制并发需要推迟启动" },
+        { "id": "latest-result", "heading": "取消之后仍要判断结果是否过期" }
+      ],
+      "connections": [
+        { "concept": "main-thread-chunking", "reason": "把事件循环的解释用于拆开主线程长计算。" },
+        { "concept": "worker-cancellation", "reason": "比较取消信号、消息取消和直接终止的不同作用。" },
+        { "concept": "resource-lifetime", "reason": "成功、失败和取消都需要明确资源清理责任。" },
+        { "concept": "async-iterator", "reason": "把逐次等待应用到可连续读取的异步数据。" }
+      ]
+    }
+  ]
+}

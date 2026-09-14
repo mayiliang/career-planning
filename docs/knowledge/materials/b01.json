@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "batch": "B01",
+  "title": "理解 JavaScript 的运行方式",
+  "reviewedOn": "2026-09-07",
+  "chapters": [
+    {
+      "id": "JS-01",
+      "guide": "js-01-execution-context-scope-closure.md",
+      "anchor": "js-01",
+      "title": "作用域与闭包",
+      "question": "函数从哪里读取变量？",
+      "summary": "从一次函数调用开始，理解变量的来处、闭包中的共享状态，以及回调的清理。",
+      "outcomes": ["沿源码找到变量所属的作用域", "解释闭包读取变量与保存快照的区别", "区分实例隔离、循环绑定和长期引用"],
+      "prerequisites": ["javascript-functions-and-callbacks.md#prejs-02"],
+      "concepts": [
+        { "id": "execution-context", "heading": "从一次函数调用看起" },
+        { "id": "lexical-scope", "heading": "名字沿源码的位置查找" },
+        { "id": "initialization", "heading": "声明之前为什么有时能读有时会报错" },
+        { "id": "closure", "heading": "闭包让函数继续访问创建处的变量" },
+        { "id": "live-binding", "heading": "闭包保存的是变量还是快照" },
+        { "id": "closure-isolation", "heading": "两次创建会得到两份独立状态" },
+        { "id": "loop-binding", "heading": "循环中的回调为什么会读到同一个数" },
+        { "id": "callback-lifetime", "heading": "回调结束使用后要解除谁的引用" }
+      ],
+      "connections": [
+        { "concept": "method-this", "reason": "普通变量与 this 的查找方式不同。" },
+        { "concept": "object-identity", "reason": "捕获对象引用，不等于保存一份独立数据。" },
+        { "concept": "resource-lifetime", "reason": "把回调清理扩展到所有退出路径。" }
+      ]
+    },
+    {
+      "id": "JS-02",
+      "guide": "js-02-prototype-object-model-this.md",
+      "anchor": "js-02",
+      "title": "原型与 this",
+      "question": "对象怎样找到属性和调用方法？",
+      "summary": "把属性查找和函数调用分开，理解原型共享、this、构造函数与 class。",
+      "outcomes": ["解释自有属性与原型链的查找顺序", "根据调用方式判断普通函数与箭头函数的 this", "区分实例原型、构造函数 prototype 和共享状态"],
+      "prerequisites": ["javascript-objects-properties-methods.md#prejs-03"],
+      "concepts": [
+        { "id": "prototype-chain", "heading": "对象自己没有的属性从哪里来" },
+        { "id": "prototype-state", "heading": "共享方法不等于共享所有状态" },
+        { "id": "method-this", "heading": "先找到函数再看怎样调用" },
+        { "id": "bound-function", "heading": "call 和 bind 怎样明确调用对象" },
+        { "id": "arrow-this", "heading": "箭头函数从外层取得 this" },
+        { "id": "getter-receiver", "heading": "getter 为什么也要关心接收对象" },
+        { "id": "construction", "heading": "new 怎样把实例接到原型上" },
+        { "id": "class-model", "heading": "class 把构造和共享方法放在一起" },
+        { "id": "bound-construction", "heading": "进一步理解绑定函数与构造调用" }
+      ],
+      "connections": [
+        { "concept": "lexical-scope", "reason": "箭头函数沿创建位置取得外层 this。" },
+        { "concept": "object-identity", "reason": "方法可以共享，实例数据需要明确归属。" },
+        { "concept": "reflect-receiver", "reason": "沿用 getter 的 receiver，理解代理转发。" }
+      ]
+    },
+    {
+      "id": "JS-03",
+      "guide": "js-03-types-equality-copy-immutability.md",
+      "anchor": "js-03",
+      "title": "类型与数据更新",
+      "question": "一次修改为什么会影响另一份数据？",
+      "summary": "从值与对象身份出发，选择恰当的比较、复制和更新方式，让旧状态保持完整。",
+      "outcomes": ["区分对象身份相同与业务内容相同", "判断浅拷贝和结构化克隆能保留什么", "沿修改路径创建新状态并保留未变分支"],
+      "prerequisites": ["js-02-prototype-object-model-this.md#js-02"],
+      "concepts": [
+        { "id": "primitive-value", "heading": "先区分原始值和对象" },
+        { "id": "object-identity", "heading": "赋值之后谁和谁共用对象" },
+        { "id": "equality", "heading": "相等比较先决定你想比较什么" },
+        { "id": "type-detection", "heading": "typeof 和真假判断各自能告诉你什么" },
+        { "id": "coercion", "heading": "转换类型时把意图写出来" },
+        { "id": "shallow-copy", "heading": "浅拷贝只复制一层" },
+        { "id": "structured-clone", "heading": "structuredClone 能解决什么不能解决什么" },
+        { "id": "immutable-update", "heading": "不可变更新沿修改路径创建新对象" },
+        { "id": "freeze", "heading": "freeze 是保护措施不是更新策略" }
+      ],
+      "connections": [
+        { "concept": "live-binding", "reason": "闭包读取的绑定与绑定指向的对象需要分开判断。" },
+        { "concept": "getter-receiver", "reason": "复制属性也可能执行 getter。" },
+        { "concept": "proxy-identity", "reason": "代理和目标是两个不同的对象身份。" }
+      ]
+    },
+    {
+      "id": "JS-07",
+      "guide": "js-07-iteration-metaprogramming-resources.md",
+      "anchor": "js-07",
+      "title": "迭代、代理与资源",
+      "question": "对象怎样参与语言操作并正确结束工作？",
+      "summary": "从逐项读取到提前关闭，再到代理转发，把对象协议与资源责任连接起来。",
+      "outcomes": ["分清 iterable、iterator 和一次性生成器", "处理正常结束、提前停止和读取失败", "保留代理转发的 receiver 并遵守不变量"],
+      "prerequisites": ["javascript-property-descriptors.md#prejs-08", "javascript-exceptions-and-finally.md#prejs-06"],
+      "concepts": [
+        { "id": "iterable", "heading": "for of 为什么能读取不同的数据结构" },
+        { "id": "iterator", "heading": "可迭代对象和迭代器分工不同" },
+        { "id": "generator", "heading": "生成器把暂停位置保存在函数里" },
+        { "id": "generator-throw", "heading": "向暂停位置传值和抛错" },
+        { "id": "resource-lifetime", "heading": "让资源的打开和关闭待在一起" },
+        { "id": "iterator-error", "heading": "next 出错和消费者退出不是一回事" },
+        { "id": "generator-return", "heading": "return 请求结束但清理代码也可能暂停" },
+        { "id": "async-iterator", "heading": "异步迭代把等待也纳入协议" },
+        { "id": "cancellation", "heading": "取消请求和停止消费需要合作" },
+        { "id": "proxy-identity", "heading": "Proxy 让普通操作经过一个入口" },
+        { "id": "reflect-receiver", "heading": "Reflect 保留原本的读取关系" },
+        { "id": "proxy-invariant", "heading": "代理必须尊重目标已经固定的事实" }
+      ],
+      "connections": [
+        { "concept": "closure-isolation", "reason": "每个迭代器为什么能拥有独立游标。" },
+        { "concept": "getter-receiver", "reason": "代理中的 receiver 延续原本的 getter 规则。" },
+        { "concept": "object-identity", "reason": "代理、目标和嵌套对象各自是什么身份。" }
+      ]
+    }
+  ]
+}

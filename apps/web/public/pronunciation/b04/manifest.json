@@ -25,13 +25,17 @@
       "file": "17296f529646faec.wav",
       "text": "accessible name"
     },
+    "aria": {
+      "file": "48803cad0f3dcf64.wav",
+      "text": "ARIA"
+    },
     "batching": {
       "file": "8224dd5d5f8f3db2.wav",
       "text": "batching"
     },
-    "commit phase": {
-      "file": "ef53927d08dacaa6.wav",
-      "text": "commit phase"
+    "commit": {
+      "file": "9505cacb7c710ed1.wav",
+      "text": "commit"
     },
     "component purity": {
       "file": "5de9cf15f2b9de55.wav",
@@ -49,14 +53,6 @@
       "file": "dd5795a7909bc843.wav",
       "text": "dependency tracking"
     },
-    "environment variable": {
-      "file": "9489846378282357.wav",
-      "text": "environment variable"
-    },
-    "focus loop": {
-      "file": "aa3969d28dede614.wav",
-      "text": "focus loop"
-    },
     "focus management": {
       "file": "b5d69c42c4e9efd1.wav",
       "text": "focus management"
@@ -69,53 +65,77 @@
       "file": "0908675d690a4278.wav",
       "text": "generics"
     },
+    "hmr": {
+      "file": "6b7e1b1d338a5d36.wav",
+      "text": "HMR"
+    },
     "hot module replacement": {
       "file": "721bae641373633e.wav",
       "text": "hot module replacement"
+    },
+    "hydration": {
+      "file": "4163fe8dc2507164.wav",
+      "text": "Hydration"
     },
     "indexed access type": {
       "file": "a919f30595ee058d.wav",
       "text": "indexed access type"
     },
-    "keyof operator": {
-      "file": "9ea68039b2ec9664.wav",
-      "text": "keyof operator"
+    "jsx": {
+      "file": "1a57a919dcf6659f.wav",
+      "text": "JSX"
     },
-    "native semantics first": {
-      "file": "c7f3c81d114c345a.wav",
-      "text": "native semantics first"
+    "keyof": {
+      "file": "f456135af3556bc0.wav",
+      "text": "keyof"
     },
-    "production build": {
-      "file": "ac5acd12ed5352a1.wav",
-      "text": "production build"
+    "markraw": {
+      "file": "bce6b73655b6b698.wav",
+      "text": "markRaw"
     },
-    "proxy": {
-      "file": "1241936d4dd3aad6.wav",
-      "text": "proxy"
+    "nexttick": {
+      "file": "61b03add50a4e7da.wav",
+      "text": "nextTick"
     },
-    "render phase": {
-      "file": "7390df961a9c6587.wav",
-      "text": "render phase"
+    "props": {
+      "file": "b264807709578e5c.wav",
+      "text": "props"
     },
-    "shallow reactivity": {
-      "file": "958316db0743a398.wav",
-      "text": "shallow reactivity"
+    "reactive": {
+      "file": "61946c94a43ed3ae.wav",
+      "text": "reactive"
+    },
+    "ref": {
+      "file": "3ff6c05723bb069d.wav",
+      "text": "ref"
+    },
+    "render": {
+      "file": "887270d0cbc560af.wav",
+      "text": "render"
+    },
+    "sfc": {
+      "file": "a56068c3ca600241.wav",
+      "text": "SFC"
+    },
+    "shallowref": {
+      "file": "89c18dafe4ad592b.wav",
+      "text": "shallowRef"
     },
     "single-file component": {
       "file": "7ee45bbe33e454a1.wav",
       "text": "single-file component"
     },
+    "state": {
+      "file": "4ba69735ca53765e.wav",
+      "text": "state"
+    },
     "state snapshot": {
       "file": "11bd0b627bee4e94.wav",
       "text": "state snapshot"
     },
-    "trigger": {
-      "file": "683259feabbf5eb3.wav",
-      "text": "trigger"
-    },
-    "type inference": {
-      "file": "421538364c200eb2.wav",
-      "text": "type inference"
+    "strict mode": {
+      "file": "f5cc124b70c8e577.wav",
+      "text": "Strict Mode"
     }
   }
 }

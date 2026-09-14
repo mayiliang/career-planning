@@ -2,171 +2,235 @@
 
 ## VUE-07 Vue Router、类型化/文件路由与导航边界
 
-Vue Router 不只是切换页面组件。它连接 URL、历史记录、嵌套布局、参数、懒加载、守卫与恢复。类型化或文件路由可以减少源码拼写错误，但浏览器 URL 永远是不可信运行时输入；客户端守卫也不能替代服务端授权。
+把资料 A 切到 B，地址变了，正文却还是 A；刷新分享链接，页面回到默认标签；离开编辑页时，刚写的笔记消失了。这些问题说明：路由既要表达“我在哪里”，也要安排地址变化之后的数据和界面。
+
+本篇用一个小型阅读台把 URL、组件复用、数据读取和离开确认连起来。先掌握普通 Vue Router 的行为，再理解文件路由和类型生成增加了什么。
 
 ### 学习前先确认
 
-- 直接前置：[VUE-06 Composable、依赖注入与逻辑复用](../chinese-guides/vue-06-composables-injection-reuse.md#vue-06)。它会递归包含组件、响应式、异步与 Web 语义基础。
+- 直接前置：[VUE-06 Composable、依赖注入与逻辑复用](../chinese-guides/vue-06-composables-injection-reuse.md#vue-06)。能区分实例、响应式来源和异步清理，就能看懂路由复用时的变化。
 
-Pinia 是相关但非硬前置；路由可独立学习。Nuxt 文件路由与 SSR 在 VUE-11。
+正文工程使用 Vue 3、Vue Router 4 的稳定 API，核对环境为 Vue 3.5.39 与 Vue Router 4.6.4。Vue Router 5 的文件路由在后文另述，不要求先升级项目。本例只有浏览器内模拟读取，没有登录或真实保存。
 
-### 一、URL 是可恢复、可分享的状态
+### URL 先说明哪些状态值得带走
 
-路由表中的一个匹配单元称为**路由记录（route record）**，进入或离开前执行的控制点是**导航守卫（navigation guard）**。按需下载页面代码称为**懒加载（lazy loading）**；由工具生成名称和参数类型的是**类型化路由（typed routes）**。取消、重复或异常导航产生可区分的**导航失败（navigation failure）**。
+路径标识资料，query 表达可分享的视图，hash 指向文内位置。例如 `/lessons/a?tab=notes#summary` 分别回答“哪篇”“哪个标签”“哪一节”。输入框尚未提交的文字则可以先留在页面。
 
-路径表达资源层级，query 表达筛选/排序，hash 表达页面内目标。应在刷新、分享和前进后退后保留的状态优先放 URL。
+| 状态 | 合适的来源 | 刷新后怎样恢复 |
+| --- | --- | --- |
+| 当前资料 ID | 路径参数 | 重新解析并读取 |
+| 当前标签、排序 | query | 按统一规则解析 |
+| 正文和权限 | 可信数据源 | 按当前身份重新确认 |
+| 尚未保存的笔记 | 当前编辑过程 | 需要另外设计保存或恢复 |
 
-```text
-/projects/p1/tasks/t42?tab=activity&page=2
+不要同时让 URL、Pinia 和组件各保存一份“当前标签”。本地可以有待提交的草稿，但应明确哪个值已经生效。状态分层见 [Pinia 的状态所有者](../chinese-guides/vue-08-pinia-state-layers.md#先判断状态应该跟随谁)。
+
+### 查询参数要有确定的解释规则
+
+地址可以由用户手动修改。同一个参数还可以重复出现，所以不能把 `Number(query.page) || 1` 当成完整规则。下面明确约定：page 必须唯一、为 1 到 100 的十进制正整数；非法时按 1 阅读；未知 tab 按简介阅读。
+
+```js example=vue07-query-contract
+function parseView(search) {
+  const values = new URLSearchParams(search);
+  const pages = values.getAll('page');
+  const raw = pages.length === 1 ? pages[0] : '';
+  const page = /^[1-9]\d*$/.test(raw) && Number(raw) <= 100 ? Number(raw) : 1;
+  const tabs = values.getAll('tab');
+  return { page, tab: tabs.length === 1 && tabs[0] === 'notes' ? 'notes' : 'intro' };
+}
+console.log(JSON.stringify(parseView('?page=2&tab=notes'))); // => {"page":2,"tab":"notes"}
+console.log(JSON.stringify(parseView('?page=2&page=3'))); // => {"page":1,"tab":"intro"}
+console.log(JSON.stringify(parseView('?page=-1&tab=other'))); // => {"page":1,"tab":"intro"}
 ```
 
-不要同时让 Pinia、组件 state 和 route query 各自成为真源。需要编辑草稿时，可区分本地 draft 与已提交 URL 参数，在提交动作时导航。
+“按默认值显示”与“改写地址”是两个决定。若要规范化地址，通常用 replace，避免自动修正又增加一条历史；用户主动切换标签则可用 push，方便后退。一次构造完整 query，保留其他功能负责的参数，不在两个 watch 中互相修正。
 
-### 二、路由表表达页面树
+### 先搭起能保留布局的阅读台
 
-```ts
-const routes: RouteRecordRaw[] = [{
-  path: '/projects/:projectId',
-  component: () => import('./ProjectLayout.vue'),
-  children: [{
-    path: 'tasks/:taskId',
-    name: 'task-detail',
-    component: () => import('./TaskPage.vue'),
-  }],
-}];
+以下四个文件组成一组 Vue + TypeScript 页面，入口 HTML 保留 `<div id="app"></div>`。先创建 `src/main.ts`：
+
+```ts example=vue07-bootstrap runtime=project file=src/main.ts
+import { createApp } from 'vue';
+import App from './App.vue';
+import { router } from './router';
+export const app = createApp(App);
+app.use(router);
+await router.isReady();
+app.mount('#app');
 ```
 
-子 path 不以 `/` 开头时继承父路径，父组件通过 RouterView 渲染。路由树应对应布局与恢复边界，不只是照文件夹。
+`src/router.ts` 定义**路由记录（route record）**。这里根布局由 App 提供，RouterView 只替换正文；更深的布局同样可以使用 children 和嵌套 RouterView。
 
-### 三、动态参数必须运行时解析
-
-`route.params.taskId` 可能是字符串、数组或缺失，且可由用户手工输入。类型生成只能保证源码构造关系，不能证明 URL 合法。
-
-```ts
-const taskId = parseTaskId(route.params.taskId);
-if (!taskId.ok) return router.replace({ name: 'not-found' });
+```ts example=vue07-router runtime=project file=src/router.ts
+import { defineComponent, h } from 'vue';
+import { createRouter, createWebHistory } from 'vue-router';
+const Home = defineComponent({ setup: () => () => h('h1', '阅读目录') });
+const Missing = defineComponent({ setup: () => () => h('h1', '找不到这个页面') });
+export const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', name: 'home', component: Home },
+    { path: '/lessons/:id', name: 'lesson', component: () => import('./Lesson.vue') },
+    { path: '/:pathMatch(.*)*', name: 'missing', component: Missing },
+  ],
+  scrollBehavior(to, from, saved) {
+    if (saved) return saved;
+    if (to.hash) return { el: to.hash, top: 16 };
+    return to.path === from.path ? false : { top: 0 };
+  },
+});
 ```
 
-数字要检查整数/范围，枚举要白名单，ID 要避免路径穿越与开放重定向。规范化 URL 时使用 replace 避免无意义历史条目。
+再放入 `src/App.vue`：
 
-### 四、复用组件时 watch 参数而不是只等 mounted
+```vue example=vue07-reader-app runtime=project file=src/App.vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { RouterLink, RouterView } from 'vue-router';
+const note = ref('');
+</script>
+<template>
+  <main>
+    <nav aria-label="资料导航">
+      <RouterLink to="/">目录</RouterLink>
+      <RouterLink :to="{ name: 'lesson', params: { id: 'a' } }">资料 A</RouterLink>
+      <RouterLink :to="{ name: 'lesson', params: { id: 'b' } }">资料 B</RouterLink>
+      <RouterLink :to="{ name: 'lesson', params: { id: 'fail' } }">故障资料</RouterLink>
+    </nav>
+    <label>布局临时笔记 <input v-model="note"></label>
+    <RouterView />
+  </main>
+</template>
+```
 
-从 `/users/a` 导航到 `/users/b` 可能复用同一组件实例，mounted 不重跑。用 watch route 参数或组件内守卫响应变化，清理旧请求并阻止迟到结果。
+`component: () => import(...)` 是路由的**懒加载（lazy loading）**入口，不必再包 defineAsyncComponent。初次访问详情才需要该模块；模块已加载以后，普通切换不会再次下载一份新的源码。
 
-不要 watch 整个 route 对象；只观察实际字段。若页面身份应完全重置，可在 RouterView 使用经过设计的 key，但过宽 key 会丢失不该重置的布局状态。
+### 同一组件里的参数变化也要重新读取
 
-### 五、导航守卫表达进入/离开规则
+最后创建 `src/Lesson.vue`。A 的模拟读取比 B 慢；故障资料会进入错误状态。watch 只观察资料参数与重试次数，标签切换不重新读正文。
 
-全局 beforeEach、路由 beforeEnter 和组件内守卫适合不同范围。守卫返回允许、取消、重定向或错误。避免旧式 next 多次调用；一个导航只能得到一个明确结果。
+```vue example=vue07-lesson runtime=project file=src/Lesson.vue
+<script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue';
+import { onBeforeRouteLeave, onBeforeRouteUpdate, RouterLink, useRoute, useRouter } from 'vue-router';
+const route = useRoute();
+const router = useRouter();
+const attempt = ref(0);
+const draft = ref('');
+const heading = ref<HTMLHeadingElement | null>(null);
+const state = ref<{ kind: 'pending' | 'ready' | 'error' | 'missing'; text: string }>({ kind: 'pending', text: '' });
+const tab = computed(() => route.query.tab === 'notes' ? 'notes' : 'intro');
+function canLeave() { return !draft.value || window.confirm('离开当前资料会丢弃未保存笔记，继续吗？'); }
+onBeforeRouteLeave(canLeave);
+onBeforeRouteUpdate(to => to.params.id === route.params.id || canLeave());
+watch([() => route.params.id, attempt], ([id], _, onCleanup) => {
+  let current = true;
+  const timer = window.setTimeout(async () => {
+    if (!current) return;
+    if (id === 'fail') state.value = { kind: 'error', text: '模拟读取失败，请换一篇或重新读取' };
+    else if (id === 'a' || id === 'b') state.value = { kind: 'ready', text: id === 'a' ? '组件协作' : '状态分层' };
+    else state.value = { kind: 'missing', text: '资料不存在' };
+    document.title = state.value.text;
+    await nextTick();
+    if (current) heading.value?.focus();
+  }, id === 'a' ? 650 : 120);
+  draft.value = '';
+  state.value = { kind: 'pending', text: '正在读取当前资料' };
+  onCleanup(() => { current = false; window.clearTimeout(timer); });
+}, { immediate: true });
+async function chooseTab(next: 'intro' | 'notes') {
+  const query = { ...route.query };
+  if (next === 'intro') delete query.tab; else query.tab = next;
+  await router.push({ query });
+}
+</script>
+<template>
+  <section>
+    <p v-if="state.kind === 'pending'" role="status">{{ state.text }}</p>
+    <template v-else>
+      <h1 ref="heading" tabindex="-1">{{ state.text }}</h1>
+      <template v-if="state.kind === 'ready'">
+        <div aria-label="资料标签">
+          <button :aria-pressed="tab === 'intro'" @click="chooseTab('intro')">简介</button>
+          <button :aria-pressed="tab === 'notes'" @click="chooseTab('notes')">笔记</button>
+        </div>
+        <p v-if="tab === 'intro'">这是 {{ state.text }} 的简介。</p>
+        <label v-else>本篇未保存笔记 <textarea v-model="draft"></textarea></label>
+      </template>
+      <p v-else-if="state.kind === 'error'" role="alert">读取未完成，布局笔记仍在。</p>
+      <button v-if="state.kind === 'error'" @click="attempt++">重新读取</button>
+      <RouterLink v-if="state.kind === 'missing'" to="/">返回目录</RouterLink>
+    </template>
+  </section>
+</template>
+```
 
-守卫适合会话存在、功能开关、未保存草稿等客户端体验。权限仍需服务器每次请求验证。只隐藏 route 或按钮不能阻止直接调用 API。
+先在布局笔记写一行字，点 A 后立刻点 B：最终显示状态分层，布局笔记保留。切到笔记标签，后退返回简介，前进恢复标签。这里的组件被复用，不能只靠 onMounted 读取；每轮 watch 清理旧计时器，并在等待 DOM 后再次检查本轮资格。
 
-### 六、异步守卫要处理竞态
+本例的计时器就是整个模拟工作，因此清除它能停止这次演示。真实 fetch 要传 AbortSignal，且仍要判断旧结果是否失效；取消浏览器等待不保证远端写入撤回，详见 [请求取消与提交资格](../chinese-guides/react-04-effects-external-sync-cleanup.md#请求能否取消和结果能否提交是两个问题)。
 
-守卫等待会话刷新期间用户可能发起新导航。依赖过期结果的旧守卫不能把用户拉回旧目标。使用 router 提供的取消语义、请求 signal 和当前会话版本；不要在守卫里开启无法监督的 Promise。
+### 离开守卫既要覆盖卸载也要覆盖复用
 
-重定向要有终止条件，避免登录页也被重定向到登录页。记录 from/to 与原因，但不把 token 或完整私人 URL 写日志。
+**导航守卫（navigation guard）**可以允许、取消、重定向或抛错。本例用返回值表达决定，没有混用 next，避免同一分支重复结束导航。
 
-### 七、懒加载是代码分割点
+在 A 的笔记标签写字，再点 B，取消确认后仍在 A，笔记不变；确认才进入 B。之所以还要 onBeforeRouteUpdate，是因为 A 与 B 使用同一条记录，切换参数不一定离开组件。只装离开守卫会漏掉这种情况。
 
-route component 使用动态 import 可生成按路由 chunk。懒加载减少首屏包，但过细分块增加请求和发布漂移。根据用户路径和测量决定，同一常访问区域可共享 chunk。
+查询标签变化不丢失草稿，因此本例不拦截；若业务要求 query 变化也切换编辑对象，就应按那个身份判断。浏览器原生确认框只是便于演示；产品若改成自定义 dialog，还需处理焦点、Escape、重复点击与待确认目标。
 
-加载失败要提供错误页面与安全重试。旧 HTML 指向已删除 chunk 时，可通过多版本资源保留或识别 build mismatch 后限次刷新；离线时不能无限 reload。
+刷新、关闭、断电不能只靠路由守卫保护。beforeunload 也不是可靠保存时机，重要草稿应在编辑过程中保存或建立恢复记录。
 
-### 八、滚动与焦点是导航体验
+### 导航失败与页面数据失败分开观察
 
-scrollBehavior 可处理新页面顶部、hash 锚点和前进后退保存位置。滚动恢复应等待必要 DOM，但不能用固定长延时。
+重复点当前地址、被守卫拒绝、被更新的导航取代，属于可辨认的 **navigation failure**。等待 router.push 后，可用 isNavigationFailure 和 NavigationFailureType 判断，不把所有结果统称为异常。守卫抛错与模块加载失败则应有 router.onError 等诊断入口。
 
-导航后键盘/读屏用户需要当前位置通知。将焦点移到页面 h1 或 main，并更新 document title；避免每个 query 小改动都抢焦点。浏览器后退应恢复合理滚动与焦点。
+页面数据错误又是另一条通路：本例的故障页保留导航并提供重试；重试后依旧失败是模拟服务仍坏，并非“按钮没触发”。不存在的资料则给返回入口，避免诱导无意义重试。
 
-### 九、未保存草稿不能保证绝对阻止离开
+异步守卫等待期间可能出现更新导航。路由器会协调导航结果，但守卫自己产生的网络写入、全局状态修改仍需管理；导航取消不会自动撤销那些副作用。登录重定向还要排除登录页自身，防止循环。
 
-beforeRouteLeave 可提示客户端导航，但刷新、关闭和进程崩溃能力有限。重要草稿应自动保存或本地恢复，并考虑敏感数据、版本和过期。
+### 滚动与焦点各自回答不同问题
 
-确认对话框要可访问；确认后只重放一次目标，取消保持当前 URL。不要让异步保存与导航同时写出两个版本。
+滚动决定看到哪里，焦点决定下一次键盘操作从哪里开始。示例在正文就绪后聚焦标题，标签切换不重新读取，也不抢走按钮焦点。完整产品还应为首页、404 和全局异常统一维护 document.title。
 
-### 十、错误路径要成为路由设计的一部分
+scrollBehavior 的 savedPosition 用于历史恢复，hash 可以定位锚点；异步正文尚未出现时，单纯返回选择器可能找不到目标。应等待该页面明确的就绪信号，不靠随意延长计时器。示例没有异步正文锚点，不能据此宣称覆盖所有滚动恢复。
 
-404、参数非法、权限拒绝、网络失败和 chunk 失败需要不同页面/动作。全局 onError 可监控意外错误，但局部页面应把可恢复数据错误呈现给用户。
+在嵌套路由中选一层负责焦点即可。菜单激活状态、面包屑和页面名最好来自同一份路由语义，避免标题到了 B，导航仍宣称在 A。
 
-错误页也要在路由 shell 中有标题、返回与重试；不能只 `console.error` 后空白。服务端 404 status 与客户端 not-found 页面在 SSR 中都要正确。
+### 文件路由和类型化路由属于生成工具
 
-### 十一、文件路由与类型路由是生成层
+**typed routes** 帮助源码中按名称和参数构造链接，文件路由帮助生成 route records。它们不证明外部 URL 合法，也不自动提供授权或数据缓存。
 
-Vue Router 5 把原 unplugin-vue-router 的文件路由能力合入核心生态，生成 route records 和 route map 类型。文件系统约定提高一致性，但仍要审查嵌套、名称、meta、代码分割和动态参数解析。
+截至 2026-09-09，官方 Vue Router 5 迁移说明仍把文件路由能力整合列为主要变化：Vite 插件来自 vue-router/vite，生成路由来自 vue-router/auto-routes；data loaders 位于 experimental 入口。迁移页还说明后续 v6 的 ESM-only 方向。实施时按实际锁文件核对，不把 v5 的生成层配置抄到只有 v4 的项目。
 
-截至 2026-08-30，官方迁移页把 v5 定位为向 v6 过渡版本，并说明 v6 将 ESM-only、移除弃用 API；data loaders 仍从 experimental 入口使用。实施时按锁文件和迁移页核验，不能把实验 loader 当稳定基础。
+普通 v4 路由应用与原先使用 unplugin-vue-router 的应用有不同迁移工作。前者不必为了文件路由重写所有页面；后者需要检查插件、生成类型、导入路径和配置范围。源码类型检查与地址栏输入检查都应保留。
 
-### 十二、客户端 meta 不是安全策略
+### Meta 重定向与别名不能代替授权
 
-`meta.requiresAuth` 可驱动守卫、导航可见性和布局，但任何人可修改客户端代码/请求。后端根据认证主体、资源与动作授权，并返回 401/403。前端据结果显示登录、无权或过期状态。
+meta 可以记录布局或客户端访问提示；真实 API 仍需依据当前会话和资源授权。父守卫执行过，不代表任意后续请求都自动获准。
 
-Route meta 类型可以扩展，避免拼写，但运行时插件/远端配置仍需校验。不要把秘密或完整权限矩阵放 bundle。
+redirect 把旧入口引向新的目标，alias 则让另一地址匹配同一记录并保留别名地址。它们都不应该让外部输入随意决定跳转目的地。登录后的返回地址应限制为允许的站内路径，排除外域、协议相对地址和编码绕过；服务端认证回调也要遵守自己的限制。
 
-### 十三、深链部署必须真实验证
+URL 进入历史、日志和分享内容，令牌与大段私人草稿不适合放进去。导航统计在确认后记录必要的路由名与结果即可，不默认上传完整 query。
 
-history 模式下直接访问深链，服务器需回退到入口 HTML，但 `/api`、静态文件和错误状态不能被通配回退吞掉。base path 在 router、Vite 与服务器/CDN 三层一致。
+### 深链与 SSR 需要服务器配合
 
-hash 模式不需服务器 fallback，但 URL 语义和服务端能力不同。选择应来自部署约束，不是为了逃避配置。
+createWebHistory 要求服务器能处理直接访问的页面路径；API 和静态资源规则应先于页面 fallback。丢失的 JS 文件应返回真实失败，不能用 HTML 200 伪装成功。子路径部署时，history base、构建资源 base 与服务器前缀要一致。
 
-### 十四、测试导航而不是只测试路由表
+hash history 的服务器请求不包含 hash 后的路由，部署要求不同；memory history 常用于 SSR 或隔离检查，本身不操作地址栏。两者能验证的范围不能混为一谈。
 
-用内存 history 验证匹配、参数、守卫和组件；E2E 用真实 history 验证地址栏深链、刷新、后退、滚动、焦点、懒加载和部署 fallback。
+SSR 每个请求新建 router，推入本次 URL 并等待 ready，再渲染。客户端要接管对应地址和数据，不能把所有用户共享的 router 或可变状态放成进程单例。完整交接将在 [Nuxt](../chinese-guides/vue-11-nuxt-rendering-data-performance.md#vue-11)继续说明。
 
-控制 A/B 请求完成顺序，证明旧页面结果不覆盖新路由。测试未保存确认、登录过期、非法参数和 chunk 错误，不只点快乐路径链接。
+### 把核对集中在真正会改变用户结果的路径
 
-### 十五、升级要保留稳定回退
+对本例，最有价值的操作是：深链刷新、标签前后退、A/B 乱序、取消离开后笔记保留，以及不存在和读取失败两条分支。内存 history 的结果不能替代真实服务器配置，模拟请求也不能证明后端授权。
 
-从 v4 到 v5 先锁定版本、阅读迁移清单，迁移插件 imports/生成类型，再跑类型、build、深链 E2E。实验 loader 保留现有稳定数据层回退。不要同时改路由结构、升级构建器和重写业务页面。
+路径正确后再看代码分块和发布：旧页面可能仍引用旧 chunk，发布时需要保留兼容资源或提供受控恢复。懒加载失败的具体恢复原则见 [代码资源与错误边界](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#lazy-管的是代码资源而不是业务数据)。
 
-### 十六、Query string 需要稳定的解析与序列化合同
+### 参考与延伸阅读
 
-查询参数适合筛选、分页、排序和可分享视图，但地址栏输入永远是字符串、数组或缺失。组件不应各自用 `Number()` 和真假判断随意解释；建立 parser，定义默认值、允许范围、重复参数和非法输入的归一化策略，再由同一 serializer 生成链接。
-
-更新多个筛选项时一次构造目标 query，避免连续 replace 产生中间请求。无意义默认值可从 URL 移除以获得规范地址，但不能在 watch 中来回规范化造成导航循环。敏感信息、token 和大段草稿不应放入 URL，因为它会进入历史、日志和分享内容。
-
-### 十七、Redirect、alias 与开放重定向有不同含义
-
-Redirect 会产生新的规范 route，适合旧路径迁移；alias 让同一 route record 可由另一 URL 匹配，地址栏可能保持别名。两者都应考虑 SEO、分析、相对链接和权限。业务内跳转优先使用命名路由与显式参数，而不是字符串拼接。
-
-登录后返回地址必须解析为允许的站内目标，拒绝协议相对 URL、外域和奇异编码。客户端校验改善体验，服务端认证回调仍要重复限制。测试应覆盖编码、base path、空值和恶意目标。
-
-### 十八、导航失败是可观察结果，不应全部吞掉
-
-重复导航、守卫取消、重定向和守卫抛错不是同一结果。调用 `router.push` 的流程要区分预期取消与程序错误，避免通用 `catch(() => {})` 让失败静默。应用启动时等待 `router.isReady()` 能减少初始 route 尚未解析造成的挂载差异。
-
-全局 `router.onError` 适合关联 chunk 加载、守卫和异步组件错误，但用户可恢复动作仍放在最近页面。日志包含目标 route 名、来源、build 与安全的参数摘要，不记录完整敏感 query。
-
-### 十九、数据加载必须绑定导航身份与失效
-
-组件 watch 参数取数是稳定基础：每次变化取消或作废旧请求，缓存 key 包含规范参数，离开后决定保留还是释放。路由层 data loader 可把 pending/error/重验证放到导航协议中，但实验 API 必须有开关和回退。
-
-预取提高命中速度，也可能浪费带宽或提前触发无权请求。只预取用户很可能访问且允许公开读取的资源；任何服务端数据仍按实际请求身份授权。测试让旧导航晚完成，证明它无法覆盖新页面。
-
-### 二十、SSR 与 Hydration 要按请求创建 Router
-
-服务端每个请求都创建新的 router，先 push 目标 URL 并等待 ready，再渲染匹配树；共享模块级 router 会串 history、用户与异步状态。客户端使用服务器实际 URL 建立对应 history，并保证首屏 route 数据与 HTML 一致。
-
-代理必须把原始 path/base 传对，静态资源和 API 不能被 SPA fallback 吞掉。记录 hydration warning、首屏 redirect 与客户端二次取数，才能发现“页面能开但协议不一致”的问题。
-
-### 二十一、滚动与焦点需要按导航类型设计
-
-前进/后退优先恢复 savedPosition，新页面导航通常到顶部，hash 导航要等待目标元素出现。异步页面或 transition 下应在 DOM 更新后定位，并尊重用户的减少动态效果设置。
-
-焦点应进入新页面主标题或主要区域，同时避免嵌套布局重复抢焦点。路由变化公告包含页面名即可；标题、面包屑、`aria-current` 与浏览器文档 title 应来自同一 route 语义。
-
-### 进阶：路由分析与隐私需要一起设计
-
-页面浏览事件应在导航确认后记录 route name、规范参数类别和来源，而不是把完整 URL 无筛选上传。查询中可能包含搜索词、邮箱、邀请 token 或内部 ID；建立允许字段和脱敏规则，并在 redirect/取消时避免重复记一次成功访问。
-
-性能追踪关联导航 ID、chunk、数据请求与最终可见状态，才能区分守卫、加载和渲染瓶颈。分析 SDK 失败不能阻止导航，退出登录和隐私选择后停止发送并清理用户关联标识。
-
-### 进阶：多标签页与浏览器历史会暴露状态所有权错误
-
-用户可在新标签打开同一 URL、通过前进后退恢复旧 query，或从外部书签进入。只有 URL 中的信息能自然恢复；模块内临时变量和未持久化 Pinia 状态不能被假定存在。页面初始化从 route 和可信数据源重建，缺失上下文进入明确空态或重定向。
-
-history state 适合与单个历史条目绑定的小型 UI 信息，但仍不能存秘密或代替服务端。用两个标签、刷新与 back/forward 测试草稿、身份切换和缓存隔离。
-
-### 学完后应能说明
-
-你应能把 URL 作为状态源，设计嵌套路由和参数解析，处理组件复用、守卫竞态、懒加载失败、滚动与焦点，解释文件/类型路由与运行时校验的分工，并证明客户端守卫不替代服务端授权。
+- [Vue Router：Composition API](https://router.vuejs.org/guide/advanced/composition-api.html)：查参数观察和组件内守卫。
+- [Vue Router：Navigation Failures](https://router.vuejs.org/guide/advanced/navigation-failures.html)：查重复、取消与异常结果。
+- [Vue Router：Scroll Behavior](https://router.vuejs.org/guide/advanced/scroll-behavior.html)：查历史位置和异步滚动。
+- [Vue Router：Migrating to v5](https://router.vuejs.org/guide/migration/v4-to-v5)：核对文件路由与插件迁移。
+- [Vue Router：Data Loaders](https://router.vuejs.org/data-loaders/)：查询实验数据加载方案。
+- [Vue：路由](https://cn.vuejs.org/guide/scaling-up/routing.html)：了解路由与 Vue 应用的关系。
+- [MDN：History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API)：查浏览器历史机制。

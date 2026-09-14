@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "batch": "B10",
+  "title": "从构建文件到可靠交付",
+  "reviewedOn": "2026-09-10",
+  "chapters": [
+    {
+      "id": "ENG-01",
+      "title": "从模块到构建文件",
+      "question": "源码怎样变成浏览器真正下载和执行的文件？",
+      "summary": "用资料统计应用观察动态加载、构建清单与同次构建的错误位置还原。",
+      "outcomes": [
+        "沿 import 解释模块为何进入产物",
+        "对照静态与动态边界及必要副作用",
+        "把生成文件的错误位置还原到源码"
+      ],
+      "guide": "eng-01-module-graph-build-output-source-maps.md",
+      "anchor": "eng-01",
+      "prerequisites": [
+        "js-06-es-modules-module-boundaries.md#js-06"
+      ],
+      "concepts": [
+        {
+          "id": "eng-module-graph",
+          "heading": "模块图回答一份代码为什么会被带进来"
+        },
+        {
+          "id": "eng-build-lab",
+          "heading": "先建立一份可以从头运行的资料应用"
+        },
+        {
+          "id": "eng-module-edges",
+          "heading": "把静态依赖与按需工作写在明确的位置"
+        },
+        {
+          "id": "eng-build-stages",
+          "heading": "转换打包和压缩分别改变了什么"
+        },
+        {
+          "id": "eng-build-manifest",
+          "heading": "从 manifest 找到真正要部署的文件"
+        },
+        {
+          "id": "eng-chunk-boundary",
+          "heading": "chunk 的边界要到浏览器里观察"
+        },
+        {
+          "id": "eng-tree-shaking",
+          "heading": "tree-shaking 必须保留必要的副作用"
+        },
+        {
+          "id": "eng-source-map",
+          "heading": "Source Map 把生成位置接回源码"
+        },
+        {
+          "id": "eng-artifact-contracts",
+          "heading": "资源多环境和库产物各有自己的合同"
+        },
+        {
+          "id": "eng-build-inputs",
+          "heading": "体积与可复现性都要对应同一组输入"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "eng-public-base",
+          "reason": "沿构建文件继续追踪部署子路径与实际请求。"
+        },
+        {
+          "concept": "eng-package-identity",
+          "reason": "解释同名包为何可能解析成不同入口与实例。"
+        },
+        {
+          "concept": "eng-typecheck",
+          "reason": "用故障对照区分语法转换与完整类型检查。"
+        },
+        {
+          "concept": "debug-source-map",
+          "reason": "把位置还原放回真实故障版本与调试证据中。"
+        }
+      ]
+    },
+    {
+      "id": "ENG-02",
+      "title": "从本地到生产访问",
+      "question": "同一份应用为什么会在路径、环境或发布后表现不同？",
+      "summary": "沿环境配置、子路径与 HTTP 响应找到差异，解释旧页面为何仍需要旧资源。",
+      "outcomes": [
+        "区分开发、构建、预览与部署能力",
+        "观察配置替换、资源路径和缓存验证",
+        "用实际请求解释回退与版本加载故障"
+      ],
+      "guide": "eng-02-dev-production-environments-assets-cache.md",
+      "anchor": "eng-02",
+      "prerequisites": [
+        "eng-01-module-graph-build-output-source-maps.md#eng-01"
+      ],
+      "concepts": [
+        {
+          "id": "eng-environment-models",
+          "heading": "开发预览和部署各自提供哪些能力"
+        },
+        {
+          "id": "eng-hmr-cleanup",
+          "heading": "热更新保留现场也会保留错误的副作用"
+        },
+        {
+          "id": "eng-mode",
+          "heading": "mode 决定配置组而不是是否优化构建"
+        },
+        {
+          "id": "eng-config-parse",
+          "heading": "配置值先解析再决定行为"
+        },
+        {
+          "id": "eng-public-base",
+          "heading": "把应用放到子路径时检查浏览器实际请求"
+        },
+        {
+          "id": "eng-http-lab",
+          "heading": "用一个本地服务观察路径与响应头"
+        },
+        {
+          "id": "eng-spa-fallback",
+          "heading": "页面回退不能吞掉资源和接口错误"
+        },
+        {
+          "id": "eng-http-cache",
+          "heading": "缓存新鲜度与文件是否存在是两回事"
+        },
+        {
+          "id": "eng-deploy-version",
+          "heading": "发布新版本时旧页面仍可能需要旧文件"
+        },
+        {
+          "id": "eng-runtime-config",
+          "heading": "运行配置与多端构建要明确生效时刻"
+        },
+        {
+          "id": "eng-production-debug",
+          "heading": "从一次真实请求定位生产差异"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "eng-build-manifest",
+          "reason": "从构建清单确认服务器应当提供哪些文件。"
+        },
+        {
+          "concept": "vue-router-ssr",
+          "reason": "连接 SPA 深层地址与服务器的文档回退。"
+        },
+        {
+          "concept": "vue-quality-config",
+          "reason": "把公开配置规则应用到 Vue 的生产构建。"
+        },
+        {
+          "concept": "debug-cache-key",
+          "reason": "区分 HTTP 缓存与业务数据缓存各自的身份。"
+        }
+      ]
+    },
+    {
+      "id": "ENG-03",
+      "title": "依赖与包的公开边界",
+      "question": "安装成功之后，怎样知道消费者实际使用了哪个包？",
+      "summary": "在本地 workspace 与独立归档消费者之间，对照声明、锁定、解析和交付。",
+      "outcomes": [
+        "解释依赖类型、版本范围与锁文件边界",
+        "观察本地包选择和冻结安装的拒绝",
+        "用归档消费者检查入口、peer 与发布合同"
+      ],
+      "guide": "eng-03-dependencies-lockfile-workspaces-peer.md",
+      "anchor": "eng-03",
+      "prerequisites": [],
+      "concepts": [
+        {
+          "id": "eng-dependency-layers",
+          "heading": "从三个问题读懂依赖关系"
+        },
+        {
+          "id": "eng-dependency-types",
+          "heading": "四类依赖先按使用责任区分"
+        },
+        {
+          "id": "eng-workspace-lab",
+          "heading": "建一个只连接本地包的 workspace"
+        },
+        {
+          "id": "eng-workspace-protocol",
+          "heading": "workspace 协议让本地包关系明确失败"
+        },
+        {
+          "id": "eng-semver",
+          "heading": "版本范围表达兼容承诺而不是验证结果"
+        },
+        {
+          "id": "eng-lockfile",
+          "heading": "冻结安装检查清单与锁文件是否一致"
+        },
+        {
+          "id": "eng-package-identity",
+          "heading": "安装位置不同为什么可能改变运行结果"
+        },
+        {
+          "id": "eng-peer-contract",
+          "heading": "peer 描述组件库与宿主如何配合"
+        },
+        {
+          "id": "eng-package-consumer",
+          "heading": "把包交给独立消费者再检查公开边界"
+        },
+        {
+          "id": "eng-dependency-changes",
+          "heading": "多包任务和临时修复要沿依赖图传播"
+        },
+        {
+          "id": "eng-supply-chain",
+          "heading": "依赖变更要解释来源和实际执行内容"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "eng-artifact-contracts",
+          "reason": "让包声明与构建器外置、资源和类型入口相互配合。"
+        },
+        {
+          "concept": "eng-quality-affected",
+          "reason": "依赖变化沿消费者关系扩大检查范围。"
+        },
+        {
+          "concept": "rsc-artifact-evidence",
+          "reason": "把版本声明追踪到真正部署的框架制品。"
+        },
+        {
+          "concept": "git-atomic-commit",
+          "reason": "把依赖清单、锁文件和理由组织成一个完整变化。"
+        }
+      ]
+    },
+    {
+      "id": "ENG-05",
+      "title": "让质量检查提供证据",
+      "question": "一项检查通过，究竟证明了什么，又可能漏掉什么？",
+      "summary": "通过六种故障对照区分检查职责，让子检查失败传到共同的合入结论。",
+      "outcomes": [
+        "为风险选择合适的检查层",
+        "区分排版、规则、类型、行为与制品结果",
+        "解释失败传播、缓存输入与提交对应关系"
+      ],
+      "guide": "eng-05-quality-gates-lint-types-tests-ci.md",
+      "anchor": "eng-05",
+      "prerequisites": [
+        "eng-03-dependencies-lockfile-workspaces-peer.md#eng-03"
+      ],
+      "concepts": [
+        {
+          "id": "eng-quality-scope",
+          "heading": "先把风险与能提供的证据对应起来"
+        },
+        {
+          "id": "eng-quality-lab",
+          "heading": "建一个可以逐项运行的小型检查项目"
+        },
+        {
+          "id": "eng-format-lint",
+          "heading": "格式和 lint 分别观察文本与代码结构"
+        },
+        {
+          "id": "eng-typecheck",
+          "heading": "类型检查和转译回答不同问题"
+        },
+        {
+          "id": "eng-behavior-gate",
+          "heading": "行为检查要能抓住一个真实规则的破坏"
+        },
+        {
+          "id": "eng-artifact-gate",
+          "heading": "构建检查要落到可以交付的文件"
+        },
+        {
+          "id": "eng-gate-exit",
+          "heading": "统一入口必须把子检查失败传出去"
+        },
+        {
+          "id": "eng-ci-inputs",
+          "heading": "从本地反馈接到共同的 CI 判定"
+        },
+        {
+          "id": "eng-quality-affected",
+          "heading": "加速检查前先确认哪些输入会使结果失效"
+        },
+        {
+          "id": "eng-check-commit",
+          "heading": "绿色结果要对应真正被合入的提交"
+        },
+        {
+          "id": "eng-gate-diagnostics",
+          "heading": "失败信息应该帮助人采取下一步"
+        },
+        {
+          "id": "eng-gate-faults",
+          "heading": "用一张故障对照表完成自查"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "eng-lockfile",
+          "reason": "为共同检查准备一致的依赖输入。"
+        },
+        {
+          "concept": "eng-deploy-version",
+          "reason": "构建通过之后仍要考虑旧页面与新资源的组合。"
+        },
+        {
+          "concept": "vue-quality-tests",
+          "reason": "把行为断言用于框架组件的公开约定。"
+        },
+        {
+          "concept": "git-combined-behavior",
+          "reason": "确保绿色结果对应合入后的组合行为。"
+        }
+      ]
+    }
+  ]
+}

@@ -35,6 +35,27 @@ function headingMatches(heading: string, anchor: string) {
   return normalizeAnchor(code ?? '') === expected || headingSlug(heading) === expected;
 }
 
+/** 只扫描正文中的标题；Shell 注释和示例 Markdown 不构成章节边界。 */
+export function extractMaterialHeadings(lines: string[]) {
+  const headings: Array<{ line: number; level: number; title: string }> = [];
+  let fence: { marker: string; length: number } | null = null;
+  for (const [line, text] of lines.entries()) {
+    const delimiter = text.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (delimiter && delimiter[1]?.[0] === fence.marker
+        && delimiter[1].length >= fence.length && !delimiter[2]?.trim()) fence = null;
+      continue;
+    }
+    if (delimiter && !(delimiter[1]?.[0] === '`' && delimiter[2]?.includes('`'))) {
+      fence = { marker: delimiter[1]![0]!, length: delimiter[1]!.length };
+      continue;
+    }
+    const match = text.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (match) headings.push({ line, level: match[1]!.length, title: match[2]!.trim() });
+  }
+  return headings;
+}
+
 export function validateKnowledgeMaterialPath(guide: string, anchor: string) {
   if (!guideNamePattern.test(guide) || guide.includes('..') || !anchorPattern.test(anchor)) {
     throw new KnowledgeMaterialError('学习资料路径无效', 'INVALID_MATERIAL_PATH');
@@ -52,36 +73,19 @@ export async function getKnowledgeMaterial(guide: string, anchor: string) {
   }
 
   const lines = source.replace(/\r\n/g, '\n').split('\n');
-  let start = -1;
-  let level = 0;
-  let title = anchor;
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index]?.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-    if (!match || !headingMatches(match[2] ?? '', anchor)) continue;
-    start = index;
-    level = match[1]?.length ?? 2;
-    title = match[2]?.trim() ?? anchor;
-    break;
-  }
-
-  if (start < 0) {
+  const headings = extractMaterialHeadings(lines);
+  const headingIndex = headings.findIndex(({ title }) => headingMatches(title, anchor));
+  const heading = headings[headingIndex];
+  if (!heading) {
     throw new KnowledgeMaterialError('学习资料章节不存在', 'MATERIAL_NOT_FOUND');
   }
-
-  let end = lines.length;
-  for (let index = start + 1; index < lines.length; index += 1) {
-    const match = lines[index]?.match(/^(#{1,6})\s+/);
-    if (match && (match[1]?.length ?? 7) <= level) {
-      end = index;
-      while (
-        end > start + 1
-        && (/^\s*$/.test(lines[end - 1] ?? '') || /^\s*<a\s+id=["'][^"']+["']\s*><\/a>\s*$/i.test(lines[end - 1] ?? ''))
-      ) {
-        end -= 1;
-      }
-      break;
-    }
+  const { line: start, level, title } = heading;
+  let end = headings.slice(headingIndex + 1).find((next) => next.level <= level)?.line ?? lines.length;
+  while (
+    end > start + 1
+    && (/^\s*$/.test(lines[end - 1] ?? '') || /^\s*<a\s+id=["'][^"']+["']\s*><\/a>\s*$/i.test(lines[end - 1] ?? ''))
+  ) {
+    end -= 1;
   }
 
   return {

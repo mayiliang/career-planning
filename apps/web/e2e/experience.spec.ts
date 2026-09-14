@@ -1084,7 +1084,7 @@ test.describe.serial('核心使用体验', () => {
   test('知识清单支持全局命令导航，笔记中心按体系归档', async ({ page }) => {
     await page.goto('/knowledge');
     await page.getByRole('button', { name: /快速查找/ }).click();
-    await page.getByRole('textbox', { name: '搜索页面或知识点' }).fill('VUE-11');
+    await page.getByRole('combobox', { name: '搜索页面或知识点' }).fill('VUE-11');
     await expect(page.getByRole('option', { name: /VUE-11/ })).toBeVisible();
 
     await page.goto('/notes');

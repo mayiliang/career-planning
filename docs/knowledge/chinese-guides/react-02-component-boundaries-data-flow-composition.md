@@ -2,207 +2,342 @@
 
 ## REACT-02 组件边界、数据流与组合
 
-把页面拆成许多 `.tsx` 文件并不等于获得了清晰组件。好的组件边界要让状态所有权、输入输出合同、变化原因和可替换部分清楚；坏的边界则会造成 props 层层转发、子组件偷偷修改父层数据、同一状态复制多份，以及组件只能在某个页面的隐含上下文中工作。
+资料列表左边有搜索框，中间有条目，右边有详情。把它们拆成三个文件很容易，难的是回答：搜索词放在哪里？点击条目后谁改变选择？详情里的草稿应不应该跟列表同时更新？
+
+这一篇先把一个小型资料工作台完整写出来，再沿数据的来去理解组件边界。目标不是尽量增加组件数量，而是让每份数据、每个用户动作和每块可替换内容都有清楚的去处。
 
 ### 学习前先确认
 
-- 直接前置：[REACT-01 渲染、组件纯度与 state snapshot](../chinese-guides/react-01-render-purity-state-snapshot.md#react-01)。它会继续链接 TypeScript、HTML、模块和 JavaScript 运行模型。
+- 直接前置：[REACT-01 渲染、组件纯度与状态快照](../chinese-guides/react-01-render-purity-state-snapshot.md#react-01)。其中的快照、更新队列与组件身份会继续用到。
 
-本讲从组件职责、props 与事件自然推进到组合、状态提升、列表身份和边界取舍；Context 与 reducer 留到 REACT-06。
+每段 TSX 都是独立示例，可替换已有 React + TypeScript 项目的 `App.tsx`；所需组件、数据和导入均在同一段中。实际工程可以再按名字拆文件。先读完整的数据流，再拆文件，更容易看懂边界。
 
-### 一、先从数据和变化来源识别职责
+### 先为工作台里的数据找主人
 
-面对订单工作台，不要先按屏幕矩形切文件。先列出数据：订单集合来自哪里，筛选词由谁修改，选中订单由谁拥有，编辑草稿何时创建和丢弃，保存动作交给谁。
+先约定产品行为：搜索只改变列表范围，不清空已经选中的资料；选中项即使暂时被筛掉，右侧仍能查看。这个决定要写在设计里，不能让某个 Effect 偶然决定。
 
-```text
-OrderWorkspace  拥有筛选、选中 ID 与保存协调
-├─ OrderFilter  显示输入并上报变化意图
-├─ OrderList    显示集合并上报选择意图
-└─ EditorFrame  提供标题、布局与组合位置
-   └─ OrderEditor  管理当前订单草稿
-```
+| 数据或动作 | 谁拥有 | 为什么 |
+| --- | --- | --- |
+| 关键词 | 工作台 | 搜索框要修改，列表要读取 |
+| 选中资料 ID | 工作台 | 列表发起选择，详情显示同一选择 |
+| 筛选后的列表 | 不另存 state | 根据原列表和关键词计算 |
+| 详情里的临时草稿 | 编辑器，或需要保留草稿的上层 | 看是否要跨资料切换保留 |
+| 每行按钮的 DOM 事件 | 行组件内部 | 父层只需要知道用户选了哪个 ID |
 
-组件边界应围绕一种稳定责任。既处理路由参数、请求、筛选、弹窗焦点又绘制每行按钮的组件，变化原因太多；只把一个 `<div>` 搬到子文件、仍传二十个无结构参数，则没有形成真正边界。
+这张表先回答所有权，再决定组件。页面上有几个矩形，不能直接告诉你状态应放在哪一层。两个相距很远的区域可能共享同一事实；紧挨着的两个按钮也可能属于不同任务。
 
-### 二、props 是只读输入合同
+### 用完整组件追踪数据下行与意图上行
 
-```tsx
-type OrderRowProps = {
-  order: Readonly<OrderSummary>;
-  selected: boolean;
-  onSelect(id: OrderId): void;
-};
+运行这个工作台，选择“状态快照”，再搜索“表单”。列表只留下表单，详情仍显示状态快照；清空搜索后，原选择重新出现在列表中。
 
-function OrderRow({ order, selected, onSelect }: OrderRowProps) {
+```tsx example=react02-workspace
+import { useId, useState } from 'react';
+
+type Lesson = Readonly<{ id: string; title: string; minutes: number }>;
+const lessons: readonly Lesson[] = [
+  { id: 'form', title: 'HTML 表单', minutes: 25 },
+  { id: 'snapshot', title: '状态快照', minutes: 30 },
+];
+function SearchBox({ value, onChange }: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const id = useId();
   return (
-    <button aria-pressed={selected} onClick={() => onSelect(order.id)}>
-      {order.title}
-    </button>
+    <div>
+      <label htmlFor={id}>关键词</label>
+      <input id={id} value={value} onChange={event => onChange(event.target.value)} />
+    </div>
+  );
+}
+function LessonList({ items, selectedId, onSelect }: {
+  items: readonly Lesson[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  if (items.length === 0) return <p>没有匹配的资料。</p>;
+  return <ul>{items.map(item => (
+    <li key={item.id}>
+      <button type="button" aria-pressed={selectedId === item.id} onClick={() => onSelect(item.id)}>
+        {item.title}
+      </button>
+    </li>
+  ))}</ul>;
+}
+function LessonDetails({ lesson }: { lesson: Lesson | null }) {
+  return lesson
+    ? <section><h2>{lesson.title}</h2><p>预计 {lesson.minutes} 分钟</p></section>
+    : <p>请先选择一份资料。</p>;
+}
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const visible = lessons.filter(item => item.title.includes(query.trim()));
+  const selected = lessons.find(item => item.id === selectedId) ?? null;
+  return (
+    <main>
+      <h1>资料工作台</h1>
+      <SearchBox value={query} onChange={setQuery} />
+      <LessonList items={visible} selectedId={selectedId} onSelect={setSelectedId} />
+      <LessonDetails lesson={selected} />
+    </main>
   );
 }
 ```
 
-props 描述父层允许子层知道什么。只读不是因为 JavaScript 自动冻结了对象，而是所有权合同：子组件不得修改 `order.title` 后期待父层同步。用户意图通过回调上行，父层决定状态是否改变并用新 props 重新渲染。
+先沿搜索走一遍：父层把 query 传给 SearchBox；输入时子层读取文本，调用 onChange；父层更新 query；下一次 render 重新算 visible，再把结果传给列表。
 
-这种“数据下行、意图上行”叫**单向数据流（one-way data flow）**。它不要求所有 state 都放根组件，只要求每份状态有可识别的所有者。
+再沿选择走一遍：行按钮调用 onSelect 并传 ID；父层更新 selectedId；详情从完整集合查找该 ID。注意查找的不是 visible，所以筛选不会让当前详情凭空消失。换成从 visible 查找，产品行为就变了，不是无关紧要的实现细节。
 
-### 三、回调名称应表达意图而不是 DOM 事件
+这种“父层给数据，子层报告意图”的组织方式叫**单向数据流（one-way data flow）**。回调向上调用并没有把数据流变成混乱的双向修改：改变权威状态的地方仍是父层，新的结果再以 props 向下传递。
 
-`onClick` 只能说明发生了鼠标/激活事件，`onSelectOrder`、`onDismiss`、`onSubmitDraft` 则表达业务意图。子组件可以使用按钮实现意图，未来也能改成键盘命令而不改变父层合同。
+### props 表达组件需要什么而不是允许改什么
 
-```tsx
-type EditorProps = {
-  order: Order;
-  onSubmit(draft: OrderDraft): Promise<void>;
-  onCancel(): void;
-};
-```
+`LessonList` 只需要条目、当前选择和选择回调，不需要知道路由、请求地址、用户的全部偏好。`LessonDetails` 只需要一份可显示的数据，不必通过全局单例偷偷找当前选择。
 
-回调的同步或异步语义也要明确。若子组件需要显示提交状态，应由合同返回 Promise 或接收显式状态；不要依赖“父层回调碰巧会抛错”。错误分类、重复提交和取消都属于合同的一部分。
+**props** 可以是对象、数组、函数或 JSX，不限于字符串。它们是子组件当前收到的输入，不能靠修改 `items[0].title` 来通知父组件。TypeScript 的 readonly 能发现部分不当写法，但不会在运行时冻结数据，嵌套对象也需要相应约定。
 
-### 四、最小 props 减少耦合但不能丢掉语义
+如果子层确实需要编辑，传出“新标题”或“待保存草稿”，由拥有者决定如何更新。这样父层还能检查标题长度、记录修改或拒绝操作，而不是在事后才发现自己的对象已经变了。
 
-把完整页面对象传给所有子组件容易让它们读取不属于自己的字段；把每个字段拆成十几个参数又会让调用处难读。选择与组件责任一致的最小稳定形状：
+也不必把对象每个字段都拆成单独 prop。需要一个完整的资料摘要时，`lesson: LessonSummary` 往往更清楚；只负责标题排版的组件，用 `title: string` 就够了。最小输入指的是符合职责的稳定形状，不是字符数量最少。
 
-```ts
-type OrderRowModel = Pick<Order, 'id' | 'title' | 'status'>;
-```
+### 用事件名称说明业务意图
 
-不要为了复用让业务组件接收 `Record<string, unknown>` 或大量布尔开关。`compact`, `editable`, `showStatus`, `hideActions` 组合增长时，往往意味着一个组件承担多种模式，应拆成组合部件或显式变体。
+`onClick` 说明一个底层事件，`onSelect` 说明用户想选中资料。父层不必知道这个意图来自鼠标、Enter 还是某个菜单。同样，`onCancel`、`onRename`、`onSubmitDraft` 通常比 `onButtonTwoClick` 更稳定。
 
-### 五、状态应放在能协调所有消费者的最低共同层
+回调参数应足够完成任务，但不携带无关内部信息。选择只需 ID；提交需要经过明确约定的草稿。没有必要把整个 DOM Event 存入父层 state，更不应把子组件内部可写状态对象直接暴露出去。
 
-筛选输入和列表都需要筛选词，父层应拥有它；只有编辑器使用的临时输入可留在编辑器。把状态移动到共同父层叫**状态提升（lifting state up）**。
+需要注意“命名”与“浏览器协议”是两层事情。组件的 `onSubmitDraft` 只是你定义的函数 prop；真正的 HTML form 仍需要处理 submit、原生校验和默认导航。参见 [WEB-01 的标签与提交](../chinese-guides/web-01-html-semantics-forms-accessibility.md#用一个完整表单看清标签与提交)。
 
-提升不是越高越好。放到应用根会扩大更新范围、增加依赖并使局部复用困难。判断位置时问：谁读取、谁写入、何时重置、是否要跨路由保留。能在最近共同祖先解决，就不应直接进全局 store。
+### 多个消费者共享状态时才向上提升
 
-### 六、保存 ID 而不是复制可派生对象
+若两个折叠面板要求“同时只能展开一个”，每个面板各存一个 open 布尔值就难以协调。共同父层保存 activeId，面板只接收当前是否展开，就能让这个要求直接成立：
 
-```tsx
-const selectedOrder = orders.find(order => order.id === selectedId) ?? null;
-```
+```tsx example=react02-accordion
+import { useId, useState, type ReactNode } from 'react';
 
-若 state 同时保存 `selectedId` 和完整 `selectedOrder`，订单集合更新后两份数据可能不同步。保存稳定 ID，并从当前集合派生对象，能让删除、权限变化和刷新自然反映。
-
-当筛选使选中项不可见，要先定义产品语义：保持选择但隐藏编辑器、清除选择，还是在独立区域继续编辑。实现必须来自明确决策，不能由某个 Effect 偶然清除。保存前仍应根据当前权威数据解析 ID，避免提交陈旧对象。
-
-### 七、列表 key 表达兄弟节点身份
-
-```tsx
-{orders.map(order => <OrderRow key={order.id} order={order} ... />)}
-```
-
-key 只需在同一兄弟集合中唯一并稳定。它帮助 React 在插入、删除、排序时把旧 state 与正确项目对应。数组索引在静态列表中可能暂时可用，但只要项目会重排、过滤或保存输入状态，就可能把焦点和草稿迁移到另一项。
-
-key 不作为普通 prop 传给组件。组件需要 ID 时必须显式传入。不要通过改变随机 key 强制刷新来掩盖状态模型错误；只有业务身份确实变化、需要重置整个子树时才改变 key。
-
-### 八、组合让容器不知道具体内容
-
-```tsx
-type PanelProps = PropsWithChildren<{
+function Section({ title, open, onToggle, children }: {
   title: string;
-  actions?: ReactNode;
-}>;
-
-function Panel({ title, actions, children }: PanelProps) {
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const contentId = useId();
   return (
-    <section aria-labelledby="panel-title">
-      <header><h2 id="panel-title">{title}</h2>{actions}</header>
-      {children}
+    <section>
+      <h2><button type="button" aria-expanded={open} aria-controls={contentId} onClick={onToggle}>{title}</button></h2>
+      <div id={contentId} hidden={!open}>{children}</div>
     </section>
   );
 }
-```
-
-**组合（composition）**让父层提供 children 或命名区域，容器负责结构和样式，而不需要知道内容的所有业务 props。它比把几十个配置项传给“万能卡片”更可扩展。
-
-组合不自动解决语义。容器仍需保证标题 ID 唯一、landmark 合理、焦点顺序与 DOM 顺序一致。children 也不是安全边界；传入内容仍在同一 React 树和 JavaScript 信任域。
-
-### 九、渲染函数适合需要参数的插槽
-
-有时容器需要把内部状态暴露给调用者决定如何渲染：
-
-```tsx
-type DataBoundaryProps<T> = {
-  value: T | null;
-  children(value: T): ReactNode;
-};
-```
-
-这种**渲染属性（render prop）**或函数 children 能表达“容器拥有加载/选择，调用者拥有展示”。但它会增加嵌套和闭包，普通组件组合已足够时不必使用。Hook 更适合复用无 UI 的有状态逻辑，组件更适合复用结构和生命周期，两者不能互相完全替代。
-
-### 十、受控与非受控边界要明确
-
-受控组件由父层传入当前值与修改回调：
-
-```tsx
-function SearchBox({ value, onChange }: {
-  value: string;
-  onChange(value: string): void;
-}) {
-  return <input type="search" value={value} onChange={e => onChange(e.target.value)} />;
+export default function App() {
+  const [activeId, setActiveId] = useState<string | null>('goals');
+  function toggle(id: string) {
+    setActiveId(previous => previous === id ? null : id);
+  }
+  return (
+    <main>
+      <h1>阅读提示</h1>
+      <Section title="学习目标" open={activeId === 'goals'} onToggle={() => toggle('goals')}>解释数据由谁修改。</Section>
+      <Section title="阅读建议" open={activeId === 'tips'} onToggle={() => toggle('tips')}>先运行例子，再看规则。</Section>
+    </main>
+  );
 }
 ```
 
-非受控组件自己保存状态，父层只提供初始值。两者都合理，但同一状态不能一半受控、一半内部维护。`defaultValue` 只在初始化使用，后续父值变化不会自动重置。需要切换业务对象时，用明确 key 或重置动作，而不是同步两份值。
+先点“阅读建议”，目标内容隐藏；再点一次，两个都关闭。没有“同时 true”的组合需要额外补救。这里的 hidden 保留内容节点；如果内容有局部状态，也会继续存在。
 
-### 十一、组件 API 应包含空、错、忙与权限状态
+把需要共享的状态移到最近共同父层，叫**状态提升（lifting state up）**。它不要求把所有输入都搬到应用根部。仅某个编辑器使用的草稿，可以仍留在编辑器；只有需要跨编辑器协调或跨页面保留时，再提升到能承担这项责任的位置。
 
-只为成功数据设计的组件会在真实项目迅速泄漏条件判断。列表组件可能需要：加载骨架、空态、错误与重试、部分数据、只读权限。不要用四个互相冲突的布尔值表达状态；可以传判别联合或把状态边界放在父层组合：
+### children 让容器不必了解所有业务字段
 
-```ts
-type LoadState<T> =
-  | { kind: 'pending' }
-  | { kind: 'error'; message: string }
-  | { kind: 'ready'; data: T };
+资料面板可能放正文、统计或帮助信息。容器只负责标题、边框和操作区，不应该为了每种内容都新增一个布尔开关。
+
+```tsx example=react02-composition
+import { useId, useState, type ReactNode } from 'react';
+
+function Panel({ title, actions, children }: {
+  title: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  const titleId = useId();
+  return (
+    <section aria-labelledby={titleId}>
+      <header><h2 id={titleId}>{title}</h2>{actions}</header>
+      <div>{children}</div>
+    </section>
+  );
+}
+export default function App() {
+  const [completed, setCompleted] = useState(false);
+  return (
+    <main>
+      <h1>我的阅读区</h1>
+      <Panel title="当前资料" actions={<button type="button" onClick={() => setCompleted(value => !value)}>切换完成状态</button>}>
+        <p>组件边界：{completed ? '已完成' : '学习中'}</p>
+      </Panel>
+      <Panel title="阅读建议"><p>每次追踪一份数据的来去。</p></Panel>
+    </main>
+  );
+}
 ```
 
-权限不是隐藏按钮即可完成。组件可根据权限改善可见性，但真正写操作必须由服务端重新授权。
+Panel 不需要知道 completed，它只显示传入内容。状态属于 App，创建 children 和 actions 的表达式也位于 App。点按钮时，两种不同用途的 Panel 可以共用同一种结构。
 
-### 十二、组件边界也决定更新范围
+这叫**组合（composition）**：通过明确的内容位置拼装组件，而不是让容器猜内容属于哪种业务。普通 children 是默认内容，actions 这样的 ReactNode prop 是一个命名位置。
 
-父组件更新默认会重新调用其子组件。清晰边界有助于定位变化，但不应为了“防止 render”把每个标签拆组件。render 本身通常很便宜；只有测量显示昂贵计算或大子树重复工作时，才使用 memo 或调整状态位置。
+示例用 useId 给每个面板建立独立的标题关联，避免重复 `id="panel-title"`。useId 适合可访问性关联，不应用作列表数据的 key。列表 key 应来自记录自身的稳定 ID。
 
-把临时 hover、输入草稿留在需要它的子树，往往比全局 memo 更有效。性能优化在 REACT-07 进一步讲解。
+组合也能减少无意义转发。例如布局层只需接收一个已经配置好的编辑器节点，就不用了解编辑器的每个字段。但真正负责决策的父组件仍需要知道它传入了什么，不能用组合隐藏本来应该清楚的业务关系。
 
-### 十三、错误边界和异步边界要按故障域放置
+### 内容需要子层数据时再用 render prop
 
-组件边界不仅是复用单位，也是恢复单位。订单侧栏失败不应让整个应用空白；编辑器保存失败也不应清空列表。根据用户能否独立重试和继续任务来放置 Error Boundary、Suspense 或路由错误边界。
+如果容器内部算出了阅读进度，调用者想决定显示百分比还是文字，可以让 children 成为函数：
 
-但不要给每个小组件都包一层 fallback。边界太细会产生碎片化体验，也难以协调共享状态。REACT-08 会深入讲解错误与 pending 的层级。
+```tsx example=react02-render-prop
+import { useState, type ReactNode } from 'react';
 
-### 十四、如何判断是否拆错了
-
-常见信号包括：
-
-- 子组件需要知道父页面的路由和全局单例才能工作；
-- props 大量成对出现且每次都一起变化；
-- 父层只负责把同一批 props 原样转发许多层；
-- 子层修改传入对象，父层通过重新获取“修复”；
-- 一个组件有十几个布尔模式，组合结果无法预测；
-- 测试必须构造整个应用才能验证一个简单展示行为。
-
-调整边界时一次改变一个维度：先明确所有权，再提取纯展示或稳定组合区，最后才考虑 Context 或 store。边界重构应保持用户行为和可访问语义不变。
-
-### 十五、测试组件合同而不是内部实现
-
-按角色和可见文本操作，验证 props 对应的输出与用户事件对应的回调。不要断言内部 state 名、Hook 调用次数或私有组件层级。
-
-```tsx
-render(<SearchBox value="Ada" onChange={onChange} />);
-await user.clear(screen.getByRole('searchbox'));
-await user.type(screen.getByRole('searchbox'), 'Bo');
-expect(onChange).toHaveBeenLastCalledWith('Bo');
+function Progress({ total, children }: {
+  total: number;
+  children: (progress: { completed: number; remaining: number }) => ReactNode;
+}) {
+  const [completed, setCompleted] = useState(0);
+  const current = Math.min(completed, total);
+  return (
+    <section>
+      {children({ completed: current, remaining: total - current })}
+      <button type="button" disabled={current >= total} onClick={() => setCompleted(value => Math.min(value + 1, total))}>完成一篇</button>
+    </section>
+  );
+}
+export default function App() {
+  return (
+    <main>
+      <h1>阅读进度</h1>
+      <Progress total={3}>
+        {({ completed, remaining }) => <p>已完成 {completed} 篇，还剩 {remaining} 篇</p>}
+      </Progress>
+    </main>
+  );
+}
 ```
 
-还应覆盖空集合、身份变化、重排 key、禁用/只读、错误和键盘路径。一个“可复用”组件若只能在快乐路径下工作，其合同仍不完整。
+这个例子约定 total 是非负整数。连续完成三篇，文本依次变化，最后按钮禁用。Progress 拥有计数和推进规则，App 决定怎样描述这些数字。
 
-### 进阶：组件合同也需要兼容演进
+函数形式的内容入口常叫 **render prop**。它在渲染期间调用，函数内同样应该保持纯计算，也不要在里面调用 Hook。需要更多状态时，把内容提取为真正的组件；需要复用不带 UI 的有状态逻辑，后续再学习自定义 Hook。
 
-公共组件被多个页面或团队消费后，prop 改名、默认值变化、事件时机和 DOM 结构都可能成为破坏性变更。新增能力优先采用可选 prop 或组合槽位，弃用旧合同要给迁移期和诊断；不要让十几个布尔 prop 组合出无法说明的隐式状态机。
+这与 [Vue 的作用域插槽](../chinese-guides/vue-04-typed-components-slots-model-teleport.md#作用域插槽把子层数据交给父层排版)可以对照：容器提供数据，调用者提供展示。先明确谁拥有哪部分，再选择语法。
 
-测试选择少量代表性消费者，验证类型、行为、键盘和服务端渲染。样式选择器若依赖内部 DOM，也应视为脆弱耦合并通过稳定 part/class 或组合 API替代。组件“可复用”不是调用次数多，而是所有权、扩展点和失败语义对消费者保持清楚。
+### 列表重排时让草稿跟着资料走
 
-### 学完后应能说明
+列表 key 的意义最好通过一个会交换位置的例子观察。这里每行 DOM 自己保存尚未提交的输入文本，用来突出身份问题：
 
-你应能从数据所有权和变化原因划分组件，解释 props 只读与意图回调，判断 state 应提升到哪里，说明 ID 派生、稳定 key、children 组合和受控模式的边界，并用用户行为测试验证组件合同而非实现细节。
+```tsx example=react02-list-identity
+import { useState } from 'react';
+
+type Lesson = { id: string; title: string };
+const initial: Lesson[] = [
+  { id: 'form', title: 'HTML 表单' },
+  { id: 'snapshot', title: '状态快照' },
+];
+function Row({ lesson }: { lesson: Lesson }) {
+  return <li><label>{lesson.title} 的备注 <input defaultValue="" /></label></li>;
+}
+export default function App() {
+  const [items, setItems] = useState(initial);
+  return (
+    <main>
+      <h1>资料备注</h1>
+      <button type="button" onClick={() => setItems(previous => [...previous].reverse())}>反转顺序</button>
+      <ul>{items.map(item => <Row key={item.id} lesson={item} />)}</ul>
+    </main>
+  );
+}
+```
+
+在 HTML 表单那一行输入“周末复习”，反转后，它应仍属于 HTML 表单。key 让 React 把已有节点和状态匹配到同一记录，而不是把“第一行的位置”当成身份。
+
+可以对照改成索引 key：资料顺序变了，原位置保留的输入却可能被贴到另一条资料旁。这不是 input 的 bug，而是你告诉 React 按另一种身份复用节点。随机 key 又会在每次渲染时制造新身份，使草稿和焦点更容易丢失。
+
+key 只在同一组兄弟中区分身份，也不会自动作为普通 prop 交给 Row。若 Row 需要 ID，仍应显式传 lesson.id。更完整的状态保留规则参见 [REACT-01 的组件身份](../chinese-guides/react-01-render-purity-state-snapshot.md#组件身份决定草稿保留还是重置)。
+
+### 异步回调要说明何时才算完成
+
+子组件需要显示保存中和失败原因时，父层必须给它一个可以等待的结果。下面约定：Promise 完成代表保存成功，拒绝代表失败；失败时保留输入。示例只模拟本地保存。
+
+```tsx example=react02-async-contract
+import { useId, useState, type FormEvent } from 'react';
+
+function RenameForm({ onSave }: { onSave: (title: string) => Promise<void> }) {
+  const id = useId();
+  const [title, setTitle] = useState('组件边界');
+  const [status, setStatus] = useState<'editing' | 'saving' | 'error' | 'saved'>('editing');
+  const [message, setMessage] = useState('');
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (status === 'saving') return;
+    setStatus('saving');
+    setMessage('');
+    try {
+      await onSave(title.trim());
+      setStatus('saved');
+      setMessage('已保存');
+    } catch (error) {
+      setStatus('error');
+      setMessage(error instanceof Error ? error.message : '保存失败，请重试');
+    }
+  }
+  return (
+    <form onSubmit={submit}>
+      <label htmlFor={id}>资料标题</label>
+      <input id={id} required value={title} disabled={status === 'saving'} onChange={event => {
+        setTitle(event.target.value); setStatus('editing'); setMessage('');
+      }} />
+      <button type="submit" disabled={status === 'saving'}>{status === 'saving' ? '保存中' : '保存标题'}</button>
+      <p role="status">{message}</p>
+    </form>
+  );
+}
+export default function App() {
+  const [saved, setSaved] = useState('尚未保存');
+  async function save(title: string) {
+    await new Promise<void>(resolve => setTimeout(resolve, 200));
+    if (title.length < 2) throw new Error('标题至少需要两个字符');
+    setSaved(title);
+  }
+  return <main><h1>修改资料标题</h1><RenameForm onSave={save} /><p>已保存标题：{saved}</p></main>;
+}
+```
+
+输入一个字符再保存，会得到错误且文本仍在；改成“组件协作”再保存，父层的已保存标题改变。等待期间禁用输入和按钮，避免这个简化场景里草稿在提交途中又发生变化。
+
+父层若启动异步请求却忘了 return 或 await，子层就会过早以为完成。类型写成 Promise 有助于发现签名问题，实际实现也要遵守等待关系。这个基础来自 [JS-05 的异步等待边界](../chinese-guides/js-05-promise-errors-async-control-flow.md#调用方等待的究竟是哪一件事)。跨实体切换、取消与并发保存则需要额外身份判断，不能仅凭 saving 就推断所有异步都安全。
+
+### 空态错误和只读模式也属于组件的输入
+
+只有成功数据时才知道怎样渲染的组件，通常会让调用者在每个角落补条件。先确定加载中、无结果、失败、只读时分别由谁提供内容和动作，再决定 API。
+
+互斥模式可以用判别联合表达，参见 [TS-02 的判别联合](../chinese-guides/ts-02-unions-narrowing-never-exhaustiveness.md#判别联合把一个状态和它需要的数据放在一起)。例如编辑模式要求 onSave，只读模式不提供保存操作，比 editable、hideActions、disabled 等一组可能互相冲突的布尔值更容易理解。
+
+但也不必把请求状态全部塞进最底层行组件。父层可以负责加载或错误分支，列表专心显示已经可用的数据；也可以用前面的组合容器统一状态区域。区别在于调用者是否仍能明确控制恢复路径。
+
+隐藏按钮只是呈现层的权限体验，实际写入仍由可信服务端授权。组件不能因为没有显示“删除”就声称数据无法被删除。
+
+### 拆分的价值是减少隐含关系
+
+判断边界是否合适，可以尝试只拿组件公开的 props、回调和内容位置，解释它的行为。如果还必须知道某个路由全局变量、某个兄弟组件的私有 ref 或某段隐藏 Effect，说明依赖尚未表达完整。
+
+组件拆小不保证不再渲染。父层变化仍可能让子组件重新计算；不要为避免一次便宜的 render 把每个标签单独包装。把临时输入放在合理的拥有者，减少冗余数据，再在确有成本时研究性能，比一开始到处 memo 更有效。
+
+错误边界和 Suspense 也应服务于可独立恢复的用户任务，而不是每个小块都套一个 fallback。普通 Error Boundary 不会自动捕获事件处理器里的所有异步失败，保存错误仍要在相应流程处理。后续异步边界资料会展开这一点。
+
+当公共组件被多个页面使用时，事件参数、回调完成时机、默认值、属性落点和可访问名称都是调用者依赖的行为。改了它们，应同步修改代表性用法与说明。这里的必要核对是“输入什么、操作什么、得到什么”，不是固定内部 Hook 次数或文件层级。
+
+### 参考与延伸阅读
+
+- [React：Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component)：查 props、默认值与 children。
+- [React：Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)：查共同拥有者和受控组件。
+- [React：Rendering Lists](https://react.dev/learn/rendering-lists)：查列表 key 与稳定身份。
+- [React：useId](https://react.dev/reference/react/useId)：查可访问性 ID 与列表 key 的不同用途。
+- [React：Thinking in React](https://react.dev/learn/thinking-in-react)：继续练习从数据、状态与组件关系构建页面。

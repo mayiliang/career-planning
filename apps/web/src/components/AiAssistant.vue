@@ -640,7 +640,7 @@ onBeforeUnmount(() => {
     ><span aria-hidden="true">✦</span> AI 解释</button>
   </Transition>
 
-  <button class="assistant-launcher" :class="{ 'is-open': panelOpen }" :aria-expanded="panelOpen" aria-controls="atlas-ai-panel" @click="panelOpen ? closePanel() : openPanel(true)">
+  <button class="assistant-launcher" :class="{ 'is-open': panelOpen }" :aria-label="panelOpen ? '关闭 Atlas AI 助手' : '打开 Atlas AI 助手'" title="Atlas AI · 总结、解释与查资料" :aria-expanded="panelOpen" aria-controls="atlas-ai-panel" @click="panelOpen ? closePanel() : openPanel(true)">
     <span class="launcher-mark" aria-hidden="true">✦</span>
     <span><strong>Atlas AI</strong><small>总结 · 解释 · 查资料</small></span>
   </button>
@@ -907,7 +907,8 @@ onBeforeUnmount(() => {
 @keyframes assistant-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 760px) {
-  .assistant-launcher { right: 12px; bottom: 78px; min-width: 176px; }
+  .assistant-launcher { right: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); width: 50px; min-width: 50px; height: 50px; min-height: 50px; padding: 5px; grid-template-columns: 1fr; gap: 0; border-radius: 16px; }
+  .assistant-launcher > span:last-child { display: none; }
   .assistant-panel, .assistant-panel.is-wide { top: 0; right: 0; bottom: 0; width: 100vw; border: 0; border-radius: 0; }
   .assistant-header { min-height: 64px; padding: max(12px, env(safe-area-inset-top)) 12px 10px; }
   .assistant-identity p { max-width: 180px; }

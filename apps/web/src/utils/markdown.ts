@@ -6,6 +6,7 @@ import css from 'highlight.js/lib/languages/css';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import markdownLanguage from 'highlight.js/lib/languages/markdown';
+import powershell from 'highlight.js/lib/languages/powershell';
 import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
@@ -17,6 +18,7 @@ import mark from 'markdown-it-mark';
 import sub from 'markdown-it-sub';
 import sup from 'markdown-it-sup';
 import taskLists from 'markdown-it-task-lists';
+import { canonicalMaterialHref } from '@/content/learning-material-catalog';
 
 const MAX_CACHE_ENTRIES = 120;
 type MarkdownInstance = InstanceType<typeof MarkdownIt>;
@@ -37,6 +39,7 @@ hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('css', css);
 hljs.registerLanguage('xml', xml);
 hljs.registerLanguage('markdown', markdownLanguage);
+hljs.registerLanguage('powershell', powershell);
 hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('yaml', yaml);
 
@@ -91,12 +94,14 @@ export function markdownHeadingId(value: string) {
 
 export function extractMarkdownHeadings(source: string): MarkdownHeading[] {
   const counts = new Map<string, number>();
-  return [...source.replace(/\r\n/g, '\n').matchAll(/^(#{1,6})\s+(.+?)\s*#*\s*$/gm)].map((match) => {
-    const title = plainHeadingText(match[2] ?? '');
+  const tokens = markdown.parse(source.replace(/\r\n/g, '\n'), {});
+  return tokens.flatMap((token, index) => {
+    if (token.type !== 'heading_open') return [];
+    const title = plainHeadingText(tokens[index + 1]?.content ?? '');
     const base = markdownHeadingId(title);
     const count = counts.get(base) ?? 0;
     counts.set(base, count + 1);
-    return { id: count === 0 ? base : `${base}-${count}`, level: match[1]?.length ?? 2, title };
+    return [{ id: count === 0 ? base : `${base}-${count}`, level: Number(token.tag.slice(1)), title }];
   });
 }
 
@@ -110,10 +115,13 @@ function isSafeLink(href: string) {
 }
 
 export function learningMaterialHref(href: string) {
-  const match = href.match(/^\.\.\/chinese-guides\/([a-z0-9][a-z0-9.-]*\.md)#([\p{L}\p{N}_-]+)$/iu);
+  const match = href.match(/^\.\.\/chinese-guides\/([a-z0-9][a-z0-9.-]*\.md)#([^#?/\s]+)$/iu);
   const guide = match?.[1];
-  const anchor = match?.[2];
-  if (!guide || !anchor || guide.includes('..')) return href;
+  let anchor: string;
+  try { anchor = decodeURIComponent(match?.[2] ?? ''); } catch { return href; }
+  if (!guide || !/^[\p{L}\p{N}_-]+$/u.test(anchor) || guide.includes('..')) return href;
+  const canonical = canonicalMaterialHref(guide, anchor);
+  if (canonical) return canonical;
   return `/knowledge/materials/${encodeURIComponent(guide)}/${encodeURIComponent(anchor)}`;
 }
 

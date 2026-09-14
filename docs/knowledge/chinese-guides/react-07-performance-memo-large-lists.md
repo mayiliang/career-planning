@@ -2,162 +2,230 @@
 
 ## REACT-07 性能测量、memo 与大列表
 
-性能优化不是给每个组件加 `memo`。先定义用户动作和预算，在相同制品、设备、数据和交互下测量，再找到浏览器/React 的真实瓶颈，做一个有机制依据的改变，并通过撤销优化证明收益来自该改变。没有基线和反证的“更快”不可复核。
+搜索框卡顿，可能是筛选计算太重，也可能是一次创建了太多 DOM；点击详情慢，还可能主要在等网络。给所有组件加 memo，只有在原因恰好是可跳过的重复渲染时才有帮助。
+
+本篇先把“慢”拆成可观察的工作，再用对照页观察引用、闭包和列表规模。示例帮助理解机制，不预先承诺在你的设备上节省多少毫秒。
 
 ### 学习前先确认
 
-- 直接前置：[REACT-06 Reducer、Context 与跨组件状态](../chinese-guides/react-06-reducer-context-state-domains.md#react-06)。它会递归包含组件、state、Hook、Effect 与 JavaScript 基础。
+- 直接前置：[REACT-06 Reducer、Context 与跨组件状态](../chinese-guides/react-06-reducer-context-state-domains.md#react-06)。先能解释状态所有者、不可变更新和 Context 传播。
 
-React Compiler 在 REACT-09。本讲先掌握人工测量与优化边界。
+四段 App.tsx 分别在 React + TypeScript 项目中独立运行。手工 memo 对照应先关闭 React Compiler，否则编译器可能改变待观察的缓存行为；Compiler 在本批 REACT-09 单独说明。开发环境适合观察更新原因，实际性能结论仍需生产条件或 profiling build。
 
-### 一、从用户问题定义指标
+### 把用户等待的时间拆开看
 
-React 的**性能分析器（profiler）**记录 render/commit 成本；复用先前计算或输出称为**记忆化（memoization）**，其命中常依赖**引用相等（referential equality）**。阻塞主线程较久的任务是**长任务（long task）**，交错读取和写入布局造成的反复计算称为**布局抖动（layout thrashing）**。
+先固定一个动作：“在已有一万条资料中输入关键词，再打开第一项”。不要把冷启动下载、热页面输入和首次访问详情混成一个指标。
 
-“页面慢”可能是首屏资源、点击响应、输入延迟、滚动掉帧、网络或内存。先固定动作，例如在 5,000 行中过滤、输入 20 个字符、打开详情。记录数据量、设备、浏览器、构建模式和缓存状态。
+| 观察到的现象 | 优先看什么 | 常见误判 |
+| --- | --- | --- |
+| 请求两秒后内容瞬间出现 | 网络与服务端耗时 | 认为组件 render 太慢 |
+| 输入后主线程连续忙碌 | 脚本、筛选、解析 | 只查请求数量 |
+| React 计算很少但滚动卡 | layout、paint、DOM 数量 | 再加一层 memo |
+| 反复进出后越来越慢 | 存活对象、监听、缓存 | 只测第一次打开 |
 
-开发环境含额外检查，不能代表生产。性能回归应使用同一生产制品或 profiling build，至少多次运行取中位数，并保留原始记录。
+浏览器 Performance 记录输入、脚本、布局与绘制；React **Profiler** 解释组件树的渲染工作。二者关注的层次不同。特别是 commitTime 是提交发生的时间点，不能把它当成“这次提交耗时”。
 
-### 二、浏览器与 React 指标分层
+### Profiler 提供线索而不是用户体验分数
 
-浏览器 Performance 面板显示 scripting、style、layout、paint 和长任务；React DevTools Profiler 显示组件 render/commit。React render 少不代表布局便宜，反之多次便宜 render 也可能无用户影响。
+actualDuration 是本次已提交更新的 React 渲染耗时；baseDuration 根据各组件最近的渲染成本估计整棵子树不跳过时的成本。它们不是网络时间，也不包含完整浏览器绘制，更不是跨设备通用分数。
 
-同时观察 INP/交互延迟、长任务、帧、内存和网络。不要只用 console.time 包一个函数就给整页下结论。
+一次 background render 可能被打断，用户是否顺畅还要看输入到可见反馈的全过程。默认生产构建不会提供完整 profiling；需要对应构建才能测生产环境的 React 轨迹。
 
-### 三、Profiler 的 actual 与 base duration
+比较时保留相同数据、浏览器、构建、缓存状态和操作。先看多次结果是否稳定，再讨论中位数；不挑最快的一次作为“优化成功”。本文中的日志只辅助定位，不作为性能排名。
 
-`<Profiler onRender>` 提供 phase、actualDuration、baseDuration、start/commit time。actual 表示本次实际 render 成本，base 估算无 memo 时子树成本。它们用于对比同一交互，不是跨设备绝对 SLA。
+### 用一份清单观察三个缓存边界
 
-Profiler 自身有开销，默认生产构建不启用完整 profiling。测试环境极快的虚拟 DOM 时间也不代表真实浏览器。
+**memo** 尝试跳过 props 未变的组件执行，**useMemo** 复用计算结果，**useCallback** 复用函数引用。三个入口作用在不同位置，下面放在同一页观察。
 
-### 四、先修状态位置和更新链
-
-常见瓶颈来自 state 放太高、Effect 互相 setState、派生值重复保存、Context 大广播。把瞬时 state 留在最近组件、删除多余 Effect，通常比 memo 更可靠。
-
-若一次输入触发全应用重渲染，先检查所有权；若 render 中有昂贵纯计算，再考虑缓存；若 DOM 节点过多，则 memo 也不能减少初次节点/布局成本。
-
-### 五、`memo` 跳过 props 未变的组件 render
-
-`memo` 默认用 Object.is 比较每个 prop。组件自己的 state 或读取的 context 变化仍会 render。它是性能优化而非语义保证；没有 memo 代码也必须正确。
-
-如果父层每次传新对象/函数，一个“总是新的”prop 会破坏跳过。减少 props 范围、稳定数据模型比深比较更好。自定义 comparator 必须比较每个影响输出的 prop，包括函数闭包，否则组件会长期使用旧逻辑。
-
-### 六、`useMemo` 缓存计算结果
-
-适合昂贵纯计算或需要稳定引用给 memo 子组件：
-
-```tsx
-const visible = useMemo(() => filterRows(rows, query), [rows, query]);
+```tsx example=react07-memo-workbench runtime=project file=src/App.tsx
+import { memo, Profiler, useCallback, useMemo, useState, type ProfilerOnRenderCallback } from 'react';
+type Row = Readonly<{ id: number; title: string }>;
+const rows: readonly Row[] = Array.from({ length: 1000 }, (_, id) => ({ id, title: `资料 ${id + 1}` }));
+const stableOptions = { prefix: '打开' };
+const report: ProfilerOnRenderCallback = (id, phase, actualDuration, baseDuration) => {
+  console.log(id, phase, { actualDuration, baseDuration });
+};
+const List = memo(function List({ items, options, onOpen }: {
+  items: readonly Row[]; options: { prefix: string }; onOpen: (id: number) => void;
+}) {
+  return <Profiler id="资料列表" onRender={report}>
+    <ul>{items.slice(0, 30).map(item => <li key={item.id}>
+      <button onClick={() => onOpen(item.id)}>{options.prefix} {item.title}</button>
+    </li>)}</ul>
+  </Profiler>;
+});
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [count, setCount] = useState(0);
+  const [stable, setStable] = useState(true);
+  const [selected, setSelected] = useState<number | null>(null);
+  const filtered = useMemo(() => rows.filter(row => row.title.includes(query.trim())), [query]);
+  const open = useCallback((id: number) => setSelected(id), []);
+  return <main>
+    <label>筛选资料 <input value={query} onChange={e => setQuery(e.target.value)} /></label>
+    <label><input type="checkbox" checked={stable} onChange={e => setStable(e.target.checked)} />使用稳定的选项对象</label>
+    <button onClick={() => setCount(value => value + 1)}>无关计数加一</button>
+    <p>计数：{count}，匹配：{filtered.length}，选中 ID：{selected ?? '无'}</p>
+    <p>这里只显示前 30 项，用来观察更新原因。</p>
+    <List items={filtered} options={stable ? stableOptions : { prefix: '打开' }} onOpen={open} />
+  </main>;
+}
 ```
 
-依赖必须完整，计算必须纯。缓存占内存，React 也可在特定情况下丢弃缓存，因此不能依赖 useMemo 保持语义、资源或唯一对象。便宜计算加 memo 可能更慢且更难读。
+打开控制台，保留稳定对象，多次点无关计数：List 的 props 没变，其内部 Profiler 通常不会得到新的提交回调。取消勾选后，每次父层执行都会创建新的 options，即使里面文字相同，也会破坏这次跳过机会。
 
-### 七、`useCallback` 缓存函数引用
+筛选文字变化时，useMemo 重新计算数组，列表应该更新；点击条目时，回调仍应取得正确 ID。open 只调用稳定 setter，不读取本轮 selected，因此空依赖是完整的。若它还使用当前账号或筛选条件，就必须加入相应依赖。
 
-它通常在函数传给 memo 子组件或作为另一个 Hook 的依赖时有用，不会减少函数定义本身的业务成本。回调依赖变化仍产生新引用。
+本例有意限制显示数量，帮助分清“筛选计算”和“创建 DOM”。它没有证明筛选已经昂贵；若实际筛选很便宜，去掉 useMemo 仍可能是更易维护的选择。
 
-可通过函数式更新移除对旧 state 的依赖，但不能为稳定而读取错误快照。若回调只在 Effect 内使用，优先把函数移入 Effect；若不传给 memo 边界，多数无需 useCallback。
+### 引用相同与内容相同不是一回事
 
-### 八、引用稳定性不是越多越好
+memo 默认对每个 prop 做 Object.is 比较。两个分别创建的对象，即使字段一样，也不相同；原对象被偷偷修改，即使字段变了，身份仍相同。
 
-每个 memo/callback 都增加依赖列表、内存和审查成本。React Compiler 可在兼容代码中自动应用许多 memo 等价优化，更说明手工优化应以证据为准。不要用 memo 修复副作用或错误状态模型。
+所以不能为了缓存命中直接改旧对象。应只为发生变化的条目创建新对象，其余条目保留引用。这同时维护了 [状态快照与不可变更新](../chinese-guides/react-03-state-model-derived-controlled.md#react-03)。
 
-优化前后保存 Profiler；再删除优化复测。若中位数、交互延迟和 render 原因没有稳定改善，撤回复杂度。
+组件自己的 state、读取的 Context 或其他更新仍能使它执行。memo 是优化机会，不是“组件被锁住”；缓存被丢弃后，结果也应正确。网络连接、计时器和唯一业务身份不能依赖 useMemo 的存活保证。
 
-### 九、大列表的首要问题是 DOM 数量
+### 忽略函数属性会保留过期的行为
 
-渲染 100,000 行，即使每行不重复 render，初次 DOM、布局、内存和可访问性树仍很大。分页、增量加载或**虚拟化（virtualization）**只渲染可视窗口。
+下面故意保留一个错误比较器。左右两列都显示同一份资料，父层可以切换当前分类；按钮回调捕获该分类。
 
-虚拟化需要估算/测量行高、overscan、滚动定位和动态内容。快速滚动不应白屏，数据 ID 与 DOM key 必须稳定。
+```tsx example=react07-comparator runtime=project file=src/App.tsx
+import { memo, useState } from 'react';
+type Props = { title: string; onChoose: () => void };
+function Choice({ title, onChoose }: Props) { return <button onClick={onChoose}>{title}</button>; }
+const Broken = memo(Choice, (before, after) => before.title === after.title);
+const Correct = memo(Choice);
+export default function App() {
+  const [category, setCategory] = useState('基础');
+  const [message, setMessage] = useState('尚未选择');
+  return <main>
+    <label>当前分类 <select value={category} onChange={e => setCategory(e.target.value)}>
+      <option>基础</option><option>进阶</option>
+    </select></label>
+    <section aria-label="错误比较器"><h2>故意忽略回调的版本</h2>
+      <Broken title="选择资料" onChoose={() => setMessage(`错误版本收到：${category}`)} />
+    </section>
+    <section aria-label="默认比较器"><h2>默认比较的版本</h2>
+      <Correct title="选择资料" onChoose={() => setMessage(`正确版本收到：${category}`)} />
+    </section>
+    <p role="status">{message}</p>
+  </main>;
+}
+```
 
-### 十、虚拟化有可访问性和焦点边界
+切到进阶后，左侧仍可能报告基础，右侧报告进阶。界面文字没有变化，但可观察行为已经不同。比较器返回 true 相当于开发者承诺“新旧 props 的结果和行为等价”，不能漏掉函数闭包。
 
-回收 DOM 可能让键盘焦点元素被卸载，读屏对列表总数/位置失去信息，浏览器查找也只能看到已渲染内容。需要 roving tabindex、焦点保持/转移、`aria-rowcount`/`aria-rowindex` 等语义，并与所选组件模式匹配。
+深比较也不天然更好：遍历成本可能比重渲染还大。优先缩小 props、改进状态位置；确需自定义比较时，再验证所有影响输出与行为的字段。
 
-若列表只有数百简单项且性能合格，分页可能比复杂虚拟化更可靠。优化不能牺牲键盘与读屏任务。
+### 先减少一次动作造成的工作
 
-### 十一、稳定 key 与不可变数据帮助跳过工作
+输入框状态放在整页根部，可能让无关侧栏一起参与更新；派生数据再存 state，可能多出一轮 Effect 与渲染。先修这些更新链，再给真正昂贵的纯计算缓存。
 
-使用业务 ID key，让 React 复用正确行；不可变更新只为改变项创建新对象，使 memo 行可跳过其他项。若每次 map 都深拷贝全部行，所有引用改变，memo 无效。
+筛选每次扫描全部数据、重复 JSON 解析或交错读写尺寸，也不会因包上 memo 自动消失。布局读取与样式写入尽量分批，避免反复强制 layout；只看 React Profiler 看不到全部浏览器成本。
 
-不要为稳定引用直接修改旧对象；那会让 React 不知道变化或让旧快照被污染。结构共享是不可变与性能的交点。
+**long task** 通常指占用主线程超过 50ms 的任务。不是每个小任务都值得单独优化，也不能因单次没越线就认定整条输入路径流畅。应把一串工作与可见反馈连接起来看。
 
-### 十二、并发 API改善感知但不减少总工作
+### 大列表先算清需要多少 DOM
 
-transition/useDeferredValue 可以把非紧急更新标记为可中断，让输入先响应、列表稍后更新。它不会让昂贵计算消失；若每次仍做 100ms 工作，CPU/电量仍受影响。
+有一万条数据，不代表必须同时创建一万个列表项。分页可以简单地限制 DOM；**virtualization** 则只显示窗口附近的项目，用占位高度保留滚动范围。
 
-pending 状态要可感知，旧结果可保留但不能让用户误操作错误上下文。先缩小数据/算法，再用调度改善体验。
+固定行高时，窗口计算不复杂。以下例子把范围夹在合法区间，并额外留两行 overscan，降低滚动边缘短暂空白的机会。
 
-### 十三、网络和代码分割也影响 React 性能
+```js example=react07-window-math
+function windowRange(total, top, height, rowHeight, overscan) {
+  const first = Math.max(0, Math.min(total, Math.floor(top / rowHeight)));
+  return { start: Math.max(0, first - overscan), end: Math.min(total, Math.ceil((top + height) / rowHeight) + overscan) };
+}
+console.log(JSON.stringify(windowRange(10000, 320, 320, 32, 2))); // => {"start":8,"end":22}
+console.log(JSON.stringify(windowRange(3, 0, 320, 32, 2))); // => {"start":0,"end":3}
+```
 
-组件 render 优化无法修复 2MB 首屏脚本或串行请求。检查 bundle、动态 import、预加载、图片、字体和缓存。分块过细会增加请求与部署漂移；按路由/交互测量。
+### 用固定高度窗口观察节点数量
 
-性能预算应同时包含 JS/CSS、长任务、交互和关键 route。CI bundle budget 不能替代真机体验，但可阻止明显回退。
+下面是只读列表演示。每行固定 32px，没有可聚焦按钮，因此不涉及“焦点按钮被回收”的问题；滚动区域本身可以接收键盘焦点。
 
-### 十四、内存泄漏会逐渐拖慢应用
+```tsx example=react07-window-list runtime=project file=src/App.tsx
+import { useRef, useState } from 'react';
+const rows = Array.from({ length: 10000 }, (_, id) => ({ id, title: `资料 ${id + 1}` }));
+const rowHeight = 32, height = 320, overscan = 2;
+export default function App() {
+  const viewport = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState(0);
+  const start = Math.max(0, Math.floor(top / rowHeight) - overscan);
+  const end = Math.min(rows.length, Math.ceil((top + height) / rowHeight) + overscan);
+  function jump() { if (viewport.current) viewport.current.scrollTop = 4999 * rowHeight; }
+  return <main>
+    <h1>一万条只读资料</h1><button onClick={jump}>跳到第 5000 条</button>
+    <p>当前创建 {end - start} 个列表项，数据共 {rows.length} 条。</p>
+    <div ref={viewport} role="region" aria-label="可滚动资料列表" tabIndex={0}
+      style={{ height, overflowY: 'auto', border: '1px solid', overflowAnchor: 'none' }}
+      onScroll={e => setTop(e.currentTarget.scrollTop)}>
+      <ul aria-label="资料" style={{ height: rows.length * rowHeight, position: 'relative', margin: 0, padding: 0, listStyle: 'none' }}>
+        {rows.slice(start, end).map((row, offset) => <li key={row.id} aria-posinset={start + offset + 1} aria-setsize={rows.length}
+          style={{ position: 'absolute', top: (start + offset) * rowHeight, height: rowHeight, lineHeight: `${rowHeight}px`, boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
+          {row.title}
+        </li>)}
+      </ul>
+    </div>
+  </main>;
+}
+```
 
-Effect 未清理监听、缓存无限增长、隐藏页面保留 DOM、闭包持有大对象，都会让长会话变慢。使用 Heap snapshot/Allocation timeline 比较重复进入/离开页面后的可回收对象。
+初始只创建 12 项，滚动到中间通常是 14 项。点击跳转可看到第 5000 条附近的内容；底部仍能到达第 10000 条。这说明节点数受窗口大小控制，没有让所有条目先隐藏在 DOM 中。
 
-缓存要有 key、容量、过期和所有权。useMemo 不是全局缓存；模块级 Map 若无淘汰可永久增长。
+真实列表若有自动换行、图片或展开行，固定高度假设就不成立，需要测量与偏移修正。若每行有输入框，草稿要按业务 ID 保存，焦点项要保留或明确迁移；不能只把这段只读演示加个按钮就当成完整组件。
 
-### 十五、测量中的噪音要控制
+浏览器查找、打印、文本选择和读屏遍历也会受回收影响。aria-posinset 与 aria-setsize 说明集合位置，但不自动补齐所有交互。表格则用相应表格语义，不能把 aria-rowindex 随意加到普通列表上。
 
-固定 CPU/网络、关闭无关扩展、预热与冷启动分开、至少三次取中位数，记录异常值而非挑最好一次。比较相同提交/数据/视口。
+### 延后结果不等于让计算更少
 
-微基准可能被 JIT 优化且忽略 DOM/GC，只有能连接用户路径才有价值。性能数据要连同命令、制品 hash 和设备一起保存。
+输入属于当前动作，下面的非紧急结果可以稍后更新。**useDeferredValue** 让 React 有机会先响应输入，并在后台尝试新结果；它不是固定毫秒数的 debounce，也不会自动减少网络请求。
 
-### 十六、回归测试保护行为与预算
+```tsx example=react07-deferred runtime=project file=src/App.tsx
+import { memo, useDeferredValue, useState } from 'react';
+const source = Array.from({ length: 3000 }, (_, id) => `资料 ${id + 1}`);
+const Results = memo(function Results({ query }: { query: string }) {
+  const found = source.filter(title => title.includes(query));
+  return <section><p>结果对应关键词：{query || '全部'}</p><p>共 {found.length} 条，只显示前 20 条</p>
+    <ul>{found.slice(0, 20).map(title => <li key={title}>{title}</li>)}</ul>
+  </section>;
+});
+export default function App() {
+  const [query, setQuery] = useState('');
+  const deferred = useDeferredValue(query);
+  const stale = query !== deferred;
+  return <main>
+    <label>即时输入 <input value={query} onChange={e => setQuery(e.target.value)} /></label>
+    <p role="status">{stale ? '结果仍对应上一次输入' : '结果已跟上输入'}</p>
+    <div style={{ opacity: stale ? 0.6 : 1 }}><Results query={deferred} /></div>
+  </main>;
+}
+```
 
-优化后不仅测时间，还要回归结果、焦点、ARIA、滚动、错误和取消。自定义 comparator 特别要测试函数 prop 更新；虚拟列表测试键盘跨窗口；deferred UI 测旧数据标识。
+机器足够快时，过渡提示可能一闪而过，这是正常的；不能为了让提示明显就把每行故意拖慢再声称性能提升。这里让结果明确标注对应关键词，避免用户把旧结果误认为新查询。
 
-性能阈值避免过窄导致 CI 噪音，可用相对预算、统计或专用稳定环境。产品体验仍需真实设备观察。
+React 能在合适的工作边界暂停渲染，但不能中断任意正在运行的长同步函数。若单个筛选函数很重，先改算法、分块或使用 Worker。Worker 的消息复制、启动与结果合并也有成本，相关基础见 [大数据与 Worker](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#cs-03)。
 
-### 十七、性能优化的停止条件
+### 网络内存与 Hydration 仍在性能范围内
 
-达到用户预算且没有显著瓶颈时停止。代码复杂度、内存、可访问性和维护风险都是成本。记录为什么保留某优化、测量结果和撤销方式，让未来 React/Compiler 升级后能重新判断。
+首屏 JS 过大、串行数据请求、字体和图片，都可能比组件缓存更重要。路由分块应结合实际访问路径，不能只看构建后的文件个数。
 
-### 十八、自定义 comparator 可能把旧闭包永久留在界面
+长会话要观察离开页面后监听、DOM 和缓存是否释放。useMemo 不是全局无限缓存，而模块 Map 如果没有容量和失效规则就可能持续增长；隐藏区域也不等于卸载。
 
-`memo(Component, areEqual)` 让开发者承担“两个 props 是否会得到相同可观察输出”的证明。只比较数据而忽略函数 prop，子组件可能继续调用捕获旧 state/props 的回调；深比较又可能比重新 render 更慢，并在数据结构增长后失控。
+SSR 让 HTML 提前出现，但客户端仍需下载并接管交互。要区分“看见按钮”和“按钮可以响应”，分别定位服务器等待、payload、JS、Hydration 和浏览器布局。具体服务端边界见 [REACT-09](../chinese-guides/react-09-compiler-rsc-security-upgrades.md#react-09)。
 
-默认浅比较不够时，先让父组件传递更小、更稳定的业务值。确需自定义比较器，就覆盖所有影响输出和行为的 prop，并在生产构建中测 comparator 与 render 的成本。测试不仅断言 DOM，还要在父状态变化后触发旧按钮，确认调用的是新语义。
+### 何时保留优化何时停下来
 
-### 十九、浏览器 Layout、Paint 与合成不会显示在组件 render 时长里
+一份有用的记录应包含：哪个用户动作慢、观察到哪类工作、改变了什么、同条件下发生什么，以及行为是否仍正确。删除优化再比较，可以帮助排除缓存预热或数据变化带来的假收益。
 
-React Profiler 主要解释 React 提交工作；大图、复杂阴影、同步布局读取、频繁改变几何属性或长列表样式仍可能在浏览器主线程造成 layout/paint。用 Performance 面板把用户输入、脚本、样式、布局、绘制和长任务串起来，再决定优化层。
+若用户目标已达到，继续加比较器、缓存或虚拟化可能只增加维护成本。保留能解释的优化，记录其前提；升级 Compiler、数据量或组件库后，再根据新证据重新判断。
 
-读写布局交错会产生 layout thrashing。批量读取后再写入，动画优先使用 transform/opacity，并用 CSS containment 或 `content-visibility` 前先验证滚动、可访问性和尺寸占位。减少 React render 不能替代浏览器渲染知识。
+### 参考与延伸阅读
 
-### 二十、窗口化列表必须维护逻辑列表而不只是可见 DOM
-
-虚拟化只渲染视窗附近条目，滚动高度由估算/测量维持。可变高度、插入删除和图片加载会改变偏移，需要稳定 ID 与测量缓存失效策略。焦点项滚出窗口时不能凭空消失；可采用 roving tabindex、保持活动项或显式焦点迁移。
-
-读屏的集合大小、当前位置和搜索结果数量要能表达。页面内查找、打印、锚点和浏览器选择也会受影响。数据量不到瓶颈时，分页或渐进渲染可能更简单；只有测到 DOM/布局成本并能满足交互合同才引入窗口化。
-
-### 二十一、Worker 只适合可序列化且足够重的计算
-
-搜索索引、解析和大规模纯计算可移到 Web Worker，减少主线程长任务；DOM、React state 和闭包不能直接跨线程。消息复制/结构化克隆、启动和结果合并都有成本，小计算搬过去可能更慢。
-
-设计 request ID、取消/过期、错误和 worker 生命周期。组件卸载或输入变化后忽略旧结果，必要时 terminate；敏感数据进入 worker 仍在客户端信任边界内。用 Performance 证明确实减少交互阻塞，而不只是把时间藏到另一线程。
-
-### 二十二、服务端渲染改善起点但 Hydration 仍可能阻塞交互
-
-SSR/流式可更早显示 HTML，客户端仍需下载、解析和 hydrate 相应边界。HTML 很快出现不代表按钮已经可用；测量首屏内容与交互准备的间隔，定位是 bundle、长任务还是 hydration 不匹配。
-
-把非关键区域延后 hydrate、按 route 分块或使用服务端能力要结合框架支持与可恢复 fallback。服务器与客户端输出必须确定一致，多版本 chunk 在滚动发布期间可用。优化应覆盖冷缓存、慢设备和客户端导航，而非只看本地刷新。
-
-### 进阶：性能预算应连接产品目标和回归责任
-
-“组件少渲染一次”不是产品指标。为搜索、切换标签、打开详情等关键动作设定可观察预算，记录设备档位、数据规模、网络、冷/热缓存和分位数；再把 bundle、长任务、React commit、布局和内存分配给可负责的层。
-
-CI 可守住 bundle 与合成基准，真实用户监测观察地区/设备尾部，实验室 trace 解释根因。阈值调整必须关联产品证据和负责人，不能因频繁失败不断放宽。优化发布后若错误率、可访问性或维护成本上升，也应回滚。
-
-### 进阶：缓存命中率和失效频率决定收益
-
-昂贵计算只有在输入多次保持相同时缓存才有收益。记录调用次数、输入 identity、计算时长、缓存命中和占用；如果依赖每次都是新对象，useMemo 本身无效。如果缓存大量结果但很少复用，内存与 GC 可能更差。
-
-React Compiler 或框架升级后重新测量并尝试删除旧优化。可删除、可对照、可解释，才是可维护的性能工程。
-
-### 学完后应能说明
-
-你应能从用户动作建立基线，区分浏览器与 React 成本，解释 Profiler、memo/useMemo/useCallback 的精确边界，处理大列表 DOM、焦点与内存，并通过多次测量和删除优化反证证明收益。
+- [React：Profiler](https://react.dev/reference/react/Profiler)：查 actualDuration、baseDuration 与生产 profiling。
+- [React：memo](https://react.dev/reference/react/memo)：查 props 比较和函数闭包风险。
+- [React：useMemo](https://react.dev/reference/react/useMemo)：查缓存适用范围与依赖。
+- [React：useCallback](https://react.dev/reference/react/useCallback)：查函数身份。
+- [React：useDeferredValue](https://react.dev/reference/react/useDeferredValue)：查后台渲染与过期结果提示。
+- [MDN：Long Tasks API](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming)：查浏览器长任务。

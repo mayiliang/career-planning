@@ -2,251 +2,275 @@
 
 ## JS-01 执行上下文、作用域与闭包
 
-写 JavaScript 时，我们经常会说“这个变量在函数里”“这个函数记住了外面的值”。这些说法在简单代码里够用，一旦出现嵌套函数、循环回调、多个实例和资源清理，就很容易互相矛盾。这一讲要建立一个稳定的运行模型：代码执行到哪里、名字从哪里查找、函数为何能在创建它的调用结束后继续访问局部状态。
+为什么函数已经执行完，里面的变量还能继续使用？为什么同一个回调，换个地方调用也找不到那个地方的同名变量？这两个看似分开的问题，其实都在问：**一个函数究竟从哪里读取变量。**
+
+这篇文章从普通函数调用开始，逐步走到闭包。读完后，你应该能顺着源码解释变量的来处，分清“这一次调用的局部状态”和“多个函数共用的状态”，也能判断回调何时需要清理。
 
 ### 学习前先确认
 
-本讲不要求先读一份总术语表。只在下面某一项陌生时，打开对应的短文补齐后再回来：
+- 直接前置：[函数、参数、返回值与回调](../chinese-guides/javascript-functions-and-callbacks.md#prejs-02)。只需能读懂函数定义、调用和返回函数；变量基础在这篇前置短文中另有入口。
 
-- 直接前置：[函数、参数、返回值与回调](../chinese-guides/javascript-functions-and-callbacks.md#prejs-02)。如果变量与赋值仍不熟悉，这份短文会继续带你进入下一层，不必在这里重复打开。
+本文示例可分别复制到现代浏览器控制台运行。每个代码块都自带所需定义，`// =>` 后面是应看到的输出。先运行，再改一个值观察变化，比一开始记术语更容易建立直觉。
 
-调用栈、词法环境、作用域链和闭包都是本知识点的正文内容，不是额外前置。
+### 从一次函数调用看起
 
-### 从一次普通函数调用开始
+先看一个最普通的价格计算：
 
-先看一段没有异步、没有框架的代码：
-
-```js
-const taxRate = 0.1;
-
-function total(price) {
-  const tax = price * taxRate;
-  return price + tax;
+```js example=js01-call
+function calculatePrice(unitPrice, quantity) {
+  const subtotal = unitPrice * quantity;
+  return subtotal;
 }
 
-const result = total(100);
+console.log(calculatePrice(12, 2)); // => 24
+console.log(calculatePrice(12, 5)); // => 60
 ```
 
-运行到 `total(100)` 时，JavaScript 必须保存“现在正在执行 `total`”“参数 `price` 是 `100`”“局部变量 `tax` 是什么”“函数结束后回到哪里”等状态。这组为一次执行服务的状态，称为**执行上下文（execution context）**。
+两次调用用的是同一段函数代码，却各自有一组参数和局部变量。第一次的 `quantity` 是 `2`，第二次是 `5`。它们并不是让同一个局部变量来回换值，而是两次调用分别建立了自己的执行环境。
 
-全局代码有全局执行上下文；函数每调用一次，都会得到一个新的函数执行上下文。递归调用同一个函数五次，不是反复改同一个上下文，而是产生五次彼此独立的调用。
+可以把**执行上下文（execution context）**理解为：为了执行当前这段代码，JavaScript 需要保存的一组信息。例如正在执行哪个函数、局部变量在哪里，以及代码执行到了哪里。它是解释运行过程的模型，不是要求你猜测引擎把每个变量放在内存的哪个位置。
 
-当前尚未结束的执行上下文按后进先出排列，这个结构就是**调用栈（call stack）**：
+当一个函数调用另一个函数时，当前函数暂时等着，被调用的函数先执行；返回以后，再从原来的位置继续。这种“后来调用的先返回”的顺序，由**调用栈（call stack）**描述。
 
-```text
-调用 total(100) 之后：
-
-栈顶  total 的函数执行上下文
-      全局执行上下文
-栈底
-```
-
-`total` 返回后，它的执行上下文从栈顶移出，全局代码继续。调用栈回答的是“当前执行到哪一层、结束后回到哪里”。它不直接回答“`taxRate` 为什么能被找到”。
-
-### 名字按源码位置查找
-
-程序还需要记录名字与绑定。可以把**词法环境（lexical environment）**理解为两部分：当前代码区域里的绑定，以及指向外层词法环境的引用。
-
-在 `total` 内读取 `taxRate` 时，查找过程是：
-
-1. 先看 `total` 这次调用的环境，只有 `price`、`tax` 等局部绑定。
-2. 当前环境没有 `taxRate`，沿外层引用来到全局环境。
-3. 找到全局绑定 `taxRate`，读取它的当前值。
-
-这条从内向外的查找路径叫**作用域链（scope chain）**。外层关系由函数写在源码的什么位置决定，因此称为“词法”作用域，而不是由函数从什么地方被调用决定。
-
-“最外层”还取决于代码运行在哪种宿主边界。经典浏览器脚本、ES Module、函数体和代码块会建立不同层次的环境；模块顶层绑定属于模块本身，不会因为写在文件最外面就自动变成 `window` 属性。不同模块也各有自己的顶层环境，再通过 `import`、`export` 明确连接。排查“全局变量”时应先问它属于哪个脚本或模块环境，不能把源码最左侧缩进为零一概当成同一个全局对象。
-
-下面的 `showName` 无论从哪里调用，外层都是 `createUser` 的代码区域，不会因为调用者有一个同名变量就改道：
-
-```js
-const name = '全局名字';
-
-function createUser() {
-  const name = '局部名字';
-  return function showName() {
-    return name;
-  };
+```js example=js01-stack
+function formatPrice(value) {
+  console.log('进入 formatPrice');
+  return `¥${value}`;
 }
 
-const show = createUser();
-
-function run() {
-  const name = '调用者名字';
-  return show();
+function showPrice() {
+  console.log('进入 showPrice');
+  const text = formatPrice(24);
+  console.log(text);
 }
 
-console.log(run()); // 局部名字
+showPrice();
+// => 进入 showPrice
+// => 进入 formatPrice
+// => ¥24
 ```
 
-`run` 出现在调用栈上，并不表示 `showName` 会从 `run` 的局部环境查找 `name`。这正是调用栈与作用域链最需要分开的地方。
+调用栈回答的是“现在轮到谁执行”。它不直接回答“函数中的某个名字应该去哪里找”。后一个问题需要作用域。把这两个问题拆开，闭包就不必依赖“函数退出了，栈怎么还没消失”这样的猜想来解释。
 
-规范模型还会把“保存当前声明的环境记录”与“指向外层的连接”分开描述。这里不必背内部槽位名称，但要避免另一个误解：创建函数时并不会把所有可见值复制一份塞进函数。后续执行保留的是按词法关系访问相关绑定的能力。调试器为了方便观察，可能显示比优化后真实保留范围更多的变量，因此调试面板是诊断视图，不是规范本身或精确的内存清单。
+### 名字沿源码的位置查找
 
-### 块作用域、函数作用域与变量遮蔽
+**作用域（scope）**决定一个名字能在哪些位置被访问。JavaScript 主要采用**词法作用域（lexical scope）**：查找外层变量的方向，由函数在源码中定义的位置决定，而不是由调用位置决定。
 
-`let`、`const`、`class` 采用块作用域。`var` 采用函数作用域；函数声明在不同语境下还受严格模式和历史兼容规则影响，现代代码不应依赖模糊的块内函数行为。
+```js example=js01-scope
+const city = '杭州';
 
-```js
-const label = 'outer';
+function showCity() {
+  return city;
+}
 
-function printLabel() {
-  const label = 'function';
-  if (true) {
-    const label = 'block';
-    console.log(label); // block
+function visit() {
+  const city = '成都';
+  return showCity();
+}
+
+console.log(visit()); // => 杭州
+```
+
+`showCity` 自己没有声明 `city`，于是向它定义处的外层查找，找到 `'杭州'`。虽然这次调用发生在 `visit` 里面，但 `visit` 的局部变量不在 `showCity` 的外层作用域中，因此不会参与这次查找。
+
+读这种代码时，可以先圈出函数的定义，再沿源码中的嵌套关系向外看。不要从调用处反向寻找“最近执行过的同名变量”。前者是作用域关系，后者只是执行顺序，两者不能混用。
+
+如果内层也声明了同名变量，内层变量会**遮蔽（shadowing）**外层变量。遮蔽只是名字查找会先停在内层，并不意味着外层的值被改了。
+
+```js example=js01-shadow
+const label = '全站设置';
+{
+  const label = '当前页面';
+  console.log(label); // => 当前页面
+}
+console.log(label); // => 全站设置
+```
+
+作用域也不等于花括号的数量。`if`、`for` 和独立代码块会为 `let`、`const` 建立块级作用域；`var` 通常受所在函数约束，不会因为普通的 `if` 块就产生独立作用域。对象字面量的花括号则是在描述属性，不是创建一层供变量查找的词法作用域。
+
+### 声明之前为什么有时能读有时会报错
+
+“声明提升”这个说法容易让人以为引擎把源码搬到了文件顶部。更准确的读法是：进入作用域时，某些名字已经被登记，但不同声明的初始化规则不同。
+
+```js example=js01-initialization
+function inspectDeclarations() {
+  console.log(total); // => undefined
+  var total = 3;
+
+  try {
+    console.log(count);
+  } catch (error) {
+    console.log(error.name); // => ReferenceError
   }
-  console.log(label);   // function
+  let count = 4;
+  console.log(count); // => 4
+}
+inspectDeclarations();
+```
+
+`var total` 在函数开始执行时已经初始化为 `undefined`，运行到赋值处才变成 `3`。`let count` 的绑定虽然已经属于这个作用域，但直到执行声明时才完成初始化。此前这段时间叫**暂时性死区（temporal dead zone）**，简称 TDZ。
+
+TDZ 中的变量不是“先去外层找找看”。只要当前作用域声明了这个名字，就会先找到当前绑定；它尚未初始化，读取便报错，即使外层恰好也有同名变量。
+
+```js example=js01-tdz-shadow
+const theme = '浅色';
+{
+  try {
+    console.log(theme);
+  } catch (error) {
+    console.log(error.name); // => ReferenceError
+  }
+  const theme = '深色';
+  console.log(theme); // => 深色
 }
 ```
 
-内层同名绑定让外层绑定暂时不可见，称为**遮蔽（shadowing）**。这不等于修改外层值；离开内层块以后，外层绑定仍在。
+普通函数声明在所在函数或模块的作用域初始化时就可供调用。赋给 `const` 的函数表达式则要等到那条声明执行完成。不要把“函数能提前调用”推广成所有写法都一样；阅读旧式脚本时，块内函数声明还有历史兼容规则，现代代码尽量在模块或明确的函数作用域中定义它们。
 
-`let`、`const` 绑定在进入代码块时已经属于该环境，但在声明语句完成初始化前不能读取，这段区域常称为**暂时性死区（temporal dead zone）**。把它简单记成“不会提升”并不准确：绑定存在，只是尚不可访问。
+还有一个有用的区别：`typeof` 一个完全未声明的名字通常返回 `'undefined'`，但 `typeof` 一个处于 TDZ 的绑定仍会报错。`typeof` 不是绕过初始化规则的通行证。`const` 声明后的约束则是不能重新赋值，和 TDZ 是两个阶段的规则；它也不会自动冻结对象，见 [JS-03 中的共享对象](../chinese-guides/js-03-types-equality-copy-immutability.md#赋值之后谁和谁共用对象)。
 
-### 闭包不是值的截图
+脚本与模块的顶层也要区分。在浏览器传统脚本中，顶层 `var` 通常会成为全局对象的属性，顶层 `let`、`const` 则不会；ES Module 的顶层声明属于模块自己的作用域，不会自动成为 `window` 的属性。因此，“能直接读到一个名字”和“能从 `window` 读到同名属性”不能画等号。控制台还有自己的输入处理方式，判断工程代码时应以它实际作为脚本还是模块加载为准。
 
-当函数能访问创建位置的外层词法环境时，我们说这个函数形成了**闭包（closure）**。更准确地说，闭包是函数代码与其可访问的外层环境引用的组合。
+### 闭包让函数继续访问创建处的变量
 
-```js
-function makeCounter(label) {
+现在把函数当作返回值，让它在外层函数结束后再执行：
+
+```js example=js01-counter
+function createCounter() {
   let count = 0;
-
   return function next() {
     count += 1;
-    return `${label}:${count}`;
+    return count;
   };
 }
 
-const counterA = makeCounter('A');
-console.log(counterA()); // A:1
-console.log(counterA()); // A:2
+const next = createCounter();
+console.log(next()); // => 1
+console.log(next()); // => 2
 ```
 
-`makeCounter` 返回后，它的执行上下文已经离开调用栈，但 `next` 仍能访问那次调用建立的 `label`、`count` 绑定。函数返回不等于相关环境立刻消失；只要返回的函数仍可达，它依赖的环境就仍可能需要保留。
+`createCounter()` 结束后，我们拿到了 `next` 这个函数。稍后调用 `next()`，它仍然可以找到创建时所在作用域中的 `count`，并继续修改它。
 
-闭包访问的是绑定，而不是创建时把值复制进函数：
+**闭包（closure）**指的就是函数以及它能够访问的词法环境这一组合。函数创建时就确定了向外查找变量的关系。把函数返回，只是让这种关系在外层调用结束以后表现得特别明显；事件回调、数组回调里的函数，同样可以形成闭包。
 
-```js
-function makeReader() {
-  let value = 1;
-  const read = () => value;
-  value = 2;
-  return read;
+这里有两个动作不要混在一起：调用 `createCounter()` 建立这一份 `count`；调用返回的 `next()` 使用这一份 `count`。第二次执行 `next()` 不会重新执行外层的 `let count = 0`，所以输出会接着增长。
+
+这也解释了为什么“调用结束”不等于“所有局部状态立刻消失”。调用栈上的执行过程可以结束，而仍被函数引用的环境继续存在。引擎可以对存储方式做优化；理解语义时，只需关心这些变量是否仍然能被访问，不必假设整个栈帧原封不动地保存着。
+
+### 闭包保存的是变量还是快照
+
+闭包不是在创建函数时，把外层所有值拍一张照片。它会在执行时读取相应的绑定，所以能看到后来发生的重新赋值。
+
+```js example=js01-live-binding
+let currentName = '未登录';
+const readName = () => currentName;
+const savedName = currentName;
+const readSavedName = () => savedName;
+
+currentName = '小林';
+console.log(readName()); // => 小林
+console.log(readSavedName()); // => 未登录
+```
+
+两个函数都用到了闭包。差别在于 `readName` 读取会变化的 `currentName`，而 `readSavedName` 读取另外建立的 `savedName`。后者保存的是当时的字符串值，之后没有被重新赋值。
+
+如果把字符串换成对象，`const saved = currentObject` 只会保存同一个对象的引用，不会复制对象内容。闭包没有替你完成深拷贝。遇到“为什么保存了旧状态却仍然变了”，应同时检查变量绑定和对象是否共享，接着看 [JS-03：浅拷贝只复制一层](../chinese-guides/js-03-types-equality-copy-immutability.md#浅拷贝只复制一层)。
+
+反过来，闭包也不会自动跟随所有“最新状态”。如果某次调用先算出一个字符串，再让回调读取这个字符串，回调读取的就是那次计算结果。决定它是新是旧的，不是“用了闭包”四个字，而是它实际捕获哪个绑定、该绑定以后是否更新。
+
+### 两次创建会得到两份独立状态
+
+同一次外层调用中创建的多个函数，可以共同使用同一组局部变量。再次调用外层函数，则会建立另一份。
+
+```js example=js01-independent
+function createCounter() {
+  let count = 0;
+  return {
+    increment() { count += 1; },
+    read() { return count; },
+  };
 }
 
-console.log(makeReader()()); // 2
+const first = createCounter();
+const second = createCounter();
+first.increment();
+first.increment();
+console.log(first.read()); // => 2
+console.log(second.read()); // => 0
 ```
 
-如果闭包是一张旧值截图，结果应该是 `1`；实际读到 `2`，因为同一个 `value` 绑定后来被赋了新值。
+`first.increment` 和 `first.read` 是两个函数，但它们读取同一份 `count`。`second` 的两个方法来自第二次外层调用，使用另一份 `count`。这是一种简单的封装方式：外部只能通过提供的方法访问状态，不能直接用 `first.count` 修改局部变量。
 
-### 每次调用会产生独立状态
+这种封装并不保证所有返回的数据都安全。如果 `read()` 返回一个内部可变对象，外部拿到它仍可能改动内部状态；“变量名不可直接访问”和“对象不可修改”是两回事。也不要在外层模块只创建一次实例，再误以为每个使用者拿到的都是新状态。需要隔离时，应明确在哪里调用创建函数。
 
-函数工厂最常见的用途之一，是用每次调用独立的词法环境保存私有状态：
+此处的方法没有用到 `this`，把 `first.read` 取出来单独调用也能工作。它读取的是词法环境里的 `count`。如果方法写成 `return this.count`，决定结果的就变成了调用方式；这个区别在 [JS-02：先找到函数再看怎样调用](../chinese-guides/js-02-prototype-object-model-this.md#先找到函数再看怎样调用)中展开。
 
-```js
-const counterA = makeCounter('A');
-const counterB = makeCounter('B');
+### 循环中的回调为什么会读到同一个数
 
-console.log(counterA()); // A:1
-console.log(counterA()); // A:2
-console.log(counterB()); // B:1
-```
+闭包问题不一定要等待定时器才出现。先把函数放进数组，再在循环结束后调用，就能把变量问题单独看清楚。
 
-两个 `next` 来自同一段函数代码，但分别连接到两次 `makeCounter` 调用的环境。A、B 不共享 `count`。如果计数器相互污染，应先检查状态是否被误放到模块顶层、全局对象或共享对象里，而不是把问题笼统归咎于闭包。
-
-闭包能隐藏局部绑定，却不是安全权限边界。调用者仍可以使用返回对象公开的方法；调试工具、序列化边界和外部副作用也不会因为使用闭包自动安全。
-
-### 循环闭包为什么常出现意外
-
-如果还不清楚 timer 为什么在循环结束后才调用回调，可在读本节时打开 [PREJS-04 定时器与稍后执行的回调](../chinese-guides/javascript-scheduled-callbacks.md#prejs-04)。它是本节的就近补充，不是理解前半篇作用域模型的硬前置。
-
-考虑旧代码中常见的写法：
-
-```js
-for (var i = 0; i < 3; i += 1) {
-  setTimeout(() => console.log(i), 0);
+```js example=js01-loop
+const shared = [];
+for (var index = 0; index < 3; index += 1) {
+  shared.push(() => index);
 }
-```
+console.log(shared.map((read) => read()).join(',')); // => 3,3,3
 
-`var i` 属于外围函数或全局环境，三次循环登记的回调都访问同一个 `i` 绑定。定时回调稍后执行时，循环已经把这个绑定改成 `3`，因此打印三次 `3`。
-
-换成 `let` 后，`for` 会为每次迭代提供对应的迭代绑定：
-
-```js
-for (let i = 0; i < 3; i += 1) {
-  setTimeout(() => console.log(i), 0);
+const separate = [];
+for (let index = 0; index < 3; index += 1) {
+  separate.push(() => index);
 }
-// 稍后打印 0、1、2
+console.log(separate.map((read) => read()).join(',')); // => 0,1,2
 ```
 
-关键不在于“`let` 更新”，而在于每个回调连接到了不同绑定。旧环境里不能使用 `let` 时，也可以通过函数参数显式创建独立绑定：
+第一轮循环使用 `var`。所有回调共享同一个 `index`；等我们真正调用它们时，循环已经结束，这个变量的值是 `3`。
 
-```js
-for (var i = 0; i < 3; i += 1) {
-  ((current) => {
-    setTimeout(() => console.log(current), 0);
-  })(i);
-}
-```
+第二轮在 `for` 头部使用 `let`。JavaScript 为迭代建立各自的绑定，因此每个回调关联自己那一轮的 `index`。这不是因为箭头函数能自动记住当前数字，两组代码都用了箭头函数；变化的是绑定的创建规则。
 
-这里每次立即调用都会创建新的参数绑定 `current`。
+如果必须处理使用 `var` 的旧代码，可以在每一轮调用一个普通函数，把当前值作为参数传进去，让这次调用建立单独的参数绑定。原理和 `createCounter` 完全一致，不需要再背一套神秘口诀。若问题来自定时器，把“何时执行”交给[稍后执行的回调](../chinese-guides/javascript-scheduled-callbacks.md#prejs-04)，把“届时读哪个变量”留给作用域分析，两条线各自推清就够了。
 
-### 闭包与内存生命周期
+### 回调结束使用后要解除谁的引用
 
-JavaScript 的垃圾回收通常从一组根开始，追踪还能到达哪些对象。只要某个活跃对象仍能沿引用关系到达另一个对象，后者就不能被当作不可达对象回收。业务代码不能依赖某个具体时刻必然发生垃圾回收。
+闭包本身不是内存泄漏。一个计数器刻意保存 `count`，就是它正常工作的方式。真正值得留意的是：业务已经不再需要回调，但事件系统、定时器或长期存在的集合仍然保存着它。
 
-闭包不会神秘地“保存整个调用栈”，但它引用的绑定，以及从这些绑定继续可达的对象，可能因此延长生命周期：
+下面使用标准 `EventTarget` 模拟一个通知来源，不需要页面上预先存在按钮。订阅函数返回清理函数，让登记和撤销写在一起。
 
-```js
-function attachPreview(button, largePreview) {
-  function handleClick() {
-    showPreview(largePreview);
+```js example=js01-cleanup
+const events = new EventTarget();
+
+function subscribeLabel(label) {
+  function onChange() {
+    console.log(label); // => 草稿已保存
   }
-
-  button.addEventListener('click', handleClick);
-
-  let active = true;
-  return function detach() {
-    if (!active) return;
-    active = false;
-    button.removeEventListener('click', handleClick);
-  };
+  events.addEventListener('change', onChange);
+  return () => events.removeEventListener('change', onChange);
 }
+
+const stop = subscribeLabel('草稿已保存');
+events.dispatchEvent(new Event('change'));
+stop();
+events.dispatchEvent(new Event('change'));
 ```
 
-事件系统保存着 `handleClick`，`handleClick` 又访问 `largePreview`。只把本地的 `detach` 变量设成 `null`，不能代替 `removeEventListener`。真正的清理动作应对应真正的外部注册点：事件要移除，定时器要取消，订阅要退订，观察器要断开。
+第一次派发事件，监听器读取闭包中的 `label`。调用 `stop()` 后，事件源不再保存这条监听，第二次派发不会输出。清理时使用的是原来的 `onChange` 函数；重新写一个内容相同的函数，会得到另一个函数对象，无法替代它。
 
-`detach` 使用 `active` 让清理具备幂等性。重复调用不会重复执行底层撤销，也不会让计数或状态进入错误结果。幂等清理不是闭包专属概念，但闭包很适合保存“是否已经清理”的私有状态。
+还要继续问一层：我们是否仍把 `stop` 放在一个长期存在的数组中？清理函数自身也可能引用 `onChange`。移除监听会断开事件源这一条引用，但其他引用若仍存在，对应对象仍可能保持可达。因此，清理完成后也应让过期订阅记录退出自己的集合。垃圾回收取决于对象是否仍然可达，而且不会承诺在某一行代码后立即执行。
 
-### 把模型用到实际代码
+::: tip 把清理责任写在创建处
+凡是把函数交给一个比当前操作活得更久的系统，都顺手确认撤销入口。完整的“正常结束、提前退出、发生异常”清理模型，见 [JS-07：让资源的打开和关闭待在一起](../chinese-guides/js-07-iteration-metaprogramming-resources.md#让资源的打开和关闭待在一起)。
+:::
 
-遇到变量结果异常或疑似泄漏时，可以按下面顺序推演：
+### 用一条线把概念连起来
 
-1. 列出当前有哪些函数调用仍未结束，画出调用栈。
-2. 对问题中的每个名字，标出它在哪个源码区域声明。
-3. 从读取位置向外画作用域链，找出实际命中的绑定。
-4. 如果函数被返回、登记或保存，标出是谁仍引用这个函数。
-5. 顺着闭包访问的绑定继续找对象引用，定位真正需要撤销的外部注册。
+分析一段涉及闭包的代码，可以按这样的次序阅读：函数在哪里定义；当前读取的名字属于哪一层作用域；那层作用域是哪次调用建立的；读取发生前，这个绑定或它指向的对象有没有变化；最后，是谁仍然持有这个函数。
 
-这比“闭包会缓存变量”“函数执行完变量就释放”之类口号更可靠，因为它能在不同代码里重复使用。
+这条顺序比先判断“这算不算闭包”更实用。它同时解释了调用结束后的状态保留、同一实例中的共享状态、多实例隔离，以及回调的清理。调用栈帮助你跟踪执行过程，词法作用域帮助你找到变量，闭包则把函数与它仍可访问的环境连在一起。
 
-### 常见误解
+接下来读 [JS-02 原型、对象模型与 this](../chinese-guides/js-02-prototype-object-model-this.md#js-02)。你会遇到另一种容易混淆的查找：`name` 沿作用域找变量，`object.name` 沿对象及其原型找属性。先把两条路径分开，再看它们如何在方法调用中碰面。
 
-- **“闭包会复制外层变量的值。”** 闭包访问绑定；绑定后续改变时，读取结果也可能改变。
-- **“函数返回后所有局部数据立即释放。”** 是否可回收取决于可达性，不取决于函数是否刚刚返回。
-- **“调用者的局部变量会进入被调用函数的作用域链。”** 词法作用域看源码嵌套，不看动态调用者。
-- **“把变量设为 null 就完成清理。”** 外部系统仍保存事件监听、定时器或订阅时，必须撤销那个注册。
-- **“能用闭包隐藏就等于安全。”** 隐藏实现细节与建立授权边界是两件事。
+### 参考与延伸阅读
 
-### 学完后应能说明
-
-不看输出答案，尝试独立说明下面四件事：
-
-1. 调用栈与作用域链分别描述什么，为什么不能画成同一条线。
-2. 两次调用 `makeCounter` 为什么拥有独立计数。
-3. `var` 循环回调为什么共享一个绑定，`let` 为什么能得到逐次绑定。
-4. 一个事件回调停止使用后，如何从引用关系判断应在哪里清理。
-
-能用自己的小例子推导这些结论，就已经掌握了本知识点的核心模型。下一步可继续学习 [JS-02 原型、对象模型与 this](../chinese-guides/js-02-prototype-object-model-this.md#js-02)，它会把“函数从哪里找到名字”与“函数调用时 `this` 是谁”彻底分开。
-
+- [MDN：Closures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures)——查阅词法环境、闭包共享状态和循环回调的更多说明。
+- [MDN：JavaScript execution model](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Execution_model)——进一步了解执行上下文、调用栈与宿主环境的关系。
+- [MDN：let](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let)——核对 TDZ 和 `for` 循环的逐轮绑定规则。
+- [MDN：Memory management](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Memory_management)——需要定位长期保留的数据时，再深入可达性和垃圾回收。

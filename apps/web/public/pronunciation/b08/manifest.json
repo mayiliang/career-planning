@@ -13,9 +13,9 @@
     "vue-11-nuxt-rendering-data-performance.md"
   ],
   "terms": {
-    "client-side rendering": {
-      "file": "9c7553523e6b3b6d.wav",
-      "text": "client-side rendering"
+    "activity": {
+      "file": "0651863bf5d90226.wav",
+      "text": "Activity"
     },
     "code splitting": {
       "file": "1bb1913b14194478.wav",
@@ -37,10 +37,6 @@
       "file": "4163fe8dc2507164.wav",
       "text": "hydration"
     },
-    "layout thrashing": {
-      "file": "8c13896a1c1020b5.wav",
-      "text": "layout thrashing"
-    },
     "lazy loading": {
       "file": "f70cbea892ed0479.wav",
       "text": "lazy loading"
@@ -49,9 +45,9 @@
       "file": "6cbf63f3932cf99e.wav",
       "text": "long task"
     },
-    "memoization": {
-      "file": "6ff225cb1dfb5185.wav",
-      "text": "memoization"
+    "memo": {
+      "file": "9c225a950b92172f.wav",
+      "text": "memo"
     },
     "navigation failure": {
       "file": "95d596bab0d24e42.wav",
@@ -61,9 +57,13 @@
       "file": "9a75872d5e2c5359.wav",
       "text": "navigation guard"
     },
-    "page payload": {
-      "file": "fc957b73b2d72b6d.wav",
-      "text": "page payload"
+    "nitro preset": {
+      "file": "8d7b2e34445eb808.wav",
+      "text": "Nitro preset"
+    },
+    "payload": {
+      "file": "239f59ed55e737c7.wav",
+      "text": "payload"
     },
     "performance budget": {
       "file": "39605983e6c911ef.wav",
@@ -71,15 +71,11 @@
     },
     "profiler": {
       "file": "74a9d35712f8cefd.wav",
-      "text": "profiler"
+      "text": "Profiler"
     },
     "react compiler": {
       "file": "4ef3c38b395ed76a.wav",
       "text": "React Compiler"
-    },
-    "referential equality": {
-      "file": "0110c8c58e31ed97.wav",
-      "text": "referential equality"
     },
     "remote code execution": {
       "file": "09e4eadfb9a436eb.wav",
@@ -89,21 +85,17 @@
       "file": "b76adfd0352afdf5.wav",
       "text": "route record"
     },
-    "route rules": {
-      "file": "c77fdb3169b86f07.wav",
-      "text": "route rules"
-    },
     "runtime configuration": {
       "file": "4a9b6d891e08d5a5.wav",
       "text": "runtime configuration"
     },
     "server component": {
       "file": "9e1fb3261c315492.wav",
-      "text": "server component"
+      "text": "Server Component"
     },
     "server function": {
       "file": "7ffb5efe72b49701.wav",
-      "text": "server function"
+      "text": "Server Function"
     },
     "server-side rendering": {
       "file": "96a21147db355f7e.wav",
@@ -117,13 +109,29 @@
       "file": "a53cb7b2cd9ae3de.wav",
       "text": "source map"
     },
-    "static site generation": {
-      "file": "876da7cc854bc9b0.wav",
-      "text": "static site generation"
-    },
     "typed routes": {
       "file": "c672a563a4d93c28.wav",
       "text": "typed routes"
+    },
+    "useasyncdata": {
+      "file": "efdd97309b265e82.wav",
+      "text": "useAsyncData"
+    },
+    "usecallback": {
+      "file": "8d936185adfe3fb2.wav",
+      "text": "useCallback"
+    },
+    "usedeferredvalue": {
+      "file": "c36a68e462663252.wav",
+      "text": "useDeferredValue"
+    },
+    "usefetch": {
+      "file": "99497c5447bffb01.wav",
+      "text": "useFetch"
+    },
+    "usememo": {
+      "file": "91b401102ee31b4a.wav",
+      "text": "useMemo"
     },
     "virtualization": {
       "file": "0b7635b2568f0d2e.wav",

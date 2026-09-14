@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "batch": "B06",
+  "title": "让副作用有始有终，让逻辑复用清楚可见",
+  "reviewedOn": "2026-09-08",
+  "chapters": [
+    {
+      "id": "REACT-04",
+      "title": "Effect 与外部同步",
+      "question": "一轮外部工作什么时候开始，又由谁结束？",
+      "summary": "从监听、计时与快慢请求理解 Effect 的依赖、清理和提交资格。",
+      "outcomes": [
+        "区分展示计算、用户动作与外部同步",
+        "为每轮资源安排对应清理并拒绝旧结果",
+        "说明 Effect Event、布局与客户端执行的边界"
+      ],
+      "guide": "react-04-effects-external-sync-cleanup.md",
+      "anchor": "react-04",
+      "prerequisites": [
+        "react-03-state-model-derived-controlled.md#react-03"
+      ],
+      "concepts": [
+        {
+          "id": "effect-purpose",
+          "heading": "先判断是在计算展示还是连接外部系统"
+        },
+        {
+          "id": "effect-listener-owner",
+          "heading": "一次监听对应一份清理函数"
+        },
+        {
+          "id": "effect-round-lifecycle",
+          "heading": "依赖变化时先结束旧同步再开始新同步"
+        },
+        {
+          "id": "effect-dependencies",
+          "heading": "依赖数组说明读取关系不能充当运行次数开关"
+        },
+        {
+          "id": "effect-timer-policy",
+          "heading": "暂停计时需要保留状态并停止外部计时器"
+        },
+        {
+          "id": "effect-request-eligibility",
+          "heading": "请求能否取消和结果能否提交是两个问题"
+        },
+        {
+          "id": "effect-async-responsibility",
+          "heading": "异步工作的异常和收尾都需要主人"
+        },
+        {
+          "id": "effect-strict-restart",
+          "heading": "Strict Mode 帮你发现开始和结束不对称"
+        },
+        {
+          "id": "effect-event-latest",
+          "heading": "Effect Event 读取最新提示格式但不重启同步"
+        },
+        {
+          "id": "effect-layout-timing",
+          "heading": "布局读取需要单独说明与绘制的关系"
+        },
+        {
+          "id": "effect-resource-split",
+          "heading": "按同步对象划分职责再考虑复用"
+        },
+        {
+          "id": "effect-host-lifecycle",
+          "heading": "页面离开浏览器暂停与错误恢复各有边界"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "react-snapshot",
+          "reason": "每轮 Effect 和 cleanup 都保留对应渲染的值。"
+        },
+        {
+          "concept": "state-request-union",
+          "reason": "用清楚的状态分支表达等待、成功与失败。"
+        },
+        {
+          "concept": "vue-watch-invalidation",
+          "reason": "对照 Vue 每轮 watcher 的失效清理，理解共同责任。"
+        },
+        {
+          "concept": "hook-debounce-cleanup",
+          "reason": "继续把等待与请求的完整生命周期封装成 Hook。"
+        }
+      ]
+    },
+    {
+      "id": "VUE-05",
+      "title": "Vue 生命周期与恢复",
+      "question": "来源变化、暂时离开和最终卸载，各要结束什么？",
+      "summary": "用 DOM 观察、请求竞态、缓存面板和加载失败说明生命周期责任。",
+      "outcomes": [
+        "选择明确的 watch 来源并区分 DOM 更新阶段",
+        "在来源变化和卸载时释放本轮资源",
+        "让 KeepAlive 暂停工作并为异步组件提供恢复入口"
+      ],
+      "guide": "vue-05-lifecycle-effects-async-recovery.md",
+      "anchor": "vue-05",
+      "prerequisites": [
+        "vue-04-typed-components-slots-model-teleport.md#vue-04"
+      ],
+      "concepts": [
+        {
+          "id": "vue-lifecycle-stage",
+          "heading": "生命周期说明实例阶段不是所有变化的触发器"
+        },
+        {
+          "id": "vue-observer-dispose",
+          "heading": "DOM 观察器必须与组件一起释放"
+        },
+        {
+          "id": "vue-watch-sources",
+          "heading": "watch 和 watchEffect 对依赖的认识不同"
+        },
+        {
+          "id": "vue-watch-invalidation",
+          "heading": "清理属于每一轮工作必须尽早登记"
+        },
+        {
+          "id": "vue-request-eligibility",
+          "heading": "用快慢请求观察取消与失效的不同责任"
+        },
+        {
+          "id": "vue-watch-flush",
+          "heading": "DOM 更新前后可以通过一个小例子分清"
+        },
+        {
+          "id": "vue-deep-watch-history",
+          "heading": "深度观察不是自动保存旧快照"
+        },
+        {
+          "id": "vue-keepalive-pause",
+          "heading": "KeepAlive 保留实例时需要暂停仍在运行的工作"
+        },
+        {
+          "id": "vue-async-retry",
+          "heading": "异步组件加载失败要重新建立可恢复入口"
+        },
+        {
+          "id": "vue-suspense-errors",
+          "heading": "Suspense 协调等待错误边界负责恢复"
+        },
+        {
+          "id": "vue-effects-ssr",
+          "heading": "服务端执行和组件停用要写进使用约定"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "effect-round-lifecycle",
+          "reason": "对照 React 同步的开始和结束，避免把清理只理解为卸载。"
+        },
+        {
+          "concept": "vue-conditional-lifetime",
+          "reason": "先分清 DOM 保留与销毁，再理解缓存实例的停用。"
+        },
+        {
+          "concept": "composable-scoped-dispose",
+          "reason": "把组件中的清理延伸到显式管理的作用域。"
+        },
+        {
+          "concept": "state-request-union",
+          "reason": "刷新旧数据与真正失败需要由状态模型区分。"
+        }
+      ]
+    },
+    {
+      "id": "REACT-05",
+      "title": "Hook 规则与逻辑复用",
+      "question": "把代码抽成 Hook 后，调用者能否更清楚地理解行为？",
+      "summary": "比较独立状态与共享来源，完成可暂停工作、防抖搜索和外部快照。",
+      "outcomes": [
+        "解释普通 Hook 的调用位置与条件行为",
+        "定义输入、取消、错误和返回值的使用约定",
+        "区分复用逻辑、Context 依赖与共享外部状态"
+      ],
+      "guide": "react-05-hooks-rules-custom-hooks.md",
+      "anchor": "react-05",
+      "prerequisites": [
+        "react-04-effects-external-sync-cleanup.md#react-04"
+      ],
+      "concepts": [
+        {
+          "id": "hook-call-order",
+          "heading": "Hook 的调用位置让状态找到所属实例"
+        },
+        {
+          "id": "hook-independent-state",
+          "heading": "两次调用复用逻辑却各自拥有状态"
+        },
+        {
+          "id": "hook-conditional-work",
+          "heading": "条件控制工作是否开始而不是控制是否调用 Hook"
+        },
+        {
+          "id": "hook-public-interface",
+          "heading": "先说明输入输出再决定抽取多少代码"
+        },
+        {
+          "id": "hook-debounce-cleanup",
+          "heading": "防抖搜索要结束等待也要结束已开始的请求"
+        },
+        {
+          "id": "hook-request-identity",
+          "heading": "防抖减少启动次数却不能替代结果身份检查"
+        },
+        {
+          "id": "hook-input-stability",
+          "heading": "参数稳定性决定哪些变化会重新开始工作"
+        },
+        {
+          "id": "hook-external-snapshot",
+          "heading": "共享外部数据需要稳定快照和订阅入口"
+        },
+        {
+          "id": "hook-provider-contract",
+          "heading": "Context 依赖仍需说明提供者在哪里"
+        },
+        {
+          "id": "hook-reuse-choice",
+          "heading": "普通函数组件与 Hook 分别复用不同东西"
+        },
+        {
+          "id": "hook-visible-effects",
+          "heading": "好的封装让副作用更容易发现"
+        },
+        {
+          "id": "hook-behavior-review",
+          "heading": "用调用者能观察的变化检查复用结果"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "effect-dependencies",
+          "reason": "Hook 内部的依赖仍来自真实读取，抽取不会消除它。"
+        },
+        {
+          "concept": "composable-independent-state",
+          "reason": "对照 Vue 函数的实例范围，区分相似结果与不同机制。"
+        },
+        {
+          "concept": "component-input-shape",
+          "reason": "组件与 Hook 都应说明需要的输入，而不暴露任意修改。"
+        },
+        {
+          "concept": "state-owner-placement",
+          "reason": "共享数据先确定所有者，再选择具体复用工具。"
+        }
+      ]
+    },
+    {
+      "id": "VUE-06",
+      "title": "Composable 与依赖注入",
+      "question": "一份复用逻辑的状态、输入和资源到底属于谁？",
+      "summary": "通过值与 ref 对照、显式作用域和嵌套提供者设计清楚的复用入口。",
+      "outcomes": [
+        "设计可追踪输入与解构后仍响应的返回值",
+        "把资源释放连接到明确的作用域",
+        "用类型化注入限定共享范围并理解延后发布"
+      ],
+      "guide": "vue-06-composables-injection-reuse.md",
+      "anchor": "vue-06",
+      "prerequisites": [
+        "vue-05-lifecycle-effects-async-recovery.md#vue-05"
+      ],
+      "concepts": [
+        {
+          "id": "composable-independent-state",
+          "heading": "每次调用先决定创建独立状态还是读取共享状态"
+        },
+        {
+          "id": "composable-ref-return",
+          "heading": "返回普通对象中的 ref 可以保留解构后的响应性"
+        },
+        {
+          "id": "composable-input-source",
+          "heading": "值 ref 和 getter 表达三种不同输入关系"
+        },
+        {
+          "id": "composable-call-context",
+          "heading": "组合式函数要说明自己依赖哪种调用环境"
+        },
+        {
+          "id": "composable-scoped-dispose",
+          "heading": "作用域停止时要真正释放外部资源"
+        },
+        {
+          "id": "composable-async-owner",
+          "heading": "异步封装要保留每一轮的身份和错误责任"
+        },
+        {
+          "id": "composable-provider-scope",
+          "heading": "provide 和 inject 把共享范围限定在一棵子树"
+        },
+        {
+          "id": "composable-injection-key",
+          "heading": "InjectionKey 统一类型身份缺失依赖仍要显式处理"
+        },
+        {
+          "id": "composable-shared-resource",
+          "heading": "共享资源的释放不能由任意一个消费者决定"
+        },
+        {
+          "id": "composable-custom-ref",
+          "heading": "customRef 适合确实需要延后发布的值"
+        },
+        {
+          "id": "composable-ssr-layers",
+          "heading": "SSR 与状态分层决定复用的外部边界"
+        },
+        {
+          "id": "composable-review",
+          "heading": "抽取以后调用处应该更容易理解"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "vue-watch-sources",
+          "reason": "toValue 的读取位置决定输入是否进入依赖追踪。"
+        },
+        {
+          "concept": "hook-independent-state",
+          "reason": "React Hook 与 Vue Composable 都需要明确独立或共享。"
+        },
+        {
+          "concept": "vue-component-events",
+          "reason": "用命名动作表达意图，把状态修改保留在拥有者处。"
+        },
+        {
+          "concept": "vue-component-model",
+          "reason": "双向编辑是明确的接口选择，不是偶然暴露内部 ref。"
+        }
+      ]
+    }
+  ]
+}

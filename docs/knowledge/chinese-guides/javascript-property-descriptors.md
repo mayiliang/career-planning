@@ -29,6 +29,7 @@ console.log(Object.getOwnPropertyDescriptor(target, 'id'));
 通过普通赋值创建属性时，`writable`、`enumerable`、`configurable` 通常都为 `true`；通过 `Object.defineProperty` 新建属性却会把没有写出的布尔字段默认为 `false`。因此下面的属性默认不可写、不可枚举、不可配置，这个差异很容易被忽略：
 
 ```js
+const target = {};
 Object.defineProperty(target, 'hidden', { value: 1 });
 console.log(Object.keys(target).includes('hidden')); // false
 ```

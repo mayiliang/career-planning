@@ -12,9 +12,33 @@
     "debug-01-systematic-debugging-evidence-causality.md"
   ],
   "terms": {
-    "content-addressed storage": {
-      "file": "30f8e09df0c65f20.wav",
-      "text": "content-addressed storage"
+    "atomic commit": {
+      "file": "db37fdc237cca5db.wav",
+      "text": "atomic commit"
+    },
+    "bisect": {
+      "file": "d665f555dcf78d97.wav",
+      "text": "bisect"
+    },
+    "blob": {
+      "file": "fa2c8cc4f28176bb.wav",
+      "text": "blob"
+    },
+    "branch": {
+      "file": "f38c764c8aa00b65.wav",
+      "text": "branch"
+    },
+    "call stack": {
+      "file": "895930fc6596c35f.wav",
+      "text": "call stack"
+    },
+    "cherry-pick": {
+      "file": "97e08b183df44230.wav",
+      "text": "cherry-pick"
+    },
+    "commit": {
+      "file": "9505cacb7c710ed1.wav",
+      "text": "commit"
     },
     "correlation id": {
       "file": "961f8d94c2a23df3.wav",
@@ -28,6 +52,10 @@
       "file": "cb5d6bd5b9e79220.wav",
       "text": "fast-forward"
     },
+    "git lfs": {
+      "file": "0ca6609625a3b9cf.wav",
+      "text": "Git LFS"
+    },
     "heisenbug": {
       "file": "897efe1f4ac56a1d.wav",
       "text": "Heisenbug"
@@ -36,13 +64,25 @@
       "file": "1bc04b5291c26a46.wav",
       "text": "index"
     },
+    "logpoint": {
+      "file": "6a370c9e039956fe.wav",
+      "text": "logpoint"
+    },
     "merge base": {
       "file": "f1a9367174869fe5.wav",
       "text": "merge base"
     },
-    "minimal reproducible example": {
-      "file": "85271507fd5ed25c.wav",
-      "text": "minimal reproducible example"
+    "nullish coalescing": {
+      "file": "3a4bcc3ae70d2795.wav",
+      "text": "nullish coalescing"
+    },
+    "powershell": {
+      "file": "86f51b17077aee2d.wav",
+      "text": "PowerShell"
+    },
+    "pull": {
+      "file": "c5f5571c2c9c4374.wav",
+      "text": "pull"
     },
     "pull request": {
       "file": "763fae517f52dd0c.wav",
@@ -51,6 +91,10 @@
     "rebase": {
       "file": "a66eb0bb9047722f.wav",
       "text": "rebase"
+    },
+    "reference": {
+      "file": "52367a6622b19f08.wav",
+      "text": "reference"
     },
     "reflog": {
       "file": "ee76b4b3c543947a.wav",
@@ -64,13 +108,45 @@
       "file": "d714791e3d876524.wav",
       "text": "rerere"
     },
+    "retaining path": {
+      "file": "d892839c3994c97c.wav",
+      "text": "retaining path"
+    },
     "semantic conflict": {
       "file": "720ea567935e1bde.wav",
       "text": "semantic conflict"
     },
     "source map": {
       "file": "a53cb7b2cd9ae3de.wav",
-      "text": "source map"
+      "text": "Source Map"
+    },
+    "staging area": {
+      "file": "d3c236f6b452248b.wav",
+      "text": "staging area"
+    },
+    "submodule": {
+      "file": "d8566c566c6f671a.wav",
+      "text": "submodule"
+    },
+    "tag": {
+      "file": "2a1073a6e67f0e5f.wav",
+      "text": "tag"
+    },
+    "three-way merge": {
+      "file": "f259b9407a28de53.wav",
+      "text": "three-way merge"
+    },
+    "tree": {
+      "file": "dc9c5edb8b2d479e.wav",
+      "text": "tree"
+    },
+    "upstream": {
+      "file": "1581e27de87bffae.wav",
+      "text": "upstream"
+    },
+    "working tree": {
+      "file": "29c60dd2623b7fd9.wav",
+      "text": "working tree"
     },
     "worktree": {
       "file": "d63516bc98983230.wav",

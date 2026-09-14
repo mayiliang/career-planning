@@ -12,6 +12,7 @@
  * - 岗位详情路由
  */
 import { createRouter, createWebHistory } from 'vue-router';
+import { waitForMaterialReady } from '@/utils/material-navigation';
 
 // 路由表定义
 const routes = [
@@ -99,13 +100,35 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  async scrollBehavior(to, from, savedPosition) {
+    if (to.name === 'KnowledgeMaterial') {
+      await waitForMaterialReady(to.path);
+      if (savedPosition) return savedPosition;
+      if (to.hash) {
+        let id: string;
+        try { id = decodeURIComponent(to.hash.slice(1)); } catch { return { top: 0 }; }
+        const element = document.getElementById(id);
+        if (element) {
+          element.setAttribute('tabindex', '-1');
+          element.focus({ preventScroll: true });
+          return { el: element, top: 96, behavior: 'instant' };
+        }
+      }
+      return { left: 0, top: 0 };
+    }
     if (savedPosition) return savedPosition;
-    if (to.name === 'KnowledgeMaterial' && to.hash) return false;
     if (to.hash) return { el: to.hash, behavior: 'smooth' };
     if (to.path === from.path) return false;
     return { left: 0, top: 0 };
   },
+});
+
+router.beforeEach(async (to) => {
+  if (to.name !== 'KnowledgeMaterial') return;
+  // 资料目录随阅读路线加载，避免每增加一批讲义都扩大应用首屏。
+  const { canonicalMaterialHref } = await import('@/content/learning-material-catalog');
+  const canonical = canonicalMaterialHref(String(to.params.guide), String(to.params.anchor));
+  if (canonical) return { path: canonical.split('#')[0], hash: `#${decodeURIComponent(canonical.split('#')[1]!)}`, query: to.query, replace: true };
 });
 
 // 路由守卫：更新页面标题

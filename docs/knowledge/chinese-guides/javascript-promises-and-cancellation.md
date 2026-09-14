@@ -6,27 +6,29 @@
 
 - 直接前置：[PREJS-04 定时器、事件与稍后执行的回调](../chinese-guides/javascript-scheduled-callbacks.md#prejs-04)。函数与变量基础由它继续向下链接。
 
-**异步结果对象（Promise）**表示一个现在可能还没有、以后会成功或失败的结果。它不是底层操作本身，也不是操作的控制器：拿到 Promise 只说明可以观察结果，不代表能暂停、重试或取消产生结果的工作。`await` 会暂停当前异步函数，等 Promise 有结果后再继续这个函数；它不会阻塞整个浏览器线程。
+**Promise** 用来表示一项工作的结果：它可能尚未完成，也可能已经成功或失败。本文保留英文名称。拿到 Promise，意味着可以等待结果，并不意味着能够暂停、重试或取消产生结果的工作。`await` 会暂停当前异步函数，等结果可用后继续；它不会阻塞整个浏览器线程。
 
 ```js
-async function loadUser(id) {
-  const response = await fetch(`/users/${id}`);
-  return response.json();
+async function showUser() {
+  const user = await Promise.resolve({ name: '小林' });
+  console.log(user.name); // 小林
 }
+showUser();
 ```
 
 Promise 只有 pending、fulfilled、rejected 三种状态，没有内置的“cancelled”状态。许多浏览器 API 使用**取消信号（cancellation signal）**协作取消，并通过 **AbortSignal** 表达它：调用者触发信号，被调用者必须实际读取这个信号，工作才可能停止。
 
 ```js
-const controller = new AbortController();
-const pending = fetch('/users/1', { signal: controller.signal });
-controller.abort();
-
-try {
-  await pending;
-} catch (error) {
-  if (error.name !== 'AbortError') throw error;
+async function inspectCancellation() {
+  const controller = new AbortController();
+  controller.abort();
+  try {
+    controller.signal.throwIfAborted();
+  } catch (error) {
+    console.log(error.name); // AbortError
+  }
 }
+inspectCancellation();
 ```
 
 取消信号不是资源清理的替代品。收到取消后，代码仍可能需要关闭游标、移除监听器或让生成器执行 `finally`。同样，消费者停止读取一个异步序列，并不会神奇地终止所有已发出的网络请求；生产者和消费者必须约定如何传递取消。
@@ -34,11 +36,18 @@ try {
 异步操作通常在调用 `fetch` 之类的 API 时就已经开始，不会等到 `.then` 或 `await` 才启动：
 
 ```js
-const first = fetch('/first');
-const second = fetch('/second');
-
-// 两个请求已经发起；下面只是等待它们的结果。
-const responses = await Promise.all([first, second]);
+async function inspectStart() {
+  function load(name) {
+    console.log(`开始${name}`);
+    return Promise.resolve(name);
+  }
+  const first = load('第一项');
+  const second = load('第二项');
+  const results = await Promise.all([first, second]);
+  console.log(results.join(','));
+}
+inspectStart();
+// 依次输出：开始第一项、开始第二项、第一项,第二项
 ```
 
 `Promise.all` 只组合结果：其中一个 Promise 拒绝时，它返回的 Promise 会尽快拒绝，但其他已启动请求不会因此自动取消。若失败后必须停止同组工作，需要把同一个取消信号传给这些操作，并明确决定何时触发。

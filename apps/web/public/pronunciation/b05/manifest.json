@@ -24,10 +24,6 @@
       "file": "40257da5fcb476ec.wav",
       "text": "controlled component"
     },
-    "controlled pattern": {
-      "file": "fc6a22a1de92a4b7.wav",
-      "text": "controlled pattern"
-    },
     "derived state": {
       "file": "49265ea9e8548426.wav",
       "text": "derived state"
@@ -60,6 +56,10 @@
       "file": "8253e211257870a8.wav",
       "text": "property input"
     },
+    "props": {
+      "file": "b264807709578e5c.wav",
+      "text": "props"
+    },
     "render prop": {
       "file": "e1960f4c29bd7639.wav",
       "text": "render prop"
@@ -71,6 +71,10 @@
     "slot": {
       "file": "6558838331b742a6.wav",
       "text": "slot"
+    },
+    "source state": {
+      "file": "e0651d81f79e011b.wav",
+      "text": "source state"
     },
     "state normalization": {
       "file": "0b57d38660a56495.wav",

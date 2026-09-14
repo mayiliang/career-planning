@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { clearMarkdownRenderCache, extractMarkdownHeadings, getMarkdownRenderCacheSize, renderMarkdown } from './markdown';
+import { canonicalMaterialHref, learningMaterialCatalog } from '@/content/learning-material-catalog';
 
 describe('学习资料 Markdown 渲染', () => {
+  it('代码内的注释和嵌套围栏不占用正文目录与标题锚点', () => {
+    const source = ['## 起点', '````powershell', '# 代码注释', '```', '## 仍在代码中', '````', '~~~text', '## 示例标题', '~~~', '### 后文'].join('\n');
+    expect(extractMarkdownHeadings(source).map(({ title }) => title)).toEqual(['起点', '后文']);
+    const html = renderMarkdown(source);
+    expect(html).toContain('<h3 id="后文">后文</h3>');
+    expect(html).toContain('data-language="powershell"');
+    expect(html).not.toContain('id="代码注释"');
+  });
+
   it('把 http/https 资料渲染为新窗口可点击链接', () => {
     const html = renderMarkdown('- [MDN 闭包](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Closures)');
     expect(html).toContain('href="https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Closures"');
@@ -37,6 +47,28 @@ describe('学习资料 Markdown 渲染', () => {
     expect(html).toContain('class="katex-display"');
     expect(html).toContain('class="mermaid-diagram"');
     expect(html).toContain('class="footnotes-sep"');
+  });
+
+  it('把 B01 概念引用定位到完整讲义，保留主入口作为阅读记录键', () => {
+    for (const chapter of learningMaterialCatalog.chapters) {
+      for (const concept of chapter.concepts) {
+        const anchor = extractMarkdownHeadings(`### ${concept.heading}`)[0]!.id;
+        const href = canonicalMaterialHref(chapter.guide, anchor);
+        expect(href).toBe(`/knowledge/materials/${chapter.guide}/${chapter.anchor}#${encodeURIComponent(anchor)}`);
+        const html = renderMarkdown(`[相关知识](../chinese-guides/${chapter.guide}#${anchor})`);
+        expect(html).toContain(`href="${href}"`);
+        expect(html).not.toContain('target="_blank"');
+      }
+    }
+    expect(canonicalMaterialHref(learningMaterialCatalog.chapters[0]!.guide, '不存在的小节')).toBeNull();
+  });
+
+  it('示例维护标识不进入代码正文或语言标签，复制的仍是可运行代码', () => {
+    const html = renderMarkdown('```js example=js01-test\nconsole.log(2); // => 2\n```');
+    expect(html).toContain('data-language="js"');
+    expect(html).toContain('class="hljs"');
+    expect(html).not.toContain('example=');
+    expect(html).toContain('// =&gt; 2');
   });
 
   it('为长讲义生成稳定且去重的标题锚点', () => {

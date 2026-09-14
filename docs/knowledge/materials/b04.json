@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "batch": "B04",
+  "title": "从类型关系走到页面与组件",
+  "reviewedOn": "2026-09-08",
+  "chapters": [
+    {
+      "id": "TS-03",
+      "title": "泛型与键值关系",
+      "question": "选哪个字段，为什么就能得到对应的值类型？",
+      "summary": "从数组取值走到资料表格，保留输入、字段、格式化器之间的关系。",
+      "outcomes": [
+        "沿调用过程读懂泛型参数和最小约束",
+        "用 keyof 与索引访问关联字段和值",
+        "区分类型推断、外部字段校验与可维护的列设计"
+      ],
+      "connections": [
+        {
+          "concept": "structural-typing",
+          "reason": "类型视图可能比实际对象窄，解释为什么外部字段仍要校验。"
+        },
+        {
+          "concept": "type-guard-contract",
+          "reason": "允许列表的守卫要同时兑现真假分支的承诺。"
+        },
+        {
+          "concept": "live-binding",
+          "reason": "列构造器通过闭包保存实际字段与格式化函数。"
+        },
+        {
+          "concept": "semantic-table",
+          "reason": "类型化列最终还需要生成有明确行列表头的 HTML。"
+        }
+      ],
+      "guide": "ts-03-generics-constraints-keyof-indexed-access.md",
+      "anchor": "ts-03",
+      "prerequisites": [
+        "ts-02-unions-narrowing-never-exhaustiveness.md#ts-02"
+      ],
+      "concepts": [
+        {
+          "id": "generic-first",
+          "heading": "从取出数组第一项开始保留信息"
+        },
+        {
+          "id": "generic-mapping",
+          "heading": "两个类型参数可以描述一次转换"
+        },
+        {
+          "id": "generic-constraint",
+          "heading": "约束只写函数真正需要的能力"
+        },
+        {
+          "id": "generic-construction",
+          "heading": "满足约束不代表能制造任意具体类型"
+        },
+        {
+          "id": "keyof-keys",
+          "heading": "keyof 得到类型中可见的字段名"
+        },
+        {
+          "id": "indexed-value",
+          "heading": "索引访问把字段名连接到字段值"
+        },
+        {
+          "id": "optional-index",
+          "heading": "可选字段会把缺失传到读取结果"
+        },
+        {
+          "id": "typeof-config",
+          "heading": "typeof 可以让配置成为类型的来源"
+        },
+        {
+          "id": "generic-inference",
+          "heading": "推断变宽时先检查变量的声明位置"
+        },
+        {
+          "id": "public-key-validation",
+          "heading": "外部字段需要允许列表而不是泛型断言"
+        },
+        {
+          "id": "typed-column",
+          "heading": "表格列要让格式化函数收到正确的值"
+        },
+        {
+          "id": "column-builder",
+          "heading": "在创建列时保存关系让渲染保持简单"
+        },
+        {
+          "id": "generic-position",
+          "heading": "类型参数的位置决定何时固定关系"
+        },
+        {
+          "id": "generic-reading",
+          "heading": "把泛型翻译成一句普通中文"
+        }
+      ]
+    },
+    {
+      "id": "WEB-01",
+      "title": "HTML 语义与表单",
+      "question": "页面怎样让鼠标、键盘与辅助技术理解同一件事？",
+      "summary": "从完整表单与设置弹窗理解名称、提交、错误反馈和焦点。",
+      "outcomes": [
+        "选用符合操作含义的原生元素",
+        "解释标签、字段名、提交数据与错误关联",
+        "让弹窗的草稿、取消和焦点形成完整流程"
+      ],
+      "connections": [
+        {
+          "concept": "column-builder",
+          "reason": "使用类型化配置生成表格时，继续保留清楚的行列语义。"
+        },
+        {
+          "concept": "react-render-commit",
+          "reason": "框架提交的结果仍是这些真实 DOM 元素。"
+        },
+        {
+          "concept": "sfc-compilation",
+          "reason": "Vue 模板经编译后同样需要落实到可用的 HTML。"
+        },
+        {
+          "concept": "react-identity",
+          "reason": "把表单草稿何时保留、何时重置落实到组件身份。"
+        }
+      ],
+      "guide": "web-01-html-semantics-forms-accessibility.md",
+      "anchor": "web-01",
+      "prerequisites": [],
+      "concepts": [
+        {
+          "id": "html-landmarks",
+          "heading": "先让页面结构能被说清楚"
+        },
+        {
+          "id": "native-controls",
+          "heading": "链接负责去哪里按钮负责做什么"
+        },
+        {
+          "id": "native-form",
+          "heading": "用一个完整表单看清标签与提交"
+        },
+        {
+          "id": "accessible-naming",
+          "heading": "名称描述与状态分别回答一个问题"
+        },
+        {
+          "id": "form-data",
+          "heading": "FormData 收集的是可提交的字段"
+        },
+        {
+          "id": "form-validation",
+          "heading": "先把原生校验用对再定制错误提示"
+        },
+        {
+          "id": "keyboard-focus",
+          "heading": "焦点表示键盘接下来会操作哪里"
+        },
+        {
+          "id": "dialog-draft",
+          "heading": "用原生 dialog 完成一次进出弹窗"
+        },
+        {
+          "id": "live-feedback",
+          "heading": "动态提示要出现也要适度"
+        },
+        {
+          "id": "semantic-table",
+          "heading": "数据表格先交代行列之间的关系"
+        },
+        {
+          "id": "framework-html",
+          "heading": "框架最终仍要生成可用的 HTML"
+        },
+        {
+          "id": "semantic-journey",
+          "heading": "用一条完整操作路径检查理解"
+        }
+      ]
+    },
+    {
+      "id": "REACT-01",
+      "title": "React 渲染与快照",
+      "question": "连续三次 setter，为什么会得到不同结果？",
+      "summary": "用计数、延迟发送和资料草稿解释状态快照、纯度与身份。",
+      "outcomes": [
+        "区分 render、commit 与浏览器绘制",
+        "沿快照和更新队列推导界面结果",
+        "用纯计算、派生值和稳定身份管理组件状态"
+      ],
+      "connections": [
+        {
+          "concept": "live-binding",
+          "reason": "每次组件调用产生新绑定，旧处理器仍引用自己的那一次调用。"
+        },
+        {
+          "concept": "immutable-update",
+          "reason": "状态快照不会深拷贝对象，更新时仍要保护共享数据。"
+        },
+        {
+          "concept": "vue-computed",
+          "reason": "对照两种框架怎样从同一份源状态派生筛选结果。"
+        },
+        {
+          "concept": "render-opportunity",
+          "reason": "DOM 提交与浏览器真正绘制存在不同的时机。"
+        }
+      ],
+      "guide": "react-01-render-purity-state-snapshot.md",
+      "anchor": "react-01",
+      "prerequisites": [
+        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03",
+        "web-01-html-semantics-forms-accessibility.md#web-01",
+        "js-06-es-modules-module-boundaries.md#js-06"
+      ],
+      "concepts": [
+        {
+          "id": "react-description",
+          "heading": "组件先返回一份界面描述"
+        },
+        {
+          "id": "react-render-commit",
+          "heading": "一次更新分成触发计算和提交"
+        },
+        {
+          "id": "react-update-queue",
+          "heading": "三次加一先看它们实际提交了什么"
+        },
+        {
+          "id": "react-snapshot",
+          "heading": "快照属于一次渲染而不是整个组件"
+        },
+        {
+          "id": "react-mixed-queue",
+          "heading": "替换值与更新函数可以按顺序混合"
+        },
+        {
+          "id": "react-batching",
+          "heading": "批处理不会把不同用户操作变成一次事务"
+        },
+        {
+          "id": "react-delayed-snapshot",
+          "heading": "延迟回调可以有意使用点击时的内容"
+        },
+        {
+          "id": "react-purity",
+          "heading": "纯渲染允许 React 重新计算"
+        },
+        {
+          "id": "react-strict-mode",
+          "heading": "Strict Mode 的额外调用不是额外点击"
+        },
+        {
+          "id": "react-identity",
+          "heading": "组件身份决定草稿保留还是重置"
+        },
+        {
+          "id": "react-derived-state",
+          "heading": "派生值直接计算可以少一份需要同步的状态"
+        },
+        {
+          "id": "react-concurrent-hydration",
+          "heading": "先保证计算正确再理解并发与 Hydration"
+        }
+      ]
+    },
+    {
+      "id": "VUE-01",
+      "title": "Vue 项目与 SFC",
+      "question": "浏览器不认识 .vue，页面是怎样出现的？",
+      "summary": "沿 HTML、入口和组件追踪页面，厘清开发、构建与配置的责任。",
+      "outcomes": [
+        "追踪 main.ts 到组件挂载的完整路径",
+        "区分模块生命周期与组件实例",
+        "正确理解别名、公开环境变量、资源与生产产物"
+      ],
+      "connections": [
+        {
+          "concept": "module-evaluation",
+          "reason": "入口文件导入组件，仍遵守 ES Modules 的解析与求值规则。"
+        },
+        {
+          "concept": "native-controls",
+          "reason": "SFC 的模板语法不会替代原生按钮和表单的交互语义。"
+        },
+        {
+          "concept": "vue-ref",
+          "reason": "理解每个实例创建的 ref，以及后续变化如何通知页面。"
+        },
+        {
+          "concept": "module-lifecycle",
+          "reason": "模块顶层资源与组件资源需要各自安排清理。"
+        }
+      ],
+      "guide": "vue-01-vite-sfc-project-structure.md",
+      "anchor": "vue-01",
+      "prerequisites": [
+        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03",
+        "web-01-html-semantics-forms-accessibility.md#web-01",
+        "js-06-es-modules-module-boundaries.md#js-06"
+      ],
+      "concepts": [
+        {
+          "id": "vue-scaffold",
+          "heading": "脚手架先帮你准备工具和入口"
+        },
+        {
+          "id": "vue-entry",
+          "heading": "沿三个文件找到页面入口"
+        },
+        {
+          "id": "sfc-compilation",
+          "heading": "SFC 把同一组件的代码放在一起"
+        },
+        {
+          "id": "vue-instance-scope",
+          "heading": "模块执行一次与每个实例执行不是一回事"
+        },
+        {
+          "id": "vite-dev-build",
+          "heading": "Vite 开发与生产使用同一份源码但处理方式不同"
+        },
+        {
+          "id": "feature-structure",
+          "heading": "目录随职责增长不必一开始就铺满层级"
+        },
+        {
+          "id": "alias-resolution",
+          "heading": "别名需要让构建工具和类型工具指向同一处"
+        },
+        {
+          "id": "public-env",
+          "heading": "环境变量进入客户端以后就是公开配置"
+        },
+        {
+          "id": "asset-path",
+          "heading": "图片进入依赖图还是保持固定名字"
+        },
+        {
+          "id": "dev-proxy",
+          "heading": "开发代理不会装进 dist"
+        },
+        {
+          "id": "hmr-state",
+          "heading": "HMR 保留开发状态但不承担持久化"
+        },
+        {
+          "id": "scoped-css",
+          "heading": "Scoped CSS 限制选择器不隔离整个世界"
+        },
+        {
+          "id": "toolchain-checks",
+          "heading": "类型检查和构建各自回答不同问题"
+        }
+      ]
+    },
+    {
+      "id": "VUE-02",
+      "title": "Vue 响应式与派生值",
+      "question": "数据已经改变，为什么计算结果或 DOM 还没更新？",
+      "summary": "通过代理、解构、筛选和浅层更新对照，找到依赖联系在哪里建立或断开。",
+      "outcomes": [
+        "区分 ref、代理、普通值与整体替换",
+        "用 computed 表达派生数据并保持计算纯粹",
+        "解释浅层响应式、外部实例与 nextTick 的边界"
+      ],
+      "connections": [
+        {
+          "concept": "proxy-identity",
+          "reason": "代理与原对象的身份不同，修改入口会影响依赖通知。"
+        },
+        {
+          "concept": "react-snapshot",
+          "reason": "对照 Vue 立即读取新值与 React 当前渲染快照的差别。"
+        },
+        {
+          "concept": "runtime-parser",
+          "reason": "响应式容器只负责跟踪变化，外部数据仍要先验证。"
+        },
+        {
+          "concept": "react-derived-state",
+          "reason": "筛选结果由源数据计算，不必用另一份状态重复保存。"
+        }
+      ],
+      "guide": "vue-02-ref-reactive-computed-boundaries.md",
+      "anchor": "vue-02",
+      "prerequisites": [
+        "vue-01-vite-sfc-project-structure.md#vue-01"
+      ],
+      "concepts": [
+        {
+          "id": "vue-ref",
+          "heading": "从一份会变化的资料数量认识 ref"
+        },
+        {
+          "id": "vue-proxy",
+          "heading": "reactive 让对象属性访问经过代理"
+        },
+        {
+          "id": "vue-raw-write",
+          "heading": "原对象变了不代表依赖收到通知"
+        },
+        {
+          "id": "vue-replacement",
+          "heading": "整体替换时要保留被订阅的入口"
+        },
+        {
+          "id": "vue-destructure",
+          "heading": "解构基本类型会取走当时的值"
+        },
+        {
+          "id": "vue-unwrapping",
+          "heading": "自动解包取决于 ref 放在哪里"
+        },
+        {
+          "id": "vue-computed",
+          "heading": "computed 让筛选结果跟着源状态变化"
+        },
+        {
+          "id": "vue-dynamic-dependency",
+          "heading": "依赖来自本次真正读取的分支"
+        },
+        {
+          "id": "vue-computed-purity",
+          "heading": "computed 的 getter 只计算结果"
+        },
+        {
+          "id": "vue-writable-computed",
+          "heading": "可写 computed 把编辑转换回源状态"
+        },
+        {
+          "id": "vue-shallow-ref",
+          "heading": "浅层响应式要求配套的更新方式"
+        },
+        {
+          "id": "vue-external-identity",
+          "heading": "外部实例和对象身份需要明确保留"
+        },
+        {
+          "id": "vue-readonly",
+          "heading": "readonly 约束一条写入路径而不是冻结数据"
+        },
+        {
+          "id": "vue-collections",
+          "heading": "数组和集合要看消费者实际读取什么"
+        },
+        {
+          "id": "vue-dom-timing",
+          "heading": "数据立即变化与 DOM 稍后更新可以同时成立"
+        },
+        {
+          "id": "vue-reactivity-diagnosis",
+          "heading": "从不更新的现象反推哪条联系断了"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "batch": "B03",
+  "title": "把异步、模块与类型的边界讲清楚",
+  "reviewedOn": "2026-09-08",
+  "chapters": [
+    {
+      "id": "JS-05",
+      "guide": "js-05-promise-errors-async-control-flow.md",
+      "title": "异步错误与控制流",
+      "question": "一次异步操作由谁等待、恢复和结束？",
+      "summary": "从提前结束的保存函数开始，理解错误边界、清理、取消、旧结果与有限重试。",
+      "outcomes": [
+        "找出没有被调用方等到的异步工作",
+        "区分两种 finally，并保留原始错误原因",
+        "为取消、状态提交和重试明确责任"
+      ],
+      "prerequisites": [
+        "js-04-async-promise-browser-event-loop.md#js-04"
+      ],
+      "connections": [
+        {
+          "concept": "promise-chain",
+          "reason": "从返回值怎样传递，理解错误应该由哪一层捕获。"
+        },
+        {
+          "concept": "module-dynamic-import",
+          "reason": "把错误边界用于可选模块加载与初始化失败。"
+        },
+        {
+          "concept": "runtime-parser",
+          "reason": "请求成功后，数据仍要经过字段检查才能进入业务代码。"
+        },
+        {
+          "concept": "typed-transition",
+          "reason": "把异步结果的提交规则落实到明确的页面状态转换。"
+        }
+      ],
+      "anchor": "js-05",
+      "concepts": [
+        {
+          "id": "floating-work",
+          "heading": "调用方等待的究竟是哪一件事"
+        },
+        {
+          "id": "return-await-boundary",
+          "heading": "return 和 return await 的区别出现在错误边界内"
+        },
+        {
+          "id": "rejection-boundary",
+          "heading": "catch 的位置决定它能处理哪些失败"
+        },
+        {
+          "id": "error-cause",
+          "heading": "错误要保留原因也要补上当前语境"
+        },
+        {
+          "id": "http-result",
+          "heading": "HTTP 失败和 Promise 拒绝需要分别判断"
+        },
+        {
+          "id": "finally-semantics",
+          "heading": "两种 finally 的返回值不要混在一起"
+        },
+        {
+          "id": "partial-results",
+          "heading": "一组工作需要先约定怎样算完成"
+        },
+        {
+          "id": "abortable-operation",
+          "heading": "可取消的等待需要处理开始前和结束后的情况"
+        },
+        {
+          "id": "stale-cleanup",
+          "heading": "新请求开始后旧请求的清理也可能过期"
+        },
+        {
+          "id": "safe-retry",
+          "heading": "重试前先问上一次可能已经做成了吗"
+        },
+        {
+          "id": "deadline-semantics",
+          "heading": "超时结束等待并不代表远端撤销"
+        }
+      ]
+    },
+    {
+      "id": "JS-06",
+      "guide": "js-06-es-modules-module-boundaries.md",
+      "title": "ES Modules 与模块边界",
+      "question": "模块怎样连接，又该把哪些能力留在内部？",
+      "summary": "用独立的多文件示例，追踪导入、实时绑定、循环初始化和可选功能的生命周期。",
+      "outcomes": [
+        "区分说明符解析、绑定连接和顶层求值",
+        "解释实时绑定与循环依赖的初始化错误",
+        "安排公开入口、按需加载和资源清理"
+      ],
+      "prerequisites": [
+        "js-05-promise-errors-async-control-flow.md#js-05"
+      ],
+      "connections": [
+        {
+          "concept": "live-binding",
+          "reason": "比较导入绑定、普通赋值与闭包中保存的变量。"
+        },
+        {
+          "concept": "rejection-boundary",
+          "reason": "动态导入失败也需要由有能力降级的调用层处理。"
+        },
+        {
+          "concept": "resource-lifetime",
+          "reason": "把模块副作用改为显式启动和关闭。"
+        },
+        {
+          "concept": "static-runtime-boundary",
+          "reason": "类型描述跨模块合同，运行时仍遵守模块求值规则。"
+        }
+      ],
+      "anchor": "js-06",
+      "concepts": [
+        {
+          "id": "module-exports",
+          "heading": "用两个文件建立公开入口"
+        },
+        {
+          "id": "module-resolution",
+          "heading": "先找到模块再连接导入导出"
+        },
+        {
+          "id": "module-evaluation",
+          "heading": "模块图不是把代码按文字顺序粘起来"
+        },
+        {
+          "id": "module-live-binding",
+          "heading": "实时绑定让读取跟着导出方变化"
+        },
+        {
+          "id": "module-cycle",
+          "heading": "循环依赖为什么会读到尚未初始化的变量"
+        },
+        {
+          "id": "module-direction",
+          "heading": "拆开循环先重新划分谁依赖谁"
+        },
+        {
+          "id": "module-dynamic-import",
+          "heading": "动态导入让可选功能有自己的失败入口"
+        },
+        {
+          "id": "module-top-level-await",
+          "heading": "顶层 await 把初始化等待传给依赖者"
+        },
+        {
+          "id": "module-lifecycle",
+          "heading": "导入时发生的副作用需要有人负责结束"
+        },
+        {
+          "id": "module-public-api",
+          "heading": "公共导出应该小于内部实现"
+        },
+        {
+          "id": "module-hosts",
+          "heading": "浏览器和 Node 共享语法但采用不同解析规则"
+        }
+      ]
+    },
+    {
+      "id": "TS-01",
+      "guide": "ts-01-type-system-structural-strict-mode.md",
+      "title": "类型系统与严格检查",
+      "question": "编译器知道的类型，与运行时的值是什么关系？",
+      "summary": "通过推断、结构兼容、空值和断言的对照，建立类型检查与运行时校验的分工。",
+      "outcomes": [
+        "判断类型注解、推断、satisfies 与断言各自的作用",
+        "理解额外属性、可选字段和索引缺失的边界",
+        "让未知输入经过检查后再进入业务代码"
+      ],
+      "prerequisites": [
+        "js-03-types-equality-copy-immutability.md#js-03"
+      ],
+      "connections": [
+        {
+          "concept": "object-identity",
+          "reason": "赋给较窄类型不会复制对象，也不会删除额外字段。"
+        },
+        {
+          "concept": "discriminated-state",
+          "reason": "把精确字段关系进一步用于互斥的页面状态。"
+        },
+        {
+          "concept": "type-guard-contract",
+          "reason": "将反复出现的检查封装起来，同时明确守卫的承诺。"
+        },
+        {
+          "concept": "module-public-api",
+          "reason": "在公开模块入口写清数据与函数的类型要求。"
+        }
+      ],
+      "anchor": "ts-01",
+      "concepts": [
+        {
+          "id": "static-runtime-boundary",
+          "heading": "类型注解先帮助发现不合适的调用"
+        },
+        {
+          "id": "type-inference",
+          "heading": "明确边界其余信息让编译器推断"
+        },
+        {
+          "id": "literal-widening",
+          "heading": "字面量保留多少取决于是否可能改写"
+        },
+        {
+          "id": "satisfies-contract",
+          "heading": "satisfies 检查要求同时保留具体信息"
+        },
+        {
+          "id": "structural-typing",
+          "heading": "结构化类型比较需要的成员"
+        },
+        {
+          "id": "excess-properties",
+          "heading": "额外属性检查是在提醒字面量可能写错了"
+        },
+        {
+          "id": "unknown-vs-any",
+          "heading": "any 和 unknown 代表两种完全不同的态度"
+        },
+        {
+          "id": "optional-contract",
+          "heading": "缺少属性和属性值为 null 是不同的信息"
+        },
+        {
+          "id": "indexed-absence",
+          "heading": "索引访问要承认这一项可能不存在"
+        },
+        {
+          "id": "readonly-view",
+          "heading": "readonly 限制当前写法不负责冻结对象"
+        },
+        {
+          "id": "typescript-strict",
+          "heading": "严格模式是一组编译检查"
+        },
+        {
+          "id": "type-assertion",
+          "heading": "类型断言改变看法不改变值"
+        },
+        {
+          "id": "runtime-parser",
+          "heading": "外部数据经过检查后再进入业务代码"
+        }
+      ]
+    },
+    {
+      "id": "TS-02",
+      "guide": "ts-02-unions-narrowing-never-exhaustiveness.md",
+      "title": "联合类型与状态建模",
+      "question": "怎样逐步排除可能性，并保证每种状态都被处理？",
+      "summary": "从合法的零和空字符串开始，用守卫、穷尽分支与请求状态机连接类型和实际行为。",
+      "outcomes": [
+        "说明每一种判断排除了什么可能性",
+        "建立判别联合并检查守卫的真假两侧",
+        "用 never 发现遗漏，用版本编号拒绝过期更新"
+      ],
+      "prerequisites": [
+        "ts-01-type-system-structural-strict-mode.md#ts-01"
+      ],
+      "connections": [
+        {
+          "concept": "runtime-parser",
+          "reason": "外部未知事件先解析，再交给内部联合处理。"
+        },
+        {
+          "concept": "stale-cleanup",
+          "reason": "静态状态正确，也要防止旧请求修改当前状态。"
+        },
+        {
+          "concept": "live-binding",
+          "reason": "异步回调读取可变属性时，区分当前绑定和保存的快照。"
+        },
+        {
+          "concept": "equality",
+          "reason": "类型收窄沿用 JavaScript 的相等语义。"
+        }
+      ],
+      "anchor": "ts-02",
+      "concepts": [
+        {
+          "id": "union-narrowing",
+          "heading": "联合列出可能性使用前先排除不适用的情况"
+        },
+        {
+          "id": "intersection-constraints",
+          "heading": "交叉要求同时满足不是按顺序覆盖字段"
+        },
+        {
+          "id": "truthiness-boundary",
+          "heading": "真假判断会顺便排除合法的零和空字符串"
+        },
+        {
+          "id": "runtime-type-guards",
+          "heading": "typeof in 和 instanceof 各自只证明一部分"
+        },
+        {
+          "id": "equality-narrowing",
+          "heading": "相等比较也能帮助缩小可能性"
+        },
+        {
+          "id": "discriminated-state",
+          "heading": "判别联合把一个状态和它需要的数据放在一起"
+        },
+        {
+          "id": "type-guard-contract",
+          "heading": "类型守卫的承诺需要实现来兑现"
+        },
+        {
+          "id": "assertion-function",
+          "heading": "断言函数在检查失败时中断继续执行"
+        },
+        {
+          "id": "narrowing-lifetime",
+          "heading": "等待期间可变对象可能已经变化"
+        },
+        {
+          "id": "never-type",
+          "heading": "never 表示已经没有合法候选"
+        },
+        {
+          "id": "exhaustive-union",
+          "heading": "用穷尽检查让新增状态提醒所有处理者"
+        },
+        {
+          "id": "open-protocol",
+          "heading": "外部未知状态先在入口处理"
+        },
+        {
+          "id": "typed-transition",
+          "heading": "类型描述状态版本判断决定谁能更新状态"
+        },
+        {
+          "id": "precise-filtering",
+          "heading": "过滤时精确排除不需要的值"
+        }
+      ]
+    }
+  ]
+}

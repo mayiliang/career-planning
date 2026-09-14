@@ -2,157 +2,334 @@
 
 ## REACT-10 React 路由、数据路由与框架模式
 
-路由不只是把 URL 映射到组件。完整路由系统负责历史记录、嵌套布局、参数解析、数据加载、提交、pending/error、取消、代码分割、服务端渲染与深链部署。React Router 提供不同控制层级；选择模式前应先决定应用需要哪些运行时与部署能力。
+点击链接能打开详情，不代表路由已经做好。把地址发给别人能否直接进入？修改标题以后，列表会不会还是旧名字？在输入草稿时点返回，应该保留、提醒还是丢弃？这些行为共同决定页面是否像一个完整应用。
+
+本篇先把 URL 和布局连接起来，再用完整 Data Router 页面演示读取、提交、错误与重新验证。最后说明 Framework Mode 增加哪些构建和运行责任，避免把客户端路由和服务端能力混为一谈。
 
 ### 学习前先确认
 
-- 直接前置：[REACT-08 错误边界、异步 UI 与可恢复体验](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#react-08)。它会递归包含跨组件状态、Effect、Promise 与 Web 基础。
+- 直接前置：[REACT-08 错误边界、异步 UI 与可恢复体验](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#react-08)。路由层也需要决定等待和失败替换哪一块区域。
 
-本讲以截至 2026-08-30 官方文档与 8.3.1 changelog 为版本核验基线；稳定路由原理是学习重点，实施时仍须按锁文件重新核对。
+2026-09-09 核对的官方文档版本为 React Router 8.3.1。以下例子使用 React 19、TypeScript 与 react-router 8.3.1，导入入口采用 react-router 及 react-router/dom；不是项目现有 Vue Router 的升级操作。每组放入独立的 React + Vite 页面，从站点根路径打开。
 
-### 一、URL 是可恢复的公共状态
+代码中的资料保存在浏览器模块内存里，刷新会恢复初始数据。loader/action 在本例都运行于浏览器，用于学习路由协议；它们不是可信后端，也不具有持久化或授权能力。
 
-父子页面共享布局形成**嵌套路由（nested route）**，刷新或分享后仍能直接进入的地址称为**深层链接（deep link）**。在渲染前读取数据的是**路由加载器（route loader）**，处理写入的是**路由动作（route action）**，写入后重新取得相关数据称为**重新验证（revalidation）**；围绕这些协议组织的路由器属于**数据路由器（data router）**。
+### URL 保存能分享和返回的页面状态
 
-路径、查询、hash 和 history entry 共同描述用户位置。可分享、可刷新、支持前进后退的筛选/选中通常应进入 URL，而不是只放组件 state。
+例如 `/lessons/a?tab=notes` 同时说明资料身份和当前标签。别人打开这个地址，应该能得到相同的位置；浏览器前进后退，也应按对应历史恢复。
 
-```text
-/projects/p1/tasks/t42?tab=activity
-```
+| 位置 | 常见含义 | 读取时要注意什么 |
+| --- | --- | --- |
+| pathname | 页面或资源身份 | 参数是否有效、资源是否存在 |
+| search params | 页码、筛选、标签 | 枚举和数字需要解析 |
+| hash | 文档内位置 | 目标是否存在、如何滚动 |
+| 当前组件状态 | 还没提交的编辑过程 | 不一定需要分享或进入历史 |
 
-路由读取仍是不可信输入。`projectId`、`taskId`、页码和枚举要运行时校验；无效值进入 404、规范化重定向或默认状态，不能用 TypeScript 断言。
+URL 里的值仍是外部输入。类型写了 tab: 'intro' | 'notes'，也不会阻止人在地址栏输入别的字符串。应决定使用默认值、规范化地址还是显示错误，而不是直接断言成想要的类型。
 
-### 二、路由树同时表达布局与错误域
+### 三种模式增加的是配套能力与约定
 
-嵌套路由让父布局通过 outlet 渲染子路由。父层可以拥有导航、面包屑和共同数据；子层拥有详情与局部错误。路由结构应跟用户任务/URL 层级一致，不只是照文件夹。
+| 模式 | 主要入口 | 额外负责什么 |
+| --- | --- | --- |
+| Declarative | BrowserRouter、Routes | URL 匹配、链接和历史；数据由应用另行安排 |
+| Data | createBrowserRouter、RouterProvider | loader、action、fetcher、导航等待与路由错误 |
+| Framework | React Router 的 Vite 插件与 route modules | 类型生成、构建分块，以及 SPA、SSR、预渲染等运行方式 |
 
-同一个父 route 下，切换子 route 是否保留父组件 state 取决于树位置和 key。离开父 route 通常卸载其子树。需要跨页面保留的草稿应明确放 URL、外部 store 或持久层。
+模式不是成熟度排名。Framework Mode 也能构建 SPA，并非只有需要 SSR 才有价值；Data Mode 也不会因为拥有 loader 就自动多出一台服务器。选择时看谁负责数据、构建和部署，以及团队想保留多少控制权。
 
-### 三、Declarative、Data 与 Framework 模式代表不同控制权
+### 嵌套路由让布局保留而内容切换
 
-Declarative 模式以 `<Routes>`/`<Route>` 管客户端匹配，数据通常由组件自己获取。Data 模式使用数据 router，提供 loader、action、pending、revalidation 和错误。Framework 模式再加入文件约定、服务端渲染、预渲染、类型生成和构建集成。
+先运行一个 Declarative 示例，整段放在 `src/App.tsx`：
 
-模式不是能力高低排名。小型纯客户端嵌入可用 Declarative；需要路由级数据/提交适合 Data；需要 SSR、文件路由和全栈部署才选 Framework。升级模式会改变构建、服务器和数据责任，应有迁移/回退计划。
-
-### 四、Loader 在进入路由前取得数据
-
-例如一个订单详情路由先解析 `orderId`，再由 loader 取得订单；参数非法时直接返回路由错误，未授权时由服务端拒绝，而不是先挂载页面再让多个组件分别请求。
-
-```ts
-export async function loader({ params, request }: LoaderArgs) {
-  const taskId = parseTaskId(params.taskId);
-  return loadTask(taskId, request.signal);
+```tsx example=react10-declarative runtime=project file=src/App.tsx
+import { useState } from 'react';
+import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router';
+const titles: Record<string, string> = { a: '组件协作', b: '状态分层' };
+function Layout() {
+  const [note, setNote] = useState('');
+  return <main>
+    <nav aria-label="资料导航"><NavLink to="/" end>目录</NavLink>{' '}<NavLink to="/lessons/a">资料 A</NavLink>{' '}<NavLink to="/lessons/b">资料 B</NavLink></nav>
+    <label>布局里的临时笔记 <input value={note} onChange={e => setNote(e.target.value)} /></label>
+    <Outlet />
+  </main>;
+}
+function Lesson() {
+  const { lessonId } = useParams();
+  const [search, setSearch] = useSearchParams();
+  const title = lessonId ? titles[lessonId] : undefined;
+  const tab = search.get('tab') === 'notes' ? 'notes' : 'intro';
+  function selectTab(next: 'intro' | 'notes') {
+    const value = new URLSearchParams(search);
+    if (next === 'intro') value.delete('tab'); else value.set('tab', next);
+    setSearch(value);
+  }
+  if (!title) return <section><h1>资料不存在</h1><Link to="/">返回目录</Link></section>;
+  return <section>
+    <h1>{title}</h1>
+    <div aria-label="资料标签"><button aria-pressed={tab === 'intro'} onClick={() => selectTab('intro')}>简介</button><button aria-pressed={tab === 'notes'} onClick={() => selectTab('notes')}>笔记</button></div>
+    <p>{tab === 'notes' ? '这里是当前资料的笔记区域' : '这里是当前资料的简介'}</p>
+  </section>;
+}
+export default function App() {
+  return <BrowserRouter><Routes>
+    <Route path="/" element={<Layout />}>
+      <Route index element={<h1>阅读目录</h1>} />
+      <Route path="lessons/:lessonId" element={<Lesson />} />
+      <Route path="*" element={<h1>找不到这个页面</h1>} />
+    </Route>
+  </Routes></BrowserRouter>;
 }
 ```
 
-loader 与 route 匹配关联，可在导航时并行加载。必须传递 request.signal 给底层请求，使新导航取消旧工作。参数先解析，HTTP/领域错误转成框架能路由到最近错误边界的结果。
+在布局笔记里输入内容，切换 A 与 B，笔记保留，因为父布局没有离开路由树。切到笔记标签，地址包含 tab=notes；返回上一条历史后恢复简介。刷新时 URL 标签仍在，组件内临时笔记则消失。
 
-Loader 不等于授权。即使 UI 路由守卫检查了角色，服务器 API/loader 的可信端仍必须对每次请求重新验证身份、资源和动作。
+**nested route** 通过 Outlet 把子内容放进父布局。无 path 的布局路由可以只提供结构，index 表示父路径的默认子页面，动态段接收参数，* 处理剩余匹配。它们不要求完全照搬源码文件夹。
 
-### 五、Action 表达路由级数据变更
+这个例子对未知 tab 显示简介，但不主动改地址；是否要规范化 URL，应作为明确策略。更新查询参数时先复制 URLSearchParams，保留与当前动作无关的参数。
 
-表单或 fetcher 提交进入 action。Action 解析输入、调用可信服务并返回验证错误、重定向或成功结果。成功后 router 可以重验证相关 loaders，使读取与写入形成闭环。
+### 地址变化与数据读取需要同一套身份
 
-写操作要处理防重与幂等。用户双击、网络重试或导航恢复可能重复提交；按钮 disabled 只改善 UI，服务器仍需幂等键/版本。验证错误返回字段级结构，程序错误进入边界。
+**loader** 让匹配到的路由取得读取结果。父子 loader 可以并行执行，不应假设“父 loader 的授权检查完成后，子 loader 才会开始”。真实可信端必须在相应请求路径中检查权限。
 
-### 六、Form 与 fetcher 有不同导航语义
+接下来是一组完整的 Data Mode 例子。创建 `src/lessonData.ts`，包括模拟数据、参数解析、取消和 action：
 
-路由 Form 提交通常参与导航/history；fetcher 可在不改变当前 URL 的情况下加载或提交，适合行内动作。选择取决于动作是否代表新位置、是否应进入历史、刷新后如何恢复。
+```ts example=react10-data-source runtime=project file=src/lessonData.ts
+import { data, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
+type Id = 'a' | 'b';
+export type Lesson = { id: Id; title: string; done: boolean; version: number };
+const lessons: Record<Id, Lesson> = {
+  a: { id: 'a', title: '组件协作', done: false, version: 1 },
+  b: { id: 'b', title: '状态分层', done: false, version: 1 },
+};
+function parseId(value: string | undefined): Id {
+  if (value === 'a' || value === 'b') return value;
+  throw new Response('资料不存在', { status: 404 });
+}
+function wait(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(signal.reason); return; }
+    const timer = window.setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, ms);
+    function abort() { window.clearTimeout(timer); reject(signal.reason); }
+    signal.addEventListener('abort', abort, { once: true });
+  });
+}
+export function listLoader() { return Object.values(lessons).map(lesson => ({ ...lesson })); }
+export async function lessonLoader({ params, request }: LoaderFunctionArgs) {
+  const id = parseId(params.lessonId);
+  await wait(id === 'a' ? 600 : 150, request.signal);
+  return { ...lessons[id] };
+}
+export type ActionResult = { ok: false; message: string } | { ok: true; message: string };
+export async function lessonAction({ params, request }: ActionFunctionArgs) {
+  const id = parseId(params.lessonId);
+  const form = await request.formData();
+  const intent = form.get('intent');
+  const versionText = form.get('version');
+  const title = form.get('title');
+  const done = form.get('done');
+  if (typeof versionText !== 'string' || !/^\d+$/.test(versionText) || !Number.isSafeInteger(Number(versionText))) {
+    return data<ActionResult>({ ok: false, message: '版本参数无效，请重新读取' }, { status: 400 });
+  }
+  if (intent === 'rename' && (typeof title !== 'string' || title.trim().length < 2)) {
+    return data<ActionResult>({ ok: false, message: '标题至少填写两个字符' }, { status: 422 });
+  }
+  if (intent !== 'rename' && intent !== 'mark') return data<ActionResult>({ ok: false, message: '未知操作' }, { status: 400 });
+  if (intent === 'mark' && done !== 'true' && done !== 'false') return data<ActionResult>({ ok: false, message: '已读参数无效' }, { status: 400 });
+  await wait(250, request.signal);
+  const current = lessons[id];
+  if (Number(versionText) !== current.version) return data<ActionResult>({ ok: false, message: '资料已变化，请重新读取后再提交' }, { status: 409 });
+  if (intent === 'rename' && typeof title === 'string') {
+    lessons[id] = { ...current, title: title.trim(), version: current.version + 1 };
+    return redirect(`/lessons/${id}`, { status: 303 });
+  }
+  lessons[id] = { ...current, done: done === 'true', version: current.version + 1 };
+  return data<ActionResult>({ ok: true, message: '已读状态已更新' });
+}
+```
 
-不要用 fetcher 隐藏应可分享的选择，也不要每个小操作都导航新页。两者都有 pending 与取消，需要对重复操作、离开页面和结果重验证定义行为。
+返回读取结果前复制条目，避免调用者拿到模块内的同一个可变对象。模拟写入也检查版本，但这只是当前浏览器里的比较；真实服务端需要以自己的原子更新与授权规则执行。
 
-### 七、Pending 应与导航粒度一致
+### 完整页面把读取提交和错误连成一条路径
 
-导航状态可驱动全局进度条，局部 fetcher 有独立 busy 状态。保持旧页面直到新数据准备好能减少闪烁，但旧数据是否仍可操作要判断。身份/租户切换时不能继续显示或提交旧上下文。
+保留 lessonData.ts，再放入 `src/App.tsx`：
 
-禁用整个页面可能阻止用户取消或导航。优先只禁用正在提交的动作，保留安全出口，并用 `aria-busy`/状态文本通知。
+```tsx example=react10-data-app runtime=project file=src/App.tsx
+import { useEffect, useRef, useState } from 'react';
+import { createBrowserRouter, Form, isRouteErrorResponse, Link, Outlet, useActionData, useFetcher, useLoaderData, useLocation, useNavigation, useRevalidator, useRouteError, useRouteLoaderData } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
+import { lessonAction, lessonLoader, listLoader, type ActionResult, type Lesson } from './lessonData';
+function Heading({ title }: { title: string }) {
+  const node = useRef<HTMLHeadingElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => { document.title = title; }, [title]);
+  useEffect(() => { node.current?.focus(); }, [pathname]);
+  return <h1 ref={node} tabIndex={-1}>{title}</h1>;
+}
+function Layout() {
+  const navigation = useNavigation();
+  const lessons = useLoaderData<typeof listLoader>();
+  return <main>
+    <nav aria-label="资料导航"><Link to="/">目录</Link>{' '}{lessons.map(lesson => <Link key={lesson.id} to={`/lessons/${lesson.id}`}>{lesson.title}{' '}</Link>)}</nav>
+    {navigation.state !== 'idle' && <p role="status">{navigation.state === 'submitting' ? '正在提交' : '正在读取下一页'}</p>}
+    <Outlet />
+  </main>;
+}
+function MarkButton({ lesson }: { lesson: Lesson }) {
+  const fetcher = useFetcher<ActionResult>();
+  return <fetcher.Form method="post" action={`/lessons/${lesson.id}`}>
+    <input type="hidden" name="intent" value="mark" /><input type="hidden" name="version" value={lesson.version} />
+    <input type="hidden" name="done" value={String(!lesson.done)} />
+    <button disabled={fetcher.state !== 'idle'}>{lesson.done ? '改回未读' : '标为已读'}：{lesson.title}</button>
+    {fetcher.data && <p role={fetcher.data.ok ? 'status' : 'alert'}>{fetcher.data.message}</p>}
+  </fetcher.Form>;
+}
+function List() {
+  const lessons = useRouteLoaderData<typeof listLoader>('root') ?? [];
+  return <section><Heading title="阅读目录" /><ul>{lessons.map(lesson => <li key={lesson.id}><MarkButton lesson={lesson} /></li>)}</ul></section>;
+}
+function TitleForm({ lesson }: { lesson: Lesson }) {
+  const [draft, setDraft] = useState({ title: lesson.title, version: lesson.version });
+  const navigation = useNavigation();
+  const result = useActionData<typeof lessonAction>();
+  return <Form method="post">
+    <input type="hidden" name="intent" value="rename" /><input type="hidden" name="version" value={draft.version} />
+    <label>标题草稿 <input name="title" value={draft.title} onChange={e => setDraft(value => ({ ...value, title: e.target.value }))} /></label>
+    <button disabled={navigation.state !== 'idle'}>保存标题并重新读取</button>
+    {result && !result.ok && <p role="alert">{result.message}</p>}
+    {draft.version !== lesson.version && <div>
+      <p role="status">当前资料已经更新，草稿尚未替换。</p>
+      <button type="button" onClick={() => setDraft({ title: lesson.title, version: lesson.version })}>载入当前已保存标题</button>
+    </div>}
+  </Form>;
+}
+function Detail() {
+  const lesson = useLoaderData<typeof lessonLoader>();
+  return <section><Heading title={lesson.title} /><p>资料 {lesson.id}，版本 {lesson.version}</p><TitleForm key={lesson.id} lesson={lesson} /></section>;
+}
+function RouteFailure() {
+  const error = useRouteError();
+  const retry = useRevalidator();
+  const missing = isRouteErrorResponse(error) && error.status === 404;
+  return <section><Heading title={missing ? '资料不存在' : '这一页暂时无法读取'} />
+    <Link to="/">返回目录</Link>{!missing && <button disabled={retry.state !== 'idle'} onClick={() => retry.revalidate()}>重新读取当前路由</button>}
+  </section>;
+}
+const router = createBrowserRouter([{ id: 'root', path: '/', Component: Layout, loader: listLoader,
+  ErrorBoundary: RouteFailure, HydrateFallback: () => <p role="status">正在准备阅读页面</p>, children: [
+    { index: true, Component: List },
+    { path: 'lessons/:lessonId', Component: Detail, loader: lessonLoader, action: lessonAction, ErrorBoundary: RouteFailure },
+    { path: '*', Component: () => <section><Heading title="找不到这个页面" /><Link to="/">返回目录</Link></section> },
+  ] }]);
+export default function App() { return <RouterProvider router={router} />; }
+```
 
-### 八、错误边界按路由层级恢复
+在目录标记一篇已读，URL 不变，按钮文字随重新读取的结果改变。进入详情，把标题改成一个字再提交，字段错误留在表单旁；改成合格标题提交，顶部导航与详情标题一起更新。
 
-父布局错误页可以保留应用 shell，子路由错误只替换详情区。404、权限、验证、网络和程序错误应呈现不同恢复动作。未知异常不展示堆栈。
+草稿保存自己的基线版本。新的 loader 结果不会自动覆盖当前输入，载入已保存标题需要明确点击；这也意味着成功保存后可以选择把标准化后的标题与新版本作为下一轮编辑起点。关键是不要通过给整个编辑器设置不断变化的版本 key，无声地丢掉尚未提交的输入。
 
-错误边界重试可触发 revalidation 或新导航；若错误来自稳定拒绝缓存，需要先失效资源。根页面仍要有最终边界，防止白屏。
+直接打开不存在的 `/lessons/x`，只替换详情区域，导航仍在。先点慢的 A，再马上点快的 B，最后仍进入 B，不会被迟到的 A 改回去。
 
-### 九、导航天然制造竞态
+### Form 与 fetcher 表达不同的位置变化
 
-用户快速从 A 到 B，A loader 可能晚完成。Router 会取消旧 request，但底层必须响应 signal，任何绕开 router 的异步层还需版本门禁。Action 提交后又导航时，结果属于哪个页面也要明确。
+**Form** 用于参与路由提交的表单；**fetcher** 可以在不发起页面导航的情况下读取或提交。上例把“修改详情标题后回到该详情”交给 Form，把“在目录里标记一项”交给 fetcher。
 
-取消通常不显示错误；真实失败要可恢复。客户端停止等待不代表服务端写操作撤销，结果未知时按幂等/查询协议处理。
+它们的等待状态也不同：useNavigation 观察导航，fetcher.state 观察这份局部工作。目录里一项正在提交，不必把所有安全导航都禁用；同一按钮可以暂时禁用，防止重复触发。
 
-### 十、未保存草稿需要阻塞或保存策略
+按钮 disabled 不是服务端防重，也不能证明其他客户端不会同时写入。输入解析、身份授权、版本与幂等仍需要可信端负责。直接给任意查询参数作为 redirect 目标也有风险，应限制到允许的站内地址。
 
-离开编辑页前可提示，但浏览器、刷新、关闭标签和程序导航有不同能力。不能保证所有离开都可被阻止；重要草稿应自动保存或本地恢复，同时处理版本、隐私和过期。
+### Revalidation 让写入结果回到读取来源
 
-阻塞器只改善客户端导航体验，不能作为数据安全。提示必须可键盘操作，确认后只重放一次目标导航，取消后保持原 URL/焦点。
+**revalidation** 是重新执行相关读取，使页面拿到写入后的当前数据。Data Router 的 action 与 loader 已有配套流程，因此本例没有再额外把标题复制进 Context 或 Pinia。
 
-### 十一、代码分割与路由边界结合
+验证错误以字段或操作结果返回，路由级异常交给最近错误区域。并不是 HTTP 状态一到 4xx 就一定整页替换；返回数据与抛出路由错误的语义不同。
 
-route lazy 可以按页面拆 chunk。分割应基于用户路径和资源体积，不是每个组件一块。动态 chunk 失败要区分离线和旧部署资源，提供限次刷新/重试。
+shouldRevalidate 可以缩小重新读取范围，但每次跳过都要说明数据为何仍然有效。默认行为、错误状态后的重验证及版本升级也有具体约定；不能为了少发请求一律返回 false。手动重试可以使用 revalidator，资源真正不存在时则应提供稳定的返回入口。
 
-预加载可以减少下一导航等待，但会消耗流量和 CPU；根据意图、网络和缓存决定。构建报告与真实网络 waterfall 验证分块是否有收益。
+### 导航取消不表示远端写入已撤回
 
-### 十二、深链部署是路由合同的一部分
+request.signal 应传给底层 fetch 或能协作取消的适配器。上例的模拟等待接收 signal，因此旧读取能够及时结束；绕开路由器的异步副作用仍需要自己的失效判断。
 
-用户直接请求 `/projects/p1/tasks/t42` 时，服务器/CDN 必须返回正确 HTML 或执行框架 route，而不是 404。SPA fallback 不能吞掉 `/api`、静态文件和 `/.well-known` 路径。
+路由器会协调导航结果，用户快速切到 B 时，不应再提交 A 的旧结果。但浏览器取消请求无法保证服务端停止已经开始的写入。尤其 action 超时、离开页面和重复点击，需要区分“客户端不再等待”和“写入没有发生”。
 
-截至 2026-08-27 的 React Router 8.3.1 changelog包含 `.well-known` 静态文件、导航 URL 验证、abort 后 route discovery 与 fetcher revalidation 修复；这说明部署、取消和安全都是路由系统的一部分。实际项目应锁定补丁并回归深链。
+这与 [Effect 的取消和提交资格](../chinese-guides/react-04-effects-external-sync-cleanup.md#请求能否取消和结果能否提交是两个问题)是同一类责任划分，路由器只是接管其中一部分协调。
 
-### 十三、SSR、SPA 与预渲染按数据新鲜度选择
+### 未保存草稿需要一个明确的离开策略
 
-SSR 为每个请求生成 HTML，适合个性化/SEO但增加服务器与缓存边界；SSG/预渲染适合稳定公开页面；SPA 客户端渲染部署简单但首屏和 SEO 依赖场景受限。Framework 模式可混合，不代表所有 route 都应 SSR。
+以下独立 App.tsx 使用 Data Router 的 useBlocker。它显示页面内确认区域，不假装能拦住所有刷新和关闭。
 
-服务端 loader 不能把秘密序列化到客户端。缓存键要包含身份/租户，模块级状态不能跨请求污染。部署适配器和代理超时也影响流式/取消。
+```tsx example=react10-blocker runtime=project file=src/App.tsx
+import { useState } from 'react';
+import { createBrowserRouter, Link, Outlet, useBlocker } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
+function Layout() { return <main><nav><Link to="/">编辑</Link>{' '}<Link to="/done">其他页面</Link></nav><Outlet /></main>; }
+function Editor() {
+  const [draft, setDraft] = useState('');
+  const [saved, setSaved] = useState('');
+  const dirty = draft !== saved;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname);
+  return <section>
+    <h1>本地草稿</h1><label>草稿内容 <textarea value={draft} onChange={e => setDraft(e.target.value)} /></label>
+    <button onClick={() => setSaved(draft)}>记为本次页面内已保存</button>
+    <p>{dirty ? '有未保存修改' : '没有未保存修改'}</p>
+    {blocker.state === 'blocked' && <div role="alert">
+      <p>离开会丢弃当前页面的草稿，是否继续？</p>
+      <button onClick={() => blocker.reset()}>留下继续编辑</button>
+      <button onClick={() => blocker.proceed()}>丢弃并继续离开</button>
+    </div>}
+  </section>;
+}
+const router = createBrowserRouter([{ path: '/', Component: Layout, children: [
+  { index: true, Component: Editor },
+  { path: 'done', Component: () => <h1>已经离开编辑页</h1> },
+] }]);
+export default function App() { return <RouterProvider router={router} />; }
+```
 
-### 十四、重验证需要控制范围
+输入草稿后点击其他页面，地址暂时不变；留下则继续编辑，确认丢弃才执行之前被阻止的那次导航。本例的“已保存”只更新页面内基线，没有持久化，不能作为真正保存成功的证明。
 
-Action 后重跑 loader 保证数据新鲜，但全树重验证可能浪费请求、闪烁或覆盖局部乐观状态。根据 route、参数、提交结果和缓存决定 shouldRevalidate；任何跳过都要证明数据仍正确。
+useBlocker 针对客户端路由导航。刷新、关闭标签、跨文档导航的能力不同，beforeunload 也不能保证在所有退出情况下执行。重要草稿应有明确的自动保存或恢复机制，确认提示只是其中一层体验。
 
-不要把客户端缓存永久视为服务端真源。权限和关键业务状态在写入时重新验证，后台刷新失败时保留旧数据并明确过期。
+### Framework Mode 进一步统一路由模块与构建
 
-### 十五、路由类型不能替代运行时解析
+Framework Mode 使用 route modules 表达页面、loader、action 和边界，由配套工具生成路由类型并组织构建。路由声明可以明确配置，文件约定也是可选择的组织方式，不必把“框架模式”解释成“文件名自动决定一切”。
 
-Framework/文件路由可生成参数和 loader data 类型，减少拼写错误。但浏览器地址栏仍能输入任意字符串，旧链接也可能存在。类型生成保护源码关系，parser 保护运行时入口。
+它支持 SPA、SSR 和预渲染等策略。服务端 loader 与客户端加载函数有不同执行位置，客户端 action 也不等于受信任的服务端 action。使用前应看清当前模式和对应导出，而不是从另一个模式复制 API 后只改文件名。
 
-命名 route、路径构造 helper 和 URL schema 应是单一来源。不要在组件各自拼字符串；编码、可选段和 base 路径很容易不一致。
+生成类型保护源码之间的关系，不会代替 URL、表单和外部 JSON 的运行时解析。服务端秘密不能因为某函数名叫 loader 就自然安全；返回给浏览器的数据仍需要限制范围。
 
-### 十六、测试完整导航协议
+### 代码分割与错误恢复要考虑发布版本
 
-验证链接点击、地址栏深链、刷新、前进后退、参数非法、loader pending/error、action 验证/重定向、旧导航取消、未保存草稿、chunk 失败和真实生产 fallback。测试使用内存 router只能覆盖一部分；至少一组 E2E 通过部署形态访问真实 URL。
+Declarative 页面可以使用 React.lazy，Data Mode 可以按 route lazy 拆分，Framework Mode 还提供构建集成。按用户访问路径分块，通常比把每个小组件拆成独立文件更有意义。
 
-网络和 Promise 要可控，证明 A 晚到不覆盖 B。构建后检查路由 chunk、source map、服务器 header 和缓存。
+动态代码加载失败可能是网络问题，也可能是旧 HTML 指向已删除资源。预加载能减少等待，但会消耗带宽和计算；无限自动刷新既不能修复真实程序错误，也可能丢失草稿。
 
-### 十七、版本升级边界
+代码资源失败与业务 loader 失败要分开定位。相关基础见 [lazy 与恢复边界](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#lazy-管的是代码资源而不是业务数据)。升级时核对实际包版本、模式与构建产物，不把讲义日期当成永久兼容承诺。
 
-路由库变化可能涉及模式、包名、生成入口、未来标志、RSC、服务适配器和安全验证。升级前记录路由表、深链、loader/action 行为、构建和回滚；升级后按同一脚本逐项验证。官方英文 changelog用于实施核验，不应成为初学者背诵材料。
+### 深链部署要让服务器也认识入口
 
-截至 2026-08-30，React Router 官方 changelog 的当前版本是 8.3.1。版本号属于实施日信息：真正升级时还要重新打开官方 changelog、核对锁文件解析结果以及所用模式的迁移说明，不能把这份讲义中的日期当永久结论。
+**deep link** 不只是在应用已经打开时点击 Link。用户直接请求 `/lessons/a`，服务器或静态托管也必须提供正确页面入口；否则客户端路由写得再好，刷新仍会 404。
 
-### 十八、路由缓存与 HTTP 缓存必须分清所有者
+SPA fallback 应在 API 和静态资源规则之后处理页面路径。丢失的 chunk、robots.txt、favicon 和 .well-known 文件，不应全部返回 HTML 200。应用里的“找不到页面”文案与 HTTP 响应状态也不同，尤其搜索引擎和缓存会关注真实状态码。
 
-Loader 重验证、浏览器 HTTP 缓存、CDN 和应用内数据缓存可能同时存在。它们的 key、过期和身份边界不同。公开静态字典可以长缓存；个性化页面通常要按用户/租户隔离并正确设置 `Vary`/private；一次 action 后要明确使哪些 route 数据失效。
+使用子路径部署时，路由 basename、资源 base 与服务器规则需要对应。浏览器 HTTP 缓存、CDN、路由重新读取和应用查询缓存也有不同的 key 与失效策略，不能统称为“路由缓存”。
 
-排查“返回旧数据”时记录请求是否真正发出、命中哪一层、响应 header 和 router 是否选择跳过重验证。不要通过给所有请求加时间戳永久关闭缓存，也不要让客户端缓存绕过服务端授权。
+### 导航完成还包括滚动焦点与文档标题
 
-### 十九、路由级安全从输入、导航到响应头贯通
+新内容出现后，应让用户知道位置变了。可以更新文档标题、聚焦新页面主标题、恢复返回时的滚动，或定位 hash 目标；不要让每层布局都抢一次焦点。
 
-重定向目标必须限制为允许的站内路径，避免把查询参数直接交给 `redirect` 形成开放重定向。路由参数、search params 和表单数据都按不可信输入解析；Action 在服务端再次做认证、授权、CSRF 防护、大小限制和幂等控制。
+上面的 Data 示例在路径切换时聚焦当前标题，标题文字变化时更新 document.title；局部 fetcher 操作不改变路径，因此不会把焦点抢回整页开头。更完整的历史滚动、同页锚点和错误页恢复，还需要按实际产品统一安排。
 
-CSP、cookie 属性与 frame 策略由服务端/框架响应头执行。客户端隐藏链接或 loader 提前跳转只是体验层。安全测试应直接调用 Action、伪造参数并以不同身份访问资源，证明服务器拒绝越权。
+核对路由时，重点是地址栏直达、刷新、前进后退、非法参数、等待、字段错误、写后重新读取和草稿退出是否讲得通。内存 router 能帮助隔离逻辑，但不能证明真实部署已经支持深链。
 
-### 二十、滚动、焦点和文档元数据属于导航完成条件
+### 参考与延伸阅读
 
-导航成功不只是 URL 和正文改变。前进后退通常恢复滚动，新页面导航回到顶部或目标锚点；主标题获得可感知焦点/播报；title、meta 与错误状态随 route 数据更新。嵌套布局不能每次导航都把焦点抢回外壳。
-
-在慢导航、redirect、错误和 hash 链接下分别测试这些行为。无障碍导航公告需要简洁且不重复，避免 Router、页面和组件同时触发多次提醒。
-
-### 进阶：静态发现文件也属于路由与部署合同
-
-`robots.txt`、`sitemap.xml`、manifest、favicon 和 `.well-known` 端点不应被 SPA fallback 返回 HTML 200。Framework 模式可生成资源 route，静态托管也可直接提供文件；无论哪种方式，都要验证 content type、缓存、base path 和 404。
-
-同样，API 路径和资源 chunk 应在 catch-all 之前匹配。部署烟雾测试直接请求首页、深链、未知页面、API、静态文件和旧 chunk，检查状态码与响应体，而不是只用客户端点击证明路由可用。
-
-多区域或 CDN 部署还要抽查不同节点的路由规则与制品版本，避免首页和 chunk 来自不兼容发布。
-
-### 学完后应能说明
-
-你应能把 URL 作为公共状态，设计嵌套路由与错误域，比较三种模式，解释 loader/action/Form/fetcher/revalidation 与取消，处理深链部署、草稿和代码分割，并用真实导航、网络和构建证据验证系统。
+- [React Router：Picking a Mode](https://reactrouter.com/start/modes)：比较 Declarative、Data 与 Framework 的能力。
+- [React Router：Data Routing](https://reactrouter.com/start/data/routing)：查嵌套、动态段与 route objects。
+- [React Router：Data Loading](https://reactrouter.com/start/data/data-loading)：查 loader 和读取结果。
+- [React Router：Actions](https://reactrouter.com/start/data/actions)：查 Form、fetcher 与重新验证。
+- [React Router：Navigation Blocking](https://reactrouter.com/how-to/navigation-blocking)：查阻止、继续与取消导航。
+- [React Router：Route Module](https://reactrouter.com/start/framework/route-module)：查框架模式的导出与执行位置。
+- [React Router：Race Conditions](https://reactrouter.com/explanation/race-conditions)：查导航并发与取消边界。
+- [React Router：Changelog](https://reactrouter.com/changelog)：核对实施时的版本与迁移信息。
+- [React：状态保留与重置](https://react.dev/learn/preserving-and-resetting-state)：理解布局位置、草稿与 key。
+- [MDN：History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API)：查浏览器历史的基本行为。

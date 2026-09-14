@@ -1,156 +1,270 @@
-# CS-03 前端大数据、Worker、增量计算与内存边界
+# B02 数据处理与异步协作
 
-## CS-03
+## CS-03 大数据、Worker、增量计算与内存边界
 
-“数据很多”不是一个自动使用 Worker 的理由。真正的问题是：哪些数据应该到达客户端，哪些工作必须在主线程完成，哪些结果可以增量维护，消息和中间对象会占多少内存，以及用户离开或输入变化时旧任务怎样停止。
+假设一个订单页面有十万条记录。用户修改了一条订单的状态，页面却重新统计十万条数据；统计结束后，又一次性创建十万个列表元素。此时，即使把统计搬进 Worker，页面仍可能在显示结果时卡住。
+
+这一篇沿着“数据进来 → 计算 → 显示 → 离开页面”的过程，区分几种经常被混用的优化手段。先判断哪部分工作可以省掉，再决定在哪里计算、怎样交接数据，以及何时结束。
 
 ### 学习前先确认
 
-- 直接前置：[PRECS-03 主线程、消息与内存所有权](../chinese-guides/browser-main-thread-messages-memory.md#precs-03)。Promise、消息数据和取消基础由它继续向下链接。
-- 直接前置：[CS-01 复杂度、数据规模与工程成本](../chinese-guides/cs-01-complexity-scale-engineering-cost.md#cs-01)。
+- 直接前置：[PRECS-03 主线程、消息与内存所有权](../chinese-guides/browser-main-thread-messages-memory.md#precs-03)。先分清页面、Worker 和消息各自负责什么。
+- 直接前置：[CS-01 复杂度、数据规模与工程成本](../chinese-guides/cs-01-complexity-scale-engineering-cost.md#cs-01)。本篇继续区分总工作量、连续占用时间和内存成本。
 
-### 一、先画完整数据路径
+示例中的小数组是为了方便核对结果，不代表这点数据就值得创建 Worker。带 `await` 的示例可在现代桌面浏览器开发者工具的 Console 中逐段运行；完整 Worker 示例也在浏览器中运行。
 
-从“数据产生在哪里”画到“用户看见什么”。一条典型路径可能是：服务端查询 → 网络响应 → JSON 解析 → 客户端索引 → 筛选与排序 → 生成视图模型 → DOM 渲染。每一步都有时间、内存和失败边界。
+### 先沿着一条数据路径寻找多余工作
 
-如果页面只显示几十项，却先下载全部历史记录、格式化每一项再只取前几十项，最先要修的是数据边界，而不是线程。开始优化前依次问：
-
-1. 客户端是否有权限、也是否有必要拿到全部原始数据；
-2. 能否在服务端分页、筛选、聚合或只返回需要的字段；
-3. 相同输入是否被重复解析、排序或格式化；
-4. UI 是否只需渲染可见部分；
-5. 输入变化时能否只更新受影响的结果。
-
-减少工作通常同时降低延迟、流量与内存，是优先级最高的优化。
-
-### 二、虚拟化和增量计算解决不同问题
-
-**虚拟化（virtualization）**只创建视窗附近的 DOM 节点，随着滚动复用或替换它们。它能显著减少布局和绘制成本，却不会自动减少上游下载、解析和全量排序。列表“DOM 不多”不代表数据处理已经便宜。
-
-**增量计算（incremental computation）**根据变化部分更新既有结果，而不是每次从原始数据全部重算。例如按状态统计订单数量时，一条订单从“待处理”变为“已完成”，可以分别把两个计数减一、加一；不必重新扫描所有订单。
-
-增量方案必须维护不变量：缓存对应哪个数据版本，删除和修改怎样撤销旧影响，批量更新是否只提交一次 UI，出现漏事件时怎样重新全量校准。没有版本和重建路径的缓存，很容易把性能问题变成正确性问题。
-
-**分块（chunking）**则是把一个长任务拆成多个较小步骤，在步骤之间给浏览器处理输入和渲染的机会。分块不减少总计算量，却可以改善响应。块过大仍会卡顿，块过小则调度开销增加，应在目标设备上根据连续占用时间调整。
-
-### 三、何时 Worker 真正有帮助
-
-**Web Worker** 适合计算量明显、可以通过数据消息描述、又不需要直接操作 DOM 的工作，例如解析大型文本、图像像素变换、压缩、搜索索引构建和大量数值计算。
-
-这里默认讨论由一个调用方创建和拥有的专用 Worker。Shared Worker 可以被多个同源页面连接，Service Worker 负责网络代理、离线与后台事件，Worklet 进入音频或渲染等受约束管线；它们的生命周期、可用 API 和失败语义不同。不能因为名称都含 Worker，就把计算任务任意搬到 Service Worker 或 Worklet。
-
-不适合的情形包括：任务本身非常短、主要时间在网络等待、必须频繁访问 DOM、每次只算一点却要传输巨大对象图。Worker 会把计算移出主线程，但还会新增启动、模块加载、消息复制、结果合并和错误恢复成本。
-
-判断时比较的是端到端路径：
+先把“加载列表”展开：
 
 ```text
-主线程方案 = 准备数据 + 计算 + 更新界面
-Worker 方案 = 准备消息 + 复制或转移 + Worker 计算 + 返回结果 + 主线程合并
+服务端查询 → 下载响应 → JSON 解析 → 建立索引
+         → 筛选与排序 → 生成显示数据 → 创建和更新 DOM
 ```
 
-若 Worker 计算快 20ms，消息和合并却多花 40ms，总耗时可能更长；但它仍可能因为主线程更空闲而改善交互。因此总延迟与响应性要分开测量。
+每个箭头都可能带来等待，每个阶段都可能创建新数据。例如页面只需要“本月已完成订单的数量”，服务端却返回全部订单明细。此时，把明细传进 Worker 再计数，仍然付出了下载、解析和存储全部明细的代价。让服务端返回所需的聚合结果，可能直接省掉后面的大部分工作。
 
-### 四、复制、转移与共享都要求明确所有权
+另一个例子：界面只展示订单号和金额，却把每条订单的完整操作历史也留在页面。先缩减字段，比研究怎样更快复制这些历史更直接。反过来，离线分析工具确实需要完整数据，客户端保留数据就可能是合理要求。方案要跟使用场景一起判断。
 
-普通消息使用**结构化克隆（structured clone）**。接收方得到一份独立的数据图，双方不会因普通对象的并发修改互相踩踏；代价是遍历和复制，发送频繁的大对象时还会抬高峰值内存。
+对于必须保留的数据，再看有没有重复工作。筛选条件没变，就不必重新构建同一份搜索索引；只改了一行，不一定要重新格式化所有行。缓存可以减少重复计算，但要同时说清楚它对应哪个输入版本、何时失效、最大保留多少份。缓存一个永远不会命中的旧版本，只是在延长数据的存活时间。
 
-`ArrayBuffer` 等**可转移对象（Transferable object）**可以把底层资源的所有权交给接收方。发送后原 buffer 被分离，发送方不能继续使用。TypedArray 视图本身不是 transfer list 中的资源，通常转移的是其 `.buffer`。
+### 少渲染和少计算分别解决什么
 
-```js
-const values = new Float64Array(50_000);
-worker.postMessage(
-  { type: 'analyze', values },
-  [values.buffer],
-);
+**虚拟化（virtualization）**是只为视窗附近的内容创建 DOM。例如十万条订单，当前只显示三十条，页面可以维持几十个元素，滚动后更新这批元素代表的记录。这样减少了元素数量，以及相关的布局和绘制工作。
 
-console.log(values.byteLength); // 0
+但虚拟化不会自动减少数据计算。如果滚动一次就重新筛选十万条订单，即使 DOM 只有几十个，主线程仍可能忙于筛选。
+
+**增量计算（incremental computation）**关注的是：已经知道旧结果后，能否只处理变化造成的差额。假设有两条待处理订单，把其中一条改成已完成，计数应从“待处理 2、已完成 0”变成“待处理 1、已完成 1”。不必重新遍历所有订单。
+
+下面维护一份订单表和一份计数表。为了突出更新过程，只允许两种状态；输入校验和持久化属于调用方责任。
+
+```js example=cs03-incremental
+const orders = new Map();
+const counts = new Map([['待处理', 0], ['已完成', 0]]);
+
+function upsert(order) {
+  const previous = orders.get(order.id);
+  if (previous) {
+    counts.set(previous.status, counts.get(previous.status) - 1);
+  }
+  // 保存副本，避免调用方随后修改同一个对象而绕过计数更新。
+  orders.set(order.id, { ...order });
+  counts.set(order.status, counts.get(order.status) + 1);
+}
+
+function remove(id) {
+  const previous = orders.get(id);
+  if (!previous) return;
+  counts.set(previous.status, counts.get(previous.status) - 1);
+  orders.delete(id);
+}
+
+upsert({ id: 1, status: '待处理' });
+upsert({ id: 2, status: '待处理' });
+console.log(counts.get('待处理'), counts.get('已完成')); // => 2 0
+upsert({ id: 1, status: '已完成' });
+console.log(counts.get('待处理'), counts.get('已完成')); // => 1 1
+upsert({ id: 1, status: '已完成' });
+console.log(counts.get('待处理'), counts.get('已完成')); // => 1 1
+remove(2);
+console.log(counts.get('待处理'), counts.get('已完成')); // => 0 1
 ```
 
-如果主线程仍需原始数据，可以保留主副本、只转移可丢弃的批次，或让 Worker 成为这份数据的长期所有者并只返回摘要。应先设计所有权，再选择 API；“transfer 更快”不是完整方案。
+最关键的一步是“撤销旧影响，再加入新影响”。如果只把已完成数量加一，待处理数量就会一直错误。重复收到同一条更新时，先减后加也使计数保持不变；但这还没有解决乱序消息。如果旧版本最后到达，它仍会把新状态改回去。来自网络的更新还需要版本比较，或按可靠的顺序应用。
 
-`SharedArrayBuffer` 允许共享底层内存，但会引入同步、数据竞争与跨源隔离要求。普通读写不会自动建立“另一个线程一定已经看到前序修改”的顺序；共享整数视图通常要配合 `Atomics` 的原子读写、通知和等待，才能表达明确的 happens-before 关系。即使单次读写没有撕裂，缺少协议仍可能读到逻辑上过期或组合不一致的状态。除非问题确实需要共享且团队能证明同步正确性，否则消息传递通常更容易维护。
+这里应始终成立的性质是：两种状态的计数之和等于订单表的大小，每个计数都与表中实际状态一致。漏掉删除事件后，这个关系会失效。因此增量系统通常仍保留从完整数据重建计数的入口，用来初始化或恢复。理解这种“数据加索引”的关系，可以回看 [CS-02 的数组和索引](../chinese-guides/cs-02-data-structures-algorithms-correctness.md#数组和索引可以各自保留一种关系)。
 
-### 五、消息协议要能承受速度不一致
+### 把工作拆开让界面有机会响应
 
-生产者若不断发送，而 Worker 处理较慢，消息队列会持续增长。**背压（backpressure）**就是消费者向上游表达“先不要再给我”的机制，使队列保持有界。
+有些任务不能省掉，但不必连续做完。**分块（chunking）**把一段大工作拆成小段，在段与段之间交还执行机会。
 
-普通 Worker 消息没有自动替你设计业务背压，可以用确认消息或信用额：主线程只允许同时在途少量批次，Worker 处理完一批后归还一个额度。协议至少要有版本、任务 ID、消息类型和批次序号：
+下面只对五个数求和，并把每段处理的下标记下来。真实数组可能大得多，分段大小也需要根据每项工作量调整。
 
-```ts
-type RequestMessage =
-  | { version: 1; type: 'start'; jobId: string }
-  | { version: 1; type: 'batch'; jobId: string; sequence: number; records: RecordItem[] }
-  | { version: 1; type: 'cancel'; jobId: string };
+```js example=cs03-chunking
+async function sumInChunks(values, chunkSize) {
+  if (!Number.isInteger(chunkSize) || chunkSize < 1) {
+    throw new RangeError('每段至少处理一项');
+  }
+  let total = 0;
+  const ranges = [];
+  for (let start = 0; start < values.length; start += chunkSize) {
+    const end = Math.min(start + chunkSize, values.length);
+    for (let i = start; i < end; i++) total += values[i];
+    ranges.push(`${start}..${end - 1}`);
+    if (end < values.length) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+  return { total, ranges };
+}
 
-type ResponseMessage =
-  | { version: 1; type: 'ready'; jobId: string; credits: number }
-  | { version: 1; type: 'partial'; jobId: string; sequence: number; value: Summary }
-  | { version: 1; type: 'done'; jobId: string; value: Summary }
-  | { version: 1; type: 'cancelled'; jobId: string }
-  | { version: 1; type: 'error'; jobId: string; message: string };
+const result = await sumInChunks([1, 2, 3, 4, 5], 2);
+console.log(result.total); // => 15
+console.log(result.ranges.join(' / ')); // => 0..1 / 2..3 / 4..4
 ```
 
-批次大小不是越大越高效：大批次消息少，但单次复制、处理和取消等待更长；小批次响应灵活，却增加消息与合并开销。用吞吐、主线程长任务、队列长度和取消延迟共同选择。
+这里的 `setTimeout` 把后续步骤留到之后的任务。它提供了处理其他工作和渲染的机会，不承诺浏览器一定在两个分段之间绘制，也不承诺零毫秒后执行。总加法次数没有减少，额外调度还可能使总耗时略长，但界面不必等整段计算结束才获得机会。
 
-Streams API 用队列策略和 `desiredSize` 表达流式背压；Worker 的信用额协议与它思想相同，但接口不同。不要把“分批发送”误认为已经有背压——没有上限和暂停条件的分批，队列仍会无界增长。
+把这一行改成 `await Promise.resolve()`，含义就变了：后续计算进入微任务，微任务会继续排空，不能依靠这种写法给界面留下渲染机会。原因见 [JS-04 的微任务与让出执行机会](../chinese-guides/js-04-async-promise-browser-event-loop.md#微任务执行完不等于浏览器已经绘制)。
 
-### 六、取消不是只丢弃最终结果
+固定每段处理一千项只是一种起点。一千次简单加法与一千次复杂文本匹配的耗时并不相同。桌面应用可以先采用保守的分段大小，再观察目标电脑上单段连续占用多久、操作是否仍有明显等待。没有必要为了这个例子引入完整调度框架。
 
-用户修改查询、离开页面或启动新任务时，旧任务已经失去业务价值。**取消（cancellation）**至少包含三层：不再启动新工作、通知正在运行的工作尽快停止、阻止过期结果写入当前界面。
+### 用一条完整消息理解 Worker
 
-AbortSignal 是统一传递取消意图的方式，但它不会强行终止任意 JavaScript。Worker 内部的长循环必须在合适的边界主动检查取消状态；若一个步骤本身要运行很久，取消消息也无法及时被处理，应进一步分块或在明确权衡后终止整个 Worker。
+**Web Worker** 让脚本在独立执行环境中工作。它可以处理计算，再通过消息交回结果；它不能直接修改页面 DOM。主线程负责显示结果，Worker 负责独立计算，这是一个容易理解的分工。
 
-每次任务使用递增版本或唯一 `jobId`。主线程收到结果时先检查它是否仍是当前任务；这条“提交门禁”即使在底层取消失败时也能防止旧结果覆盖新页面。取消后还要清理消息监听、定时器、中间缓存和待处理 Promise，组件销毁时则解除引用并根据复用策略决定是否 `terminate()`。
+下面是可直接运行的完整例子。为了避免先创建两个文件，使用 Blob 临时提供 Worker 源码；项目里通常把 Worker 放在独立模块，用构建工具支持的 `new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })` 创建。
 
-#### 失败、重启与重复结果必须进入协议
+```js example=cs03-worker-roundtrip runtime=browser
+const workerSource = `
+  self.onmessage = ({ data }) => {
+    const total = data.values.reduce((sum, value) => sum + value, 0);
+    self.postMessage({ jobId: data.jobId, total });
+  };
+`;
+const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+let worker;
+let timer;
+try {
+  worker = new Worker(url);
+  const response = await new Promise((resolve, reject) => {
+    worker.onmessage = ({ data }) => resolve(data);
+    worker.onerror = (event) => reject(new Error(event.message || 'Worker 运行失败'));
+    worker.onmessageerror = () => reject(new Error('结果消息无法读取'));
+    timer = setTimeout(() => reject(new Error('等待结果超时')), 5000);
+    worker.postMessage({ jobId: 1, values: [2, 4, 6] });
+  });
+  console.log(response.jobId, response.total); // => 1 12
+} finally {
+  clearTimeout(timer);
+  worker?.terminate();
+  URL.revokeObjectURL(url);
+}
+```
 
-Worker 脚本加载失败、运行时异常或消息无法反序列化时，主线程要处理 `error`、`messageerror` 和业务 `error` 消息，不能让等待中的 Promise 永久 pending。Worker 崩溃后，它的内存状态和在途进度都可能丢失；是否重建 Worker、从哪个批次恢复、哪些任务可以重试，要由协议决定。
+沿着数据看一次往返：主线程创建 `{ jobId: 1, values: [2, 4, 6] }`；Worker 收到消息后求和；它发回 `{ jobId: 1, total: 12 }`；主线程收到结果并输出。`jobId` 用来辨认任务，不是线程编号。
 
-重试会带来投递语义：若没有收到完成确认，任务可能是“从未执行”，也可能“已经执行但确认丢失”。纯计算可用相同 `jobId` 重算；涉及缓存写入、计费或服务端副作用时，提交端必须按幂等键去重，或明确选择至多一次而接受丢失。稳定系统不靠猜测 Worker 是否做过，而靠任务 ID、检查点和幂等提交把重复与缺失变成可观察状态。
+这个例子一次只发送一个任务，收到一条结果就结束，因此可以直接给 `onmessage` 赋值。多个任务共用一个 Worker 时，需要按 `jobId` 查找各自等待的 Promise，不能每次覆盖前一个任务的处理函数。成功、业务失败、运行异常、消息解码失败和超时，都应该让等待者获得明确结果。
 
-### 七、用内存生命周期寻找真正峰值
+Blob 示例需要页面安全策略允许 `blob:` Worker。若页面限制了它，使用独立 Worker 文件，并按项目策略配置；这与求和代码是否正确是两件事。
 
-端到端内存可能同时包含：网络响应文本、解析后的对象、索引、待发送批次、结构化克隆副本、Worker 中间结果和视图模型。只看最终结果大小会严重低估**峰值内存（peak memory）**。
+三个数相加当然不值得这样做。Worker 更适合工作量较大、能用消息描述、无需访问 DOM 的计算，例如构建搜索索引或分析大型文本。请求主要在等网络时，使用 Worker 通常不会缩短网络等待。只有几行计算却要来回复制一个巨大对象时，交接成本还可能超过计算成本。
 
-建立每类数据的生命周期：谁创建、谁持有、何时最后使用、成功/失败/取消时由谁释放。缓存还要有最大容量、淘汰策略、失效条件和命中率。LRU 只是淘汰策略，不是自动防泄漏；键如果持续增加或条目被其他引用保留，内存仍会增长。
+### 复制和转移会留下什么
 
-排查时一次验证一个假设：
+普通对象消息通常通过**结构化克隆（structured clone）**交接。接收方得到独立的数据图。主线程修改原对象，不会直接改掉 Worker 收到的那份普通对象。
 
-- 消息过大：记录每种消息的字节规模与频率；
-- 队列积压：记录发送序号、完成序号和最大在途数量；
-- 结果过期：记录 jobId 与提交门禁拒绝次数；
-- 引用未释放：对比取消前后堆快照的保留路径；
-- 主线程仍卡：检查结果合并和 DOM 更新，而不只看 Worker 时间。
+这意味着隔离，也意味着成本。两边都保留一份大数据时，峰值内存可能上升。具体哪些类型可以克隆，以及类实例、函数等有哪些限制，见 [B01 的 structuredClone](../chinese-guides/js-03-types-equality-copy-immutability.md#structuredclone-能解决什么不能解决什么)。
 
-### 八、客户端、Worker 与服务端的分层决策
+**转移（transfer）**则把可转移资源交给接收方。为了先单独观察所有权变化，下面使用 `structuredClone`，不创建 Worker；它的 transfer 选项同样能展示 ArrayBuffer 分离。
 
-留在主线程：工作短、需要立即访问 UI、分块后已经足够响应。使用 Worker：CPU 工作可独立描述、消息成本可控、主线程响应是主要目标。放到服务端：原始数据不应下发、需要跨用户聚合、数据规模超过设备边界，或结果可由服务端更接近数据源地计算。
+```js example=cs03-transfer
+const original = new Uint8Array([10, 20, 30]);
+const copied = structuredClone(original);
+copied[0] = 99;
+console.log(original[0], copied[0]); // => 10 99
 
-服务端不是无限资源，也会引入网络、权限、并发容量、缓存一致性和离线降级。可行方案也可能是组合：服务端先筛选和聚合，Worker 处理已授权的中等结果，主线程只虚拟化渲染可见窗口。
+const received = structuredClone(original, { transfer: [original.buffer] });
+console.log(original.byteLength, received.byteLength); // => 0 3
+console.log(received.join(',')); // => 10,20,30
+```
 
-### 九、理解 Worker 的调度与取消时机
+复制后，两边都能继续使用自己的内容。转移后，接收方拿到三个字节，原视图的 `byteLength` 变为 0。不是“原数据恰好被清空了”，而是发送方已经失去对这块数据的使用权。
 
-Worker 有自己的事件循环。它正在执行一个很长的同步循环时，`cancel` 消息虽然已经发送，也要等当前任务把调用栈交还给事件循环后才能被处理。因此“每次循环检查一个由消息修改的布尔值”并不保证及时取消：那条消息尚未有机会运行，布尔值仍不会改变。
+在 Worker 消息中，相应写法是 `worker.postMessage({ values }, [values.buffer])`：消息中的 `values` 让接收方找到数据，第二个参数列出要转移的资源。TypedArray 是视图，放进 transfer list 的是它的底层 `ArrayBuffer`。如果多个视图共用同一 buffer，转移会同时影响这些视图，不能只检查当前变量。
 
-解决方式是把工作切成有界步骤，在步骤之间返回事件循环；或在适合的数据模型中使用共享内存与原子操作，但后者会显著提高同步证明难度。另一个粗粒度选择是 `worker.terminate()`，它能迅速停止整个 Worker，却不会执行普通清理逻辑，也会丢掉该 Worker 上其他任务。任务粒度、复用方式与取消语义必须一起设计。
+如果主线程还要显示原始数据，就不能把唯一副本转移后照常读取。可选做法包括：只转移临时批次；保留一份主副本；或者让 Worker 长期持有原始数据，主线程只请求摘要或某个可见区间。API 的选择应当跟数据归属一起确定。
 
-Worker 池不是把数量设为 CPU 核心数就结束。池要考虑浏览器和其他页面也需要 CPU，消息与内存是否随 Worker 数量复制，任务是否足够大以抵消调度开销，以及高优先级交互任务能否插队。移动设备上的合理并发常低于桌面设备；可以从保守默认值开始，再以队列等待、吞吐、功耗和交互数据调整。
+`SharedArrayBuffer` 是另一种方式：两个环境共享底层内存，修改可能被另一方观察到。此时必须定义同步协议，通常涉及整数视图与 `Atomics`；浏览器使用还受跨源隔离等条件约束。比如“先写内容，再设置已完成标记”，若缺少正确同步，不能仅凭代码行顺序推断另一线程读到的组合。需要共享内存时应专门设计和验证协议，普通计算先采用消息交接会更容易说明白。
 
-### 十、先估算字节，再用工具核对保留路径
+### 限制在途批次才能避免越排越多
 
-JavaScript 对象的实际内存包含引擎布局与对齐，不能仅用字段字面大小精确相加；但数量级估算仍很有价值。一个百万项 `Float64Array` 的数据区约 8 MB，而一百万个 `{id, score}` 对象还包含对象头、字符串、引用和数组槽位，可能高出许多倍。若再结构化克隆到 Worker，峰值期间可能同时存在两份对象图。
+假设主线程每秒能发送一百批数据，Worker 每秒只能处理二十批。即使每批只有一千条，“已经分批”仍然挡不住队列越来越长。
 
-设计前列出：原始响应、解析对象、索引、在途批次、Worker 副本、聚合结果、视图模型。为每类写数量、单项估算、最大同时存在份数和释放条件。这个表不能替代堆快照，却能在编码前发现“同一批数据被无意保留四份”。
+**背压（backpressure）**的意思是让上游知道下游的接收能力。最简单的约定是：最多允许两批尚未确认完成的数据。只有 Worker 处理完一批并返回确认，上游才继续发下一批。
 
-堆快照中的 retained size 表示对象通过引用链保住的总量，shallow size 只是对象自身。排查泄漏要沿 retaining path 找到仍持有它的监听器、Map、闭包或消息队列。一次快照很难区分正常缓存与泄漏；在执行相同操作并触发清理后比较多次快照，更能观察不可回落的增长。
+| 发生的事 | 尚未完成的批次 | 是否继续发送 |
+| --- | --- | --- |
+| 发出第 1 批 | 1 | 可以再发一批 |
+| 发出第 2 批 | 1、2 | 达到上限，暂停 |
+| 收到第 1 批完成确认 | 2 | 发送第 3 批 |
+| 第 2 批仍在处理 | 2、3 | 继续等待 |
 
-### 十一、为大数据流水线建立可观测协议
+这样，Worker 前面的积压有了上限。不过如果主线程提前把一百万个批次全部放进自己的数组，只是把积压换了位置。上游也应按需读取或生成批次；从网络流读取时，需要把下游的等待传回读取过程。Streams API 提供队列和背压机制，Worker 的普通消息接口则需要自己约定确认与上限。
 
-至少记录任务 ID、数据版本、输入条数/字节数、批次数、最大在途数量、排队时间、计算时间、主线程合并时间、取消请求与确认时间、最终状态。日志要能把主线程和 Worker 的同一任务关联起来，但不要记录敏感原始数据。
+一个容易阅读的消息可以包含：协议 `version`、任务 `jobId`、消息 `type`、批次 `sequence` 和数据。确认要说明究竟确认了什么：只是“收到”，还是“处理完、可以继续”。前者不一定释放处理能力。
 
-指标之间要能互相解释：吞吐下降而 Worker 计算稳定，可能是消息或合并；取消延迟接近单批处理时长，说明批次是最小响应边界；堆峰值随在途数量线性增长，说明背压阈值直接控制内存。把协议状态与测量连起来，才能从“页面卡”走到可证伪的根因假设。
+任务失败时，也要结清它占用的额度并结束等待。遇到重复确认，不能重复增加额度。是否重试、是否允许乱序完成，要写进约定：纯计算可以重新计算；如果处理结果还会触发外部写入，则需要在提交处去重，不能把“没收到确认”等同于“肯定没做过”。
 
-### 学完后的自我检验
+### 停止旧工作和拒绝旧结果需要分别处理
 
-为一个“大文本搜索”或“大列表统计”场景画出数据路径，标出每一步在哪个执行环境、创建什么中间数据。提出一个“少做工作”的方案、一个增量方案和一个 Worker 方案，分别说明正确性不变量、消息上限、取消门禁和释放时机。最后写明出现什么测量证据时会退回主线程，或把计算移动到服务端。
+用户先搜索“函数”，随后改成“闭包”。第二次搜索先完成，第一次却最后返回。即使每次计算都正确，最后显示“函数”的结果仍然是错误体验。
 
+可以在每次启动时增加任务编号，收到结果时只接受当前编号。下面用两条普通消息演示判断，刻意让旧结果晚到，不依赖真实线程速度。
+
+```js example=cs03-current-job
+let currentJobId = 2;
+let visible = '';
+function receive(message) {
+  if (message.jobId !== currentJobId) return;
+  visible = message.text;
+}
+
+receive({ jobId: 2, text: '闭包的搜索结果' });
+receive({ jobId: 1, text: '函数的搜索结果' });
+console.log(visible); // => 闭包的搜索结果
+```
+
+这个检查只防止过期结果显示，并没有让旧计算停止。完整的取消还包括：停止发送新批次；让进行中的任务尽快响应取消；清理监听、缓存、定时器以及等待中的 Promise。
+
+`AbortSignal` 用来表达取消意图，不会强行打断任意 JavaScript。Worker 正在执行一个长同步循环时，`cancel` 消息必须等当前任务交还执行机会才能被处理。如果取消标记只能由这条消息修改，那么循环里再频繁地检查标记，也无法让尚未处理的消息提前生效。
+
+解决办法之一是让 Worker 自己分段工作，在段间回到事件循环。此时取消延迟至少受到单段耗时影响。仅等待一个已兑现的 Promise 仍然可能连续排空微任务，并不能确保取消消息及时运行。
+
+另一种办法是 `worker.terminate()`，直接停止整个 Worker。它不会替你运行 Worker 内尚未执行的 `finally`，也会影响该 Worker 上的其他任务。因此主线程必须结束相应等待、清理自己的资源；需要继续处理时再创建新 Worker。可复用 Worker 适合协作取消，独占且可丢弃的计算则更容易采用直接终止。两者的资源责任不同。
+
+### 用数据的同时存活时间解释内存峰值
+
+看一个数值数据集：一百万个 `Float64` 数值的数据区是八百万字节，约 8 MB，约 7.63 MiB。它不包含对象和视图本身的开销。
+
+```js example=cs03-bytes
+const values = new Float64Array(1_000_000);
+console.log(values.byteLength); // => 8000000
+console.log(values.byteLength / 1024 / 1024 < 8); // => true
+```
+
+如果普通克隆到 Worker，两边同时保留数据区时，仅这两份就约 16 MB。若原始数据来自 JSON，响应文本、解析后的普通数组、转换后的 TypedArray 可能还会短暂共存。最后只返回一个数字，不意味着计算过程中只占一个数字的空间。
+
+可以用下面这张表追踪一份搜索数据，而不用急着猜每个对象的精确大小。
+
+| 数据 | 谁持有 | 何时不再需要 |
+| --- | --- | --- |
+| 原始响应文本 | 解析流程 | 解析结束且无需重试时 |
+| 记录表与搜索索引 | Worker | 更换数据集或销毁工作区时 |
+| 在途批次 | 发送队列、消息系统 | 对应批次完成或任务结束时 |
+| 当前查询结果 | 主线程 | 新结果替换或页面关闭时 |
+| 可见区间的显示数据 | 视图 | 滚出复用范围或数据更新时 |
+
+“用完了”是业务判断，“仍然被谁引用”才决定垃圾回收能否回收它。比如页面关闭后，一个全局 Map 仍保存旧 Worker 任务的回调，回调又捕获完整记录表，这份数据就仍然可达。关联关系可以画成 `全局 Map → 回调 → 记录表`。这正是 [B01 中回调的引用清理](../chinese-guides/js-01-execution-context-scope-closure.md#回调结束使用后要解除谁的引用) 在大数据场景中的表现。
+
+堆快照中的 shallow size 只看对象自身，retained size 关注因这个对象而被保住、随它不可达才可能释放的对象总量。一个很小的回调也可能保住一大张表。应沿引用保留路径找持有者，而不是只找自身最大的对象。解除引用后，回收何时发生由引擎决定，不能用“清理后内存没有立即下降”直接判定泄漏。
+
+### 把方案放回完整页面中判断
+
+考虑一个本地大型文本分析工具。可以先由服务端或文件读取阶段缩减输入，再把文本分析交给专用 Worker；Worker 长期维护索引，查询只返回命中摘要；主线程只显示可见结果；换文件时终止旧任务并清空旧索引的引用。
+
+这里只讨论专用 Worker。Shared Worker 面向多个同源页面之间的共享连接，Service Worker 主要处理网络代理、离线等事件，Worklet 则参与特定渲染或音频管线。它们的生命周期和可用接口不同，不能仅因为都在页面之外执行就互相替换。
+
+如果使用 Worker 池，也不要把 Worker 数量直接等同于电脑核心数。浏览器、界面与其他软件也需要 CPU；每个 Worker 可能复制索引，数量翻倍还可能先把内存吃满。对桌面系统，可以从少量 Worker 开始，根据队列等待、计算吞吐和界面响应调整。需要同时处理多个任务，不等于越多线程越好。
+
+最后，只需用几项观察检验最主要的假设：用户操作是否仍等待很久；主线程时间花在计算还是结果显示；最大在途批次数是否受控；换数据集后旧数据是否还有保留路径。若 Worker 内计算很快、主线程合并很慢，继续增加 Worker 解决不了问题。若输入本身超出客户端可承受范围，则应重新考虑分页、聚合或服务端计算。
+
+这几种优化可以配合使用，但各自回答的问题不同：减少数据是在少搬东西；增量是在少算东西；虚拟化是在少显示东西；分块是在安排执行时机；Worker 是在安排执行位置。先找到真正昂贵的阶段，再选择对应手段。
+
+### 参考与延伸阅读
+
+- [MDN：使用 Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)——创建、消息往返、可用能力与终止。
+- [MDN：可转移对象](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects)——转移清单、底层资源与分离行为。
+- [MDN：Streams API 概念](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Concepts)——队列、消费速度与背压。
+- [MDN：SharedArrayBuffer](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer)——共享内存与浏览器安全条件。
+- [MDN：Worker.terminate](https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate)——立即终止的具体边界。

@@ -13,21 +13,13 @@
     "web-03-modern-css-architecture-container-progressive.md"
   ],
   "terms": {
-    "anchor positioning": {
-      "file": "1587e6f22443d416.wav",
-      "text": "anchor positioning"
-    },
-    "architecture decision record": {
-      "file": "7c9c1b4d98829ba0.wav",
-      "text": "architecture decision record"
-    },
-    "architecture fitness function": {
-      "file": "31fb28f77e0b3ce3.wav",
-      "text": "architecture fitness function"
-    },
     "blameless postmortem": {
       "file": "b032e8f9da12988b.wav",
       "text": "blameless postmortem"
+    },
+    "box model": {
+      "file": "bf89ee999f0cfbf6.wav",
+      "text": "box model"
     },
     "cascade": {
       "file": "fd782ad6a7d31fee.wav",
@@ -41,9 +33,9 @@
       "file": "132e39685484b5b5.wav",
       "text": "code owner"
     },
-    "component diagram": {
-      "file": "9aa2b468814cb60f.wav",
-      "text": "component diagram"
+    "component view": {
+      "file": "41c52448d247eacd.wav",
+      "text": "component view"
     },
     "container": {
       "file": "a42d519714d616e9.wav",
@@ -53,41 +45,25 @@
       "file": "bf226c2a8e4ba44b.wav",
       "text": "container query"
     },
-    "css scope": {
-      "file": "4a72f105764c99cd.wav",
-      "text": "CSS scope"
+    "containing block": {
+      "file": "f451747f0cdf50e4.wav",
+      "text": "containing block"
     },
     "custom property": {
       "file": "adc9b8ef9ffb06df.wav",
       "text": "custom property"
     },
-    "deployment diagram": {
-      "file": "36c3d2cf018c578c.wav",
-      "text": "deployment diagram"
-    },
-    "diagrams as code": {
-      "file": "3b3f68cbc2f90e18.wav",
-      "text": "diagrams as code"
-    },
-    "dynamic view": {
-      "file": "7224b438b5444410.wav",
-      "text": "dynamic view"
-    },
-    "feature query": {
-      "file": "866112b3c4daca10.wav",
-      "text": "feature query"
+    "fitness function": {
+      "file": "d1e89ac153784576.wav",
+      "text": "fitness function"
     },
     "flexbox": {
       "file": "08e857f6f01f391e.wav",
-      "text": "flexbox"
+      "text": "Flexbox"
     },
-    "grid layout": {
-      "file": "f1dca6211d5d18e1.wav",
-      "text": "grid layout"
-    },
-    "incident commander": {
-      "file": "77c7af9d2e8ea188.wav",
-      "text": "incident commander"
+    "grid": {
+      "file": "0f2a693e93e2ed70.wav",
+      "text": "Grid"
     },
     "intrinsic sizing": {
       "file": "022e59fee71428b9.wav",
@@ -97,29 +73,17 @@
       "file": "32ad4cddad3ed2c0.wav",
       "text": "logical properties"
     },
-    "media query": {
-      "file": "23b06e81ca781e2c.wav",
-      "text": "media query"
-    },
     "mitigation": {
       "file": "52a6efefa2bf8bb9.wav",
       "text": "mitigation"
     },
-    "near miss": {
-      "file": "b2c8bf205677a573.wav",
-      "text": "near miss"
+    "model": {
+      "file": "9372c470eeadd5ec.wav",
+      "text": "model"
     },
     "progressive enhancement": {
       "file": "e1c3f6b34fe91345.wav",
       "text": "progressive enhancement"
-    },
-    "risk classification": {
-      "file": "5a7774cb9bb148d1.wav",
-      "text": "risk classification"
-    },
-    "scroll-driven animation": {
-      "file": "31f06e03d1137386.wav",
-      "text": "scroll-driven animation"
     },
     "severity": {
       "file": "c98f54e5559a9568.wav",
@@ -131,11 +95,11 @@
     },
     "subgrid": {
       "file": "16ec7e29434b8c47.wav",
-      "text": "subgrid"
+      "text": "Subgrid"
     },
-    "system context diagram": {
-      "file": "8730a2a50b5431cb.wav",
-      "text": "system context diagram"
+    "system context": {
+      "file": "1b450f3ed392b64f.wav",
+      "text": "system context"
     },
     "trust boundary": {
       "file": "0c983266f8307390.wav",

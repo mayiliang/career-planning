@@ -2,166 +2,244 @@
 
 ## GIT-03 原子提交、远端协作、PR 与并行工作区
 
-团队协作不是“每个人各写代码，最后让平台合并”。可协作的变更必须有明确意图、可审查边界、稳定基线、验证证据和可恢复的集成顺序。Git 提供对象、引用、远端和 worktree；PR 平台提供讨论、检查与治理。二者组合起来才能回答谁改了什么、为什么能合、失败时如何退回。
+你已经会提交和合并，接下来会遇到另一类问题：自己的分支为什么推不上去，评审者为什么看不懂改动，临时修复为什么弄乱了正在写的功能？这些问题需要把个人操作放进共同的工作约定里。
+
+本篇从一个可解释的提交开始，用两个本地副本模拟远端同步，再观察 worktree 如何保留独立现场。PR、检查和发布记录也会回到同一个问题：别人能否理解、验证和接手这次变化。
 
 ### 学习前先确认
 
-- 直接前置：[GIT-02 分支、合并、变基与冲突恢复](../chinese-guides/git-02-branches-merge-rebase-conflicts.md#git-02)。本讲直接使用分支集成、共享历史和冲突恢复；对象与暂存区由其前置继续递归说明。
+- 直接前置：[GIT-02 分支整合与冲突处理](../chinese-guides/git-02-branches-merge-rebase-conflicts.md#git-02)。正文会直接使用分叉、快进和重放的含义。
 
-### 一、提交是一个可审查的决策单位
+终端例子使用 PowerShell 7 与 Git 2.43，按顺序在全新练习目录中执行。这里的远端也是本机临时目录，不需要注册平台账号，不会向互联网上传内容。真实平台的权限与合并规则需另行确认。
 
-好的提交不以行数衡量，而以意图边界衡量。它应解决一个可以命名的问题，包含维持该问题成立所需的测试或文档，并尽量能独立构建、审查和回滚。
+### 一个提交围绕一个可以解释的变化
 
-“单一目的”不等于把实现和测试分成两个提交，也不等于每个文件一个提交。若 API 类型、实现和回归测试共同表达同一合同，它们属于一个决策单位。反之，把功能修复、全仓格式化和依赖升级混在一起，会让评审无法区分风险，也让回滚不得不同时撤销无关变化。
+**原子提交（atomic commit）**的“原子”强调意图完整：这组变化共同完成一个可以命名的行为，便于独立理解、验证和撤销。它不以文件数或代码行数划界。
 
-提交前检查 `git diff --staged`，确认：没有用户原有的无关改动；生成文件与源变化对应；测试证明的是新行为；临时日志、密钥和本地路径没有进入差异。
+假设搜索页会被过期请求覆盖。一次完整修复可能同时包含请求身份判断、控制完成顺序的回归例子和必要说明；这些文件服务于同一件事。把修复、回归和说明机械拆开，反而可能留下无法解释或无法运行的中间提交。
 
-### 二、提交说明解释原因和影响
+| 混合在工作区里的变化 | 更合适的归属 | 原因 |
+| --- | --- | --- |
+| 阻止旧请求覆盖新结果，以及对应回归 | 搜索修复提交 | 一起定义并保护同一行为 |
+| 全站按钮圆角调整 | 视觉调整提交 | 可独立讨论和撤销 |
+| 无关依赖升级 | 依赖升级提交 | 风险和验证条件不同 |
 
-标题应准确概括行为变化，正文补充问题、约束、重要取舍和迁移风险。diff 已经展示“哪一行变了”，说明更应该回答“为什么这样变、为什么不是其他方案”。
+用 [暂存区](../chinese-guides/git-01-object-index-references-recovery.md#同一个文件可以同时有三个版本) 选择本次内容，再读 `git diff --staged`。特别检查有没有漏掉实现依赖的类型、误带临时日志、混入别人的修改。部分暂存后，本地运行的工作文件可能不是暂存版本，不能直接把那次运行结果写成“提交已验证”。
+
+### 提交说明解释用户能观察到的变化
+
+标题先写结果，正文补充原因与必要边界。一份可以独立理解的说明例如：
 
 ```text
-fix(search): prevent stale response from replacing latest result
+修复连续搜索时旧响应覆盖当前结果
 
-Track a monotonic request sequence at the commit boundary. Abort remains an
-optimization because some transports can still resolve after cancellation.
-Adds reversed-order coverage and keeps the existing error presentation.
+输入 a 后立即输入 ab，若 a 较晚返回，页面会退回 a 的结果。
+现在只允许最新搜索提交状态；取消请求用于减少无效工作。
+用可控的响应完成顺序核对了旧结果被忽略、当前结果正常显示。
 ```
 
-不要把工单号当作全部说明，也不要用“fix bug”“update files”隐藏范围。若变更有破坏性接口、数据迁移或回滚限制，应在提交和 PR 中同时显式标注。
+这比“修改 search.ts”多解释了触发条件、机制和验证。工单号可以帮助追溯背景，但不能代替说明本身。提交作者、提交者和最终合入者也可能是不同的人；判断变更背景时看完整记录，不把某个名字当作全部责任。
 
-### 三、fetch、push 与 pull 操作不同引用
+说明应与实际做过的检查一致。没连接真实后端，就写清验证使用可控返回；没有测量过性能，就不写“显著提升”。怎样从复现推到机制，见 [DEBUG-01](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#每个假设都要有能推翻它的观察)。
 
-`git fetch` 从远端取得对象并更新远端跟踪引用，不自动把当前分支与它集成。`git push` 请求远端更新引用，服务端可依据权限、保护规则和预期旧值拒绝。`git pull` 是 fetch 后再执行 merge 或 rebase 的组合命令，结果取决于配置和当前图。
+### 用两个本地副本看清远端同步
 
-协作时优先把步骤说清：先 fetch，查看 `main...origin/main`，再决定快进、merge 或 rebase。直接说“pull 一下”会隐藏实际集成策略，也容易在脏工作区或错误分支产生意外合并提交。
+创建一个裸仓库 `remote.git` 作为共享端，`author` 和 `peer` 模拟两位协作者。`git -C` 表示在指定目录里执行 Git，省去反复切换终端位置。
 
-远端名称只是本地配置的 URL 别名，`origin` 没有特殊权限。一个仓库可以有上游只读远端、个人 fork 和部署镜像；推送前应核对目标 URL、分支和账号，避免把内部分支或敏感提交发送到错误位置。
-
-### 四、跟踪关系不等于自动同步
-
-本地分支可配置 upstream，用于省略 push/pull 参数和显示 ahead/behind。它只是默认关系，不表示远端变化会实时进入本地，也不表示本地提交已备份。
-
-```sh
-git branch -vv
-git remote -v
-git status --branch
+```powershell example=git03-setup runtime=project
+$lab = Join-Path ([System.IO.Path]::GetTempPath()) ('atlas-git03-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $lab | Out-Null
+git init --bare -b main "$lab/remote.git"
+git clone "$lab/remote.git" "$lab/author"
+git -C "$lab/author" config user.name 'Atlas Author'
+git -C "$lab/author" config user.email 'author@example.invalid'
+git -C "$lab/author" config core.autocrlf false
+'lesson=1' | Set-Content -Encoding utf8NoBOM "$lab/author/notes.txt"
+git -C "$lab/author" add -- notes.txt
+git -C "$lab/author" commit -m '建立共同笔记'
+git -C "$lab/author" push -u origin main
+git clone "$lab/remote.git" "$lab/peer"
+git -C "$lab/peer" config user.name 'Atlas Peer'
+git -C "$lab/peer" config user.email 'peer@example.invalid'
+git -C "$lab/peer" config core.autocrlf false
 ```
 
-推送前确认远端跟踪引用来自最近 fetch，尤其在使用 `--force-with-lease`、删除远端分支或发布标签时。陈旧的本地观察会让并发保护基于错误前提。
+第一次 clone 报“空仓库”提示是正常的，因为那时还没有提交。现在三处都能找到第一版。`origin` 只是 clone 建立的远端别名，不代表特殊权限；`push -u` 设置当前分支的 **upstream**，供状态展示和部分默认操作使用，不是开启自动同步。
 
-### 五、PR 是变更提案，不是一个 Git 对象
+让 peer 推送新笔记，同时让 author 在另一文件里写自己的变化：
 
-**拉取请求（pull request）**把主题分支、目标分支、需求上下文、自动检查、讨论和评审决定组织在一起。它不替代提交图：平台上的 squash、rebase merge 或 merge commit 会以不同方式产生最终历史。
-
-一份可审查 PR 应说明：
-
-- 要解决的问题、用户影响和明确不处理的范围；
-- 关键设计决定及替代方案；
-- 风险、兼容性、迁移和回滚方法；
-- 执行过的自动与人工验证；
-- 截图、性能数字或日志的采集条件；
-- 依赖的其他变更和建议集成顺序。
-
-PR 描述不能把整个需求文档复制一遍，也不能只写“见工单”。评审者需要在当前页面快速建立边界，并能沿链接追到权威来源。
-
-### 六、控制差异大小，而不是机械限制文件数
-
-大 PR 的问题是评审者难以保持完整心智模型，容易漏掉跨文件合同。可通过先提交纯重命名、再提交行为变化，或按可部署垂直切片拆分。拆分后每片仍应保持构建和运行一致，不能制造中间提交泄露数据或破坏迁移顺序。
-
-依赖关系需要显式写出：PR-B 基于 PR-A 时，说明临时基线和最终重定向方式；避免评审者把 A 的差异重复算进 B。堆叠 PR 合入后应更新后续分支，重新检查最终 diff，而不是假定平台自动处理语义变化。
-
-### 七、自动检查与人工评审承担不同风险
-
-CI 擅长可重复规则：构建、类型、测试、格式、依赖与安全扫描。人工评审擅长需求是否被正确理解、边界是否合理、错误状态、可维护性和运行风险。任何一方都不能证明全部正确。
-
-绿色检查可能测试不足，人工 “LGTM” 也可能没有查看产物。保护规则应要求与风险相称的检查、代码所有者、最新基线或签名，但规则本身要有明确 owner 和例外流程，避免紧急情况下通过关闭全部门禁获得速度。
-
-### 八、评审意见需要形成可追踪决定
-
-评论应指向具体位置和可观察风险，区分阻塞、建议和问题。作者回应时提供证据、修订或明确接受风险；评审者随后重新验证并关闭，而不是把“已回复”当“已解决”。
-
-当分歧来自目标不同，先回到需求、非功能约束和团队规范；当证据不足，安排小实验或升级给负责该边界的人。不要用职位压过可复核证据，也不要通过无限讨论逃避一个有截止时间的决定。
-
-### 九、合入方式改变最终历史合同
-
-- merge commit 保留主题提交与合入节点；
-- squash merge 把 PR 差异压成一个新提交，原分支提交不成为主线祖先；
-- rebase merge 将提交逐个重建到目标分支；
-- fast-forward 只移动目标引用。
-
-团队应根据回滚单位、变更日志、签名、bisect 和发布工具选择。若 squash 后丢失有价值的逐提交因果，提交正文或 PR 决定应进入最终说明；若保留全部临时提交会使 bisect 落在不可构建状态，则先整理主题历史。
-
-### 十、worktree 提供独立工作区，不提供独立仓库
-
-**工作树（worktree）**让同一对象数据库对应多个工作目录。每个 worktree 有独立 `HEAD`、暂存区和工作文件，适合同时维护修复、功能和评审分支，也适合多个自动化 Agent 并行。
-
-```sh
-git worktree add ../app-hotfix -b hotfix/login origin/main
-git worktree list
+```powershell example=git03-diverge runtime=project
+'lesson=2' | Set-Content -Encoding utf8NoBOM "$lab/peer/notes.txt"
+git -C "$lab/peer" add -- notes.txt
+git -C "$lab/peer" commit -m '补充第二版笔记'
+git -C "$lab/peer" push origin main
+'catalog=ready' | Set-Content -Encoding utf8NoBOM "$lab/author/catalog.txt"
+git -C "$lab/author" add -- catalog.txt
+git -C "$lab/author" commit -m '增加资料目录'
+git -C "$lab/author" show origin/main:notes.txt
+git -C "$lab/author" show main:notes.txt
 ```
 
-共享对象库意味着 fetch 和新对象对各 worktree 可见，但一个分支通常不能同时检出到多个 worktree。根级配置、外部数据库、端口、缓存、生成目录和包存储仍可能共享。worktree 不会自动隔离这些运行资源，也不会阻止两个任务最终修改同一逻辑。
+author 的两次读取仍是 `lesson=1`。服务器已是第二版，但 author 的远端跟踪引用尚未更新。本地的 ahead/behind 也只能基于已有观察，不能告诉你“全世界此刻的真实进度”。
 
-### 十一、并行任务需要所有权和集成协议
+### fetch 更新观察而整合改变当前开发线
 
-给人或 Agent 分配并行工作时，至少记录：
+现在尝试普通 push，再拉取观察信息：
 
-- 起始 commit 与目标分支；
-- 允许修改的文件或模块；
-- 不得覆盖的用户改动；
-- 输入、输出和依赖任务；
-- 验证命令与环境资源；
-- 提交归属、完成条件和集成顺序。
+```powershell example=git03-fetch runtime=project
+git -C "$lab/author" push origin main
+# 上一行预期被拒绝：远端已有本地尚未包含的变化。
+git -C "$lab/author" fetch origin
+git -C "$lab/author" show origin/main:notes.txt
+git -C "$lab/author" show main:notes.txt
+git -C "$lab/author" rev-list --left-right --count main...origin/main
+git -C "$lab/author" diff main...origin/main -- notes.txt
+```
 
-文件边界只是第一层。两个任务分别修改前端类型和服务端响应，即使文件不重叠，也可能产生合同冲突。集成者必须重新阅读合并后的差异和运行全局测试，不能把子任务各自通过简单相加为系统通过。
+fetch 后，`origin/main` 读到第二版，`main` 仍是第一版；计数为 `1 1`，表示两侧各有一个独有提交。fetch 下载对象并按引用规则更新本地观察，不会自动把当前工作文件改为远端版本。
 
-### 十二、脏工作区首先代表未知所有权
+本例 author 的目录提交尚未共享，且改的是不同文件，可以重放到新主线，再普通推送：
 
-看到未提交变更时，不应默认它们是垃圾、上一次任务残留或可以 stash。先通过状态、diff 和任务上下文判断来源；与当前工作无关的修改要保留并绕开。确需移动、覆盖或删除时，必须得到明确授权并验证精确目标。
+```powershell example=git03-integrate runtime=project
+git -C "$lab/author" rebase origin/main
+git -C "$lab/author" show HEAD:notes.txt
+git -C "$lab/author" show HEAD:catalog.txt
+git -C "$lab/author" push origin main
+git -C "$lab/author" branch -vv
+```
 
-自动格式化、代码生成和依赖安装可能改动大范围文件，应在运行前预估影响，运行后逐项检查。不要用 reset、checkout 或清理命令恢复“干净”外观而抹掉他人的工作。
+结果同时有 `lesson=2` 和 `catalog=ready`。如果两侧改同一行，仍需按 [三方内容和业务意图](../chinese-guides/git-02-branches-merge-rebase-conflicts.md#冲突解决先保留需求再决定文本) 处理冲突。
 
-### 十三、钩子是反馈层，服务端规则才是共同边界
+**pull** 把 fetch 和随后的集成放在一条命令里，具体使用 merge、rebase 或仅允许快进与参数、配置有关。日常可以使用团队约定的 pull 方式；在学习或排错时把获取与整合拆开，能更容易指出是哪一步改变了什么。
 
-pre-commit、commit-msg 和 pre-push 钩子能在本地提前发现问题，但可以未安装、配置不同或被跳过。它们应快速、确定，并与 CI 的权威命令同源。不可绕过的合并规则放在服务端保护和 CI，而不是假设每台机器完全一致。
+### lease 比较的是你明确确认过的远端位置
 
-钩子失败要给出具体修复路径，不应在未说明时自动改写大量文件或联网安装。紧急旁路必须记录原因、批准者、补测和恢复门禁的时间。
+`--force-with-lease` 可在重写已发布主题历史时限制更新条件：远端分支必须仍处于预期旧 ID。它不是锁，也不证明你已经读过别人所有变化。省略显式旧值时，通常依赖本地远端跟踪引用；编辑器后台 fetch 可能更新它，所以“刚 fetch 过”不能等同于“已经审阅并同意覆盖”。
 
-### 十四、合入后的验证属于变更的一部分
+下面只在练习远端制造一次应当拒绝的更新。author 先发布主题提交并保存自己确认的位置：
 
-主题分支通过不保证与最新主线组合后仍正确。合入前后应验证目标分支实际 commit、锁文件和生成产物，必要时在干净环境重建。发布后再以健康检查、关键用户任务和错误监控确认结果。
+```powershell example=git03-lease-start runtime=project
+git -C "$lab/author" switch -c codex/lease
+'heading=Draft' | Set-Content -Encoding utf8NoBOM "$lab/author/title.txt"
+git -C "$lab/author" add -- title.txt
+git -C "$lab/author" commit -m '增加资料标题'
+git -C "$lab/author" push -u origin codex/lease
+$expected = git -C "$lab/author" rev-parse origin/codex/lease
+# peer 在这个已发布主题上继续工作。
+git -C "$lab/peer" fetch origin
+git -C "$lab/peer" switch -c codex/lease origin/codex/lease
+'review=done' | Set-Content -Encoding utf8NoBOM "$lab/peer/review.txt"
+git -C "$lab/peer" add -- review.txt
+git -C "$lab/peer" commit -m '补充评审记录'
+git -C "$lab/peer" push origin codex/lease
+```
 
-若失败，区分撤销业务变更、回退部署制品和重写 Git 历史。生产恢复通常使用已知制品或 revert；在事故中强行重写主分支只会扩大协作不确定性。
+author 只改写自己的标题提交说明，再模拟一次后台 fetch：
 
-### 十五、从提交到发布建立证据链
+```powershell example=git03-lease-reject runtime=project
+git -C "$lab/author" commit --amend -m '为学习资料增加可辨认的标题'
+git -C "$lab/author" fetch origin
+git -C "$lab/author" push "--force-with-lease=refs/heads/codex/lease:$expected" origin HEAD:refs/heads/codex/lease
+# 预期被拒绝；检查 peer 的记录仍在远端跟踪版本中。
+git -C "$lab/author" show origin/codex/lease:review.txt
+```
 
-稳定链路可以是：需求或问题编号 → 原子提交 → PR 决定 → CI 运行 → 合入 commit → 构建制品 → 发布记录 → 运行验证。每个箭头都应能查询，且不泄露密钥或不必要的用户数据。
+预期仍读到 `review=done`。虽然 fetch 更新了 `origin/codex/lease`，显式保存的 `$expected` 没有变化，远端实际位置与它不符，所以更新被挡住。若此时只是把 `$expected` 改成新 ID 再试，可能恰好绕过你需要处理的协作问题。
 
-这条链不是为了增加表单，而是让维护者在数月后回答：某行为为什么存在、由什么测试保护、哪个制品包含它、失败时该撤销哪一层。
+被拒绝后应查看新提交、协调目标，再选择保留两侧内容的整合方式；本例到拒绝和核对为止。即便条件匹配，平台权限、保护规则和 hooks 仍可拒绝推送。租约只针对指定引用在更新时的值，也不代表它此前从未移动过。
 
-### 进阶：堆叠变更需要保持可独立理解
+### PR 帮助别人完成一次有依据的决定
 
-当一个大目标必须拆成基础重构、服务合同和界面三层时，可以建立堆叠分支。每层 PR 写明父分支、独立价值和最终目标；评审工具只展示相对父层的差异。底层修改合入后，后续层重定向到主线并重新验证，不保留旧父的重复提交。
+**pull request**，常写作 PR，是托管平台组织变更提案、差异、讨论和检查的方式，不是第五种 Git 对象。它把“准备怎么改”交给别人审阅，最终历史仍取决于实际整合方式。
 
-堆叠并不允许中间层不可构建。可以先加入兼容 API，再迁移消费者，最后删除旧接口；每步都应可发布或明确只存在于受控集成分支。若某层改动频繁导致所有上层反复冲突，说明边界或拆分顺序需要调整。
+搜索修复的 PR 可以这样组织：
 
-### 进阶：变更所有权还包括运行资源
+```text
+连续输入 a、ab 时，较早发出的 a 若晚返回，会覆盖当前结果。
+本次在状态提交前核对请求身份；取消请求用于减少无效等待。
 
-并行 worktree 可能共享本机数据库、浏览器用户目录、测试账号、端口、生成缓存和操作系统凭据。文件互不重叠时，两个测试仍可能清理对方数据或抢占端口。任务协议应为这些资源分配唯一命名空间，并在结束时只回收自身对象。
+验证：可控顺序下分别交付旧响应和新响应，旧响应不再写入界面；
+单次搜索及当前请求失败仍保留原有反馈。未连接生产搜索服务。
 
-依赖安装和代码生成可能写共享根目录。执行前读取脚本作用域，必要时串行或建立独立缓存。最终集成必须基于源文件重建生成物，不能挑选不同任务留下的随机产物。
+关注点：请求身份是否在每次新搜索时更新，错误分支是否也受保护。
+恢复：可撤销本次行为提交；没有数据格式迁移。
+```
 
-多 Agent 场景还要区分“建议修改”和“已获授权写入”。自动工具不能因为发现顺手问题就扩大到其他任务，尤其不能移动或删除未知修改。清楚的所有权、提交和验证记录，才让并行提高吞吐而不牺牲可恢复性。
+这段文字让评审者知道触发、结果、重点和证据边界。截图适合展示视觉变化，日志适合说明顺序；附件都应附采集条件，不能只堆“已测试”的图片。
 
-### 进阶：子模块与大文件改变协作原子性
+对于大变更，按可运行的垂直切片拆分比机械限制文件数更有帮助。PR-B 依赖 PR-A 时，写明临时基线和最终合入目标；A 合入后要重新检查 B 的最终 diff，尤其是 A 经过 squash 后，原提交未必成为主线祖先。
 
-submodule 在父仓库中保存的是另一个仓库的特定 commit，而不是把其文件历史合并进来。父仓库更新指针时，必须保证目标对象已推送且协作者有权限；否则父提交存在，依赖内容却无法取得。评审要同时查看指针从哪个 commit 变到哪个 commit，以及子仓库那段差异和发布证据。
+### 合入方式应该服务于以后如何追踪
 
-Git LFS 通常在普通 Git 对象中保存指针，把大内容交给另一存储。克隆或检出成功不保证大对象已下载，备份也要覆盖 LFS 存储。锁定二进制资产可以减少并行覆盖，但会引入锁所有权和失联恢复问题。自动化不能只验证工作树里有同名文件，还要验证它不是未解析指针且内容散列正确。
+| 方式 | 最终历史的主要特点 | 适合讨论的取舍 |
+| --- | --- | --- |
+| merge commit | 保留主题提交和明确的汇合节点 | 如何追踪分支意图与撤销整次整合 |
+| squash | 把本次差异形成一个新的主线提交 | PR 是否就是合适的回滚单位，最终说明是否完整 |
+| rebase 式合入 | 通常将主题提交逐个接到目标线 | 中间提交能否独立理解、构建和二分 |
+| fast-forward | 只移动目标引用 | 是否需要额外记录合入时点 |
 
-这些机制说明“一个 commit”未必包含交付所需全部字节。依赖仓库、包仓库、制品库与部署配置都要在发布记录中固定版本。需要跨仓库原子变更时，优先设计兼容窗口：先发布可兼容提供者，再迁移消费者，最后删除旧合同；不要假设多个仓库能在同一瞬间合入和上线。
+平台的具体实现可能有额外规则，最终应查看真实提交图。不要同时要求保留所有临时提交，又希望每一步都可独立解释；先明确对维护最有用的历史粒度。
 
-### 学完后应能说明
+本地 hooks 能提前提醒格式、说明和快速检查，但可能未安装或被跳过；共同要求应由 CI 与服务端规则执行。人工评审继续负责需求理解、设计边界和运行风险。检查全绿与评审通过都不是对未来所有环境的保证。
 
-你应能组织可独立审查的提交，区分 fetch、push、pull 与跟踪引用，解释 PR 合入方式如何改变提交图，并为并行 worktree 任务规定所有权、依赖和集成顺序。面对脏工作区或失败合入时，应先保护未知改动，再以提交图、差异和验证证据恢复，而不是追求表面干净。
+评审意见应指向可观察问题。例如“快速切换后旧请求还能写入错误提示，建议给错误分支加同样守卫”，比“这里不够优雅”更容易达成决定。作者提供修订或证据，评审者再核对；回复过不等于问题已解决。
+
+### worktree 给每项工作一份独立现场
+
+**worktree** 让一个仓库拥有多个工作目录。每个目录有自己的 HEAD、暂存区和工作文件，同时共享对象数据库和大部分仓库引用、配置。它适合把正在开发的功能留在原处，另开一个目录处理修复。
+
+继续使用本篇 `$lab`。先在 author 留下一个尚未提交的草稿，再从 main 建立修复工作区：
+
+```powershell example=git03-worktree runtime=project
+'尚未完成的草稿' | Set-Content -Encoding utf8NoBOM "$lab/author/draft.txt"
+git -C "$lab/author" worktree add -b codex/hotfix "$lab/hotfix" main
+git -C "$lab/author" worktree list
+git -C "$lab/author" status --short
+git -C "$lab/hotfix" status --short
+Test-Path -LiteralPath "$lab/hotfix/draft.txt"
+'notice=fixed' | Set-Content -Encoding utf8NoBOM "$lab/hotfix/notice.txt"
+git -C "$lab/hotfix" add -- notice.txt
+git -C "$lab/hotfix" commit -m '修正阅读提示'
+git -C "$lab/author" show codex/hotfix:notice.txt
+Test-Path -LiteralPath "$lab/author/notice.txt"
+```
+
+author 显示 `?? draft.txt`，hotfix 起初干净；两次 `Test-Path` 都是 `False`。但 author 中的 `git show` 能读到 `notice=fixed`：工作文件各自独立，提交对象与分支引用共享。
+
+同一个分支通常不能同时检出到两个 worktree，以免两个现场共同移动同一个分支。只读评审可考虑 detached worktree；需要长期保存修改时应给它命名分支。原理回到 [HEAD 与引用](../chinese-guides/git-01-object-index-references-recovery.md#分支和-head-是找到提交的入口)。
+
+### 工作目录独立还需要运行资源独立
+
+两个目录都执行“启动开发服务”，仍可能争用同一个端口；两套测试指向同一个数据库，仍可能清掉对方数据。对象库共享也意味着一处 fetch 可以更新另一处看到的远端跟踪引用。
+
+| 需要约定的资源 | 一个可执行的分配例子 |
+| --- | --- |
+| 修改范围 | 修复任务负责请求逻辑和相邻回归，文档任务负责说明 |
+| 起点和目标 | 都记录起始 commit；明确先合修复再核对文档 |
+| 端口与数据 | 每项任务使用独立端口和带任务前缀的测试数据库 |
+| 缓存与产物 | 查清脚本是否写仓库共享目录，必要时单独路径或串行生成 |
+| 交接信息 | 完成的行为、实际修改、检查结果和未解决问题 |
+
+这些约定同样适用于 AI Agent。文件不重叠仍可能改坏同一个接口合同；接手人必须读整合结果。遇到未知脏工作区，先辨认归属，保留现有改动；不能为了让状态好看就自动 reset 或 stash。
+
+结束 worktree 前先查看它的状态，确认需要的内容已提交或另有保存，再使用 `git worktree remove <已确认路径>`。它默认拒绝有未提交或未跟踪内容的工作区。不要用强制删除来代替交接，也不要把移除工作目录误认为删除了对应分支或提交。
+
+### 跨仓库依赖与发布记录补齐交付链条
+
+**submodule** 在父仓库记录子仓库的特定 commit；父仓库提交存在，不保证协作者能从子仓库取得那个对象。更新指针时要保证子提交已共享、权限可用，并评审子仓库对应差异。
+
+**Git LFS** 通常让 Git 保存指针，大文件内容由另一存储提供。看到同名文件不保证它已替换成实际资产；备份也需要包含大对象。二进制锁可以减少冲突，却仍需明确锁归属和异常解除方式。
+
+跨仓库修改接口时，可采用兼容窗口：先让服务端同时接受旧、新格式，再迁移前端，最后移除旧支持。两个仓库的合入与发布通常不是同一瞬间，不能靠“我们同时点按钮”实现原子交付。
+
+一条便于维护的记录链是“问题 → 提交 → PR 决定 → 检查运行 → 合入 ID → 构建制品 → 发布验证”。合入后发生故障时，还要区分撤销源代码、回退部署制品和恢复数据；它们不是同一件事。制品错配的排查可以继续看 [Source Map 与运行版本](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#source-map-必须和实际运行的制品配对)。
+
+### 参考与延伸阅读
+
+- [git fetch](https://git-scm.com/docs/git-fetch) 与 [git pull](https://git-scm.com/docs/git-pull)：核对获取、引用更新与集成策略。
+- [git push](https://git-scm.com/docs/git-push)：特别查看带明确预期值的 lease，以及后台 fetch 的说明。
+- [GitHub：Pull requests](https://docs.github.com/en/pull-requests/reference/pull-requests)：理解平台上的提案、差异、讨论与评审。
+- [git worktree](https://git-scm.com/docs/git-worktree)：查询共享范围、分支检出限制和移除条件。
+- [Git 子模块](https://git-scm.com/docs/gitsubmodules) 与 [Git LFS](https://git-lfs.com/)：需要跨仓库或管理大文件时继续学习。
+
+本篇于 2026-09-09 对照官方机制。练习中的共享端只验证 Git 对象与引用行为，不代表已经验证任何托管平台权限、CI 或生产发布。

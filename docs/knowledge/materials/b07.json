@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "batch": "B07",
+  "title": "让共享状态、错误恢复和页面导航彼此配合",
+  "reviewedOn": "2026-09-09",
+  "chapters": [
+    {
+      "id": "REACT-06",
+      "title": "Reducer 与状态域",
+      "question": "一次操作怎样同时维护好几份相关状态？",
+      "summary": "通过清单、乱序回执与独立 Provider，把变化规则和共享范围分开说明。",
+      "outcomes": [
+        "用动作与纯 reducer 维护关联状态",
+        "拒绝过期回执并明确非法变化的策略",
+        "根据任务寿命放置 Provider 和共享状态"
+      ],
+      "guide": "react-06-reducer-context-state-domains.md",
+      "anchor": "react-06",
+      "prerequisites": [
+        "react-05-hooks-rules-custom-hooks.md#react-05"
+      ],
+      "concepts": [
+        {
+          "id": "domain-transition-rules",
+          "heading": "先把一次操作需要保持的关系写出来"
+        },
+        {
+          "id": "domain-list-reducer",
+          "heading": "用完整清单观察 reducer 怎样维护一致性"
+        },
+        {
+          "id": "domain-action-facts",
+          "heading": "Action 应保留已经发生的事实"
+        },
+        {
+          "id": "domain-reducer-purity",
+          "heading": "纯函数让规则可以重复计算"
+        },
+        {
+          "id": "domain-receipt-identity",
+          "heading": "迟到回执需要在状态规则中失去资格"
+        },
+        {
+          "id": "domain-invalid-transition",
+          "heading": "非法变化和预期过期需要不同处理"
+        },
+        {
+          "id": "domain-context-sharing",
+          "heading": "Context 让子树取得一份已有状态"
+        },
+        {
+          "id": "domain-context-propagation",
+          "heading": "分开状态和动作有助于缩小传播范围"
+        },
+        {
+          "id": "domain-provider-scope",
+          "heading": "Provider 的位置决定状态活多久"
+        },
+        {
+          "id": "domain-data-owners",
+          "heading": "URL 服务器数据与本地状态各有所有者"
+        },
+        {
+          "id": "domain-persistence-replay",
+          "heading": "持久化和重放都不能越过真实副作用"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "state-source-facts",
+          "reason": "先减少冗余状态，再集中需要共同维护的关系。"
+        },
+        {
+          "concept": "hook-independent-state",
+          "reason": "useReducer 仍属于组件实例，共享需要明确提供同一来源。"
+        },
+        {
+          "concept": "pinia-store-lifetime",
+          "reason": "对照 Pinia 的实例寿命，避免把页面卸载与状态销毁等同。"
+        },
+        {
+          "concept": "router-state-url",
+          "reason": "可分享位置优先进入 URL，Context 只负责传播。"
+        }
+      ]
+    },
+    {
+      "id": "VUE-08",
+      "title": "Pinia 与状态分层",
+      "question": "数据放进 store 以后，谁仍然负责生命周期和一致性？",
+      "summary": "从共享清单、异步失效和设置迁移理解 Pinia 管理的范围。",
+      "outcomes": [
+        "区分组件、URL、客户端状态与服务器缓存",
+        "正确登记 Setup Store 状态并保留解构响应性",
+        "设计重置、旧结果失效和版本化持久化"
+      ],
+      "guide": "vue-08-pinia-state-layers.md",
+      "anchor": "vue-08",
+      "prerequisites": [
+        "vue-06-composables-injection-reuse.md#vue-06"
+      ],
+      "concepts": [
+        {
+          "id": "pinia-state-layers",
+          "heading": "先判断状态应该跟随谁"
+        },
+        {
+          "id": "pinia-store-facts",
+          "heading": "一个清单 store 保存事实并提供命名动作"
+        },
+        {
+          "id": "pinia-shared-instance",
+          "heading": "两个组件取得同一实例却不需要复制数据"
+        },
+        {
+          "id": "pinia-setup-state",
+          "heading": "Setup Store 的状态需要交给 Pinia 管理"
+        },
+        {
+          "id": "pinia-reactive-destructure",
+          "heading": "解构时保留响应性并理解 getter 的成本"
+        },
+        {
+          "id": "pinia-request-identity",
+          "heading": "异步 action 仍然要拒绝过期结果"
+        },
+        {
+          "id": "pinia-store-lifetime",
+          "heading": "Store 的重置处置和页面卸载不是同一件事"
+        },
+        {
+          "id": "pinia-persistence-schema",
+          "heading": "持久化只保存允许字段并解析版本"
+        },
+        {
+          "id": "pinia-observation",
+          "heading": "Patch 订阅与动作观察各自解决不同问题"
+        },
+        {
+          "id": "pinia-server-optimism",
+          "heading": "服务器缓存和乐观变化需要另外定义责任"
+        },
+        {
+          "id": "pinia-request-instance",
+          "heading": "跨 store 调用与 SSR 需要明确实例"
+        },
+        {
+          "id": "pinia-design-review",
+          "heading": "分层清楚以后再讨论工具与规模"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "composable-independent-state",
+          "reason": "比较每次调用独立创建与同一 Pinia 中取得已有实例。"
+        },
+        {
+          "concept": "composable-ref-return",
+          "reason": "Composable 的只读返回值不能不加区分地搬进 Setup Store。"
+        },
+        {
+          "concept": "domain-provider-scope",
+          "reason": "状态寿命应跟随任务，比较 Provider 和 store 的边界。"
+        },
+        {
+          "concept": "effect-request-eligibility",
+          "reason": "取消和提交资格各有职责，异步 action 也要遵守。"
+        }
+      ]
+    },
+    {
+      "id": "REACT-08",
+      "title": "错误边界与恢复",
+      "question": "一块内容出错后，怎样保留任务并真正恢复？",
+      "summary": "亲手制造渲染失败、交付 Promise 结果，并对比重试、过渡与代码加载。",
+      "outcomes": [
+        "区分错误边界、事件失败与 Suspense 等待",
+        "重新建立失败资源并保留区域外的草稿",
+        "说明过渡更新、lazy 和服务端恢复的边界"
+      ],
+      "guide": "react-08-error-boundaries-suspense-recovery.md",
+      "anchor": "react-08",
+      "prerequisites": [
+        "react-06-reducer-context-state-domains.md#react-06"
+      ],
+      "concepts": [
+        {
+          "id": "recovery-error-phase",
+          "heading": "先看错误发生在哪个执行阶段"
+        },
+        {
+          "id": "recovery-local-boundary",
+          "heading": "一个简单边界保护一块可以独立恢复的区域"
+        },
+        {
+          "id": "recovery-capture-examples",
+          "heading": "对比渲染错误同步 Effect 错误与事件失败"
+        },
+        {
+          "id": "recovery-suspense-source",
+          "heading": "Suspense 等待的是支持它的读取"
+        },
+        {
+          "id": "recovery-promise-states",
+          "heading": "手动交付结果让 Promise 的三种状态清楚可见"
+        },
+        {
+          "id": "recovery-resource-retry",
+          "heading": "只清错误标记不一定真的重新读取"
+        },
+        {
+          "id": "recovery-use-rules",
+          "heading": "use 有自己的规则不能套用到所有 Hook"
+        },
+        {
+          "id": "recovery-transition",
+          "heading": "Transition 可以让已可用的内容暂时保留"
+        },
+        {
+          "id": "recovery-lazy-code",
+          "heading": "lazy 管的是代码资源而不是业务数据"
+        },
+        {
+          "id": "recovery-result-actions",
+          "heading": "等待失败和取消要提供不同的下一步"
+        },
+        {
+          "id": "recovery-boundary-granularity",
+          "heading": "边界层级影响草稿布局和提示数量"
+        },
+        {
+          "id": "recovery-streaming-ssr",
+          "heading": "服务端流式渲染与客户端恢复有不同责任"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "domain-provider-scope",
+          "reason": "边界重建会影响内部状态，需先确定任务所有者。"
+        },
+        {
+          "concept": "effect-async-responsibility",
+          "reason": "异步任务自行处理异常，不能把所有回调都交给渲染边界。"
+        },
+        {
+          "concept": "router-data-cycle",
+          "reason": "路由层继续把读取、提交与局部错误组织起来。"
+        },
+        {
+          "concept": "vue-suspense-errors",
+          "reason": "对照 Vue 的等待与错误通路，避免混用两个框架的规则。"
+        }
+      ]
+    },
+    {
+      "id": "REACT-10",
+      "title": "路由与数据流",
+      "question": "从打开地址到修改数据，怎样形成可恢复的完整路径？",
+      "summary": "沿真实 URL、嵌套布局、loader、表单和重验证理解三种路由模式。",
+      "outcomes": [
+        "把可分享状态放进 URL 并解析输入",
+        "用 loader、action 和 fetcher 连接读取与写入",
+        "处理离开草稿、错误区域和深链部署"
+      ],
+      "guide": "react-10-router-data-framework-modes.md",
+      "anchor": "react-10",
+      "prerequisites": [
+        "react-08-error-boundaries-suspense-recovery.md#react-08"
+      ],
+      "concepts": [
+        {
+          "id": "router-state-url",
+          "heading": "URL 保存能分享和返回的页面状态"
+        },
+        {
+          "id": "router-mode-choice",
+          "heading": "三种模式增加的是配套能力与约定"
+        },
+        {
+          "id": "router-nested-layout",
+          "heading": "嵌套路由让布局保留而内容切换"
+        },
+        {
+          "id": "router-loader-identity",
+          "heading": "地址变化与数据读取需要同一套身份"
+        },
+        {
+          "id": "router-data-cycle",
+          "heading": "完整页面把读取提交和错误连成一条路径"
+        },
+        {
+          "id": "router-form-fetcher",
+          "heading": "Form 与 fetcher 表达不同的位置变化"
+        },
+        {
+          "id": "router-revalidation",
+          "heading": "Revalidation 让写入结果回到读取来源"
+        },
+        {
+          "id": "router-cancellation",
+          "heading": "导航取消不表示远端写入已撤回"
+        },
+        {
+          "id": "router-draft-blocking",
+          "heading": "未保存草稿需要一个明确的离开策略"
+        },
+        {
+          "id": "router-framework-modules",
+          "heading": "Framework Mode 进一步统一路由模块与构建"
+        },
+        {
+          "id": "router-code-release",
+          "heading": "代码分割与错误恢复要考虑发布版本"
+        },
+        {
+          "id": "router-deep-link-hosting",
+          "heading": "深链部署要让服务器也认识入口"
+        },
+        {
+          "id": "router-navigation-experience",
+          "heading": "导航完成还包括滚动焦点与文档标题"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "recovery-error-phase",
+          "reason": "路由错误区域也要区分等待、业务反馈和真正异常。"
+        },
+        {
+          "concept": "recovery-resource-retry",
+          "reason": "重新验证与重建资源要针对具体失败来源。"
+        },
+        {
+          "concept": "state-draft-baseline",
+          "reason": "新读取结果不能无声覆盖尚未保存的编辑草稿。"
+        },
+        {
+          "concept": "pinia-state-layers",
+          "reason": "避免把路由已有的数据再复制进另一份客户端仓库。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "batch": "B05",
+  "title": "让组件协作与状态变化有据可循",
+  "reviewedOn": "2026-09-08",
+  "chapters": [
+    {
+      "id": "REACT-02",
+      "title": "React 组件协作",
+      "question": "拆开页面之后，每份数据和每个动作由谁负责？",
+      "summary": "从完整资料工作台理解 props、意图回调、共同状态与组合。",
+      "outcomes": [
+        "沿父子组件追踪数据和修改意图",
+        "用 children 与 render prop 留出明确内容位置",
+        "处理列表身份和异步回调的完成边界"
+      ],
+      "connections": [
+        {
+          "concept": "react-snapshot",
+          "reason": "每次传入的 props 和处理器都属于对应渲染，先理解快照来源。"
+        },
+        {
+          "concept": "vue-component-events",
+          "reason": "对照 Vue 事件与 React 函数回调，区分通知和可等待的结果。"
+        },
+        {
+          "concept": "vue-scoped-slot",
+          "reason": "比较容器提供数据、调用者决定展示的两种组合方式。"
+        },
+        {
+          "concept": "state-draft-baseline",
+          "reason": "组件拆分以后，用版本明确编辑草稿与已保存数据的关系。"
+        }
+      ],
+      "guide": "react-02-component-boundaries-data-flow-composition.md",
+      "anchor": "react-02",
+      "prerequisites": [
+        "react-01-render-purity-state-snapshot.md#react-01"
+      ],
+      "concepts": [
+        {
+          "id": "component-data-owner",
+          "heading": "先为工作台里的数据找主人"
+        },
+        {
+          "id": "component-one-way",
+          "heading": "用完整组件追踪数据下行与意图上行"
+        },
+        {
+          "id": "component-input-shape",
+          "heading": "props 表达组件需要什么而不是允许改什么"
+        },
+        {
+          "id": "component-intent",
+          "heading": "用事件名称说明业务意图"
+        },
+        {
+          "id": "component-lifting",
+          "heading": "多个消费者共享状态时才向上提升"
+        },
+        {
+          "id": "react-children",
+          "heading": "children 让容器不必了解所有业务字段"
+        },
+        {
+          "id": "react-render-prop",
+          "heading": "内容需要子层数据时再用 render prop"
+        },
+        {
+          "id": "react-row-identity",
+          "heading": "列表重排时让草稿跟着资料走"
+        },
+        {
+          "id": "react-async-contract",
+          "heading": "异步回调要说明何时才算完成"
+        },
+        {
+          "id": "component-variants",
+          "heading": "空态错误和只读模式也属于组件的输入"
+        },
+        {
+          "id": "component-boundary-review",
+          "heading": "拆分的价值是减少隐含关系"
+        }
+      ]
+    },
+    {
+      "id": "VUE-03",
+      "title": "Vue 模板与表单",
+      "question": "一条模板指令究竟改变了哪些 DOM 行为？",
+      "summary": "用隐藏面板、重排列表和中文输入解释模板、事件与表单绑定。",
+      "outcomes": [
+        "区分文本、属性、条件节点和列表身份",
+        "说明事件默认行为与传播的差别",
+        "保留合理编辑中间值并处理组合输入"
+      ],
+      "connections": [
+        {
+          "concept": "vue-computed",
+          "reason": "先派生筛选结果，再让模板显示，避免条件与循环作用域混杂。"
+        },
+        {
+          "concept": "native-form",
+          "reason": "框架提交仍要保留 label、字段名与浏览器表单协议。"
+        },
+        {
+          "concept": "state-editing-text",
+          "reason": "React 与 Vue 都需要区分输入中的字符串和有效业务值。"
+        },
+        {
+          "concept": "vue-fallthrough-target",
+          "reason": "把原生输入封装成组件后，名称与描述仍须落到正确控件。"
+        }
+      ],
+      "guide": "vue-03-template-directives-events-forms.md",
+      "anchor": "vue-03",
+      "prerequisites": [
+        "vue-02-ref-reactive-computed-boundaries.md#vue-02"
+      ],
+      "concepts": [
+        {
+          "id": "vue-template-binding",
+          "heading": "文本插值与属性绑定各有入口"
+        },
+        {
+          "id": "vue-attribute-property",
+          "heading": "布尔属性与字符串状态不能混着理解"
+        },
+        {
+          "id": "vue-conditional-lifetime",
+          "heading": "v-if 与 v-show 决定的是两种保留方式"
+        },
+        {
+          "id": "vue-list-identity",
+          "heading": "列表 key 让输入跟随稳定身份"
+        },
+        {
+          "id": "vue-dom-intent",
+          "heading": "事件处理器先提取当前任务需要的值"
+        },
+        {
+          "id": "vue-event-modifiers",
+          "heading": "prevent 和 stop 处理不同的问题"
+        },
+        {
+          "id": "vue-native-model",
+          "heading": "v-model 根据原生控件选择值与事件"
+        },
+        {
+          "id": "vue-editing-text",
+          "heading": "输入过程允许暂时不是合法业务值"
+        },
+        {
+          "id": "vue-ime-submit",
+          "heading": "中文输入先完成选词再提交意图"
+        },
+        {
+          "id": "vue-html-boundary",
+          "heading": "v-html 不会把字符串变成 Vue 组件"
+        },
+        {
+          "id": "vue-dom-directive",
+          "heading": "自定义指令只承担清楚的 DOM 操作"
+        },
+        {
+          "id": "vue-template-observation",
+          "heading": "沿最终 DOM 和用户动作检查模板"
+        }
+      ]
+    },
+    {
+      "id": "VUE-04",
+      "title": "Vue 组件接口与组合",
+      "question": "组件怎样公开值、事件、内容位置和必要的 DOM 操作？",
+      "summary": "通过成组父子文件理解 props/emits、模型、插槽、属性透传与 Teleport。",
+      "outcomes": [
+        "写出有明确所有者的类型化组件接口",
+        "区分模型更新、普通插槽与作用域插槽",
+        "让透传属性和弹窗焦点符合真实 DOM 行为"
+      ],
+      "connections": [
+        {
+          "concept": "react-children",
+          "reason": "对照 children 和命名内容区，理解容器与内容的职责。"
+        },
+        {
+          "concept": "react-async-contract",
+          "reason": "需要等待保存时，明确返回 Promise 的接口；emit 本身不是完成凭证。"
+        },
+        {
+          "concept": "dialog-draft",
+          "reason": "复用原生 dialog 的进出、返回值和焦点规则。"
+        },
+        {
+          "concept": "state-draft-baseline",
+          "reason": "草稿允许偏离已保存值，但要定义初始化、取消和冲突策略。"
+        }
+      ],
+      "guide": "vue-04-typed-components-slots-model-teleport.md",
+      "anchor": "vue-04",
+      "prerequisites": [
+        "vue-03-template-directives-events-forms.md#vue-03"
+      ],
+      "concepts": [
+        {
+          "id": "vue-component-input",
+          "heading": "先把输入和修改意图写成一对"
+        },
+        {
+          "id": "vue-component-type-boundary",
+          "heading": "类型能说明允许的调用不能代替运行时解析"
+        },
+        {
+          "id": "vue-component-events",
+          "heading": "emit 不会沿组件树自动冒泡也不能用来等待保存"
+        },
+        {
+          "id": "vue-component-model",
+          "heading": "组件 v-model 让值与更新意图配对"
+        },
+        {
+          "id": "vue-named-model",
+          "heading": "多个模型适合真正独立的连续值"
+        },
+        {
+          "id": "vue-parent-slot-scope",
+          "heading": "普通插槽的内容仍属于父层作用域"
+        },
+        {
+          "id": "vue-scoped-slot",
+          "heading": "作用域插槽把子层数据交给父层排版"
+        },
+        {
+          "id": "vue-fallthrough-target",
+          "heading": "透传属性必须落到真正的控件"
+        },
+        {
+          "id": "vue-teleport-trees",
+          "heading": "Teleport 移动 DOM 不改变组件的归属"
+        },
+        {
+          "id": "vue-dialog-interface",
+          "heading": "用原生 dialog 补齐弹窗的进入和退出"
+        },
+        {
+          "id": "vue-component-draft",
+          "heading": "草稿保存与弹窗开关需要各自定义"
+        },
+        {
+          "id": "vue-communication-choice",
+          "heading": "选通信方式之前先说明责任"
+        }
+      ]
+    },
+    {
+      "id": "REACT-03",
+      "title": "React 状态建模",
+      "question": "哪些信息真的需要记住，哪些可以从现有事实算出？",
+      "summary": "用计划输入、请求状态、草稿版本和撤销历史厘清状态含义。",
+      "outcomes": [
+        "删去冗余派生状态并避免互斥状态冲突",
+        "区分受控输入、编辑草稿与已保存数据",
+        "用 ID、版本和有限历史维护一致的状态关系"
+      ],
+      "connections": [
+        {
+          "concept": "discriminated-state",
+          "reason": "把加载、成功、失败所需数据放到各自明确分支。"
+        },
+        {
+          "concept": "vue-editing-text",
+          "reason": "对照 Vue 的编辑中间值，理解状态含义如何跨框架保持一致。"
+        },
+        {
+          "concept": "immutable-update",
+          "reason": "保留旧快照与撤销历史，需要沿修改路径创建新对象。"
+        },
+        {
+          "concept": "typed-transition",
+          "reason": "请求状态的类型正确，仍要另外判断旧结果有没有提交资格。"
+        }
+      ],
+      "guide": "react-03-state-model-derived-controlled.md",
+      "anchor": "react-03",
+      "prerequisites": [
+        "react-02-component-boundaries-data-flow-composition.md#react-02"
+      ],
+      "concepts": [
+        {
+          "id": "state-source-facts",
+          "heading": "先列事实再决定哪些需要 state"
+        },
+        {
+          "id": "state-editing-text",
+          "heading": "编辑文本和有效数量是两种不同的信息"
+        },
+        {
+          "id": "state-redundancy",
+          "heading": "删除一份冗余数据比补一条同步更直接"
+        },
+        {
+          "id": "state-request-union",
+          "heading": "互斥状态用一种明确的分支表示"
+        },
+        {
+          "id": "state-owner-placement",
+          "heading": "一份状态放在能协调使用者的地方"
+        },
+        {
+          "id": "state-controlled-dom",
+          "heading": "受控值由外层决定非受控输入由 DOM 保存"
+        },
+        {
+          "id": "state-draft-baseline",
+          "heading": "草稿可以不同但保存前要核对基线"
+        },
+        {
+          "id": "state-reset-policy",
+          "heading": "重置应跟随身份或明确动作"
+        },
+        {
+          "id": "state-normalization",
+          "heading": "集合里保存 ID 可以少一份陈旧对象"
+        },
+        {
+          "id": "state-update-path",
+          "heading": "不可变更新只复制变化经过的路径"
+        },
+        {
+          "id": "state-url-draft",
+          "heading": "URL 状态与输入草稿可以各自有职责"
+        },
+        {
+          "id": "state-request-identity",
+          "heading": "旧请求有没有资格更新由身份决定"
+        },
+        {
+          "id": "state-undo-history",
+          "heading": "撤销只回退你明确记录的事实"
+        },
+        {
+          "id": "state-invariants",
+          "heading": "用不变量检查模型是否清楚"
+        }
+      ]
+    }
+  ]
+}

@@ -1,183 +1,230 @@
 # Git 知识点讲义
 
-## GIT-02 分支、合并、变基与冲突恢复
+## GIT-02 分支、合并、变基与冲突处理
 
-分支协作的难点不在于记住 `merge` 或 `rebase` 的参数，而在于理解它们如何改变提交图。两个操作可以生成相同的最终文件，却留下不同父子关系、提交身份和回滚方式。只有先看共同祖先、双方提交和发布边界，才能选择合适的集成策略，并在冲突后恢复业务语义。
+同一份请求配置，一位同事把默认等待时间缩短，另一位同事为了导出报表把它延长。Git 报冲突时，应该保留哪个数字？即使工具自动合并成功，产品行为就一定正确吗？
+
+这篇把同一张提交图分别交给 merge、rebase 和 cherry-pick。你会看到：它们不仅改变文件，还会以不同方式连接历史；解决冲突则必须重新理解双方要达成的行为。
 
 ### 学习前先确认
 
-- 直接前置：[GIT-01 对象模型、暂存区、引用与安全恢复](../chinese-guides/git-01-object-index-references-recovery.md#git-01)。本讲直接使用提交对象、分支引用、暂存区、`HEAD` 与 reflog；更早内容由该讲递归说明。
+- 直接前置：[GIT-01 对象、暂存区与恢复](../chinese-guides/git-01-object-index-references-recovery.md#git-01)。需要知道分支是引用，以及工作区、暂存区和 HEAD 可以不同。
 
-### 一、分支只是会移动的提交引用
+例子使用 PowerShell 7、Git 2.43。请从下面新建的练习仓库开始，按顺序执行。预期冲突的命令会返回非零状态，这是观察点；不要在真实项目里批量照搬解决步骤。
 
-创建分支不会复制工作目录或全部历史，只创建一个指向现有提交的名称。切换分支会改变 `HEAD` 的指向，并把工作区和暂存区调整为目标提交所描述的状态；若未提交改动会被覆盖，Git 通常会拒绝切换。
+### 先画关系再选择整合方式
+
+**分支（branch）**给一条开发线提供名字。两条线分开修改后，先问它们最近共享哪段历史。**共同祖先（merge base）**提供比较双方变化的基线。
 
 ```text
-A---B---C  main
+      C  main：普通请求希望更快失败
+     /
+A ──┤
      \
-      D---E  feature
+      D  codex/export：报表导出需要更长等待
 ```
 
-图中 B 是两条线的共同祖先。main 与 feature 的名字只是分别指向 C 和 E。提交仍通过 parent 边形成图；删除 feature 名称不等于立即删除 D/E，只是减少一个可达入口。
+A、C、D 是下文的讲解标签，不是可以直接传给 Git 的真实 ID。分叉的关键是 C 与 D 都以 A 为父提交；谁的时间戳更晚并不能决定该保留谁。
 
-远端跟踪引用如 `origin/main` 是本地对远端上次已知位置的记录，不会在断网时自动变化。`fetch` 更新这些记录；本地 `main`、`origin/main` 和远端服务器上的 `main` 是三个需要区分的状态。
+整合之前先读 `git status`。带着未知未提交修改进入 merge 或 rebase，会把“本次冲突”与“原有现场”混在一起，abort 也未必能完整重建所有原有修改。先提交、另建工作区或妥善保留已确认归属的修改，再开始整合。
 
-### 二、共同祖先决定三方集成
+### 建立一份确实会分叉的配置历史
 
-**共同祖先（merge base）**是比较两个分支演进的基准。三方合并关注 ancestor、ours 和 theirs：双方相对祖先做了什么，哪些变化可以自动组合，哪些需要人决定。
+下面建出图中的三次提交。主线和导出分支故意改同一行，以便稳定观察冲突。
 
-```sh
-git merge-base main feature
-git diff main...feature
+```powershell example=git02-setup runtime=project
+$lab = Join-Path ([System.IO.Path]::GetTempPath()) ('atlas-git02-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $lab | Out-Null
+Set-Location -LiteralPath $lab
+git init -b main
+git config user.name 'Atlas Learner'
+git config user.email 'learner@example.invalid'
+git config core.autocrlf false
+git config merge.conflictStyle diff3
+# A：双方共同使用的起点
+'timeoutMs=1000' | Set-Content -Encoding utf8NoBOM request.conf
+git add -- request.conf
+git commit -m '建立请求等待配置'
+$base = git rev-parse HEAD
+git switch -c codex/export
+'timeoutMs=2000' | Set-Content -Encoding utf8NoBOM request.conf
+git add -- request.conf
+git commit -m '为报表导出延长等待'
+$topic = git rev-parse HEAD
+git switch main
+'timeoutMs=800' | Set-Content -Encoding utf8NoBOM request.conf
+git add -- request.conf
+git commit -m '普通请求更快报告超时'
+$mainTip = git rev-parse HEAD
+git log --graph --oneline --all
 ```
 
-三点 diff `main...feature` 通常表示从共同祖先到 feature 的变化，适合评审主题分支；两点 diff 比较两个端点的内容。复杂历史可能有多个最佳共同祖先，递归或 ort 等策略会构造合并基准，不能总把“时间更早的那个提交”当唯一祖先。
+`main` 停在 C，`codex/export` 停在 D。变量 `$base`、`$topic`、`$mainTip` 保存真实 ID，后续命令用它们说明比较基线。读图时从分支名沿线向父提交走，应该都能到达 A。
 
-### 三、fast-forward 只移动引用
+### 两个点和三个点要连同命令一起读
 
-若当前分支是目标分支的祖先，合并不需要新提交，可以**快进（fast-forward）**：让当前分支直接指向目标端点。
+同样的点号在 `diff` 和 `log` 中回答不同问题，不能背成统一的“范围语法”。
 
-```text
-A---B  main
-     \
-      C---D  feature
-
-[main 快进后]
-A---B---C---D  main, feature
+```powershell example=git02-compare runtime=project
+git merge-base main codex/export
+git diff main..codex/export -- request.conf
+git diff main...codex/export -- request.conf
+git log --oneline main..codex/export
+git log --left-right --oneline main...codex/export
 ```
 
-快进保留 feature 的提交，但不产生“这一组提交在此时作为整体合入”的合并节点。团队可以要求总是保留合并提交以表达审计边界，也可以允许快进保持简单历史；选择取决于发布、回滚和评审需求，不是审美竞赛。
+| 操作 | 这个例子里的含义 | 预期结果 |
+| --- | --- | --- |
+| `merge-base main codex/export` | 查共同祖先 | 等于 `$base` |
+| `diff main..codex/export` | 比较两个端点的文件 | 800 → 2000；与 `diff main codex/export` 相同 |
+| `diff main...codex/export` | 从共同祖先看右侧端点 | 1000 → 2000 |
+| `log main..codex/export` | 右侧可达而左侧不可达的提交 | 只有 D |
+| `log --left-right main...codex/export` | 两侧各自独有的提交 | C 带 `<`，D 带 `>`；显示顺序可不同 |
 
-### 四、三方合并保留并行历史
+评审一个主题分支时，“它相对共同基线做了什么”通常比“它与今天主线的最终文件有何不同”更容易解释。复杂历史可能有多个最优共同祖先；本篇练习图只有一个，不把这个简化推广成所有仓库的规则。
 
-当两条分支都从祖先继续提交，merge 通常创建一个有两个父的提交：
+### merge 保留两条线并记录一次汇合
 
-```text
-A---B---C------M  main
-     \        /
-      D---E---   feature
+先从 C 新建整合分支，保留 `main` 给后面的对照用。**三方合并（three-way merge）**比较基线 A、当前侧 C 和合入侧 D，而不是单纯让后一份文件覆盖前一份。
+
+```powershell example=git02-merge-conflict runtime=project
+git switch -c codex/merge main
+git merge --no-ff codex/export -m '整合普通请求与导出配置'
+# 上一行预期报告冲突；停下来查看，尚未生成合并提交。
+git status --short
+git ls-files -u -- request.conf
+git show :1:request.conf
+git show :2:request.conf
+git show :3:request.conf
+Get-Content request.conf
 ```
 
-M 的快照是集成结果，两个父分别保留此前的并行路径。回滚合并需要说明哪个父是主线，因为“撤销相对哪条历史引入的变化”会影响以后再次合并。
+状态包含 `UU request.conf`。三个 `show` 依次显示 1000、800、2000。`ls-files -u` 中 stage 1 是基线，stage 2 是当前侧，stage 3 是合入侧。冲突时暂存区保存这些候选；解决后 `add` 会用一个已解决版本替代它们。
 
-合并前应 fetch 最新远端，查看提交图和差异，确认工作区没有无关改动。合并后不仅要看冲突标记消失，还要运行与双方变化相关的测试，并检查自动合并是否产生语义冲突。
+因为设置了 `diff3`，工作文件里还会显示基线块。`<<<<<<<` 到 `=======` 的区域不能整体当作“正确版本”；中间的 `|||||||` 是基线标记，读的时候要分清三段。标签中出现的分支名或 ID 可随命令变化。
 
-### 五、rebase 是重放，不是移动原提交
+### 冲突解决先保留需求再决定文本
 
-**变基（rebase）**找出主题分支相对上游独有的提交，把它们的变化按顺序重新应用到新基线，创建新的提交对象：
+800 的意图是让普通请求尽快反馈失败，2000 的意图是允许较慢的报表生成。如果系统确实同时支持这两类请求，更合理的整合是分开配置。我们把格式改为两个明确命名的值：
 
-```text
-A---B---C  main
-     \
-      D---E  feature
-
-[feature rebase onto main]
-A---B---C---D'---E'  feature
+```powershell example=git02-merge-resolve runtime=project
+@('defaultTimeoutMs=800', 'exportTimeoutMs=2000') | Set-Content -Encoding utf8NoBOM request.conf
+git add -- request.conf
+git diff --staged -- request.conf
+git ls-files -u -- request.conf
+git commit -m '分别配置普通请求与报表导出的等待时间'
+git rev-list --parents -n 1 HEAD
+Get-Content request.conf
 ```
 
-D' 和 E' 的内容意图可能与 D/E 相同，但父提交、时间或冲突决定不同，因此 ID 不同。旧提交仍可能暂时由 reflog 找到，但协作者若基于 D/E 工作，就会出现两套历史。
+`ls-files -u` 现在没有输出；最后一条历史记录包含“当前提交 ID + 两个父提交 ID”。新的 merge commit M 同时连接 C 和 D，原来的两个提交仍然存在。
 
-rebase 适合整理尚未共享的本地主题分支，或在团队约定下同步最新基线。不要把“线性历史”误解成开发真的按顺序发生；审计并行决策时，merge 可能表达得更真实。
+这个练习只有配置文件，所以这里只验证了配置整合与提交关系。真实程序还需要让读取配置的代码选择正确字段：普通请求使用 800，导出请求使用 2000，并覆盖未知请求类型的默认行为。**冲突标记消失只能证明文本已被接受，不能证明使用配置的程序已改对。**
 
-### 六、交互式 rebase 重写一段历史
+没有文本冲突也可能发生**语义冲突（semantic conflict）**：A 分支让价格接口从“元”改为“分”，B 分支在另一文件直接显示价格。Git 合并得很顺，页面却把 12.50 元显示成 1250 元。此时需要验证接口与消费者的组合，不能依赖冲突检测。
 
-交互式 rebase 可以重新排序、合并、拆分、修改说明或删除本地提交。每个被修改的提交及其后代都会重建。开始前记录当前分支端点，并确保工作区安全；过程中可使用 `--abort` 返回开始前状态。
+### rebase 重放变化并建立新的父子关系
 
-把十个混杂提交 squash 成一个并不自动变成好提交。若结果把数据库迁移、功能开关、代码与回滚步骤压成不可分割的大块，审查和恢复反而更难。历史整理的目标是形成有意义、可验证的决策单位，而不是最少行数。
+**变基（rebase）**把选定提交的变化重新应用到另一个基线上。继续同一个练习，从 D 新建对照分支，再将它移到 C 后面：
 
-### 七、cherry-pick 复制选定变化
-
-`cherry-pick` 将一个或多个现有提交的变化应用到当前分支，也会创建新提交。它适合把已确认的修复移植到维护分支，或从混杂分支提取独立提交。
-
-同一逻辑若被多次 cherry-pick 到随后还要互相合并的分支，可能形成重复补丁或复杂冲突。需要记录来源提交、目标分支、测试和后续合并计划。cherry-pick 不是替代正常分支集成的万能工具。
-
-### 八、冲突是 Git 无法替你决定的语义
-
-文本冲突只是一种显式信号：双方修改同一区域，Git 无法自动组合。更危险的是**语义冲突（semantic conflict）**：文件自动合并成功，但两边对同一业务约束作出不兼容改变。例如一边把金额单位改为分，另一边新增仍按元计算的折扣函数。
-
-解决流程应先读祖先、ours、theirs 的意图，再决定集成结果：
-
-1. 查看 `git status` 和冲突文件；
-2. 读取双方相关提交、需求与测试，而不只看标记；
-3. 使用三方 diff 理解祖先版本；
-4. 编辑结果并暂存，表示该路径已决定；
-5. 运行局部与跨边界测试；
-6. 检查最终 diff 和提交图，再继续 merge/rebase。
-
-`ours` 和 `theirs` 的含义在 rebase 场景容易让人误解，因为当前检出基线与正在重放的提交角色不同。不要只凭名称选择整文件版本，应查看实际内容和操作上下文。
-
-### 九、暂存区保存冲突的三个阶段
-
-冲突时，index 可保存 base、ours、theirs 三阶段条目。`git ls-files -u` 能看到它们，`git show :1:path`、`:2:path`、`:3:path` 可分别检查。
-
-理解三阶段有助于处理删除/修改、重命名和二进制冲突：标记文件只是工作区表现，真正待解决状态在 index。删除冲突不能只从磁盘删文件，还要用相应 Git 操作把决定写入暂存区。
-
-### 十、rerere 复用的是冲突决定，不是业务证明
-
-**重复冲突复用（rerere）**可以记录一组冲突形状与此前解决结果，在未来相似冲突中复用。它适合长期维护分支或反复变基，但自动套用后仍需审查和测试，因为上下文和业务规则可能已经变化。
-
-同理，merge driver、自定义属性和格式化工具可减少机械冲突，却不能替代对生成文件、锁文件和迁移顺序的理解。生成文件常应由同一源重新生成，而不是手工拼接两份产物。
-
-### 十一、共享历史的强推必须保护并协调
-
-普通 `--force` 会无条件覆盖远端引用，可能抹掉他人刚推送的提交。`--force-with-lease` 会验证远端仍在你预期的位置后再更新，降低误覆盖概率，但并不会让历史改写对协作者无影响。
-
-使用前仍要 fetch、确认预期旧端点、通知受影响人员、说明重新同步方法，并确保保护分支政策允许。若目标是修复共享业务错误，revert 往往比重写更安全。安全选项只是并发保护，不是授权或协作流程。
-
-### 十二、合并策略服务于交付和恢复
-
-选择策略时可以问：
-
-- 是否需要保留主题分支的独立提交与审查边界？
-- 是否允许改写，是否有人已基于旧端点工作？
-- 生产回滚是按单提交、整 PR 还是发布制品？
-- 是否存在长期维护分支，需要把修复移植到多个版本？
-- 生成文件、数据库迁移或功能开关是否有顺序约束？
-
-小而连续的个人分支可在提交前 rebase 整理；多人长期分支常用 merge 保留并行；发布分支可 cherry-pick 已验证修复。任何规则都应写清例外和恢复方式，不能只要求“历史必须漂亮”。
-
-### 十三、操作失败时先回到已知端点
-
-merge 尚未提交可 `merge --abort`；rebase 中可 `rebase --abort`；cherry-pick 可中止对应序列。若操作已完成但结果不对，先查 reflog，创建保护分支，再决定重新集成。不要连续尝试 reset、pull、rebase 直到命令不报错，因为每一步都可能移动引用或扩大差异。
-
-恢复后核对本地和远端分支端点、工作区、暂存区、独有提交与测试。内容相同不代表历史关系正确；历史图正确也不代表集成后的业务语义正确，两者都要验证。
-
-### 十四、把提交图当作解释工具
-
-```sh
-git log --graph --decorate --oneline --all
-git branch -vv
-git log --left-right --cherry-pick main...feature
+```powershell example=git02-rebase runtime=project
+git switch -c codex/rebase codex/export
+git rebase main
+# 预期冲突；这次先看两侧分别是谁。
+git show :2:request.conf
+git show :3:request.conf
+@('defaultTimeoutMs=800', 'exportTimeoutMs=2000') | Set-Content -Encoding utf8NoBOM request.conf
+git add -- request.conf
+git rebase --continue
+git log --graph --oneline codex/rebase
+git rev-list --parents -n 1 HEAD
+git diff codex/merge codex/rebase -- request.conf
 ```
 
-图能回答哪些提交只在一边、引用指向哪里以及合并父关系，但不能说明需求是否满足。将提交图、最终 diff、测试结果和发布边界放在一起，才形成可靠的集成证据。
+最终历史是 `A—C—D′`，D′ 只有一个父提交 C。最后的文件 diff 没有输出：两种整合方式得到了相同内容，却留下不同历史。原来的 D 仍由 `codex/export` 指着，不能说 rebase 把所有旧对象删掉了。
 
-### 进阶：撤销合并会影响未来祖先判断
+继续时 Git 可能打开你配置的编辑器。核对提交说明，保存并关闭编辑器后，命令才会结束；冲突解决改变了意图时，应相应修改说明。
 
-对 merge commit 执行 revert 时，主线参数告诉 Git 保留哪个父的视角。新 revert 提交声明“这些分支变化在历史上已经合入，但其效果被抵销”。以后直接再次合并同一祖先链，Git 可能认为旧提交已经处理，不会重新引入原变化。
+rebase 不保证“挑出的每个提交都必然对应一个新提交”：已经应用过的补丁、变成空的提交、无须移动的情况及命令选项都会影响结果。本例 D 的父提交确实改变，所以 D′ 有新的身份。将已共享提交重放后直接强推，会让别人的基线分裂，协作约定见 [GIT-03](../chinese-guides/git-03-commits-remotes-pr-worktrees-collaboration.md#lease-比较的是你明确确认过的远端位置)。
 
-若要重新引入，可以 revert 那次 revert，或让主题分支包含新的修复提交后再合并。不要删除 merge 记录或反复 cherry-pick 每个旧提交来碰运气。发布与数据库迁移还要验证反向变化是否安全；文件逆向成功不表示数据和外部副作用可逆。
+### ours 和 theirs 要看当前正在做什么
 
-### 进阶：集成队列解决并发基线漂移
+这两个词是当前合并过程的角色，不是“我的代码”和“同事的代码”的永久标签。
 
-多个 PR 分别基于同一 main 通过，不保证 A+B 的实际组合通过。合并队列可以为候选构造临时集成 commit，按顺序运行门禁，再更新目标引用。它减少“绿色 PR 合入后主线红”，但仍需要合理批次、失败归因和取消过期运行。
+| 场景 | stage 2 / ours | stage 3 / theirs |
+| --- | --- | --- |
+| 在 C 上 merge D | 当前 C | 合入的 D |
+| 把 D rebase 到 C，本例第一步 | 已建立的新基线 C | 正在重放的 D |
 
-依赖 PR 应显式描述：B 是否必须在 A 后，A 被修改后 B 是否重测，最终 diff 是否含重复变更。队列解决引用并发，不解决两项业务设计相冲突；集成者仍要查看合并后的状态和跨边界测试。
+所以你明明在自己的导出分支运行 rebase，`ours` 却读到主线的 800。因为 Git 正从新基线逐个接回补丁，“当前侧”是这个逐步组装的结果。多个提交重放时，它还可能含前面已成功重放的内容。
 
-长寿命分支会积累大量语义差异。定期小步集成、功能开关和向后兼容合同通常比最终一次大合并更安全。若必须长期隔离，提前定义同步频率、冲突 owner 和最后回退点。
+不要在不看内容的情况下批量选 `--ours` 或 `--theirs`。先读 stage 和原提交意图，再手工写出最终行为。**rerere** 可以记住并复用相似冲突的解决结果，节省重复编辑；复用的决定仍要重读，因为新基线可能改变了它原来的前提。
 
-### 进阶：冲突解决必须验证组合语义
+### fast-forward 和 cherry-pick 各自省略了什么
 
-文本标记只展示同一位置附近的竞争编辑。更隐蔽的是**语义冲突（semantic conflict）**：两边分别能编译、文本也自动合并，却共同破坏了约束。例如一边把返回值改为异步，另一边新增同步调用；或一边重命名配置，另一边继续生成旧字段。解决流程应从冲突文件扩展到调用者、类型、测试、迁移和运行配置，而不是删掉 `<<<<<<<` 就结束。
+**快进（fast-forward）**适用于当前分支是目标提交祖先的情况：只需把引用向前移动，就已经包含全部现有历史。当前 `main` 在 C，而对照分支 D′ 的父提交正是 C：
 
-可以先分别说明“ours”和“theirs”各自要保护的业务不变量，再写第三个组合实现。最终 diff 应与两个父提交分别比较，确认没有把任一方的非冲突修改意外丢掉。自动格式化和生成文件应在语义内容确定后重建，避免大量机械差异遮挡决定。
+```powershell example=git02-fast-forward runtime=project
+git switch -c codex/fast main
+git merge --ff-only codex/rebase
+git rev-parse HEAD
+git rev-parse codex/rebase
+```
 
-二进制文件、锁文件和生成物无法可靠按行合并。锁文件通常以确定的清单重新生成并运行冻结安装；数据库迁移需要新编号或新的前向迁移，而不是拼接两段状态；图片等资产则由 owner 选择权威版本并验证引用。每类制品都要有明确再生或选择规则。
+两个 ID 相同，没有额外的 merge commit。`--ff-only` 在真正分叉时会拒绝，不会替你偷偷挑另一种策略。强制保留汇合点可选择 `--no-ff`，但应以团队追踪和回滚需要为依据。
 
-冲突频繁集中在同一文件，往往说明所有权、模块边界或变更批次有问题。统计热点并改善边界比训练团队更快点选冲突按钮更有效。
+**cherry-pick** 则把选定提交相对父提交的变化应用到当前线，适合只把一个修复带到维护分支。继续用 D 的变化观察一次：
 
-合并完成后的作者归属也需要正确理解。merge commit 的作者并不等于它包含的所有变化作者；rebase 后提交者和对象 ID 会改变，但原作者字段可保留。审计时结合父关系、补丁、签名和评审记录，不用最后一个执行合并的人替代完整贡献历史。
+```powershell example=git02-cherry-pick runtime=project
+git switch -c codex/pick main
+git cherry-pick -x $topic
+# 预期冲突；仍需决定普通请求和导出请求怎样共存。
+@('defaultTimeoutMs=800', 'exportTimeoutMs=2000') | Set-Content -Encoding utf8NoBOM request.conf
+git add -- request.conf
+git cherry-pick --continue
+git rev-list --parents -n 1 HEAD
+git log -1 --format=%B
+```
 
-### 学完后应能说明
+新提交只有一个父提交 C。核对最终说明是否保留来源 ID；`-x` 的自动来源说明在官方文档中以无冲突挑选为保证范围，冲突后应检查并按需要补充。它没有把 D 的整个分支祖先关系合进来。若修复还依赖另一个类型或 API 变化，只挑最后一条补丁可能编译失败；先检查依赖，再决定是否一起引入。
 
-你应能从共同祖先预测 fast-forward 与三方合并，解释 rebase 和 cherry-pick 为什么创建新提交，使用 index 三阶段解决冲突，并区分文本冲突与语义冲突。面对共享分支时，还应能根据审计、回滚和协作约束选择 merge、rebase 或 revert，而不是按个人偏好决定历史形状。
+### 整理本地提交时保留可恢复的起点
+
+交互式 rebase 可调整尚未共享的主题历史：`reword` 改说明，`squash` 合并并编辑说明，`fixup` 通常折入前一提交，`edit` 暂停以便拆分或修改。比如“增加输入校验 → 修正自己刚写的拼写 → 补充校验边界”可以整理为一个完整的校验变化。
+
+开始前给旧尖端保留一个分支名，再确认暂存和工作区状态。拆分一条提交时，常见思路是在 edit 停点把该提交用 mixed reset 退到父提交，保留工作文件，然后分批暂存、提交并继续。这个过程改变的是选中历史，不能对未知共享分支直接套用。
+
+暂停之后先用 `git status` 判断自己处于哪一种流程，再使用对应的 `merge --abort`、`rebase --abort` 或 `cherry-pick --abort`。`rebase --skip` 会跳过正在重放的提交，并不是通用的“忽略报错继续”。若意外移动了入口，回到 [reflog 救援](../chinese-guides/git-01-object-index-references-recovery.md#用-reflog-找回被移走的入口)，先固定旧提交再处理。
+
+### 撤销合并后仍要看祖先关系
+
+设合并后的主线是 `C—M—R`，M 的另一个父提交是 D，R 是撤销 M 所引入变化的提交。`git revert -m 1 <M的ID>` 中的 `1` 指以 M 的第一个父提交为主线计算反向变化，不表示“撤销第一个父提交”。使用前先查看 M 的父列表，确认哪一侧是要保留的主线。
+
+撤销内容不会取消 D 已经是主线祖先这个事实。之后再 merge 原来的 D，Git 可能认为已经整合过；如果 D 后面增加 E，再次合并通常也不会自动恢复 D 中已撤销的旧变化。
+
+下一步取决于需求：若整次撤销需要反转，可以讨论撤销 R；若只要其中修好的部分，应在当前基线上提交新的修复。无论哪种，都要重新核对组合行为和已发布结果，不能把“再点一次合并”当作还原按钮。
+
+### 最终检查围绕组合后的行为
+
+评估整合方式时，可以把历史和结果分开看：
+
+| 关注点 | 可观察证据 | 尚需判断 |
+| --- | --- | --- |
+| 谁包含谁 | 父提交、祖先判断、提交图 | 是否符合协作约定 |
+| 最终文件 | 与目标基线的 diff | 新接口和消费者是否匹配 |
+| 可追溯性 | 提交说明、来源 ID、PR 决定 | 以后能否独立解释与撤销 |
+| 验证结果 | 目标组合上的关键行为 | 单分支通过是否覆盖最新组合 |
+
+锁文件冲突要结合依赖清单和约定的包管理器重建，不能随机保留半边生成内容；二进制冲突需确定权威资产，文本工具无法替你拼出正确图像。数据库迁移还涉及部署顺序与数据兼容，Git 图连上了不代表迁移可逆。
+
+集成队列可以按主线最新状态验证待合入组合，减少“各自通过，合起来失败”的窗口；它仍依赖检查覆盖真正的组合行为。发现异常时，沿 [系统化调试](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#先把现象写成别人能重现的事实) 记录输入和证据，比反复切换合并方式更能定位原因。
+
+### 参考与延伸阅读
+
+- [Pro Git：分支的合并](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging)：结合图理解分叉、快进和汇合。
+- [git diff](https://git-scm.com/docs/git-diff) 与 [git log](https://git-scm.com/docs/git-log)：对照端点差异与提交集合。
+- [git merge](https://git-scm.com/docs/git-merge)：查看三方合并、索引阶段、冲突与 abort 的边界。
+- [git rebase](https://git-scm.com/docs/git-rebase)：查询重放、交互操作、空提交和 ours/theirs 的含义。
+- [git cherry-pick](https://git-scm.com/docs/git-cherry-pick) 与 [git revert](https://git-scm.com/docs/git-revert)：需要移植修复或撤销 merge 时查具体选项。
+
+本篇于 2026-09-09 核对官方机制；例子展示相同文件结果如何对应不同历史，不预设某种团队分支风格一定更优秀。

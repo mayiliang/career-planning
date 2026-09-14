@@ -2,159 +2,262 @@
 
 ## ENG-01 模块图、构建产物、代码分割与 Source Map
 
-源码能在开发服务器运行，不等于生产构建一定正确。构建工具要从入口解析模块关系，执行插件转换，处理 CSS 和静态资源，划分共享与异步 chunk，生成运行时代码和映射文件。高级工程师不仅会执行 `build`，还应能从一个源码导入追到最终文件和浏览器请求，并解释某段代码为什么被保留、删除、复制或延迟加载。
+资料页上有一个“查看统计”按钮。如果用户还没点它，统计代码是否已经下载了？源码经过构建，为什么换成了带散列的文件名？生产错误只报 `assets/report-xxx.js:1:240`，又怎样找回原来的代码？
+
+这篇用一个能实际构建的小应用，把这些问题接在一起。我们从入口跟随 import，观察构建清单和浏览器请求，再用同一次构建的 Source Map 还原错误位置。
 
 ### 学习前先确认
 
-- 直接前置：[JS-06 ES Modules 与模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#js-06)。本讲直接使用静态导入、动态 `import()`、导出绑定与模块求值；更早的 JavaScript 运行基础由该讲递归链接。
+- 直接前置：[JS-06 ES Modules 与模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#js-06)。需要理解静态导入、导出绑定与动态 import 返回 Promise。
 
-### 一、构建首先建立可分析的模块图
+正文沿用当前项目的 Vite 6.4.3、Node.js 22.23.0 进行核对，不要求先升级业务项目。Vite 当前主版本的底层构建器和部分配置已有变化，因此例子只用这里明确列出的配置；迁移时按文末对应版本文档核对，不照搬旧版本内部实现。
 
-入口可能是 HTML、客户端脚本、服务端入口、Worker 或库导出。工具从入口读取静态依赖边，解析说明符到实际文件，再递归形成**模块图（module graph）**。边不仅是 JavaScript import，也可能来自 CSS `@import`、URL、框架虚拟模块和插件生成内容。
+### 模块图回答一份代码为什么会被带进来
 
-解析过程受相对路径、包 exports、conditions、别名、扩展名、平台与环境影响。同一个包在 browser、node、development、production 条件下可能解析到不同文件。排错时要记录“哪个 importer 以哪些条件解析到哪个文件”，不能只在文件系统里搜索同名源码。
+**模块图（module graph）**记录入口通过哪些依赖关系找到其他模块。import 的字符串首先经过解析，变成实际文件或虚拟模块；工具再继续分析它的依赖。CSS、图片 URL 和插件生成模块也可能进入这张图。
 
-循环依赖不一定立即报错，但会影响模块求值顺序和未初始化绑定。构建工具可以看见循环，不代表能判断业务是否安全；应回到 ESM 实时绑定与副作用顺序分析。
+```text
+index.html → main.js → lessons.js
+                 ├→ boot.js：初始化标记
+                 └⇢ report.js → report.css
+                   点击时动态导入
+```
 
-### 二、转换与打包是不同阶段
+这里实线代表首屏会使用的静态关系，虚线代表由按钮触发的动态关系。这是源码关系图，不是最终网络请求图：构建器可能合并模块、拆共享文件，也可能删除不需要的导出。
 
-TypeScript、JSX、Vue SFC、CSS 预处理和宏通常先转换成工具能继续分析的模块。插件可参与解析、加载、转换和生成产物。插件顺序、适用环境和虚拟模块命名都会改变结果。
+同一个包名在浏览器、Node 或不同条件下可能对应不同入口。排错时要问“谁导入它、用什么条件、最后解析到哪里”，不能只找到一个同名文件就认定它会执行。重复依赖和条件导出的具体判断见 [ENG-03](../chinese-guides/eng-03-dependencies-lockfile-workspaces-peer.md#安装位置不同为什么可能改变运行结果)。
 
-**打包（bundling）**则根据模块图把许多模块组织成少量可部署文件，并生成加载运行时。现代工具在开发阶段可能按请求转换而不完整打包，生产阶段再统一优化；不能把“浏览器看到 ESM 请求”简单等同于“项目没有构建”。
+### 先建立一份可以从头运行的资料应用
 
-定位插件问题时保存转换前后代码、插件名称和阶段。某插件在 transform 中注入副作用，后续 tree-shaking 再删除它，根因可能是插件元数据与副作用声明不一致，而不是最终压缩器随机丢代码。
+新建独立目录 `build-lab`，按以下文件名保存内容。这是没有框架和后端的浏览器小应用，避免先把构建问题与框架行为混在一起。
 
-### 三、chunk 是部署与加载单位
+`package.json` 定义本例需要的工具与命令：
 
-例如，一个首页同步加载导航和用户摘要，而图表只在进入分析页后使用：前两者可保留在入口路径，图表通过动态导入形成异步 chunk。这个示例不是固定答案；真实边界仍由用户路径、共享依赖、缓存和失败恢复共同决定。
-
-**代码块（chunk）**是构建后可独立加载和缓存的一组模块。静态依赖通常进入入口或共享 chunk，动态 `import()` 常形成异步边界：
-
-```js
-export async function openReport() {
-  const { renderReport } = await import('./report.js');
-  return renderReport();
+```json example=eng01-package runtime=project file=package.json
+{
+  "name": "atlas-build-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "devDependencies": { "vite": "6.4.3" }
 }
 ```
 
-动态导入返回 Promise，运行时需要请求对应文件并执行。拆分可减少首屏下载和解析，却增加请求、运行时映射和失败状态。过细拆分会产生大量小请求和重复共享代码；过粗会让很少使用的编辑器、图表或语言包进入首屏。
+`vite.config.js` 显式输出构建清单和本地练习用映射：
 
-边界应跟随用户任务、缓存寿命和错误恢复，而不是看到大文件就随意拆。登录后才使用的管理模块适合异步；每次首屏都立即需要的小工具拆出去可能没有收益。
+```js example=eng01-config runtime=project file=vite.config.js
+export default {
+  build: {
+    manifest: true,
+    sourcemap: true
+  }
+};
+```
 
-### 四、tree-shaking 依赖静态结构和副作用合同
+`index.html` 提供两个按钮和可观察结果：
 
-**无用代码消除（tree-shaking）**从入口的使用关系出发，删除可证明未使用且无必要副作用的导出与语句。ESM 静态导入导出便于分析，但动态属性访问、运行时拼接路径、CommonJS 包装和插件生成代码会限制推断。
+```html example=eng01-html runtime=project file=index.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="UTF-8">
+<title>资料构建观察台</title>
+<style>
+  body { max-width: 800px; margin: 64px auto; padding: 0 24px; font: 17px/1.8 system-ui; color: #19372e; background: #f2f6f4; }
+  main { padding: 32px; border-radius: 18px; background: white; box-shadow: 0 12px 40px #183d2810; }
+  button { padding: 10px 16px; margin-right: 8px; border: 1px solid #80a494; border-radius: 8px; color: inherit; background: #e9f4ee; cursor: pointer; }
+  button:focus-visible { outline: 3px solid #217251; outline-offset: 3px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+<main>
+  <h1>资料构建观察台</h1>
+  <p id="summary"></p>
+  <button id="report">查看统计</button>
+  <button id="error">演示错误位置</button>
+  <p id="status" role="status">尚未加载统计模块</p>
+  <pre id="output"></pre>
+</main>
+<script type="module" src="/main.js"></script>
+</html>
+```
 
-包的 `sideEffects` 声明是发布合同，不是“我希望体积更小”的开关。错误地标记无副作用可能删除注册自定义元素、注入样式、安装 polyfill 或初始化监控的模块。正确做法是尽量让副作用入口显式，并用生产构建运行验证，而不是只比较文件大小。
+### 把静态依赖与按需工作写在明确的位置
 
-树摇也不会自动删除所有不可达字符串或第三方代码。压缩器的局部 dead-code elimination、条件常量替换和模块级 tree-shaking 是不同层，应分别确认。
+`lessons.js` 中包含正在使用的资料和一个未使用的导出；`boot.js` 则故意产生初始化效果。
 
-### 五、环境常量会改变可达图
-
-构建工具常把 `import.meta.env.PROD` 等常量静态替换，使生产分支可被删除：
-
-```js
-if (import.meta.env.DEV) {
-  installDebugPanel();
+```js example=eng01-lessons runtime=project file=lessons.js
+export const lessons = [
+  { title: '闭包', minutes: 12 },
+  { title: '模块', minutes: 18 }
+];
+export function unusedExample() {
+  return 'ATLAS_UNUSED_EXPORT';
 }
 ```
 
-必须使用工具支持的静态形状；动态索引或把整个 env 对象传递给函数，可能阻止替换。更重要的是，进入客户端构建的环境值最终可被用户下载，不能存放服务器密钥。
+```js example=eng01-boot runtime=project file=boot.js
+document.documentElement.dataset.atlasBoot = 'ready';
+```
 
-不同 mode、target 和 SSR 条件会形成不同模块图。分析产物时要记录命令、环境和配置散列，不能拿 staging 的 manifest 解释 production 请求。
+`main.js` 在首屏显示资料数量，按钮使用动态导入取得统计功能，并在失败时给出反馈：
 
-### 六、CSS 与资源同样属于构建图
+```js example=eng01-main runtime=project file=main.js
+import { lessons } from './lessons.js';
+import './boot.js';
 
-CSS 可被合并、拆分、模块化、加前缀和压缩。图片、字体和 WebAssembly 可能以内联 data URL、带内容散列文件或复制资源输出。源码中的相对 URL 会在构建时重写，运行时拼接字符串则可能无法被分析。
+const summary = document.querySelector('#summary');
+const status = document.querySelector('#status');
+const output = document.querySelector('#output');
+summary.textContent = `已准备 ${lessons.length} 篇资料`;
 
-资源文件名通常包含内容散列，便于长期缓存；HTML 或 manifest 负责引用新散列。若部署只上传 JS 不上传字体，或 CDN `base` 与实际路径不一致，构建仍然成功但页面运行失败。因此“产物清单”和“部署完整性”是两个检查层。
+async function openReport(showError) {
+  status.textContent = '正在加载统计模块';
+  try {
+    const report = await import('./report.js');
+    if (showError) report.failForMapping();
+    output.textContent = report.summarize(lessons);
+    output.classList.add('report-result');
+    status.textContent = '统计已就绪';
+  } catch (error) {
+    status.textContent = '统计暂时不可用，已保留当前页面';
+    output.textContent = error instanceof Error ? error.stack : String(error);
+  }
+}
+document.querySelector('#report').addEventListener('click', () => openReport(false));
+document.querySelector('#error').addEventListener('click', () => openReport(true));
+```
 
-### 七、Source Map 是生成位置到源码的映射
+`report.js` 与 `report.css` 只负责统计结果。错误函数只用于本地定位演示，实际产品不应向用户展示完整堆栈。
 
-压缩、合并和转换后，生产堆栈指向生成文件。**源代码映射（source map）**记录生成行列与原始文件、位置和名称之间的关系。它可以是独立 `.map`、内联数据或上传到错误平台的私有制品。
+```js example=eng01-report runtime=project file=report.js
+import './report.css';
 
-映射必须与同一次构建的 JS 严格配对。文件名相同不够，应核对内容散列、release、manifest 和 `sourceMappingURL`。公开 map 可能暴露源内容、路径和注释；关闭公开访问后仍可将它作为受控调试制品上传。
+export function summarize(lessons) {
+  const minutes = lessons.reduce((sum, lesson) => sum + lesson.minutes, 0);
+  return `${lessons.length} 篇资料，共 ${minutes} 分钟`;
+}
+export function failForMapping() {
+  throw new Error('ATLAS_MAP_DEMO');
+}
+```
 
-Source Map 证明位置对应，不证明源码行就是根因。仍要结合输入、状态、调用栈和时间线。构建测试可故意制造一次生产错误，验证从部署 URL 和 generated position 确实回到预期源码。
+```css example=eng01-report-css runtime=project file=report.css
+.report-result {
+  padding: 18px;
+  border-left: 4px solid #217251;
+  background: #edf6f0;
+}
+```
 
-### 八、manifest 把入口和产物连接起来
+在这个独立目录运行 `npm install`，保留生成的锁文件，再运行 `npm run build`、`npm run preview`。后续重复安装可用 `npm ci`；不需要为本例更换业务仓库的包管理器。按照终端给出的本地地址打开页面，点击后应显示“2 篇资料，共 30 分钟”。
 
-**构建清单（manifest）**通常记录源码入口对应的文件、CSS、静态与动态依赖。服务端渲染、后端模板和部署验证可以读取它，而不必猜测带散列名称。
+### 转换打包和压缩分别改变了什么
 
-清单属于某次构建，不应与另一批产物混用。部署时可计算文件集合和散列，验证没有缺失或多余旧文件；回滚应恢复 HTML、manifest、入口和异步 chunk 的一致集合，而不是只把主 JS 换回旧版。
+**转换（transformation）**把 TS、JSX、Vue SFC 等语法转成后续工具可以处理的模块；**打包（bundling）**根据模块关系组织部署文件；**压缩（minification）**在保持约定语义的前提下缩短表达、删除冗余内容。
 
-### 九、共享 chunk 需要考虑缓存与失效
+这三件事可以由不同工具完成，也可能在一次命令内紧密配合。本例没有 TS，但若把文件改为 TS，能生成 JS 仍不意味着类型检查通过。类型检查需要自己的命令，见 [ENG-05](../chinese-guides/eng-05-quality-gates-lint-types-tests-ci.md#类型检查和转译回答不同问题)。
 
-把所有第三方依赖塞进一个 vendor chunk 可能导致任意依赖变化都使整个文件失效；按包拆分又可能产生过多请求和运行时复杂度。更稳妥的原则是让变化频率、复用范围和加载时机相近的代码在一起，并用真实访问路径测量。
+插件还可能介入解析、加载、转换和输出。排查“样式去哪了”时，先确认转换后有没有该样式，再追踪输出和加载；直接调整压缩器设置，可能根本没触及丢失发生的阶段。
 
-手工 chunk 规则也可能造成循环、执行顺序改变或同一模块被复制到多环境产物。每次优化后检查模块归属、请求瀑布、缓存命中与运行行为。构建报告只是观察入口，不是性能结论。
+构建目标通常负责语法转换范围，不会自动提供全部缺失的运行时 API。能解析某段语法，与环境里存在某个浏览器能力，是两个问题。
 
-### 十、重复依赖不总是纯体积问题
+### 从 manifest 找到真正要部署的文件
 
-不同版本、不同解析条件、别名或符号链接可让同一库出现多份。对工具函数可能主要增加体积；对 React、Vue 注入上下文、CSS-in-JS 注册表或全局单例，会造成运行时身份分裂。
+本例生成 `dist/.vite/manifest.json`。**构建清单（manifest）**把源码入口与带散列的 JS、CSS 及依赖关联起来。默认路径和字段有工具约定，不能把文件名猜成固定的 `app.js`。
 
-先从 lockfile、模块图和构建元数据确认为什么重复，再决定统一版本、调整 peer dependency、别名或包边界。强行去重若让原本需要不同版本的消费者共享不兼容实例，会把体积问题变成功能问题。
+在项目根目录保存 `inspect.mjs`，构建后运行 `node inspect.mjs`：
 
-### 十一、库构建和应用构建目标不同
+```js example=eng01-inspect runtime=project file=inspect.mjs
+import { readFile, stat } from 'node:fs/promises';
+const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
+for (const [source, entry] of Object.entries(manifest)) {
+  const bytes = (await stat(`dist/${entry.file}`)).size;
+  console.log(source, '->', entry.file, `${bytes} bytes`);
+  console.log('静态依赖:', entry.imports ?? []);
+  console.log('动态依赖:', entry.dynamicImports ?? []);
+  console.log('样式:', entry.css ?? []);
+}
+```
 
-应用构建知道最终入口和部署环境，可以积极拆分与消除代码。库构建要服务未知消费者，需决定 ESM/CJS 格式、exports、外部依赖、类型声明、CSS 和副作用合同。
+观察 `index.html` 对应的入口，以及指向 report 的动态关系；report 对应的记录还应带上它的 CSS。某些共享记录的 key 不是源码路径，而是生成名称。实际输出文件名和字节数以本次构建为准，不能把示例截图里的 hash 写死到部署脚本。
 
-库通常把框架等 peer 依赖标为 external，避免把宿主应提供的单例打入产物。发布前应在真实消费者项目安装 tarball，验证 exports、类型、样式和 tree-shaking，而不是只在库仓库用源码路径测试。
+清单用于找产物，模块归属的细粒度分析还需构建报告或插件元数据。它不能直接告诉你每个用户是否下载过某个文件，更不能代替实际页面验证。
 
-### 十二、SSR 和多环境构建有多张图
+### chunk 的边界要到浏览器里观察
 
-客户端、服务端、Worker 和 edge 环境的可用 API、外部化规则和目标不同。一个模块若在顶层访问 `window`，服务端图在求值时就可能失败；把服务端密钥意外导入客户端图则形成泄露。
+**chunk** 是一组构建后一起加载的代码，不等于一份源码文件。打开 Network，清空记录后刷新页面，再点击“查看统计”。在本例中，首屏没有请求 report JS；点击后才出现相应 JS 与 CSS，请求成功后结果才变成统计文本。
 
-现代构建工具逐步显式建模多个环境。无论具体 API 如何演进，都应能回答每个入口运行在哪里、哪些模块可以共享、环境变量如何注入、产物如何关联。不要假设一次 `build` 只产生一张浏览器图。
+开发服务器里可能直接看到 `report.js`，预览产物里则看到带散列的资源。预加载、浏览器缓存和加载辅助代码也会影响瀑布，不要用“每次点击一定增加一条请求”作为通用结论。模块成功加载后通常会复用，第二次调用不等于再次下载。
 
-### 十三、从源码追到浏览器请求
+做一次对照：把 `main.js` 顶部加入 `import * as report from './report.js'`，删除函数内同名的 `const report = await import('./report.js')`，重新构建。界面行为仍应成立，但 report 已进入首屏的静态可达集合，点击时不再需要同样的异步边界。
 
-选择一个路由入口可以按以下链路验证：
+这说明拆分改变的是工作发生的阶段。示例模块很小，不据此宣称测出了速度提升。真实优化还需比较冷缓存、热缓存、解析执行和用户等待；大型编辑器或图表等低频功能往往更值得讨论拆分。
 
-1. 记录源码静态与动态依赖；
-2. 查看解析结果和插件转换；
-3. 构建并读取 manifest 或可视化报告；
-4. 在生产预览打开路由，记录实际请求和时机；
-5. 检查响应缓存、内容散列与模块归属；
-6. 触发一次错误，用同制品 Source Map 回到源码；
-7. 验证异步加载失败时有可恢复界面。
+### tree-shaking 必须保留必要的副作用
 
-任何一步的截图都不能替代下一步。模块存在于 chunk 不代表浏览器一定请求；浏览器请求成功也不代表模块执行后的用户任务正确。
+**tree-shaking** 从使用关系和副作用分析出发，删除无需保留的代码。此例的 `unusedExample` 没有被引用，生产 JS 中应不再包含 `ATLAS_UNUSED_EXPORT`；但 boot 的初始化会影响外部状态，即使没有导出，仍需要执行。
 
-### 十四、产物优化必须有行为反证
+在浏览器控制台检查 `document.documentElement.dataset.atlasBoot`，应得到 `ready`。体积变小和初始化仍正确要一起核对；只搜索标记可以辅助这个受控例子，不能证明任意项目的所有副作用都安全。
 
-优化前建立下载、解析、执行和交互指标基线，说明测试设备、网络、缓存和数据。优化后除了体积变化，还要运行功能、异步错误、SSR 和旧缓存兼容测试。若收益只在分析器估算中出现、真实指标无变化或错误恢复变差，应撤销或重新划分边界。
+包清单中的 `sideEffects` 是对模块效果的声明。错误地把需要注册自定义元素、导入 CSS 或安装兼容补丁的文件声明为可忽略，消费者构建可能删掉它们。它不是“越小越好”的优化按钮；实际效果还取决于构建器如何读取该声明。
 
-Source Map、manifest 和构建统计也会增加制品体积或暴露信息，应按用途决定是否部署、私有上传或只保存于 CI。每个产物都应有 owner、保留和访问策略。
+静态导入并不意味着全包必然留下，动态导入也不意味着所有内容都能删除。动态属性访问、CommonJS 包装、未知调用和插件生成代码都会影响分析能力。循环依赖则要回到 ESM 的绑定与求值顺序理解，构建图能容纳环，不代表业务初始化一定正确。
 
-### 十五、构建成功不是部署成功
+### Source Map 把生成位置接回源码
 
-构建命令退出 0 只说明工具完成了当前配置。仍需验证文件被完整发布，路径与 MIME 正确，HTML 和 chunk 原子一致，缓存策略支持新旧客户端，目标浏览器能运行，服务端入口也使用对应版本。
+点击“演示错误位置”，页面会保留 `ATLAS_MAP_DEMO` 的堆栈。**Source Map** 记录生成位置到作者源码位置的对应关系；有 map 文件不等于已经成功定位。
 
-把构建、部署和运行拆成三层证据，能避免“本地 dist 看起来正常”或“CDN 有文件”被误写成用户已可用。
+先在 Chrome Sources 查看映射后的 `report.js`。还可以用下面独立脚本核对堆栈中的生成位置。保存为 `map-position.mjs`，向它传入本次 report 的 `.map` 路径以及堆栈行、列：
 
-### 进阶：构建运行时也是生产代码
+```js example=eng01-map-position runtime=project file=map-position.mjs
+import { readFile } from 'node:fs/promises';
+import { SourceMap } from 'node:module';
+const [mapPath, lineText, columnText] = process.argv.slice(2);
+const line = Number(lineText);
+const column = Number(columnText);
+if (!mapPath || !Number.isInteger(line) || line < 1 || !Number.isInteger(column) || column < 1) {
+  throw new Error('用法：node map-position.mjs <本次.map路径> <生成行> <生成列>');
+}
+const payload = JSON.parse(await readFile(mapPath, 'utf8'));
+const entry = new SourceMap(payload).findEntry(line - 1, column - 1);
+if (entry.originalSource === undefined) throw new Error('这个位置没有对应源码');
+console.log(entry.originalSource, entry.originalLine + 1, entry.originalColumn + 1);
+```
 
-动态 import 需要运行时根据模块 ID 找到 chunk URL、加载并注册模块。运行时与 manifest 或入口 HTML 不一致时，会请求错误文件；CSP、MIME、跨源或超时也会让加载失败。应用应区分首次网络失败、离线和版本错配，提供有限重试或安全刷新，并保护未保存数据。
+例如命令形状是 `node map-position.mjs dist/assets/report-实际散列.js.map 1 实际列号`，必须替换为你的真实位置。Chrome 堆栈的行列从 1 开始，这个 API 的偏移从 0 开始，所以脚本先减 1，再将展示结果加回 1。
 
-预加载提示可以降低等待，也可能下载用户永远不用的代码、争抢关键资源。根据路由概率、资源优先级和真实瀑布决定，不要为每个动态 chunk统一 preload。HTTP/2/3 也没有消除解析、执行和缓存元数据成本。
+输出应回到 `report.js` 创建演示错误的那一行。换另一构建的 map，位置就可能失真。生产上可私有保存 map、限制访问；`sourcemap: 'hidden'` 只是去掉引用注释，生成的 map 仍需通过部署策略避免意外公开。位置与根因的区别见 [B09 调试](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#source-map-必须和实际运行的制品配对)。
 
-### 进阶：体积预算应连接用户阶段
+### 资源多环境和库产物各有自己的合同
 
-预算可分首屏 JS/CSS、单路由异步块、第三方总量和 source map 私有制品。只限制压缩后字节会漏掉解压、解析和执行成本；只限制总量又无法防止首屏回归。
+CSS 提取、字体、图片、Worker 与 WebAssembly 都会形成输出或加载关系。本例的统计功能需要 report JS 和 CSS 配合，缺少样式文件时，要继续观察动态导入是否因依赖资源加载失败而进入错误反馈，不能只确认 JS 文件存在。资源还可能被内联而不形成独立文件，不能用文件数量推断是否包含。
 
-构建报告与真实浏览器测量关联同一 commit，记录冷/热缓存和目标设备。超过预算时说明新增模块、业务价值和回收计划；不要通过把代码移动到用户点击后立即加载的 chunk 来伪造首屏改善。
+客户端、SSR 服务与 Worker 可能有不同入口图。顶层访问 `document` 的 boot 适合本例浏览器入口，不能直接放进服务器共享模块；服务端密钥也不能沿共享 import 意外进入客户端产物。配置和部署的对应关系见 [ENG-02](../chinese-guides/eng-02-dev-production-environments-assets-cache.md#开发预览和部署各自提供哪些能力)。
 
-构建工具版本升级会改变默认 target、压缩和 chunk 算法，预算基线需重新解释。旧产物与新工具比较时，区分工具差异和源码差异，并保留功能回归与回滚制品。
+应用构建知道最终入口，库构建则服务未知消费者，要明确 ESM/CJS、exports、类型和 CSS。框架等宿主依赖常需 external 配合 peer 声明：声明 peer 不会自动阻止打包器把框架打进库。发布前应检查归档，并在独立消费者使用公开入口，而不是只通过仓库源码别名验证。
 
-### 进阶：可复现构建需要封闭输入
+### 体积与可复现性都要对应同一组输入
 
-同一 commit 得到相同制品，前提是工具链、依赖解析、环境变量、时区、语言区域、生成数据和外部下载都被固定。构建脚本若把当前时间、绝对路径或随机 ID 写入文件，散列会在无源码变化时漂移，既降低缓存命中，也让制品证明难以比较。确需版本时间时，将它作为声明的构建元数据并与功能文件分离。
+| 观察项 | 能回答 | 还需核对 |
+| --- | --- | --- |
+| 首屏静态可达 JS | 打开入口必须先带来多少代码 | 解析、执行和真实用户等待 |
+| 按需 chunk | 后续任务会增加哪些资源 | 加载失败、复用和缓存寿命 |
+| 文件散列 | 两次产物字节是否相同 | 哪个输入造成差异 |
+| 构建成功 | 当前配置完成输出 | 部署路径、完整上传与浏览器行为 |
 
-两次构建不一致时先比较 manifest、文件列表和未压缩内容，再追踪输入来源；不要用忽略散列差异来宣布可复现。制品签名证明签名者认可某组字节，来源证明连接源码和构建过程，二者都不能替代运行行为测试。
+共享 chunk 可提高复用，也可能把变化频繁与长期稳定的代码绑在一起，导致一次小更新让大文件失效。先测实际路径，再决定手工拆分；不要为了预算数字，把首屏立刻需要的代码机械挪到下一毫秒下载。
 
-远程构建缓存的 key 必须覆盖所有语义输入。漏掉编译配置或环境变量会把旧结果错误复用给新任务；加入无关临时文件又会让缓存永远失效。缓存命中后仍执行轻量完整性检查，发布任务只接受来自可信构建上下文且与目标 commit 对应的产物。
+可复现构建还需要固定依赖、工具、环境配置、生成数据和平台条件。脚本写入当前时间或绝对路径，可能让相同源码生成不同字节；缓存 key 漏掉编译配置，则可能把旧产物错误复用。锁文件能固定重要的一部分输入，不能独自证明最终制品一致。
 
-### 学完后应能说明
+### 参考与延伸阅读
 
-你应能从入口画出模块图，区分转换、打包、chunk 与运行时加载，解释 tree-shaking 为什么依赖静态结构和副作用合同，并从源码经过 manifest 追到浏览器请求。还应能用同制品 Source Map 定位生产位置，识别重复依赖、多环境与缓存失效的边界，而不是把产物大小当唯一质量指标。
+- [Vite 6：生产构建](https://v6.vite.dev/guide/build) 与 [当前构建文档](https://vite.dev/guide/build)：分别核对此例和新主版本的构建配置。
+- [Vite 6：后端集成](https://v6.vite.dev/guide/backend-integration)：查看 manifest 的字段和依赖关系。
+- [Vite：功能](https://vite.dev/guide/features)：区分 TypeScript 转译、资源处理与动态导入优化。
+- [Node.js：SourceMap](https://nodejs.org/api/module.html#class-modulesourcemap)：查询生成与原始行列的映射 API。
+- [MDN：动态 import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import)：回到模块加载和失败语义。
+
+审校日期：2026-09-10。正文的机制、文件和实际观察共同组成例子，工具版本变动时应保留同样的验证问题，而不是沿用旧散列和体积数字。

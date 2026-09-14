@@ -1,248 +1,283 @@
 # Web 基础知识点讲义
 
-## WEB-03 现代 CSS 架构、容器查询与渐进增强
+## WEB-03 让组件适应空间并保留可用基线
 
-现代 CSS 已经能按组件容器、作用域、级联层和用户偏好表达大量响应逻辑。能力变多并不意味着把所有新语法立即用于生产；高级工程师要先建立可用基线，再按浏览器能力增强，并为不支持、部分支持和行为变化保留清晰回退。CSS 架构的目标是降低隐式竞争，让组件在不同宿主中仍可预测。
+同一张资料卡片放在正文里很宽，放进侧栏后却只有 280 px。用视口断点判断，它们看到的是同一个浏览器；用容器查询判断，它们才知道各自真正拿到了多少空间。
+
+现代 CSS 的价值，是更准确地表达这些关系，同时让样式来源、作用范围和回退更容易理解。这篇先给出一个可以切换增强的桌面页面，再解释级联层、容器查询、Subgrid、scope 与其他能力各自解决什么问题。
 
 ### 学习前先确认
 
-- 直接前置：[WEB-02 CSS 布局、层叠、响应式与逻辑属性](../chinese-guides/web-02-layout-cascade-responsive-logical-properties.md#web-02)。本讲直接使用 Grid/Flex、内在尺寸、层叠与媒体查询；HTML 语义由该讲的前置继续递归说明。
+- 直接前置：[WEB-02 布局尺寸与样式覆盖](../chinese-guides/web-02-layout-cascade-responsive-logical-properties.md#web-02)。本讲直接使用 Grid、内在尺寸、层叠与媒体查询。
 
-### 一、CSS 架构管理来源、范围和变化
+完整例子的基线使用普通 Grid 与 CSS 自定义属性；容器布局和 Subgrid 作为可关闭的增强。页面的独立级联实验需要浏览器支持 @layer。本篇不会把一种新语法可用，写成所有现代 CSS 都已兼容。
 
-规模增长后，问题常不是“不会写某个属性”，而是规则来自哪里、为何覆盖、能影响多大范围、组件在哪些上下文使用。架构应明确基线、设计 token、组件、工具类、主题和例外的责任。
+### 先决定没有增强时用户还能做什么
 
-避免以页面路径和深层 DOM 形成选择器，如 `.dashboard .main .card h3`。它把样式绑到当前结构，复用到侧栏或弹窗就要继续提高权重。组件选择器保持低权重，状态通过属性或明确修饰符表达。
+**渐进增强（progressive enhancement）**先保证核心任务，然后在有相应能力时改善呈现。对资料卡片，核心任务是看清标题、摘要、状态，并进入资料；两列排版、主题细节与对齐属于可以退回简单形式的呈现。
 
-CSS Modules、scoped style 或 CSS-in-JS 可以生成名称隔离，却不自动解决全局变量、层叠顺序、portal 和运行时主题。机制边界仍需设计。
+先用相同 DOM 做出能阅读和操作的单列卡片，再增加容器条件。不要先把内容隐藏，等 JavaScript 判断所有能力后才显示；初始化失败时，用户可能连最基本的内容都拿不到。
 
-### 二、级联层显式定义作者样式顺序
+可用基线也需要明确边界。完全不支持 Grid 的浏览器会忽略该声明，正常文档流仍应包含内容；正式支持范围若要求特定旧环境，应在那里实际检查。新浏览器里关闭增强，只证明基线分支可用，不等于模拟了另一个浏览器引擎。
 
-**级联层（cascade layer）**用 `@layer` 把作者声明分组，并在首次声明时固定普通声明的层顺序：
+### 在同一视口放入两种宽度的卡片
 
-```css
-@layer reset, tokens, base, components, utilities, overrides;
+把下面整段保存为 `modern-css.html`，直接用桌面浏览器打开。两张卡片的内容与结构相同，宿主分别为 280 px 和 520 px。下方还有一组不依赖颜色名称猜测结果的级联实验与 Subgrid 对齐示例。
 
-@layer components {
-  .button { padding: .6rem 1rem; }
-}
-
-@layer utilities {
-  .p-0 { padding: 0; }
-}
-```
-
-不同层先比较层顺序，再在同层内比较优先级。后续重新打开已命名层只是追加内容，不重新排序。未放入层的作者普通样式位于命名层之后，可能意外覆盖 utilities；引入旧 CSS 时应明确放在哪一层。
-
-important 的层顺序与普通声明有不同目的，用于保护早期重要基线。不要把 layer 当成新的 `!important` 竞赛，先设计正常层次并尽量少用 important。
-
-### 三、第三方样式进入受控层
-
-组件库和旧样式通常权重高或顺序不确定。可将其导入 vendor 层，再让本地组件层在不增加选择器权重的情况下覆盖普通规则。
-
-```css
-@layer reset, vendor, components, utilities;
-@import url('./vendor.css') layer(vendor);
-```
-
-若第三方使用内联样式或 important，layer 不能自动解决，需要组件 API、CSS 变量或窄覆盖。升级第三方时重新检查层外规则和 DOM，不要假设导入位置不变。
-
-### 四、@scope 限制匹配范围
-
-**样式作用域（CSS scope）**可让一组规则只在某个根与可选下界之间匹配，减少全局选择器冲突：
-
-```css
-@scope (.profile-card) to (.embedded-widget) {
-  :scope { border: 1px solid var(--border); }
-  h2 { font-size: 1.1rem; }
-}
-```
-
-scope 会参与层叠中的近接度，但不是 Shadow DOM，也不是安全或脚本隔离。自定义属性仍会继承，子树也仍在同一 DOM。
-
-使用前提供无 scope 时仍正确的类选择器基线，或由构建工具转换；按目标浏览器验证。不要为了使用新语法把关键内容样式置于唯一不兼容路径。
-
-### 五、容器查询解决组件可用空间
-
-媒体查询通常看视口，而组件可能同时出现在宽主栏和窄侧栏。**容器查询（container query）**让组件根据最近合格祖先的尺寸或状态调整。
-
-```css
-.course-zone {
-  container: course / inline-size;
-}
-
-.course-card {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-@container course (min-width: 30rem) {
-  .course-card {
-    grid-template-columns: minmax(0, 2fr) minmax(9rem, 1fr);
+```html example=web03-cards runtime=project file=modern-css.html
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>同一组件的两种空间</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --surface: #fff; --ink: #203f36; --muted: #506b60; --line: #b8cfc2; --accent: #21644f; }
+  body { margin: 0; padding: 32px; background: #edf4ef; color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  body[data-theme="dark"] { --surface: #183b31; --ink: #edf8f0; --muted: #c3d7c9; --line: #809e8c; --accent: #afd4bd; background: #10271f; }
+  main { max-inline-size: 1120px; margin-inline: auto; }
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.15rem; margin: 0; }
+  p { line-height: 1.7; }
+  button, select { font: inherit; padding: .6rem .85rem; }
+  button { border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); cursor: pointer; }
+  :focus-visible { outline: 3px solid #be641d; outline-offset: 3px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; margin-block: 24px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .slot { container: material / inline-size; max-inline-size: 100%; }
+  .slot.narrow { inline-size: 280px; }
+  .slot.wide { inline-size: 520px; }
+  .slot-label { font-size: .85rem; color: var(--muted); }
+  .card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 24px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+  .card > * { min-inline-size: 0; margin: 0; }
+  .summary { overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .action { justify-self: start; }
+  @supports (container-type: inline-size) {
+    @container material (min-width: 420px) {
+      body.enhanced .card { grid-template-columns: minmax(0, 1fr) auto; }
+      body.enhanced .card .action { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+      body.enhanced .card h2 { font-size: clamp(1.15rem, 1rem + .6cqi, 1.35rem); }
+    }
   }
-}
+  .panel { margin-block-start: 32px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+  .aligned { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-block-start: 16px; }
+  .aligned article { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; padding: 18px; border: 1px solid var(--line); }
+  .aligned article > * { margin: 0; }
+  @supports (grid-template-rows: subgrid) {
+    body.enhanced .aligned article { grid-template-rows: subgrid; grid-row: span 3; }
+  }
+  @media print {
+    body { padding: 0; background: white; color: black; }
+    .controls, button, #status { display: none; }
+    .examples { display: block; }
+    .slot.narrow, .slot.wide { inline-size: 100%; }
+    .card, .panel { color: black; background: white; border-color: black; }
+    .meta, .slot-label { color: black; }
+    .card, .aligned article { break-inside: avoid; }
+  }
+  @media (forced-colors: active) {
+    .card, .panel, button { border-color: CanvasText; }
+    :focus-visible { outline-color: Highlight; }
+  }
+</style>
+<style>
+  @layer vendor, components, utilities;
+  @layer vendor {
+    .layer-probe { color: rgb(160, 0, 0); }
+    .important-probe { color: rgb(128, 0, 128) !important; }
+  }
+  @layer components {
+    #specific .layer-probe { color: rgb(0, 0, 160); }
+  }
+  @layer utilities {
+    .layer-probe { color: rgb(0, 100, 0); }
+    .important-probe { color: rgb(180, 80, 0) !important; }
+  }
+  .unlayered { color: rgb(20, 20, 20); }
+  #specific { background: white; color: #182f25; }
+</style>
+</head>
+<body class="enhanced" data-theme="light">
+<main>
+  <h1>同一组件的两种空间</h1>
+  <p>视口不变，观察卡片怎样适应宿主；关闭增强后，内容与操作仍应保留。</p>
+  <div class="controls">
+    <label><input id="enhance" type="checkbox" checked>启用容器布局与 Subgrid</label>
+    <label>页面主题 <select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+  </div>
+  <div class="examples">
+    <section class="slot narrow" aria-label="窄容器"><p class="slot-label">宿主宽度 280 px</p><article class="card"><h2>资料标题与错误恢复</h2><p class="summary">用具体例子理解输入、保存和失败后的继续操作。</p><p class="meta">约 15 分钟 · 可以开始</p><button class="action">阅读资料</button></article></section>
+    <section class="slot wide" aria-label="宽容器"><p class="slot-label">宿主宽度 520 px</p><article class="card"><h2>资料标题与错误恢复</h2><p class="summary">用具体例子理解输入、保存和失败后的继续操作。</p><p class="meta">约 15 分钟 · 可以开始</p><button class="action">阅读资料</button></article></section>
+  </div>
+  <p id="status" role="status">演示按钮只更新本页状态，不读取真实资料。</p>
+  <section class="panel" id="specific" aria-label="级联实验">
+    <h2>查看 Computed 中的颜色</h2>
+    <p class="layer-probe">普通声明：utilities 胜出，应为深绿色。</p>
+    <p class="layer-probe unlayered">未分层普通声明胜出，应为接近黑色。</p>
+    <p class="important-probe">important 层顺序反转，vendor 胜出，应为紫色。</p>
+  </section>
+  <section class="panel" aria-label="轨道对齐实验"><h2>让相邻卡片共用行轨道</h2>
+    <div class="aligned">
+      <article><h2>短标题</h2><p>两行之外的空间由内容与父轨道共同分配。</p><button>查看第一份</button></article>
+      <article><h2>这是一段较长的资料标题，用于观察标题行怎样影响相邻卡片</h2><p>说明。</p><button>查看第二份</button></article>
+    </div>
+  </section>
+</main>
+<script>
+  document.querySelector('#enhance').addEventListener('change', (event) => {
+    document.body.classList.toggle('enhanced', event.target.checked);
+  });
+  document.querySelector('#theme').addEventListener('change', (event) => {
+    document.body.dataset.theme = event.target.value;
+  });
+  for (const button of document.querySelectorAll('button')) {
+    button.addEventListener('click', () => {
+      document.querySelector('#status').textContent = `已选择：${button.textContent}。这是本地演示反馈。`;
+    });
+  }
+</script>
+</body>
+</html>
 ```
 
-必须在祖先建立 containment；默认查询最近合格容器，命名可避免嵌套误选。不能让元素查询自己尺寸并通过样式无限反馈，容器建立会改变尺寸计算，需要检查布局副作用。
+在支持容器尺寸查询的浏览器中，280 px 卡片应为单列，520 px 卡片的按钮应位于右侧。关闭增强后，两张都回到单列，按钮仍可通过 Tab 和 Enter 操作。主题选择只改 CSS 变量，不重建内容；本例不持久化主题，也没有真实跳转或业务权限。
 
-### 六、容器单位提供局部流式尺寸
+### 级联层先决定来源顺序再看选择器
 
-`cqi`、`cqb` 等单位相对查询容器 inline/block size，可用于 `clamp()` 内的局部字号和间距。没有合格容器时的回退行为要理解，不能让文本变成不可预测尺寸。
+**级联层（cascade layer）**用 @layer 安排同一来源内部的优先次序。页面的第二段 style 故意独立出来，便于看清实验与正常卡片样式的边界。
+
+普通声明中，后声明的层比前面的层优先。虽然 components 中使用了 ID，utilities 里的 `.layer-probe` 仍先按层顺序胜出，结果是深绿色；不是 ID 失效了，而是还没轮到比较 specificity。
+
+普通的未分层声明优先于分层普通声明，所以第二行采用接近黑色。important 的层顺序反转，较早的 vendor 层优先；分层 important 也优先于未分层 important。这解释了为什么引入 layer 后，不能继续简单判断“最后一个层能覆盖一切”。
+
+示例的三条规则只用于理解机制，真实项目不应把到处使用 important 当作架构。先明确 reset、第三方、组件、工具与覆盖的顺序，并限制特殊覆盖的范围。
+
+已声明的层次再次出现，只会向该层追加规则，不重新排列初次顺序。第三方样式可以通过 `@import url(...) layer(vendor)` 进入指定层，但 import 有位置要求，也要核对构建器处理结果。不要把未分层旧样式搬进去后，未经检查就认为外观完全不变。
+
+### 容器查询读取的是哪一个祖先
+
+**容器查询（container query）**让被匹配元素按合适祖先的尺寸等条件选择样式。页面的 `.slot` 使用 `container:material / inline-size`，同时给出容器名称与所查询的尺寸轴。
+
+查询为后代卡片选择规则，不是让容器按自己的尺寸改变自己。若把 container-type 直接放在卡片上，又希望卡片查询自身宽度，通常就选错了对象。外层 slot 分配空间，内层 card 适应空间，使两层责任清楚。
+
+`@container material (min-width:420px)` 查找满足名称与查询能力的祖先。嵌套结构中如果最近的候选不满足所需名称或能力，选中的容器可能与你想象不同。使用 DevTools 查看实际命中容器，不靠 DOM 距离猜。
+
+本例用的是 inline-size containment，避免卡片的横向内容反过来决定宿主的横向尺寸。若使用 size，块轴尺寸也受到约束，宿主高度可能需要额外安排；containment 不是完全没有代价的标记。
+
+### 容器单位与断点要服务实际内容
+
+cqi 表示所选尺寸容器 inline 方向尺寸的百分之一。本例仅在宽容器条件中适度增加标题字号，并用 rem 下限和上限限制范围，不让卡片大小完全由字体漂移决定。
+
+没有适用尺寸容器时，容器单位可能退回相应小视口单位；它们不会自动按你心里想的那个卡片计算。把容器单位放到公共 token 前，应确认使用者始终处于预期容器内。
+
+420 px 不是标准断点。这里选择它，是因为标题、摘要、间距与按钮并排需要这些空间。可以把宿主改到 419 与 421 px 观察条件两侧，再用更长的标题确认它是否仍合理。
+
+尺寸查询、样式查询、滚动状态查询和锚点相关查询是不同子能力。尺寸查询可用，不意味着任意属性都能在 style() 中查询，也不意味着所有滚动状态语法都可用。本例只把已给出的尺寸查询作为完整演示，其他子能力按具体语法查阅兼容资料。
+
+### Subgrid 共享轨道而不是固定每张卡片高度
+
+**Subgrid** 让嵌套 Grid 在某一轴使用父网格的轨道。本例的 `.aligned` 有两列；每张 article 跨三行，标题、正文、按钮分别落到对应共享行。
+
+普通基线中的 `auto 1fr auto` 为每张卡片独立计算内部行。标题长度不同，正文开始位置就可能不同；启用 Subgrid 后，同一组卡片的标题行共同参与父轨道尺寸，正文和按钮的行位置因此能对齐。
+
+这个能力不要求把标题写死为两行，也不会自动截断超长内容。它解决轨道共享，不解决权限、加载或数据状态，更不会改变 DOM 顺序。改变列数后，还要确认 span 与隐式轨道是否符合新的排版。
+
+本例通过 @supports 包住增强，关闭增强后保留独立 Grid。基线可能不具备完全相同的对齐效果，但信息和按钮都应存在。把“外观少一点整齐”作为回退，通常比“缺少核心内容”更容易接受。
+
+### scope 与嵌套分别管理范围和重复
+
+@scope 限制选择器匹配的范围，可以给组件样式明确的起止边界。下面是**说明片段**，不属于上面的完整页面：
 
 ```css
-.course-card__title {
-  font-size: clamp(1rem, 4cqi, 1.5rem);
+@scope (.reader) to (.embedded-widget) {
+  h2 { color: var(--ink); }
 }
 ```
 
-流式尺寸仍需最小/最大边界，并在缩放和长文本下验证。排版可读性不应完全跟随容器线性变化。
+它表达 reader 范围内、排除指定下界及其子树的匹配区域。它不是 Shadow DOM，也不会阻断所有继承：外层已算出的 color 或自定义属性仍可能沿继承传下去。不要把作用域边界误当成安全边界或彻底样式隔离。
 
-### 七、样式查询与滚动状态查询有成熟度边界
+作用域接近程度在层叠中有自己的比较位置，不能越过来源、重要性或 specificity 随意获胜。页面同时使用 layers 与 scope 时，应逐层解释结果；`:scope` 选择器可被识别，也不能单独证明浏览器支持 @scope 规则。
 
-容器查询体系还可以根据自定义属性样式或滚动状态选择规则。不同子能力的支持时间和语法可能不同，应查当前兼容数据并逐项 feature-detect，不能因尺寸查询可用就假设所有容器查询都可用。
+原生嵌套减少重复前缀，例如在 `.card` 内写 `&:focus-within`，但不会自动建立范围隔离。嵌套过深会继续形成长而难覆盖的选择器；含 ID 的父选择器列表还可能影响优先级。先保持短而明确的结构，再决定是否嵌套。
 
-状态若来自业务数据，仍应由 HTML 属性或应用状态明确表达；不要把权限、加载或持久状态藏进 CSS 查询。CSS 状态适合视觉环境，不是业务真源。
+### 自定义属性表达可以变化的设计含义
 
-实验能力采用增强：基线先完成任务，支持时增加 sticky 状态提示或位置适配，不支持时保持可读。
+页面定义 surface、ink、muted、line 与 accent 等变量，组件使用这些含义，而不是每处分别写主题颜色。用户选择深色后，只改变同一组变量，因此组件结构、文字和焦点顺序无需改变。
 
-### 八、Subgrid 共享父网格轨道
+**自定义属性（custom property）**默认可以继承，在使用处通过 var() 代入；它不是预处理器中的纯文本常量。`var(--space,12px)` 的后备值也不是任意非法值的兜底：如果变量存在却是一个不适用于当前属性的值，替换后的声明仍可能在计算时无效。
 
-**子网格（subgrid）**让嵌套 grid 的某一轴沿用父轨道，适合多卡片标题、正文和动作行对齐：
+例如给 `--space` 写 red，再用于 padding，不能指望自动回到 12 px。需要输入约束时可以考虑 @property 的语法、初始值与继承设置，但它又有自己的支持和语义，不能为了一个静态间距随意增加机制。
+
+系统颜色偏好可以提供默认，用户明确选择则应有清楚优先级。若真实产品保存主题偏好，还要考虑首屏应用时机与 SSR 接管一致；这个演示只切换当前页面，不声称已经处理这些状态。
+
+### 新颜色与能力检测都需要明确回退
+
+现代颜色可用于表达感知关系，例如 oklch 或 color-mix，但语法支持不保证文字对比度、强制颜色与打印结果都符合要求。应先给可用的基础色，再在有能力时增强。
 
 ```css
-.cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.card {
-  display: grid;
-  grid-template-rows: subgrid;
-  grid-row: span 3;
+.notice { background: #e8f2ec; }
+@supports (background: color-mix(in oklch, white, green)) {
+  .notice { background: color-mix(in oklch, white 92%, green); }
 }
 ```
 
-它解决轨道对齐，不解决内容过长、数据边界或语义顺序。窄屏转为单列时验证 span 和隐式轨道，保留普通 grid/flex 基线。
+这也是说明片段。两条背景色都不能单独证明前景文字可读，还要结合实际文字色与使用状态判断。相对颜色与更高版本颜色语法要分别核对，不能从支持 color-mix 推出所有颜色功能都可用。
 
-### 九、原生嵌套降低重复但要控制深度
+**@supports** 判断浏览器是否识别指定声明或条件，不保证整个组件没有布局错误。`CSS.supports('container-type','inline-size')` 可以提供语法能力线索，却不能证明你的命名容器选对、宽度正确或键盘路径完整。
 
-CSS nesting 可以在规则内写相对选择器，减少重复组件前缀。它不会自动限制作用域，也可能生成高权重深层选择器。
+增强开关便于在同一环境观察退回基线的行为；目标旧环境仍需实际运行。记录时写清“禁用增强”还是“真实不支持”，避免把二者合并成一个兼容性结论。
 
-```css
-.card {
-  border: 1px solid var(--border);
+### 锚点定位与滚动动画只承担呈现
 
-  & > h2 { margin-block-start: 0; }
-  &:focus-within { border-color: var(--focus); }
-}
-```
+CSS Anchor Positioning 可以把浮层定位与另一个元素关联，并提供位置回退能力；但它不会自动赋予对话框语义、管理焦点、处理 Escape 或完成权限判断。菜单到底是非模态提示还是模态任务，应先用合适的 HTML 与交互协议表达。
 
-嵌套保持一到两层，并查看最终选择器。不要把预处理器所有历史语法假设为原生 CSS 等价；构建和浏览器解析规则要按当前规范核对。
+对核心提示，可以先提供正常流或已验证的基础定位，再按具体属性增加锚点增强。anchor-name、position-anchor、位置回退语法以及不同子能力的支持要分别核对；检测某一个属性通过，不等于整条弹层协议都成立。
 
-### 十、设计 token 用自定义属性表达运行时值
+滚动驱动动画把时间线关联到滚动或可见进度，适合阅读进度等辅助呈现。不要默认让关键正文 opacity 为 0，指望滚动时间线最终把它显示出来。脚本失败、语法不支持、打印或用户减少动态效果时，内容都应可见。
 
-**自定义属性（custom property）**参与层叠和继承，可用于颜色、间距、字体和组件局部参数。它保存 token 引用，不做类型保证；未定义或产生无效值时会在计算阶段回退。
+本例没有为卡片添加运动，只通过布局直接呈现结果。真实产品若加入非必要动画，应提供 reduced-motion 分支；“没有动画”不需要再设置一套动画开关。弹层与层叠边界可回到 [WEB-02](../chinese-guides/web-02-layout-cascade-responsive-logical-properties.md#包含块与层叠上下文是两个问题)。
 
-```css
-:root {
-  --color-surface: oklch(98% .01 160);
-  --space-3: .75rem;
-}
+### 渲染优化不能让关键内容依赖偶然触发
 
-.card {
-  padding: var(--card-padding, var(--space-3));
-  background: var(--color-surface);
-}
-```
+content-visibility:auto 可以减少暂时不相关区域的渲染工作，配合 contain-intrinsic-size 给出合理的占位估计。它不把 DOM 数据移除，也不等于只保留少量节点的虚拟列表；大量节点、事件与数据仍有成本。
 
-全局 token 表达语义而非具体组件，如 surface、danger、focus；组件变量作为窄接口。不要让任意页面覆盖内部全部值，使组件合同不可预测。
+不应为了提速把重要焦点目标和阅读入口变成不可达内容。浏览器查找、锚点、辅助技术与滚动恢复需要按目标环境观察；估计尺寸失真时，进入区域可能引发位置变化。hidden 与 auto 的用途也不同，不能混用来实现权限隐藏。
 
-### 十一、现代颜色仍需可访问回退
+性能改动先有具体瓶颈与前后观察。对于几张卡片，本例无需加这些优化；对于长列表，再选择适合的数据量与渲染策略。可继续查 [REACT-07](../chinese-guides/react-07-performance-memo-large-lists.md#react-07) 与 [CS-03](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#cs-03)。
 
-OKLCH、`color-mix()`、相对颜色和广色域能建立更一致主题，但显示设备、浏览器和强制颜色行为不同。先声明 sRGB 基线，再在支持条件内增强。
+### 迁移样式时记录来源与退出条件
 
-```css
-.notice {
-  background: #eef7f3;
-}
+把旧规则放进 legacy 层、把新规则放进 components 层，是一项会改变覆盖关系的真实变更。先选一个组件，记录原来的 computed 值与外观，再迁移和核对，不把全站移动、改主题与改布局一次混在一起。
 
-@supports (color: oklch(95% .03 160)) {
-  .notice { background: oklch(95% .03 160); }
-}
-```
+临时 override 应能说明为什么存在、由谁维护、何时可以删除。只不断新增 utilities 和 important，最终会形成无法推断的例外集合。设计变量也需要用途与弃用路径，不能让颜色变量名留着旧含义却换成新职责。
 
-数学上的颜色空间均匀不自动满足对比度。验证文本、非文本控件、hover/focus、暗色、强制颜色和打印。不要只用颜色传达状态。
+引入新能力前记录具体语法、目标浏览器、基线、增强结果与核对日期。可参考下表组织本例结论，不填未经运行的版本数字：
 
-### 十二、@supports 是能力分支，不是版本分支
+| 能力 | 本例的可观察结果 | 检查结论不能扩大到 |
+| --- | --- | --- |
+| 容器尺寸查询 | 两种宿主宽度采用不同列数 | 所有样式与滚动状态查询 |
+| @layer | 三项颜色来源符合预期 | 所有第三方样式迁移都不变样 |
+| Subgrid | 相邻标题、正文与按钮共享行位置 | 任意嵌套与列数都自动正确 |
+| 基线开关 | 内容与按钮保留，卡片回到单列 | 真正旧浏览器已经通过 |
+| 主题与打印 | 结构保留，演示控件可移除 | 完整可访问性或生产主题系统 |
 
-**特性查询（feature query）**用 `@supports` 检查某个声明是否被解析。它不证明实现无 bug，也不能检查所有组合行为，但比按浏览器名称分支稳健。
+### 让验证覆盖最有解释力的条件
 
-先写可用基线，再在 `@supports` 内覆盖。JavaScript 只有在行为需要脚本协同时用 `CSS.supports()`，不要为纯布局重复维护一份 JS 状态。
+先在同一桌面视口查看 280 与 520 px 卡片，再观察断点附近、关闭增强、主题变化与长标题。通过 Computed 核对颜色和网格列数，比只看肉眼“差不多”更能解释级联结果。
 
-不支持环境应得到简单但完整的单列、普通定位和无动画体验，而不是空白或不可操作。
+随后用键盘进入卡片按钮、触发反馈，查看打印样式和强制颜色下的信息结构。局部变窄不应使整页溢出，也不应把操作移到 DOM 中完全不同的位置。这里的窄宿主是桌面侧栏场景，不需要扩展手机设备矩阵。
 
-### 十三、渐进增强围绕核心任务
+截图可以留住外观，行为操作证明按钮能工作，计算样式说明规则来源。三者都有用，但对小型样式变更只保留能支持当前判断的观察。若提交 PR，可按 [CAREER-05](../chinese-guides/career-05-code-review-risk-communication.md#验证证据应来自正在评审的改动) 的方式说明范围与限制。
 
-**渐进增强（progressive enhancement）**先保证目标环境能完成核心任务，再增加容器响应、锚点定位和动画。回退不是视觉完全相同，而是内容、操作和错误恢复仍可用。
+### 参考与延伸阅读
 
-确定基线浏览器与业务要求，列出增强能力和失败方式。关键确认按钮不能只通过不受支持的 popover 或动画出现；锚点定位失败时可回到普通 flow 或 JS 计算。
+核对日期：2026-09-12。完整页面用于桌面示例；scope、颜色、锚点与滚动动画的说明不构成这些能力的完整兼容报告。
 
-新 API 稳定后可以调整基线，但通过版本化决定移除旧回退，不要永久累积两套无人验证的 CSS。
-
-### 十四、Anchor Positioning 处理锚点与碰撞
-
-**锚点定位（anchor positioning）**可让浮层相对触发元素定位，并提供位置 fallback。它适合 tooltip、菜单等几何关系，不能替代弹层语义、焦点、dismiss 和 top layer。
-
-基线可使用普通定位或成熟组件，支持时采用 anchor 和 `position-try` 改善碰撞。验证滚动容器、缩放、RTL、窄视口和锚点消失。浮层内容必须保持屏幕内可访问。
-
-不同锚点相关子能力可能处于不同成熟阶段，使用时锁定支持矩阵并保留回退。
-
-### 十五、滚动驱动动画不能控制内容可达性
-
-**滚动驱动动画（scroll-driven animation）**把动画进度连接到滚动或视图时间线，可减少手写 scroll 监听。它适合进度指示和非关键呈现。
-
-内容不能因为动画不支持或 reduced motion 而永远透明、偏离屏幕。基线直接显示，支持且用户未要求减少动画时增强。验证键盘跳转、程序滚动、打印和不同滚动容器。
-
-性能仍需测量：CSS API 减少脚本不保证所有属性都在合成线程高效运行。
-
-### 十六、content-visibility 是渲染优化而非虚拟列表
-
-`content-visibility:auto` 可跳过屏外子树的部分渲染工作，`contain-intrinsic-size` 提供占位估计。它不减少 DOM、数据和事件监听，也不等于列表虚拟化。
-
-验证浏览器查找、锚点跳转、焦点、可访问树、打印和布局偏移。若用户通过键盘进入未渲染区，内容必须及时出现。对短页面使用可能没有收益，却增加调试复杂度。
-
-先用性能 trace 证明瓶颈和收益，并保留撤销优化的对照。
-
-### 十七、主题系统依赖层叠与媒体偏好
-
-暗色可通过 `prefers-color-scheme` 建立默认，再由用户显式选择覆盖。用户选择持久化后应成为应用状态，并在首屏尽早应用，减少闪烁。
-
-主题 token 覆盖放在明确层和范围，组件消费语义变量。不要在每个组件硬编码暗色选择器。高对比度与 forced-colors 单独验证，不能认为暗色主题覆盖无障碍需求。
-
-服务端渲染时处理首次主题与 hydrate 一致，避免客户端纠正造成抖动。
-
-### 十八、CSS 架构需要删除和迁移策略
-
-引入 layer、scope 或 token 时，避免一次混合全站行为变化。先声明层顺序，导入旧样式到 legacy 层，逐组件迁移并用视觉/交互回归验证。
-
-记录旧 utility、变量和浏览器回退的弃用。使用统计和代码搜索决定删除时间。重复新旧规则长期共存会让 computed style 更难解释。
-
-迁移期间的临时 override 有 owner 和截止条件，不成为永久最高层垃圾场。
-
-### 十九、版本核验按子能力记录
-
-现代 CSS 页面常把多个 API 放在同一“新特性”标题下，但尺寸容器查询、样式查询、锚点 fallback 和滚动时间线支持不同。资料记录访问日期、目标浏览器和具体语法，而不是只写“现代浏览器支持”。
-
-使用 Web Platform Tests、MDN/规范和真实设备验证。Can I Use 等统计是输入，不替代你的用户浏览器分布和行为测试。实验能力需要功能开关或可安全回退。
-
-### 二十、验证矩阵覆盖支持与不支持
-
-选择同一组件在 240px 与 480px 容器、窄/宽视口、支持/禁用增强、reduced motion、打印和键盘路径下检查。断言核心内容与操作始终存在，增强只改变布局或体验。
-
-查看 computed layer、查询容器和实际尺寸，保存断点两侧截图。故意把组件放进嵌套容器，确认查询命中了命名目标；移除增强规则后，基线仍能完成任务。
-
-CSS 验证还要检查页面级 overflow、焦点和可访问名称，不能只比较像素。
-
-### 学完后应能说明
-
-你应能用 cascade layer 和 scope 控制来源与范围，使用容器查询、容器单位和 Subgrid 让组件响应宿主，并通过自定义属性建立主题合同。对锚点定位、滚动动画和 content-visibility 等能力，应能判断成熟度、提供可用基线和 `@supports` 增强，并用支持/不支持矩阵证明核心任务不依赖新语法。
+- [MDN：容器查询](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment/Container_queries)：区分尺寸容器、名称、单位与其他子能力。
+- [MDN：@layer](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@layer) 与 [@scope](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@scope)：查阅来源顺序、作用范围与具体层叠规则。
+- [MDN：Subgrid](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Grid_layout/Subgrid)：理解轨道共享与内容尺寸。
+- [MDN：自定义属性](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascading_variables/Using_custom_properties)：核对继承、替换与后备值。
+- [MDN：锚点定位](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Anchor_positioning) 与 [滚动驱动动画](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Scroll-driven_animations)：逐项查阅属性、语法和兼容性。
+- [MDN：content-visibility](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/content-visibility)：理解渲染跳过的作用与边界。

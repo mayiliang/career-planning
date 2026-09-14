@@ -17,15 +17,18 @@ console.log('登记后');
 
 `0` 不表示“当前这一行立即运行”，只表示没有额外的主动等待要求。当前同步代码仍会先执行完。完整的任务、微任务与渲染顺序属于 JS-04；在 JS-01 中，只需要知道循环结束后回调才读取它捕获的变量。
 
-**事件监听器（event listener）**也是“登记后再调用”：
+**事件监听器（event listener）**也是“登记后再调用”。下面用独立的事件来源演示，不需要页面中预先存在按钮：
 
 ```js
-function handleClick() {
-  console.log('clicked');
+const events = new EventTarget();
+function handleChange() {
+  console.log('收到变化');
 }
 
-button.addEventListener('click', handleClick);
-button.removeEventListener('click', handleClick);
+events.addEventListener('change', handleChange);
+events.dispatchEvent(new Event('change')); // 输出：收到变化
+events.removeEventListener('change', handleChange);
+events.dispatchEvent(new Event('change')); // 不再输出
 ```
 
 撤销监听时必须提供同一个事件类型和同一个函数对象。重新写一个内容相同的箭头函数，会得到另一个函数对象，无法撤销原监听。

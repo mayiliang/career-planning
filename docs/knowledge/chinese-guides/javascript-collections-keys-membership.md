@@ -2,84 +2,103 @@
 
 ## PRECS-02
 
-这份短文只解释在算法讲义里会反复用到的四种容器：Array、Object、Map 和 Set。重点不是背 API，而是知道“按位置取”“按键找”“判断是否出现过”分别在表达什么。
+假设要做一份学习清单：资料按阅读顺序排列，可以用编号找到某篇资料，还要记住哪些资料已经收藏。这三个问题分别适合用 Array、Map 和 Set 表达。每一篇资料本身，则可以用普通对象描述。
 
 ### 学习前先确认
 
-- 直接前置：[PREJS-03 对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)。函数与变量基础由它继续向下链接。
+- 直接前置：[PREJS-03 对象、属性与方法](../chinese-guides/javascript-objects-properties-methods.md#prejs-03)。先能读懂对象字段和方法调用。
 
-### Array：有顺序的一列值
+### Array 保留一列值的顺序
 
-**数组（Array）**把值按从 0 开始的下标排列。按下标读取适合“我知道第几个”的问题，顺序遍历适合“每一项都处理一次”的问题。
+**数组（Array）**按下标访问成员，下标从 0 开始。适合回答“第二项是什么”以及“按顺序处理每一项”。
 
-```js
-const cities = ['北京', '上海', '广州'];
-console.log(cities[1]); // 上海
-
-for (const city of cities) {
-  console.log(city);
-}
+```js example=precs02-array
+const titles = ['变量', '函数', '闭包'];
+console.log(titles[1]); // => 函数
+console.log(titles.join(' → ')); // => 变量 → 函数 → 闭包
+console.log(titles.find((title) => title === '闭包')); // => 闭包
+console.log(titles.find((title) => title === '原型')); // => undefined
 ```
 
-数组也能用 `find` 查找某个成员，但它必须从前向后检查，直到找到或走到结尾。如果程序在另一个大循环里反复 `find`，应考虑是否真正需要“按键直接找”。
+已知下标读取与按条件寻找，是两种操作。`find` 从前向后检查，找到第一项就返回，找不到则返回 `undefined`。查找“闭包”时，这个例子检查了三项；它不是凭标题直接跳到第三项。
 
-### Object 与 Map：从键找到值
+### Object 描述一条记录 Map 按键找到记录
 
-对象的属性把字符串或 Symbol 键映射到值，适合描述一条有固定字段的记录，例如 `{ id, name, score }`。当键集合会动态增加、需要任意类型的键，或需要直接使用 `size`、迭代与删除操作时，**映射（Map）**通常更清楚。
+`{ id: 'js-01', title: '作用域与闭包' }` 是一条记录，字段说明它包含什么信息。若有很多记录，想由 ID 找到其中一条，可以另外建立 **Map**。
 
-把普通对象当动态字典时要记住三条边界：数字等非 Symbol 键会转成字符串；普通对象会继承原型上的属性，因此成员判断应优先用 `Object.hasOwn`；来自外部的任意键还可能碰到 `__proto__` 等敏感名字。确实需要无原型字典时可用 `Object.create(null)`，但当键完全动态、类型不限或来自不可信输入时，Map 往往能更直接表达意图。
-
-```js
-const scoreById = new Map();
-scoreById.set('u-17', 92);
-scoreById.set('u-42', 88);
-
-console.log(scoreById.get('u-17')); // 92
-console.log(scoreById.has('u-99')); // false
+```js example=precs02-map
+const chapter = { id: 'js-01', title: '作用域与闭包' };
+const byId = new Map([[chapter.id, chapter]]);
+byId.set('js-02', { id: 'js-02', title: '原型与 this' });
+console.log(byId.get('js-01').title); // => 作用域与闭包
+console.log(byId.has('js-03')); // => false
+console.log(byId.size); // => 2
+byId.set('js-01', { id: 'js-01', title: '重新整理的讲义' });
+console.log(byId.size, byId.get('js-01').title); // => 2 重新整理的讲义
 ```
 
-Map 中的对象键按**引用身份（reference identity）**判断，而不是按内容自动比较：
+对同一个键再次 `set`，会替换对应的值，不会增加第二个同名键。Map 可以按插入顺序迭代，但“按 ID 找到记录”与“资料应该按哪种业务顺序阅读”仍是两种关系，必要时用数组单独保存阅读顺序。
 
-```js
+还有一个容易漏掉的区别：`get` 返回 `undefined`，既可能是没有这个键，也可能是这个键对应的值本来就是 `undefined`。需要判断存在性时用 `has`。
+
+```js example=precs02-presence
+const notes = new Map([['js-01', undefined]]);
+console.log(notes.get('js-01'), notes.get('js-02')); // => undefined undefined
+console.log(notes.has('js-01'), notes.has('js-02')); // => true false
+```
+
+普通对象也能按属性名保存数据。不过对象的属性键是字符串或 Symbol，其他键通常会转为字符串；它还可能继承原型属性。判断自有字段时使用 `Object.hasOwn`，不要把 `in` 的结果直接理解为“这条记录自己保存了这个字段”。固定字段的一条记录用对象很自然；需要频繁增删动态键、统计数量或使用其他类型键时，Map 更直接。
+
+### 内容一样的对象不一定是同一个键
+
+Map 中的对象键按**对象身份（object identity）**判断。分别创建两个 `{ id: 1 }`，它们的内容相同，身份却不同。
+
+```js example=precs02-identity
 const first = { id: 1 };
 const second = { id: 1 };
-const labels = new Map([[first, '已保存']]);
-
-console.log(labels.get(first));  // 已保存
-console.log(labels.get(second)); // undefined
+const labels = new Map([[first, '已收藏']]);
+console.log(labels.get(first)); // => 已收藏
+console.log(labels.get(second)); // => undefined
 ```
 
-如果业务上的身份是 `id`，通常应把稳定的 `id` 字符串作为键，而不是临时创建的对象。
+如果你的业务把 `id: 1` 视为同一篇资料，就应考虑用稳定的 ID 作为键，而不是每次新建一个对象去查找。Map 不会替业务决定“这两个对象算不算同一条记录”。更完整的解释见 [B01 的对象身份](../chinese-guides/js-03-types-equality-copy-immutability.md#赋值之后谁和谁共用对象)。
 
-### Set：只关心成员是否存在
+### Set 只回答是否已经出现过
 
-**集合（Set）**保存不重复的成员，常用于去重、已访问标记和权限集合。`add` 加入成员，`has` 检查成员，`delete` 移除成员。
+**Set** 保存不重复的成员。收藏资料时，如果只关心某个 ID 是否被收藏，不需要再为它配一个值，就可以使用 Set。
 
-```js
-const visited = new Set();
-
-function visit(id) {
-  if (visited.has(id)) return false;
-  visited.add(id);
-  return true;
-}
+```js example=precs02-set
+const favorites = new Set();
+favorites.add('js-01');
+favorites.add('js-01');
+favorites.add('js-02');
+console.log(favorites.size); // => 2
+console.log(favorites.has('js-01')); // => true
+favorites.delete('js-01');
+console.log(favorites.has('js-01')); // => false
+console.log(new Set([{ id: 1 }, { id: 1 }]).size); // => 2
 ```
 
-Set 对对象的判断同样依赖引用身份。两个内容相同但分别创建的对象仍是两个成员。
+最后一行不是去重失败，而是两个对象本来就有不同身份。按业务 ID 去重，可以先提取 ID，或建立按 ID 保存记录的 Map。Map 和 Set 对原始值使用 SameValueZero 比较，其中 `NaN` 可以识别为同一个成员，`+0` 与 `-0` 也视为相同；对象则看身份。
 
-### 选择容器时先问操作
+### 先确定问题再选择容器
 
-不要先问“哪种结构最高级”，先问程序最常做什么：
+| 当前问题 | 常见表达 |
+| --- | --- |
+| 第几项、按什么顺序处理 | Array |
+| 一篇资料有哪些字段 | Object |
+| 根据唯一编号找到资料 | Map |
+| 编号是否已经出现过 | Set |
 
-- 要保持顺序、按下标访问或完整遍历：从 Array 开始；
-- 要从稳定键找到对应值：考虑 Map；
-- 只需知道成员是否出现过：考虑 Set；
-- 要表达字段固定的一条记录：Object 往往最自然。
+这些容器可以配合使用，但关系需要一致维护：从记录表删除资料时，收藏集合或顺序数组是否也要更新，要由业务规则决定。把同一个对象放进数组和 Map，也不会自动复制对象；它们可能共同指向同一条记录。
 
-容器还会影响序列化与接口边界。普通 JSON 能直接表达数组和普通对象，却不会自动保留 Map、Set 的类型；跨网络或持久化前要明确转换规则。
+跨网络或保存为 JSON 时，还要明确转换方式。JSON 不会自动保留 Map、Set 的容器类型；直接 `JSON.stringify(new Map())` 得到的不是键值列表。可转换成键值对数组，并在读取后按约定重建。
 
 ### 接下来去哪里
 
-- 想系统学习结构选择、算法模式与正确性，请进入 [CS-02 常用数据结构、算法模式与正确性](../chinese-guides/cs-02-data-structures-algorithms-correctness.md#cs-02)。
-- 想理解对象身份、相等与复制，请读 [JS-03 类型、相等、拷贝与不可变更新](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)。
+[CS-02 常用数据结构、算法模式与正确性](../chinese-guides/cs-02-data-structures-algorithms-correctness.md#cs-02)会继续用栈、队列、索引和图说明：数据怎样组织，会影响什么操作容易、什么结果需要维护。
 
+### 参考与延伸阅读
+
+- [MDN：Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map)——键、插入顺序与 Map 和对象的区别。
+- [MDN：Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set)——成员判断与相等规则。

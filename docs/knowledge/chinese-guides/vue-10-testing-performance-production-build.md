@@ -2,170 +2,242 @@
 
 ## VUE-10 组件测试、性能与生产构建
 
-Vue 工程质量不是“有几个测试文件”或“build 绿色”。需要从纯逻辑、组件行为到真实浏览器分层验证；性能从用户动作建立基线；生产构建检查依赖图、分块、路径和秘密。测试、测量与制品证据共同决定应用是否可发布。
+保存失败后，输入还在不在？筛选变慢，是计算还是 DOM 太多？开发页面没问题，为什么部署到子目录就白屏？这三类问题需要不同证据：组件行为、性能记录和真实构建产物。
+
+本篇用一个可控制结果的保存表单讲清如何验证行为，再把观察延伸到更新成本和发布。重点是为关键问题选择足够的检查，不是给每个实现细节都配一套测试。
 
 ### 学习前先确认
 
-- 直接前置：[VUE-07 Vue Router、类型化/文件路由与导航边界](../chinese-guides/vue-07-router-navigation-boundaries.md#vue-07)。它会递归包含 composable、组件、响应式与异步基础。
+- 直接前置：[VUE-07 Vue Router、类型化/文件路由与导航边界](../chinese-guides/vue-07-router-navigation-boundaries.md#vue-07)。理解页面、导航和数据的关系以后，再检查它们如何组合。
 
-Pinia 测试可从 VUE-08 相关阅读；本讲把组件、路由与生产制品连起来。
+正文组件使用 Vue 3 + TypeScript；测试示例使用 Vitest、Vue Test Utils 和 jsdom。jsdom 模拟 DOM，不负责真实布局；浏览器性能与部署需要另外观察。
 
-### 一、按风险选择测试层
+### 先说清要保护哪一种结果
 
-挂载组件并从公开交互断言的测试是**组件测试（component testing）**，穿过真实浏览器与部署边界的是**端到端测试（end-to-end testing）**。按路由/能力拆分产物称为**代码分割（code splitting）**，把产物位置映射回源码的文件是**源码映射（source map）**，限制可接受回归的阈值是**性能预算（performance budget）**。
+**component testing** 从组件公开输入和交互检查结果；**end-to-end testing** 跨过浏览器、页面和服务边界。两者都不应为了“测得全面”去反复证明同一个简单事实。
 
-纯函数/解析器用单元测试；composable/store 用受控依赖测试；组件用 DOM 环境验证输入输出和用户行为；关键路由、网络与部署用 E2E。层级不是互相替代，而是以最低成本覆盖相应风险。
+| 当前问题 | 最直接的证据 | 不必顺便承担的工作 |
+| --- | --- | --- |
+| 标题解析是否接受空格 | 纯函数输入与输出 | 启动整个站点 |
+| 保存失败是否保留草稿 | 组件输入、失败结果、可见文字 | 读取组件私有 ref |
+| 深链刷新后是否白屏 | 构建后的页面与服务器响应 | 所有页面做截图回归 |
+| 一万行滚动是否卡顿 | 目标桌面浏览器的性能轨迹 | 用 jsdom 给出帧率 |
 
-不要把所有内容 shallow mount 后只断言组件名，也不要把每个分支都推给慢 E2E。越靠近用户越能发现集成问题，越靠近纯逻辑越容易穷尽边界。
+一次缺陷修复通常只需要能重现该错误的最小检查。覆盖率可以提示未执行的路径，但不会证明断言有意义；反过来，少量聚焦的测试也不能被包装成“整个系统都正确”。
 
-### 二、组件测试以公开合同为中心
+### 一个保存表单先把公开合同写完整
 
-挂载组件，按角色/名称查找 DOM，触发输入、点击与键盘，检查可见结果和 emits：
+合同是：标题至少两个字符；保存期间不能再次提交；失败保留草稿；成功向父层报告服务返回的标题。创建 `src/TitleForm.vue`：
 
-```ts
-const wrapper = mount(SearchForm, { props: { modelValue: '' } });
-await wrapper.get('input[type=search]').setValue('Ada');
-expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['Ada']);
+```vue example=vue10-title-form runtime=project file=src/TitleForm.vue
+<script setup lang="ts">
+import { ref } from 'vue';
+const props = defineProps<{ save: (title: string) => Promise<string> }>();
+const emit = defineEmits<{ saved: [title: string] }>();
+const draft = ref('');
+const pending = ref(false);
+const error = ref('');
+const message = ref('');
+async function submit() {
+  if (pending.value) return;
+  error.value = ''; message.value = '';
+  const title = draft.value.trim();
+  if (title.length < 2) { error.value = '标题至少两个字符'; return; }
+  pending.value = true;
+  try {
+    const saved = await props.save(title);
+    draft.value = saved;
+    message.value = '保存完成';
+    emit('saved', saved);
+  } catch { error.value = '保存失败，草稿仍保留，可以重试'; }
+  finally { pending.value = false; }
+}
+</script>
+<template>
+  <form @submit.prevent="submit">
+    <label>资料标题 <input v-model="draft" :disabled="pending" aria-describedby="title-feedback" :aria-invalid="error ? 'true' : 'false'"></label>
+    <button :disabled="pending">{{ pending ? '正在保存' : '保存标题' }}</button>
+    <div id="title-feedback"><p v-if="error" role="alert">{{ error }}</p><p v-if="message" role="status">{{ message }}</p></div>
+  </form>
+</template>
 ```
 
-更推荐 Testing Library 风格角色查询以同时验证语义。不要断言内部 ref 名、私有方法或 child.vm；重构内部不应破坏用户合同测试。
+这个单实例演示固定了反馈 ID；在同一页放多个表单时，应给每个实例生成独立 ID。若组件可能在保存期间切换账号或卸载，还要为任务补上相应取消、失效和结果归属，不能只依赖按钮禁用。
+
+### 手动交付结果比随机等网络更容易理解
+
+把下面作为 `src/App.vue`，保留普通 Vue 入口。两个交付按钮控制模拟 Promise；保存动作本身不会发网络请求。
+
+```vue example=vue10-save-app runtime=project file=src/App.vue
+<script setup lang="ts">
+import { ref, shallowRef } from 'vue';
+import TitleForm from './TitleForm.vue';
+const saved = ref('尚未保存');
+const delivery = shallowRef<{ resolve: () => void; reject: () => void } | null>(null);
+function save(title: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    delivery.value = {
+      resolve: () => { delivery.value = null; resolve(title); },
+      reject: () => { delivery.value = null; reject(new Error('模拟失败')); },
+    };
+  });
+}
+</script>
+<template>
+  <main>
+    <TitleForm :save="save" @saved="saved = $event" />
+    <button :disabled="!delivery" @click="delivery?.resolve()">交付成功</button>
+    <button :disabled="!delivery" @click="delivery?.reject()">交付失败</button>
+    <p>父层收到：{{ saved }}</p>
+  </main>
+</template>
+```
+
+输入一个字再提交，只出现校验反馈，不会启动保存。输入“组件协作”后提交，按钮等待；交付失败，输入仍在；再次提交并交付成功，父层才显示收到的标题。
+
+这组操作把三件事分开了：触发提交、外部任务完成、Vue 更新 DOM。若把它们都藏进固定的一秒等待，读者就看不到真正的依赖关系。
+
+### 两个行为测试就能保护关键约定
+
+在演示项目安装 Vitest、Vue Test Utils、jsdom 与 @vitejs/plugin-vue。创建根目录 `vitest.config.ts`，让测试也使用 Vue SFC 编译：
+
+```ts example=vue10-test-config runtime=project file=vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
+export default defineConfig({ plugins: [vue()], test: { environment: 'jsdom' } });
+```
+
+创建 `src/TitleForm.spec.ts`，运行 `npx vitest run src/TitleForm.spec.ts`。用例只观察 DOM、传给外部函数的值和公开事件，不依赖内部变量名。
+
+```ts example=vue10-form-tests runtime=project file=src/TitleForm.spec.ts
+import { describe, expect, it, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+import TitleForm from './TitleForm.vue';
+describe('标题保存', () => {
+  it('非法标题不调用保存', async () => {
+    const save = vi.fn(async (title: string) => title);
+    const wrapper = mount(TitleForm, { props: { save } });
+    try {
+      await wrapper.get('input').setValue('短');
+      await wrapper.get('form').trigger('submit');
+      expect(wrapper.get('[role="alert"]').text()).toBe('标题至少两个字符');
+      expect(save).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it('失败后保留草稿，重试成功才发出结果', async () => {
+    let rejectFirst!: (reason: Error) => void;
+    const first = new Promise<string>((_, reject) => { rejectFirst = reject; });
+    const save = vi.fn<(title: string) => Promise<string>>()
+      .mockImplementationOnce(() => first).mockResolvedValueOnce('组件协作');
+    const wrapper = mount(TitleForm, { props: { save } });
+    try {
+      await wrapper.get('input').setValue(' 组件协作 ');
+      await wrapper.get('form').trigger('submit');
+      expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+      expect(save).toHaveBeenCalledWith('组件协作');
+      rejectFirst(new Error('模拟失败'));
+      await flushPromises();
+      expect(wrapper.get('input').element.value).toBe(' 组件协作 ');
+      expect(wrapper.get('[role="alert"]').text()).toContain('草稿仍保留');
+      expect(wrapper.emitted('saved')).toBeUndefined();
+      await wrapper.get('form').trigger('submit');
+      await flushPromises();
+      expect(wrapper.emitted('saved')).toEqual([['组件协作']]);
+      expect(wrapper.get('[role="status"]').text()).toBe('保存完成');
+    } finally { wrapper.unmount(); }
+  });
+});
+```
+
+trigger 和 setValue 等待 Vue 的更新；手动 reject 决定业务异步何时完成，flushPromises 让已能推进的 Promise 回调继续运行。它不会替你结束尚未交付的请求，也不负责推进所有计时器。
+
+这里先让组件安装失败处理，再拒绝 Promise，避免在测试安排阶段产生无主的 rejection。finally 卸载实例，让一个失败断言也不会留下组件干扰后续用例。
+
+### 替身只能证明它实际参与的部分
+
+上面的 save 替身证明组件会怎么处理结果，不证明服务器真的保存过。若要检查状态码、序列化或 cookie，应把观察移到 HTTP 或服务边界，而不是再给这个替身增加无关断言。
+
+Testing Pinia 可以把 actions 替换为空实现；“组件调用了 action”与“真实 action 更新了状态”是不同结论。需要后者时使用真实 Pinia 或明确关闭 stub，见 [Pinia 观察与动作](../chinese-guides/vue-08-pinia-state-layers.md#patch-订阅与动作观察各自解决不同问题)。
+
+网络竞态使用可控制结果顺序的请求，debounce 使用可控制的时钟。截图、字体和动画也需要稳定输入。自动重试可以留下调查线索，但不能把第一次失败从报告中抹掉。
+
+### Vue 性能先看变化传播到了哪里
+
+假设有一千个条目，当前选中 ID 从 a 变为 b。给每个子组件传 activeId，所有子组件都会收到一个变化的 prop；在父层计算布尔 active，则通常只有 a 与 b 的 active 变化。
 
-### 三、Vue 更新与业务异步要分别等待
+这与 React 的引用问题相关，但 Vue 和 React 的更新机制并不相同。子组件自己读取的响应式来源、slots 和其他依赖也会影响更新，不能简化为“props 没变就永不更新”。
 
-`await wrapper.trigger()`/`setValue()` 通常等待下一 tick；手工修改 ref 后用 nextTick。网络 Promise 需要等待受控 Promise 或 UI 状态，`flushPromises` 只清当前 Promise 队列，不会自动推进 timer、动态 import 或所有网络。
+computed 应保持纯计算；如果每次返回新对象，即使字段相同，也可能失去值稳定带来的收益。大数组的浅层响应式可以减少代理开销，但嵌套值按不可变方式替换的责任仍在调用者，见 [Vue 响应式边界](../chinese-guides/vue-02-ref-reactive-computed-boundaries.md#vue-02)。
 
-固定 sleep 会导致慢且不稳定。用假计时器控制 debounce，用 deferred Promise 控制 A/B 完成顺序，并等待具体 DOM 文本/状态。
+### 缓存和窗口化都有不适用的时候
 
-### 四、测试组件合同中的失败状态
+v-once 表示不再更新那部分结果，只适合确实固定的内容。v-memo 的依赖若漏掉标题，标题变化也可能被跳过；它不是给任意列表贴上的加速标签。
 
-覆盖空、pending、错误、取消、重试、只读/禁用、非法 prop 与卸载。对 watch/async 验证旧结果不覆盖新输入，卸载后监听归零，取消不显示错误。
+列表慢时先区分筛选计算、组件执行和 DOM 布局。分页或虚拟化能减少节点，但会影响焦点、读屏、浏览器查找与打印。固定行高例子及其限制见 [React 大列表](../chinese-guides/react-07-performance-memo-large-lists.md#用固定高度窗口观察节点数量)，算法思路可以对照，框架代码不用照搬。
 
-表单测试空字符串、IME、blur/submit、错误描述链和焦点。Teleport/dialog 测试目标、Escape、Tab 与关闭归还。快照只能辅助结构，不替代这些行为。
+性能记录使用目标桌面浏览器与同一动作。重复进出复杂页面还应观察内存是否趋于稳定。没有测到瓶颈时，不必为了少一次更新引入难以维护的缓存。
 
-### 五、Store 与依赖装配要知道替身边界
+### 构建把模块变成可以请求的文件
 
-Testing Pinia 可能默认 stub actions，适合验证组件发出意图，不适合证明 action 真正更新 state。需要集成时使用真实 Pinia 或关闭 stub。每个用例新建实例，避免状态串场。
+**code splitting** 把按需模块放进独立产物，**source map** 把产物位置映射回源码。构建工具转换 TypeScript 并不等于完成严格类型检查，Vue 项目通常还要运行 vue-tsc。
 
-通过 provide 注入假 transport/clock/storage，比全局 monkey patch 更清晰。测试后恢复 fake timers、DOM target 和 global，保证并行隔离。
+开发环境的模块服务与生产产物不是同一条路径。理解过程可以看这条链：
 
-### 六、E2E 验证浏览器与部署协议
+```text
+源码里的静态与动态 import
+→ 构建解析和转换
+→ 入口、公共依赖与按需资源
+→ 浏览器根据 URL 请求这些文件
+→ 运行时加载组件并读取数据
+```
 
-关键路径包括地址栏深链、刷新、前进后退、真实焦点、网络取消、chunk 和静态资源。拦截网络时仍要保留至少一组真实本地服务测试，避免 mock 与 API 漂移。
+构建报告只能说明生成了什么，不能证明服务器会返回正确 MIME、页面入口和缓存头。动态 import 的实际分块还受打包器与插件配置影响，不能把旧版工具内部实现当成所有版本的规则。
 
-选择器使用角色、名称或稳定测试语义，不依赖 CSS 结构。失败时保存 screenshot、trace、console 与 network，证据应能复现根因。
+### 子路径发布要把三个位置对齐
 
-### 七、性能从同一用户脚本测量
+若站点发布在 `/atlas/`，Vite 的 base、router history 的 base 与服务器路由前缀都要对应。资源使用正确的导入或 BASE_URL，不在各处硬编码根路径 `/assets`。
 
-固定生产制品、设备、浏览器、数据和动作，记录至少三次中位数。使用浏览器 Performance、Vue DevTools 和 Web Vitals 观察脚本、布局、绘制、长任务和组件更新。
+| 请求 | 应得到什么 | 常见错误 |
+| --- | --- | --- |
+| `/atlas/lessons/a` | 页面入口或服务端页面 | 只在客户端点击时可用，刷新 404 |
+| `/atlas/assets/某文件.js` | JS 与正确类型 | 被 fallback 换成 HTML 200 |
+| `/api/不存在` | API 的真实失败响应 | 混入前端入口 |
 
-组件 render 次数不是最终指标。一个额外 render 可能很便宜，单次大布局可能更慢。把用户感知、浏览器阶段和 Vue 组件原因连接起来。
+本地 preview 能证明产物可以被读取，不能证明 CDN、反向代理或生产 cookie 配置正确。新版本替换时还要考虑已打开的旧页面：它可能继续请求旧 chunk，应该保留兼容资源或提供明确的恢复动作。
 
-### 八、先减少工作再缓存
+### 配置值进入浏览器以后就是公开内容
 
-修复不必要深度 watch、Effect 链、巨大 DOM、重复解析和错误状态位置。computed 提供依赖缓存，但不应承载副作用；`v-memo`、`v-once` 等只在证明适用时使用。
+Vite 的客户端环境值通常是字符串，`"false"` 也是非空字符串。下面只接受明确的开关值，缺省为关闭，其余输入给出可诊断错误。
 
-props 稳定性可减少子组件更新，列表使用稳定 key。不要深 clone 所有数据或为优化破坏响应式。优化后删除优化复测，证明中位数确实回退。
+```ts example=vue10-config-boolean
+function readFlag(value: string | undefined): boolean {
+  if (value === undefined || value === 'false') return false;
+  if (value === 'true') return true;
+  throw new Error('开关只接受 true 或 false');
+}
+console.log(readFlag('false')); // => false
+console.log(readFlag('true')); // => true
+try { readFlag('yes'); } catch (error) { console.log(error instanceof Error ? error.message : '未知错误'); }
+// => 开关只接受 true 或 false
+```
 
-### 九、大列表需要评估虚拟化代价
+mode 决定加载哪组环境文件，NODE_ENV 与 mode 则是不同概念；不要只因文件名带 production 就推断所有运行分支正确。客户端 VITE_ 配置会进入代码，密钥不能放在其中。
 
-分页/虚拟化减少 DOM，但要处理动态高度、overscan、键盘焦点、读屏行数、浏览器查找和滚动恢复。若列表规模不大，简单 DOM 更可靠。
+公开 source map 与受控上传各有诊断和源码暴露方面的取舍。隐藏 map 不能保护已经进入 bundle 的秘密，source map 的 hidden 选项也不等于服务器拒绝访问生成的文件。
 
-测试快速滚动、筛选后焦点、窗口 resize 和 200% zoom。性能通过但用户无法键盘访问仍不合格。
+### 预算与发布检查应该服务于具体问题
 
-### 十、Vite 生产构建生成可部署依赖图
+**performance budget** 可以限制首屏脚本、样式或某条关键路径的可接受退化，但通过字节预算不保证输入流畅。传输压缩后很小的文件，解压、解析和执行仍可能昂贵。
 
-`vite build` 解析静态/动态 import，转换、分块、压缩并输出 `dist`。构建成功不代表类型测试已跑，通常另行运行 vue-tsc。
+发布证据应指向同一制品：本次构建、实际检查过的文件、部署使用的版本。若检查后重新构建另一份，就需要说明为什么它等价。工具链升级也应检查是否少发现了测试文件，而不只看绿色状态。
 
-检查 manifest/可视化报告，识别重复依赖、意外大 chunk 和未生效 tree-shaking。第三方包声称 sideEffects 需要与真实产物验证。
+把检查规模留给风险决定。普通文案修改没有必要重跑全部端到端流程；改了数据恢复，就保护对应失败和重试；改了路径与构建，就核对真实产物入口。能解释每项检查保护什么，比不断扩大套件更有价值。
 
-### 十一、`base` 决定资源 URL
+### 参考与延伸阅读
 
-部署在 `/atlas/` 子路径时，Vite base、router history base 与服务器路径一致。绝对 `/assets`、public 文件和 CSS url 都需验证。开发服务器根路径成功不能证明子路径生产可用。
-
-用静态预览和实际反向代理打开首页与深链，检查刷新、404、缓存和 MIME。不要让 SPA fallback 吞 API/静态错误。
-
-### 十二、代码分割要验证网络结果
-
-动态 import 形成异步 chunk。按路由/重功能切分，测首屏与后续导航；过细会增加请求与握手，过粗延迟首屏。预加载/预取根据真实意图和网络，不能全量恢复成大包。
-
-部署时保留旧 hash 资源或原子切换，避免旧页面加载新导航 chunk 404。错误 UI提供限次刷新并区分离线。
-
-### 十三、Source map 与错误诊断有安全取舍
-
-Source map 帮助生产堆栈还原，也可能暴露源码/路径。可上传到受控错误平台而不公开服务，或按风险决定。无论如何不应把秘密写进源码；关闭 map 不是秘密保护方案。
-
-错误发布需带 build ID、版本和 commit，前端日志脱敏。构建产物扫描 token、内部 URL、测试夹具和调试标记。
-
-### 十四、环境变量和 mode 需要直接验证
-
-Vite mode 决定加载哪些 `.env`，但所有客户端注入值最终公开。生产构建使用明确 mode，CI 检查必需配置，错误时尽早失败。不要让 preview 自动连接生产数据库/内部服务。
-
-布尔/数字显式解析，URL 校验协议与 base。不同环境只改变配置，不应改变未经测试的大量代码分支。
-
-### 十五、构建预算是回归门禁
-
-设置首屏 JS/CSS、总资源、最大 chunk 等预算，并对超限给出可定位报告。预算不等于体验，通过预算也要测交互和真机；但能阻止依赖升级突然增加大量代码。
-
-预算调整要记录原因与用户证据，不能每次失败就提高阈值。比较 gzip/brotli 与解压解析成本，低端设备可能受执行而非传输限制。
-
-### 十六、生产预览仍不是完整部署
-
-本地 preview 证明 dist 可被静态服务器读取，不证明 CDN header、缓存、压缩、CSP、反向代理、SSR、身份和回滚。发布前在接近生产的环境跑 smoke/E2E，检查 Cache-Control、content type、深链和错误页。
-
-发布后做健康、关键路径和错误率检查，保留旧制品可回滚。逐步发布时前后端协议需兼容并行版本。
-
-### 十七、测试套件自身也要可维护
-
-共享 helper 只抽取稳定用户动作，不隐藏重要断言。避免全局顺序依赖、随机数据不记录 seed 和不可控日期。并行 worker 的临时数据库/端口要隔离。
-
-失败测试先定位产品回归、环境或脆弱选择器，不应盲目重试。Flaky 测试会降低团队对门禁信任，应像生产缺陷一样修复根因。
-
-### 十八、一套可复核发布证据
-
-至少保存类型/单元/组件/E2E 结果、生产构建摘要、bundle 预算、三次性能基线、可访问键盘路径、产物扫描和回滚说明。证据关联同一制品 hash，避免“测试的是 A，发布的是 B”。
-
-### 十九、覆盖率是缺口线索，不是质量分数
-
-行/分支覆盖率能提示未执行路径，但高覆盖也可能只有无意义断言。优先覆盖状态转移、权限、错误、竞态和清理；对无法稳定到达的分支，应重构可注入依赖或说明为何排除，而不是用忽略注释藏掉风险。
-
-变异测试或故意破坏一次关键判断，可以检查测试是否真的会失败。每个高风险缺陷修复都添加能复现根因的最小测试，同时保留一条用户路径证明组合行为。
-
-### 二十、视觉与无障碍回归需要稳定基线
-
-截图回归适合布局、主题、断点和组件状态，但字体、动画、时间和随机数据会制造噪音。固定视口、字体、时区、数据与 reduced-motion，遮罩真正动态区域；阈值不能大到掩盖错位。截图差异必须人工判断语义，不能自动更新全部基线。
-
-视觉相同不代表可访问。并行检查语义角色、名称、键盘顺序、焦点、对比度和读屏公告。模板或组件库升级后，两类证据都要重新跑。
-
-### 二十一、CI 并行化先保证隔离与可重复
-
-按测试文件分片可缩短反馈，但 worker 共享端口、数据库、缓存目录或账号会造成随机失败。每个 worker 获得独立命名空间和可追踪 seed，外部服务通过可控测试环境或契约替身，失败时保存对应日志与截图。
-
-先运行快速类型/单元门禁，再运行构建、组件与关键 E2E；发布制品只构建一次，后续验证引用同一 hash。重试只能收集脆弱性证据，首次失败仍应被记录并进入治理。
-
-### 二十二、Hydration 与长会话是两类常被遗漏的性能测试
-
-SSR 页面要分别记录服务器响应、HTML 展示、客户端 hydrate 和可交互；同时捕获 console mismatch。客户端长会话要重复进入/离开复杂页面，观察监听、DOM、缓存和 heap 是否回到稳定范围。
-
-只测一次首屏会漏掉内存增长，只测 SPA 导航会漏掉 hydration。用同一用户脚本覆盖冷启动、热导航和第十次重复操作，才能看到真实生命周期问题。
-
-### 二十三、契约测试保护前后端演进而不替代真实集成
-
-组件或 composable 使用的 API 应有明确请求/响应 schema，测试成功、业务拒绝、协议错误和向后兼容字段。消费者契约可以在后端变更时尽早报警，但无法证明代理、cookie、CORS、压缩和真实数据库都正确，因此发布前仍保留少量跨层集成/E2E。
-
-Mock Service Worker 一类网络替身应在 HTTP 边界工作，避免直接 mock composable 内部函数而错过序列化和状态码。测试数据写出必要字段与边界值，不能复制一份巨大生产响应后无人知道哪些字段重要。
-
-### 二十四、依赖升级需要把测试工具链也当作产品代码
-
-Vue、Vite、测试运行器、DOM 环境和浏览器自动化工具可能同时改变调度与编译行为。一次只升级可解释的一组，记录锁文件、Node/浏览器版本和弃用警告；若快照大面积变化，先理解语义再更新。
-
-升级后运行同一份组件行为、真实构建和部署烟雾测试。测试工具“全绿”只说明它观察到的合同没有失败，不能证明新工具没有少执行文件；同时核对发现的测试数量、分片和报告上传。
-
-### 进阶：生产配置失败要尽早且可诊断
-
-构建/启动时用 schema 验证必需 URL、枚举和数字范围，错误消息指出变量名但不打印秘密。对可选能力使用显式 feature flag 和安全默认值，并测试开/关两条路径；不要依赖字符串 `"false"` 的真假转换。
-
-部署后页面显示 build ID、API schema 版本或诊断摘要给受控健康端点，便于确认实际运行制品。配置热变更若不受框架支持，就通过新实例滚动发布，不在客户端偷偷改变无法回滚的全局对象。
-
-### 学完后应能说明
-
-你应能按风险划分测试层，正确等待 Vue 与业务异步，验证失败/清理和真实导航，从用户脚本测量性能，审查 Vite 分块/base/source map/环境变量，并建立同一制品的质量、预算与回滚证据。
+- [Vue：测试](https://cn.vuejs.org/guide/scaling-up/testing.html)：比较不同测试层的观察范围。
+- [Vue Test Utils：异步行为](https://test-utils.vuejs.org/guide/advanced/async-suspense.html)：查 nextTick 与 flushPromises。
+- [Vitest：测试环境](https://vitest.dev/guide/environment.html)：查 jsdom 与浏览器环境的区别。
+- [Vue：性能优化](https://cn.vuejs.org/guide/best-practices/performance.html)：查 props、computed 与大列表。
+- [Vite：生产构建](https://vite.dev/guide/build)：查 base、产物与分块。
+- [Vite：环境变量与模式](https://vite.dev/guide/env-and-mode)：查字符串配置和公开范围。

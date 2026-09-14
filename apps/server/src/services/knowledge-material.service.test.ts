@@ -4,11 +4,21 @@ import { resolve } from 'node:path';
 import { projectRoot } from '../config/index.js';
 import {
   getKnowledgeMaterial,
+  extractMaterialHeadings,
   KnowledgeMaterialError,
   validateKnowledgeMaterialPath,
 } from './knowledge-material.service.js';
 
 describe('站内中文学习资料', () => {
+  it('代码围栏内的注释与示例标题不截断正文，也不能作为章节入口', async () => {
+    const source = ['## 起点', '````powershell', '# 代码注释', '```', '## 仍在代码中', '````', '~~~text', '## 示例标题', '~~~', '### 正文小节', '## 下一篇'];
+    expect(extractMaterialHeadings(source).map(({ title }) => title)).toEqual(['起点', '正文小节', '下一篇']);
+    const material = await getKnowledgeMaterial('git-02-branches-merge-rebase-conflicts.md', 'git-02');
+    expect(material.markdown).toContain('# A：双方共同使用的起点');
+    expect(material.markdown).toContain('### 参考与延伸阅读');
+    await expect(getKnowledgeMaterial('git-02-branches-merge-rebase-conflicts.md', 'a双方共同使用的起点')).rejects.toThrow('学习资料章节不存在');
+  });
+
   it('按知识点锚点只返回对应讲义章节', async () => {
     const material = await getKnowledgeMaterial('js-07-iteration-metaprogramming-resources.md', 'js-07');
     expect(material.title).toMatch(/JS-07/i);

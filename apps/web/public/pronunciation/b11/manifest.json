@@ -12,21 +12,41 @@
     "career-01-project-evidence-causal-storytelling.md"
   ],
   "terms": {
-    "accessible query": {
-      "file": "298e82a771049421.wav",
-      "text": "accessible query"
+    "accessible name": {
+      "file": "17296f529646faec.wav",
+      "text": "accessible name"
     },
-    "boundary value analysis": {
-      "file": "0328f9a2816edc3a.wav",
-      "text": "boundary value analysis"
+    "adr": {
+      "file": "0fc8146d0908e8a4.wav",
+      "text": "ADR"
+    },
+    "boundary value": {
+      "file": "5544ffa58a756cdc.wav",
+      "text": "boundary value"
     },
     "browser context": {
       "file": "6844ebcbd8ac3733.wav",
       "text": "browser context"
     },
+    "causality": {
+      "file": "eb3efb5151e62559.wav",
+      "text": "causality"
+    },
+    "component test": {
+      "file": "34fa4e81bd0073ee.wav",
+      "text": "component test"
+    },
     "counterfactual": {
       "file": "9e6864835aee0364.wav",
       "text": "counterfactual"
+    },
+    "coverage": {
+      "file": "c3a3091b9d32267d.wav",
+      "text": "coverage"
+    },
+    "dependency injection": {
+      "file": "23e55f6dcfc7bf02.wav",
+      "text": "dependency injection"
     },
     "differential testing": {
       "file": "444c1708b271d2ea.wav",
@@ -43,6 +63,10 @@
     "evidence chain": {
       "file": "d0a3d04d5ef7961c.wav",
       "text": "evidence chain"
+    },
+    "flaky": {
+      "file": "bdbb9deb8e394404.wav",
+      "text": "flaky"
     },
     "flaky test": {
       "file": "c4b007dfff2c7e4d.wav",
@@ -72,6 +96,14 @@
       "file": "510953c105ea0e48.wav",
       "text": "property-based testing"
     },
+    "shrinking": {
+      "file": "d3ab8b2a97636e58.wav",
+      "text": "shrinking"
+    },
+    "star": {
+      "file": "525eca1d5089dbdc.wav",
+      "text": "STAR"
+    },
     "test double": {
       "file": "df15abb3073535eb.wav",
       "text": "test double"
@@ -82,7 +114,7 @@
     },
     "trace": {
       "file": "eafe895eb8119e6e.wav",
-      "text": "trace"
+      "text": "Trace"
     },
     "user-event": {
       "file": "1a43b20c4c345dee.wav",

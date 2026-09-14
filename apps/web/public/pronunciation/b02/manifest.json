@@ -47,21 +47,9 @@
       "file": "2c12e4186c2ac726.wav",
       "text": "breadth-first search"
     },
-    "call stack": {
-      "file": "895930fc6596c35f.wav",
-      "text": "call stack"
-    },
-    "cancellation": {
-      "file": "80812d7992dd498c.wav",
-      "text": "cancellation"
-    },
     "chunking": {
       "file": "7ce2d499b7d81a8d.wav",
       "text": "chunking"
-    },
-    "concurrency limit": {
-      "file": "f6edf622ee4d184f.wav",
-      "text": "concurrency limit"
     },
     "depth-first search": {
       "file": "47b87a5f4bcb6bb2.wav",
@@ -75,10 +63,6 @@
       "file": "4f17182543966064.wav",
       "text": "dynamic programming"
     },
-    "event loop": {
-      "file": "4f84e8f471009022.wav",
-      "text": "event loop"
-    },
     "garbage collection": {
       "file": "4f76b35955d6c947.wav",
       "text": "garbage collection"
@@ -90,10 +74,6 @@
     "greedy algorithm": {
       "file": "4e07308b96788139.wav",
       "text": "greedy algorithm"
-    },
-    "growth trend": {
-      "file": "01bf482c14df1bc5.wav",
-      "text": "growth trend"
     },
     "heap": {
       "file": "103a360f285151bf.wav",
@@ -111,6 +91,10 @@
       "file": "c94ad2d92135458a.wav",
       "text": "invariant"
     },
+    "latency": {
+      "file": "3fdb7e873db12844.wav",
+      "text": "latency"
+    },
     "main thread": {
       "file": "006295de1193b4fa.wav",
       "text": "main thread"
@@ -123,41 +107,25 @@
       "file": "b0ca47bba9db2987.wav",
       "text": "microtask"
     },
-    "microtask checkpoint": {
-      "file": "73ce92ad54785d16.wav",
-      "text": "microtask checkpoint"
-    },
-    "microtask starvation": {
-      "file": "555d0f7380476531.wav",
-      "text": "microtask starvation"
+    "object identity": {
+      "file": "51c6feaca4cd3149.wav",
+      "text": "object identity"
     },
     "ownership": {
       "file": "01b8016fdce455c4.wav",
       "text": "ownership"
     },
-    "peak memory": {
-      "file": "7dbb9376abe879a6.wav",
-      "text": "peak memory"
-    },
     "percentile": {
       "file": "f31bb820c9ffe53d.wav",
       "text": "percentile"
     },
-    "property-based testing": {
-      "file": "510953c105ea0e48.wav",
-      "text": "property-based testing"
+    "promise": {
+      "file": "3513d9452af7c176.wav",
+      "text": "Promise"
     },
     "queue": {
       "file": "00b109cf1123a591.wav",
       "text": "queue"
-    },
-    "reference identity": {
-      "file": "2f1bae6e788f9e84.wav",
-      "text": "reference identity"
-    },
-    "sample": {
-      "file": "af2bdbe1aa9b6ec1.wav",
-      "text": "sample"
     },
     "set": {
       "file": "6ee0eb490ff83210.wav",
@@ -175,13 +143,21 @@
       "file": "6ee08e6eb3bc6f45.wav",
       "text": "stack"
     },
+    "starvation": {
+      "file": "bdcd69991500ee75.wav",
+      "text": "starvation"
+    },
     "structured clone": {
       "file": "bfda4ac5e6feb89d.wav",
       "text": "structured clone"
     },
-    "task queue": {
-      "file": "443a732bc2ac28cb.wav",
-      "text": "task queue"
+    "task": {
+      "file": "0ebb429fa86d481c.wav",
+      "text": "task"
+    },
+    "throughput": {
+      "file": "ad1ad4489f250ef7.wav",
+      "text": "throughput"
     },
     "time complexity": {
       "file": "338d5c560cd443dd.wav",
@@ -191,9 +167,9 @@
       "file": "067089555c90c149.wav",
       "text": "topological sort"
     },
-    "transferable object": {
-      "file": "8117f233e12307b4.wav",
-      "text": "Transferable object"
+    "transfer": {
+      "file": "27f576cafbb263ed.wav",
+      "text": "transfer"
     },
     "tree": {
       "file": "dc9c5edb8b2d479e.wav",

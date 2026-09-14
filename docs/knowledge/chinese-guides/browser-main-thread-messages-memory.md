@@ -2,63 +2,81 @@
 
 ## PRECS-03
 
-这份短文只建立使用 Web Worker 前需要的运行图景：浏览器为什么有主线程，两个执行环境为什么要传消息，以及“复制”和“转移”为什么会改变内存所有权。
+页面需要处理一份大文件时，常会听到“放进 Worker 就不卡了”。先不要急着搬代码。理解下面三件事更有帮助：计算原来占用了谁，数据怎样交给另一个环境，以及交出去后自己还能不能继续使用。
 
 ### 学习前先确认
 
 - 直接前置：[PREJS-07 Promise、异步函数与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。
-- 直接前置：[PRECS-02 JavaScript 集合、键与成员关系](../chinese-guides/javascript-collections-keys-membership.md#precs-02)。消息示例会使用数组和普通对象。
+- 直接前置：[PRECS-02 JavaScript 集合、键与成员关系](../chinese-guides/javascript-collections-keys-membership.md#precs-02)。消息通常使用普通对象、数组或数值数据。
 
-### 主线程负责什么
+### 主线程忙的时候页面在等什么
 
-页面中的 JavaScript、DOM 事件处理、样式计算、布局和绘制需要协调。我们通常把承担这条交互关键路径的执行线程称为**主线程（main thread）**。如果一段 JavaScript 长时间占住主线程，点击和绘制只能等待，即使最终计算结果完全正确，页面也会显得卡顿。
+**主线程（main thread）**承担普通页面脚本执行、事件处理以及渲染流程中的重要工作。如果脚本连续进行大量计算，点击对应的 JavaScript 处理和页面更新就可能等待，用户感觉是“按钮按了没反应”。
 
-“主线程”不等于浏览器进程中只有一个线程。网络、图像解码、合成等工作可能由浏览器的其他部分完成；关键边界是普通页面脚本不能随意在多个线程同时读写同一棵 DOM。
+浏览器内部不止一个线程，网络、合成等工作也可能由其他部分完成。因此页面脚本忙时，不代表整个浏览器里每件事都停止了。这里真正关心的是：界面需要主线程参与，而这条执行路径有没有被长计算占住。
 
-### Worker 是另一个执行环境
+把计算写进 `async` 函数，不会自动把它送到另一个线程；`await` 后面继续运行的代码，也仍属于原来的执行环境。怎样让主线程获得其他执行机会，会在主讲义中展开。
 
-**Web Worker** 提供独立的全局环境，可以执行 JavaScript，但不能直接访问页面的 `window` 和 DOM。页面与 Worker 通过 `postMessage` 发送消息，通过 `message` 事件接收消息。
+### Worker 有自己的环境
 
-本页和 CS-03 讨论的默认是服务于一张页面的专用 Web Worker。Service Worker 主要拦截网络请求并支撑离线、推送等生命周期，不是页面随手调用的计算线程；Worklet 则运行在音频、渲染等受约束的专用管线。三者都可能在主线程之外执行代码，却不能互换使用。
+**Web Worker** 可以独立执行 JavaScript，但不能直接访问页面 DOM，也没有页面的 `window` 对象。可以让它统计数据、构建索引，再把结果交给主线程显示。
 
-```js
-// 页面
-worker.postMessage({ type: 'calculate', values: [2, 4, 6] });
+把一次求和写成双方的分工，关系是这样的：
 
-// Worker
-self.addEventListener('message', (event) => {
-  const { values } = event.data;
-  self.postMessage({ type: 'result', total: values.reduce((a, b) => a + b, 0) });
-});
+| 主线程 | 交接内容 | Worker |
+| --- | --- | --- |
+| 发出任务 | `{ jobId: 1, values: [2, 4, 6] }` | 接收并求和 |
+| 等待消息，同时可以处理其他工作 | | 计算得到 12 |
+| 接收结果并更新界面 | `{ jobId: 1, total: 12 }` | 发回结果 |
+
+这不是一个写成 `const result = worker.calculate()` 就能立即返回结果的普通函数调用。双方使用 `postMessage` 发消息，通过 `message` 事件接收；编号帮助接收方知道结果属于哪次任务。创建、接收、失败处理与清理都齐全的代码，放在 [CS-03 的完整 Worker 示例](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#用一条完整消息理解-worker) 中。
+
+本篇默认说专用 Worker。Service Worker 主要参与网络代理、离线等事件，Worklet 参与特定音频或渲染流程；名字相近，职责和生命周期却不同。
+
+### 复制之后两边各有一份
+
+普通对象通常通过**结构化克隆（structured clone）**发送。先在同一环境里使用 `structuredClone` 看清“副本”是什么：
+
+```js example=precs03-clone
+const source = { values: [2, 4, 6] };
+const copy = structuredClone(source);
+copy.values[0] = 99;
+console.log(source.values.join(',')); // => 2,4,6
+console.log(copy.values.join(',')); // => 99,4,6
 ```
 
-消息不是一次跨线程函数调用。发送方不能立刻拿到返回值，也不能假定来自不同发送源的消息具有全局顺序；双方需要用类型、任务编号和状态约定来理解彼此。同一消息端口会保持发送顺序，但结果仍可能因任务耗时不同而晚到，因此提交结果时要核对任务编号，而不是只相信“最后收到的就是最新的”。
+修改副本的数组，没有改到原数组。普通对象消息也会建立这种独立关系，并不是两个线程直接拿着同一个普通对象随意修改。克隆支持许多内置数据类型和循环引用，但不能把任意函数或 DOM 节点都当作普通数据发送。
 
-### 结构化克隆会得到另一份值
+独立副本更容易理解，但复制本身也需要时间和内存。输入很大时，两边同时保存一份的成本不能忽略。
 
-大多数消息数据通过**结构化克隆（structured clone）**复制。接收方得到内容相应的新值，而不是与发送方共享同一个普通对象。它能处理循环引用、Map、Set、Date 和许多内置类型，但函数、DOM 节点等不能按普通数据克隆。
+### 转移之后原来的一方不能照常读取
 
-复制使两个环境可以独立修改数据，却也可能增加 CPU 时间和峰值内存。消息很大或频率很高时，不能只测 Worker 内部的计算，还要把消息成本算进去。
+有些底层资源可以转移。**所有权（ownership）**在这里表示当前谁可以使用这份资源。对 ArrayBuffer 的转移会使发送方原 buffer 分离；它不是复制一份后双方都照常使用。
 
-### 可转移对象交出所有权
-
-某些底层资源可以作为**可转移对象（Transferable object）**交给另一个执行环境。转移 `ArrayBuffer` 时通常不复制其中的字节，而是把访问权移交给接收方；发送方原来的 buffer 会变成分离状态。
-
-```js
-const buffer = new ArrayBuffer(1024);
-worker.postMessage({ type: 'consume', buffer }, [buffer]);
-
-console.log(buffer.byteLength); // 0，发送方不再拥有这块数据
+```js example=precs03-transfer
+const source = new Uint8Array([2, 4, 6]);
+const received = structuredClone(source, { transfer: [source.buffer] });
+console.log(source.byteLength); // => 0
+console.log(received.join(',')); // => 2,4,6
 ```
 
-这里最重要的概念是**所有权（ownership）**：此刻谁可以使用这份资源，何时交出，结果是否需要再转回来。转移可能减少复制，却不是无条件优化；如果发送方还要继续读取原数据，协议就必须重新设计。
+这里仍使用 `structuredClone` 单独展示转移效果。在 Worker 中，可以把 `source.buffer` 放进 `postMessage` 的转移清单。接收方需要的数据也要出现在消息本身；清单只是声明哪些资源转移，不是另一份自动送达的数据正文。
 
-### 内存不能只看最终大小
+TypedArray 如 `Uint8Array` 是查看底层字节的视图，转移的是它的 buffer。若另一个视图也使用同一 buffer，它同样会受到分离影响。主线程还要使用原数据时，应先明确保留副本、转移临时批次，还是让 Worker 持有原数据并按需返回结果。
 
-处理过程可能同时存在原始数据、克隆副本、中间数组、消息队列和渲染结果，因此真正危险的常常是**峰值内存（peak memory）**，而不是任务结束后的大小。取消、失败或页面离开时，还要解除事件监听、清空队列并释放不再需要的引用。
+共享内存又是另一种模式：使用 SharedArrayBuffer 时，两个环境可以共享底层字节，需要额外处理同步。不要把普通克隆、转移、共享混成一种“传引用”。
+
+### 结束时还要看谁在持有数据
+
+假设输入数据 8 MB，普通复制到 Worker 后两边各持有一份，仅数据区就可能同时占 16 MB；再加上中间结果和消息队列，处理过程中的内存峰值会高于最终结果大小。
+
+页面离开后，如果缓存、监听回调或等待队列还引用旧数据，它们不会因为“用户看不见了”就自动消失。正常结束、失败和取消都需要明确谁负责解除这些引用。停止接收结果，也不等于 Worker 中的计算已经停止。
 
 ### 接下来去哪里
 
-- 要完整学习何时使用 Worker、怎样分块、背压、取消并控制内存，请进入 [CS-03 前端大数据、Worker、增量计算与内存边界](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#cs-03)。
-- 若“回调稍后执行”和 Promise 仍不熟悉，可分别阅读 [PREJS-04 定时器与稍后执行的回调](../chinese-guides/javascript-scheduled-callbacks.md#prejs-04)与 [PREJS-07 Promise 与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。
+[CS-03 大数据、Worker、增量计算与内存边界](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#cs-03)会用完整示例说明：什么时候先少算一点，什么时候分块或使用 Worker，以及怎样限制队列、拒绝旧结果并清理数据。
 
+### 参考与延伸阅读
+
+- [MDN：使用 Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)——创建、消息与执行环境。
+- [MDN：可转移对象](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects)——转移和分离如何改变资源的使用权。

@@ -12,29 +12,49 @@
     "eng-05-quality-gates-lint-types-tests-ci.md"
   ],
   "terms": {
-    "atomic deployment": {
-      "file": "0922ac6db609cb0f.wav",
-      "text": "atomic deployment"
+    "affected scope": {
+      "file": "e88ac1269ae6245d.wav",
+      "text": "affected scope"
+    },
+    "base": {
+      "file": "cae662172fd450bb.wav",
+      "text": "base"
     },
     "bundling": {
       "file": "3797d3d963dd86ac.wav",
       "text": "bundling"
     },
+    "cache": {
+      "file": "5e1ecee06a7fc06f.wav",
+      "text": "cache"
+    },
     "chunk": {
       "file": "6c87f68371b28954.wav",
       "text": "chunk"
     },
-    "continuous integration": {
-      "file": "02f53fd47961035f.wav",
-      "text": "continuous integration"
+    "ci": {
+      "file": "1b158839f8aa339e.wav",
+      "text": "CI"
+    },
+    "dependencies": {
+      "file": "2188dfc2d889b532.wav",
+      "text": "dependencies"
+    },
+    "dev server": {
+      "file": "a7aa6197e18207ac.wav",
+      "text": "dev server"
+    },
+    "devdependencies": {
+      "file": "34f4420214ed5d56.wav",
+      "text": "devDependencies"
     },
     "formatting": {
       "file": "6c7aa935c55c6724.wav",
       "text": "formatting"
     },
-    "hot module replacement": {
-      "file": "721bae641373633e.wav",
-      "text": "hot module replacement"
+    "hmr": {
+      "file": "6b7e1b1d338a5d36.wav",
+      "text": "HMR"
     },
     "lint": {
       "file": "da966368ea663ea5.wav",
@@ -48,9 +68,25 @@
       "file": "05b3abf2579a5eb6.wav",
       "text": "manifest"
     },
+    "minification": {
+      "file": "10a58bb2a468204f.wav",
+      "text": "minification"
+    },
+    "mode": {
+      "file": "e642b12901a6ee51.wav",
+      "text": "mode"
+    },
     "module graph": {
       "file": "8da23d7d57439dfd.wav",
       "text": "module graph"
+    },
+    "offline install": {
+      "file": "d513969047208ee3.wav",
+      "text": "offline install"
+    },
+    "override": {
+      "file": "ce603774135699e9.wav",
+      "text": "override"
     },
     "peer dependency": {
       "file": "4ec1cbc0972856c1.wav",
@@ -60,13 +96,25 @@
       "file": "4a807ff70e8537f4.wav",
       "text": "phantom dependency"
     },
-    "semantic versioning": {
-      "file": "74baa68f217dab64.wav",
-      "text": "semantic versioning"
+    "quality gate": {
+      "file": "90aea89a9d168a50.wav",
+      "text": "quality gate"
+    },
+    "semver": {
+      "file": "50449d83eadc612b.wav",
+      "text": "SemVer"
     },
     "source map": {
       "file": "a53cb7b2cd9ae3de.wav",
-      "text": "source map"
+      "text": "Source Map"
+    },
+    "transformation": {
+      "file": "4b7e172afd07683e.wav",
+      "text": "transformation"
+    },
+    "transpilation": {
+      "file": "b0ca85e5389de7f9.wav",
+      "text": "transpilation"
     },
     "tree-shaking": {
       "file": "72e1629aaba5e6ed.wav",

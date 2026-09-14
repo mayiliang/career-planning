@@ -1,214 +1,372 @@
-# JS-04 异步、Promise 与浏览器事件循环
+# B02 数据处理与异步协作
 
-## JS-04
+## JS-04 异步、Promise 与浏览器事件循环
 
-JavaScript 可以发起网络请求、等待定时器，也能在用户点击时响应事件，但普通页面脚本并不是把任意两段 JavaScript 同时放在主线程执行。理解异步的关键，是分清“当前调用栈怎样结束”“回调何时进入哪类队列”“Promise 怎样安排后续反应”以及“浏览器何时得到渲染机会”。
+“先写的代码为什么后执行？”学异步时，最容易把这个问题全交给一句“事件循环”。但它实际上包含几个不同问题：哪段代码现在就在执行，哪件事还在等待，完成后谁来安排回调，以及浏览器什么时候有机会响应用户。
+
+本篇从几行可以手动推演的代码开始。先建立执行顺序，再把它用于并发请求、界面响应和过期结果处理。这里讨论浏览器；Node.js 的具体阶段和 `process.nextTick` 不在本篇的顺序模型内。
 
 ### 学习前先确认
 
-- 直接前置：[PREJS-07 Promise、异步函数与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。它会继续链接 timer、回调、函数与变量基础。
-- 直接前置：[JS-01 的执行上下文与调用栈](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。
+- 直接前置：[PREJS-07 Promise、async/await 与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。先认识 Promise 表示什么、怎样得到结果。
+- 直接前置：[JS-01 执行上下文、作用域与闭包](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。回调仍然遵守普通函数的调用与变量查找规则。
 
-### 一、异步先把“等待”与“继续执行”分开
+带 `await` 的示例可在现代桌面浏览器开发者工具的 Console 中逐段运行。每段示例都定义了自己需要的变量，输出用注释标在对应位置。先预测一次，再运行核对，重点看“哪个动作安排了下一步”。
 
-调用 `fetch` 或 `setTimeout` 时，JavaScript 不是停在原地占住调用栈等待。代码向宿主环境登记工作和回调，然后当前函数继续执行并返回。网络、计时或用户事件达到条件后，宿主再安排相应回调进入未来的执行机会。
+### 先区分现在调用和以后回调
 
-这解释了为什么下面先打印“函数结束”：
+看下面四个动作：记录开始；安排一个定时器；给一个已兑现的 Promise 注册回调；记录结束。这里用数组保存顺序，最后一次输出，避免日志被其他代码插入而看乱。
 
-```js
-console.log('函数开始');
-
-setTimeout(() => {
-  console.log('定时回调');
-}, 0);
-
-console.log('函数结束');
+```js example=js04-first-order
+const events = [];
+const timerDone = new Promise((resolve) => {
+  events.push('开始');
+  setTimeout(() => {
+    events.push('定时器');
+    resolve();
+  }, 0);
+});
+Promise.resolve().then(() => events.push('Promise 回调'));
+events.push('结束');
+await timerDone;
+console.log(events.join(' → ')); // => 开始 → 结束 → Promise 回调 → 定时器
 ```
 
-延时为 0 的含义是“不再额外要求等待这段时长后，尽快安排”，不是“立即打断当前代码”。当前脚本仍要运行到调用栈为空。
+先看不需要事件循环知识的部分：调用 `setTimeout` 是现在发生的，但传给它的函数不是现在调用。注册 `.then` 也是现在发生的，但回调不会在 `.then` 内立刻调用。于是“开始”和“结束”先进入数组。
 
-**调用栈（call stack）**记录当前正在执行的函数。普通 JavaScript 函数具有运行到结束的语义：一个回调执行中不会在任意表达式中间突然换成另一个普通回调。异步的交错发生在一次执行结束、宿主选择下一项工作时。
+之后再比较两个回调：已兑现 Promise 的处理回调进入微任务队列；定时器回调属于之后的任务。当前这段同步代码交还执行机会后，微任务先获得处理，因此“Promise 回调”排在“定时器”前面。
 
-### 二、任务、微任务与渲染机会组成基本节奏
+`0` 不是“立刻执行”。它表达的是定时器的延迟请求，回调还要等待调度，浏览器也可能施加延迟限制。若当前代码持续计算两秒，定时器不能在这两秒中间闯进来打断它。
 
-浏览器从**任务队列（task queue）**中选择一个可运行任务，例如初始脚本、定时器回调或某些事件回调。任务运行到调用栈为空后，浏览器进入**微任务检查点（microtask checkpoint）**，持续执行当前队列中的微任务，直到队列为空。之后浏览器才可能更新渲染，再进入下一轮任务。
+### Promise 的执行器现在就会运行
 
-Promise 的反应回调、`queueMicrotask` 回调和 `await` 的后续通常作为**微任务（microtask）**运行。它们不会在当前同步代码中间插入，却会在下一个普通任务前完成：
+**Promise** 表示一次异步结果的最终状态，但 `new Promise` 接收的执行器函数本身是同步调用的。它不是把整段代码放到后台的开关。
 
-```js
-console.log('A');
-
-setTimeout(() => console.log('D'), 0);
-
-Promise.resolve().then(() => console.log('C'));
-
-console.log('B');
-// A B C D
+```js example=js04-executor
+const events = ['创建前'];
+const promise = new Promise((resolve) => {
+  events.push('执行器');
+  resolve(7);
+  events.push('resolve 之后');
+});
+const observed = promise.then((value) => events.push(`收到 ${value}`));
+events.push('创建后');
+await observed;
+console.log(events.join(' → ')); // => 创建前 → 执行器 → resolve 之后 → 创建后 → 收到 7
 ```
 
-逐行追踪时不要背最终字符串，画状态更可靠：初始脚本是当前任务；`setTimeout` 登记未来任务；`.then` 在 Promise 已兑现后登记微任务；同步打印结束；栈空后先清微任务得到 C；下一任务才得到 D。
+`resolve(7)` 决定结果，但不会让当前函数自动返回，所以“resolve 之后”仍会执行。若需要结束执行器，还得自己 `return`。`.then` 回调随后执行，也不会回到执行器的 `resolve` 那一行插队。
 
-**事件循环（event loop）**是协调任务、微任务、渲染和宿主事件的运行模型，不只是“两条队列轮流取值”。不同 API 的任务来源和浏览器调度策略更复杂；学习时先掌握稳定的顺序边界，再通过规范或开发者工具核对具体 API。
+例如把一段很慢的循环放在 `new Promise` 的执行器里，循环仍会立即占用主线程。把它包成 `async` 函数也不会自动变成并行计算；需要减少工作、分块或转移执行位置，见 [CS-03 的分块](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#把工作拆开让界面有机会响应)。
 
-### 三、Promise 状态与回调执行时机要分开
+### 状态已决定和结果已到手不是同一件事
 
-Promise 有 pending、fulfilled、rejected 三种状态。状态一旦从 pending 变为 fulfilled 或 rejected 就不会再改变，但 `.then`/`.catch` 中的回调仍不会同步插入当前调用栈；它们作为 Promise reaction 在微任务中执行。
+Promise 有三种状态：pending、fulfilled 和 rejected。后两种合称 settled，状态一旦落定就不会再变化。
 
-```js
-const ready = Promise.resolve('数据');
+还有一个容易混淆的词：resolved。它描述结果的走向已经被锁定，可能锁定为一个普通值，也可能锁定为跟随另一个仍然 pending 的 Promise。因此 resolved 不一定等于 fulfilled。
 
-ready.then((value) => console.log(value));
-console.log('已登记处理函数');
-
-// 已登记处理函数
-// 数据
-```
-
-`.then` 会立即返回一个新的 Promise。回调返回普通值时，新 Promise 以该值兑现；抛出错误时，新 Promise 拒绝；返回另一个 Promise 或 thenable 时，新 Promise 会采用其最终状态。这就是链式调用能把异步步骤和错误沿同一条链传递的基础。
-
-```js
-fetch('/api/profile')
-  .then((response) => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  })
-  .then((profile) => renderProfile(profile))
-  .catch((error) => showError(error));
-```
-
-把 `.then` 回调写成花括号后忘记 `return`，下一步会收到 `undefined`；在链外启动 Promise 却不返回，也会让外层无法等待和统一处理错误。先画每个 `.then` 返回的新 Promise，很多“异步失踪”都会变清楚。
-
-没有返回、没有 `await`、也没有明确 `.catch` 的 Promise 常被称为脱离链条的工作。它拒绝时，宿主可能报告 `unhandledrejection`，但全局监听只能作为最后的观测和告警，不能替代调用边界上的处理责任。若业务确实要“发出后不等待”，也应显式说明谁记录失败、何时取消以及页面离开后是否允许继续。
-
-### 四、async/await 改变写法，不改变调度模型
-
-调用 `async` 函数总会得到 Promise。执行到 `await expression` 时，表达式会按 Promise 语义处理；当前 async 函数暂停，把控制权还给调用者，待结果可用后，其后续作为微任务继续。
-
-即使表达式是普通值或已经兑现的 Promise，`await` 后面的代码也不会在当前同步栈中立刻继续，而会经过异步恢复。这个一致规则能避免“有缓存时同步、没缓存时异步”的时序分叉，也意味着在循环里对普通值反复 `await` 仍会产生调度边界。
-
-```js
-async function loadProfile() {
-  console.log('开始请求');
-  const response = await fetch('/api/profile');
-  console.log('响应可用');
-  return response.json();
-}
-
-const pending = loadProfile();
-console.log('调用已经返回 Promise');
-await pending;
-```
-
-`await` 不会冻结整个浏览器，也不会为普通 JavaScript 创建新线程。它只暂停当前 async 函数。两个互不依赖的请求如果连续 `await`，会人为串行等待；先同时发起再统一等待，才会重叠网络等待时间：
-
-```js
-const userRequest = fetch('/api/user');
-const teamRequest = fetch('/api/team');
-
-const [userResponse, teamResponse] = await Promise.all([
-  userRequest,
-  teamRequest,
-]);
-```
-
-是否并行发起要考虑服务端容量、浏览器连接、请求成本和错误策略，不能把 `Promise.all` 当成越多越快的开关。它会在第一个输入拒绝时尽快拒绝自己的结果，却不会自动取消其他已启动操作；若要共同停止，需要这些操作共享可响应的取消协议。需要收集每一项成败时，应选择能表达该合同的组合方式，而不是用 `catch` 把所有失败悄悄改成成功值。
-
-### 五、微任务连续产生会推迟任务和渲染
-
-浏览器会在当前检查点持续清空微任务；如果每个微任务又加入新的微任务，队列可能长时间不为空。这叫**微任务饥饿（microtask starvation）**，会推迟定时器、事件和渲染。
-
-```js
-function keepRunning() {
-  queueMicrotask(keepRunning);
-}
-
-keepRunning();
-```
-
-这段代码不是“高效地后台运行”，而是在主线程不断占用微任务检查点。大量 CPU 工作需要分片时，应使用能进入后续任务或浏览器调度阶段的机制，并控制每片工作量；需要真正移出主线程的计算则考虑 Worker。选择 API 时要结合浏览器支持和降级方案。
-
-微任务适合在当前同步变化之后、下一任务之前做短小的一致性收尾，例如批量提交状态。它不适合承载无界循环或大规模计算。
-
-### 六、事件循环并不等于业务并发控制
-
-浏览器主线程一次执行一段 JavaScript，与同时等待多少个网络请求是两个层次。若一次发起数百个请求，代码需要在应用层设置**并发限制（concurrency limit）**，保护服务端、网络和内存。这个限制器维护的是已启动但尚未完成的操作数量，而不是改变任务/微任务规则。
-
-并发限制必须控制“何时调用会启动工作的函数”。若先用 `items.map(item => fetch(item.url))` 创建数百个 Promise，再把这些 Promise 交给限制器，请求在 `map` 阶段已经启动，限制器只是在限制等待。可靠接口接收任务函数或输入项，在获得额度时才真正调用 API。
-
-应用层异步流程通常还要决定：结果是否保持输入顺序，单项失败是否终止整体，用户取消后是否停止未开始的工作，运行中的操作是否接受同一个 AbortSignal。它们是业务协议，不属于事件循环自动提供的保证。
-
-理解这种分层可以避免两个常见错误：把“JavaScript 单线程”误解为一次只能等待一个请求；或把 Promise 同时创建误解为 JavaScript 回调在主线程真正并行执行。
-
-### 七、取消和过期结果要在提交处设门禁
-
-`AbortController` 可以把取消意图传给支持信号的 API，例如 `fetch`。取消不是 Promise 的第四种状态；底层操作通常以拒绝结束，调用方再根据错误类型区分用户取消与真实失败。
-
-```js
-const controller = new AbortController();
-
-const request = fetch('/api/search?q=book', {
-  signal: controller.signal,
+```js example=js04-adoption
+let finishInner;
+const inner = new Promise((resolve) => { finishInner = resolve; });
+const outer = new Promise((resolve, reject) => {
+  resolve(inner);
+  reject(new Error('这次调用不会再改变 outer 的走向'));
 });
 
-controller.abort();
+let received = false;
+const observed = outer.then((value) => {
+  received = true;
+  return value;
+});
+console.log(received); // => false
+finishInner('资料已准备好');
+console.log(await observed); // => 资料已准备好
+console.log(received); // => true
 ```
 
-有些异步工作不能被真正中断，或者取消到达时结果已经在路上。连续搜索等场景还需要请求版本：只允许当前版本把结果写进状态，旧版本即使完成也被丢弃。取消节省工作，版本门禁保护正确性，两者互补。
+`outer` 已经选择跟随 `inner`，后面的 `reject` 无法再把它改成另一个结果；但只要 `inner` 还没结束，`outer` 也拿不到最终结果。像“已经决定等小李回复”和“小李已经回复”是两件事，这个区别可以帮助理解 resolved 与 settled。
 
-Promise 的错误处理、重试和连续搜索状态会在 JS-05 继续展开。本知识点先把底层调度和基本取消边界建立牢固。
+这种跟随也适用于 thenable，也就是带有可调用 `then` 方法的对象。Promise 会尝试接纳它的结果，因此返回一个 Promise 并不会让正常的 Promise 链变成“还需要再手动拆一层的盒子”。thenable 的读取、调用和异常处理有专门规则，不应把任意对象的 `.then` 当成普通数据属性随意执行。
 
-### 八、浏览器模型不要直接套到 Node.js
+### 链上的返回值决定下一步收到什么
 
-浏览器和 Node.js 都使用事件循环思想，但宿主阶段、API 与某些队列优先级不同。`process.nextTick`、I/O 阶段等是 Node 专有内容。分析浏览器页面时只使用浏览器 API 和对应规范；分析 Node 程序时再建立 Node 的阶段模型。记住一个环境中的输出顺序，不能替代辨认当前宿主。
+每次 `.then` 都返回一个新 Promise。回调正常返回一个值，新 Promise 就以该值兑现；回调抛出异常，新 Promise 就拒绝；返回另一个 Promise，则跟随它的结果。
 
-### 九、用可解释的 trace 排查顺序问题
+```js example=js04-chain
+const events = [];
+const value = await Promise.resolve(3)
+  .then((number) => number * 2)
+  .then((number) => {
+    events.push(`中间值 ${number}`);
+    throw new Error('示例中的失败');
+  })
+  .catch((error) => {
+    events.push(error.message);
+    return 0;
+  })
+  .finally(() => events.push('清理'));
+console.log(events.join(' → ')); // => 中间值 6 → 示例中的失败 → 清理
+console.log(value); // => 0
+```
 
-面对混合了同步代码、Promise、timer 和事件的程序，按以下方法：
+这里 `catch` 返回 0，表示这条链已经用 0 恢复为成功结果。记录错误后不再抛出，并不等于“错误还会自动继续传播”。如果调用方仍应知道失败，应在处理后重新抛出，或返回被拒绝的 Promise。
 
-1. 标出当前任务和调用栈；
-2. 每遇到调度 API，就记录它最终加入任务还是微任务；
-3. 当前栈未清空前，不执行任何已登记回调；
-4. 栈空后清微任务，并把微任务新加入的微任务继续排到队尾；
-5. 微任务为空后记录一次可能的渲染机会，再选择后续任务；
-6. 对每个 Promise 标出它是谁返回的新 Promise，以及状态从哪里采用。
+另一个常见遗漏是忘记 `return`：
 
-开发者工具中的 Performance 录制可以验证任务块、长任务与渲染间隙，日志可以验证业务事件顺序。不要在生产逻辑里依赖多个同截止时间 timer 的偶然相对顺序；需要顺序时，应在程序中显式串联。
+```js example=js04-missing-return
+const first = await Promise.resolve(3).then((number) => { number * 2; });
+const second = await Promise.resolve(3).then((number) => number * 2);
+console.log(first); // => undefined
+console.log(second); // => 6
+```
 
-### 十、Promise 解析不只是“保存一个值”
+带花括号的箭头函数是函数体，表达式结果不会自动成为返回值。链上没有返回值，下一步就收到 `undefined`。这属于函数规则，不是 Promise 特有的随机行为。
 
-当 `.then` 回调返回普通值时，下一个 Promise 兑现；返回 Promise 时，下一个 Promise 会等待并采用它的最终状态。更一般地，返回一个带可调用 `then` 属性的 thenable，也会进入解析过程。运行时需要防止一个 thenable 多次调用成功/失败回调、读取 `then` 时抛错，以及 Promise 试图采用自身而形成循环。
+`finally` 通常用于无论成功失败都要执行的清理。它不会接收前一步的结果；正常结束时保留原结果。不过它若抛错或返回最终拒绝的 Promise，就会让整条链转为相应失败；它若返回 pending 的 Promise，后续也会等待。释放资源的责任可与 [B01 的资源关闭](../chinese-guides/js-07-iteration-metaprogramming-resources.md#让资源的打开和关闭待在一起) 一起理解。
 
-这些细节解释了为什么“resolve 一个 Promise”不一定立即 fulfilled，也解释了跨库 thenable 能接入原生链。业务代码通常不应手写 thenable；但高级工程师需要知道 Promise assimilation 会执行外部对象的 `then`，它不是一次无副作用的字段复制。
+### 用调用栈任务和微任务推演顺序
 
-`.finally(cleanup)` 不接收成功值或失败原因，正常返回时保留原链状态；若 cleanup 抛错或返回拒绝 Promise，新失败会替代原结果。资源清理要尽量可靠，否则错误处理路径会被清理错误遮蔽。
+可以先用三部分跟踪代码：
 
-### 十一、await 会引入可重入边界
+- 调用栈：正在调用的函数。当前同步执行过程不会被同一执行环境中的定时器回调任意打断。
+- **任务（task）**：例如定时器、某些用户交互和消息引发的工作。浏览器有不同任务来源，不是所有异步回调都挤在一个全局先进先出队列里。
+- **微任务（microtask）**：例如 Promise 的处理回调与 `queueMicrotask` 注册的回调。在微任务检查点，队列会持续处理，直到排空。
 
-`await` 前后的代码不属于同一段连续同步执行。暂停期间，事件、其他任务和微任务都可能修改共享状态；恢复时，之前读取的条件可能已经过期：
+下面的例子在第一个微任务里再安排一个微任务。它能说明“检查一次微任务队列”为什么不等于“只处理最初已有的那几项”。
 
-```js
-async function saveDraft() {
-  const version = currentVersion;
-  const payload = collectDraft();
-  const result = await sendDraft(payload);
-  if (version !== currentVersion) return; // 恢复时重新验证
-  showSaved(result);
+```js example=js04-nested-microtasks
+const events = ['同步开始'];
+const timerDone = new Promise((resolve) => {
+  setTimeout(() => { events.push('定时器'); resolve(); }, 0);
+});
+queueMicrotask(() => {
+  events.push('微任务 A');
+  queueMicrotask(() => events.push('微任务 C'));
+});
+Promise.resolve().then(() => events.push('微任务 B'));
+events.push('同步结束');
+await timerDone;
+console.log(events.join(' → ')); // => 同步开始 → 同步结束 → 微任务 A → 微任务 B → 微任务 C → 定时器
+```
+
+| 推演位置 | 已记录的内容 | 接下来等待的微任务 |
+| --- | --- | --- |
+| 同步代码完成 | 同步开始、同步结束 | A、B |
+| A 执行，在队尾加入 C | 再加 A | B、C |
+| B 执行 | 再加 B | C |
+| C 执行 | 再加 C | 空 |
+
+这里 A 先被安排，所以先执行；A 新建的 C 排在已入队的 B 后面。微任务排空后，定时器所在任务才有机会被选中。
+
+“任务结束后检查微任务”是适合入门的路径，但不是所有检查点的完整清单。浏览器在特定脚本或回调执行完成后，也可能按规范进行微任务检查。分析复杂事件分发时，应结合那个 API 的调用方式，不能机械套用“一次点击的全部回调之间绝对没有微任务”。
+
+尤其不要把不同来源的回调先后顺序当成保证。例如定时器和网络响应哪一个先就绪、哪一个任务先被选择，可能取决于环境。能够确定的顺序与碰巧观察到的顺序要分开。
+
+### await 暂停的是当前异步函数
+
+**async/await** 把 Promise 链写成更接近逐句阅读的形式。调用 async 函数时，它从开头同步执行；走到 `await`，当前函数暂停，后续在等待结果可用后通过微任务继续。
+
+```js example=js04-await-order
+const events = ['调用前'];
+async function read() {
+  events.push('函数开始');
+  const value = await 5;
+  events.push(`await 之后 ${value}`);
+  return value * 2;
 }
+const result = read();
+events.push('调用后');
+console.log(await result); // => 10
+console.log(events.join(' → ')); // => 调用前 → 函数开始 → 调用后 → await 之后 5
 ```
 
-这类问题不是多线程数据竞争，却具有相同的“检查后状态发生变化”特征。每个 `await` 都应被视为可能让出控制权的边界：恢复后重新验证版本、所有权、组件是否仍挂载和操作是否已取消。
+即使等的是普通值 5，`await` 后面的代码也不会留在原来的同步调用过程中继续执行。调用方先获得一个 Promise，可以继续做自己的事。
 
-串行 `await` 适合有真实数据依赖的步骤；无依赖工作可以先启动后统一等待；数量无界时再加并发限制。正确顺序来自依赖图和业务合同，不来自把所有 `await` 删除或全部塞进 `Promise.all`。
+但“当前函数暂停”不等于“浏览器一定已经渲染一帧”。如果等待的结果已经可用，后续只是进入微任务，可能很快接着执行。也不等于“有另一个 JavaScript 线程接手了函数”；续体仍在所属执行环境中运行。
 
-### 十二、任务来源与渲染不是简单轮转表
+如果等待的 Promise 拒绝，`await` 位置会表现为抛出异常，可以用普通 `try/catch` 捕获。没有捕获时，async 函数返回的 Promise 会拒绝。注意把真正需要等待的工作纳入这条链：仅启动一个异步操作而不返回也不等待它，外层无法自动知道它何时结束或失败。
 
-教学图常画一个任务队列，但 HTML 运行模型区分不同任务来源，浏览器可在约束内选择可运行任务。稳定保证是一个任务运行到栈空、随后完成微任务检查点；不要依赖两个独立来源任务之间未被规范保证的偶然顺序。
+### 微任务执行完不等于浏览器已经绘制
 
-渲染也不是每清空一次微任务就必然发生。浏览器会根据刷新节奏、页面可见性和是否需要更新来决定渲染机会。`requestAnimationFrame` 回调位于渲染更新流程中，适合在下一次绘制前更新动画状态；它不是通用后台任务队列，后台标签页还可能被暂停或降频。
+设想不断执行“读取下一条 → 等一个已兑现的 Promise → 读取下一条”。看起来每轮都在 `await`，但下一轮仍可能不断加入微任务队列。只要队列一直有工作，浏览器就难以继续处理后续任务和渲染。
 
-MutationObserver 等 API 也与微任务检查点相关，但各自有交付规则。学习新异步 API 时，应查它把回调安排到哪个宿主阶段、是否批处理、能否取消，而不是把所有“稍后执行”都叫作 timer。
+下面只重复四次，避免运行不会结束的示例。它展示微任务会排在定时器之前，不用制造页面冻结。
 
-### 学完后的自我检验
+```js example=js04-bounded-microtasks
+const events = [];
+const timerDone = new Promise((resolve) => {
+  setTimeout(() => { events.push('定时器'); resolve(); }, 0);
+});
+for (let i = 1; i <= 4; i++) {
+  await Promise.resolve();
+  events.push(`第 ${i} 步`);
+}
+await timerDone;
+console.log(events.join(' → ')); // => 第 1 步 → 第 2 步 → 第 3 步 → 第 4 步 → 定时器
+```
 
-自己写一段包含同步日志、一个 timer、两级 `.then` 和一个 `await` 的短代码。在运行前画出任务、微任务、调用栈和 Promise 链，预测输出，再用浏览器验证。接着把其中一个微任务改成递归加入微任务，解释渲染为什么被推迟；最后说明如果场景需要限制网络并发或丢弃旧搜索结果，为什么那是事件循环之上的另一层协议。
+四步很轻，不会造成可感知的问题。但把四步换成持续创建新微任务的大量计算，就可能出现**饥饿（starvation）**：其他工作一直得不到机会。解决方向是减少工作，或在适当的分段边界安排之后的任务；需要脱离主线程计算时使用 Worker。单纯增加 `await Promise.resolve()` 并不能达到这个目的。
 
+`requestAnimationFrame` 用于在浏览器准备更新渲染时执行回调，适合汇总当前帧的视觉更新。它是在绘制之前参与工作，不是“绘制已完成”的通知。把大计算放进它的回调，仍会推迟这一帧。后台或隐藏页面的回调频率也可能降低，不能把它当成可靠的后台计时器。
+
+浏览器不会在每个任务后都保证绘制一帧。是否有渲染机会、是否需要更新、文档是否可见等都会影响调度。判断“加载中”为什么没显示，应该先看设置状态后的代码是否连续占用了主线程，而不是只检查有没有写 `await`。
+
+### 并发从启动动作开始
+
+假设要获取个人资料和通知列表，两者互不依赖。如果先等资料完成，再启动通知，就把两段等待串起来了。要让它们重叠，应先启动两件事，再等待结果。
+
+下面用立即兑现的 Promise 记录启动与等待顺序，专门观察调用关系；它不模拟真实网络延迟，也不用于测量提速倍数。
+
+```js example=js04-start-order
+const events = [];
+function load(name) {
+  events.push(`启动${name}`);
+  return Promise.resolve(name);
+}
+
+await load('资料');
+events.push('资料已等待完');
+await load('通知');
+console.log(events.join(' → ')); // => 启动资料 → 资料已等待完 → 启动通知
+
+events.length = 0;
+const profile = load('资料');
+const notices = load('通知');
+const results = await Promise.all([profile, notices]);
+events.push('一起等待完');
+console.log(events.join(' → ')); // => 启动资料 → 启动通知 → 一起等待完
+console.log(results.join(',')); // => 资料,通知
+```
+
+`Promise.all` 接收的是已经创建的 Promise。真正开始工作的时机由 `load` 等调用决定，不是看到 `all` 才自动启动。结果数组按输入顺序排列，即使通知先完成，它仍然位于第二项。
+
+如果通知请求必须使用资料请求返回的用户 ID，就有真实依赖，需要先得到 ID。这时串行是正确表达，而不是等待写法不够“高级”。
+
+还要区分并发和并行：多个请求可以同时处于等待状态，但同一个页面执行环境中的 JavaScript 回调仍逐个运行。CPU 计算是否真正同时在不同线程运行，是另一个问题。
+
+### 组合 Promise 不会自动取消工作
+
+`Promise.all` 在某个输入拒绝后，可以尽早拒绝自己的结果，但其他输入代表的工作仍会继续。`Promise.race` 也只是采用最先落定的结果，不会替你终止其余候选。若超时 Promise 先赢，网络请求仍可能在继续。
+
+| 组合方法 | 结果何时确定 | 适合表达的问题 |
+| --- | --- | --- |
+| `all` | 全部兑现，或某个输入拒绝 | 所需结果必须全部成功 |
+| `allSettled` | 每个输入都已兑现或拒绝 | 每项都要报告结果 |
+| `race` | 第一个输入兑现或拒绝 | 接受最先落定的结果 |
+| `any` | 首个兑现，或全部拒绝 | 任意一次成功即可 |
+
+`allSettled` 不会把失败变成成功；它会把每项的状态和结果记录在返回数组中。`any` 遇到一个拒绝不会立刻结束，全部拒绝时返回 `AggregateError`。空数组也有明确规则：`all` 和 `allSettled` 兑现为空数组，`any` 拒绝，`race` 保持 pending。边界值常能暴露调用方对“至少会有一个结果”的隐含假设。
+
+下面用手动完成的 Promise 看清 `all` 拒绝后，另一件事仍能完成。
+
+```js example=js04-all-keeps-running
+let finishOther;
+const events = [];
+const other = new Promise((resolve) => { finishOther = resolve; })
+  .then(() => events.push('另一件事仍然完成'));
+try {
+  await Promise.all([Promise.reject(new Error('其中一件失败')), other]);
+} catch (error) {
+  events.push(error.message);
+}
+finishOther();
+await other;
+console.log(events.join(' → ')); // => 其中一件失败 → 另一件事仍然完成
+```
+
+如果任务需要共同停止，调用方应把同一取消信号交给支持它的操作，并在失败时主动取消。任意 Promise 没有通用的 `cancel()`；取消能力来自它代表的底层工作，而不是 Promise 这个结果容器本身。
+
+### 限制并发需要推迟启动
+
+一次启动一千个请求，再把它们交给 `Promise.all`，并没有限制并发。想最多运行两个，就应暂存“启动任务的函数”，而不是一千个已经在进行中的 Promise。
+
+```js example=js04-concurrency-limit
+async function runLimited(tasks, limit) {
+  if (!Number.isInteger(limit) || limit < 1) throw new RangeError('并发数必须是正整数');
+  const results = new Array(tasks.length);
+  let next = 0;
+  async function consume() {
+    while (next < tasks.length) {
+      const index = next++;
+      // 在 await 前领取编号，同一执行环境中的其他消费者不会中途插入。
+      results[index] = await tasks[index]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, consume));
+  return results;
+}
+
+let active = 0;
+let peak = 0;
+const tasks = [1, 2, 3, 4].map((number) => async () => {
+  active++;
+  peak = Math.max(peak, active);
+  try {
+    await Promise.resolve();
+    return number * 10;
+  } finally {
+    active--;
+  }
+});
+console.log((await runLimited(tasks, 2)).join(',')); // => 10,20,30,40
+console.log(peak); // => 2
+```
+
+两个消费者各自领取一个编号，然后等待自己手上的任务。谁先完成，谁再领下一个。因此上限约束的是正在等待完成的任务数，结果仍放回输入对应的位置。
+
+这是讲解“领取后再启动”的最小实现。示例中的任务都成功；若某个任务失败，它的消费者会停止，外层会拒绝，但另一个消费者仍可能继续领取后续任务。需要“一次失败就停止领取”时，还要加入共享停止状态，并在领取前检查；需要停止已启动的请求时，再传递取消信号。这个区别与 `Promise.all` 不负责取消完全一致。
+
+### 取消之后仍要判断结果是否过期
+
+搜索框的例子最容易看出问题：用户先输入“函数”，再输入“闭包”，第二次结果先到，第一次随后到。如果每个回调都直接写界面，旧查询就会覆盖新查询。
+
+下面用可手动完成的 Promise 固定顺序，不靠网络速度复现。
+
+```js example=js04-stale-result
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+const first = deferred();
+const second = deferred();
+let version = 0;
+let visible = '';
+async function displayLatest(promise) {
+  const ownVersion = ++version;
+  const text = await promise;
+  if (ownVersion !== version) return;
+  visible = text;
+}
+
+const oldTask = displayLatest(first.promise);
+const newTask = displayLatest(second.promise);
+second.resolve('闭包的结果');
+await newTask;
+first.resolve('函数的结果');
+await oldTask;
+console.log(visible); // => 闭包的结果
+```
+
+每次启动保存自己的版本；提交前与当前版本比较。这个检查让“最后一次查询”决定界面，而不是“最后一次返回”决定界面。失败提示也要做同样的判断，否则旧查询的错误仍可能盖住新查询的成功。
+
+真实请求中，可以在启动新查询时先调用上一个 `AbortController` 的 `abort()`，把新 `signal` 交给 `fetch` 等支持它的操作。这能减少已失去价值的工作。但取消与结果就绪可能接近发生，某些底层操作也不支持取消，因此提交前的版本检查仍有意义。取消表示意图，版本检查决定结果现在是否适合显示。
+
+页面关闭时也应使旧版本失效，并释放监听或其他资源。涉及 Worker 时，消息可能已经在途；同样的判断可以放在消息接收处，见 [CS-03 的任务编号](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#停止旧工作和拒绝旧结果需要分别处理)。
+
+### 把顺序问题还原成几个具体动作
+
+遇到一段新的异步代码，可以沿下面的过程阅读：先圈出立即调用的函数；找到每个任务真正启动的位置；标出回调进入任务还是微任务；再看每个 `await` 暂停哪一个函数、后续依赖哪个结果。最后检查失败由谁接住，失去价值的工作由谁停止，旧结果由谁拒绝提交。
+
+例如“点击刷新后加载提示没出现”，先找提示设置后的同步长计算；“两个独立请求很慢”，先看第二个是不是等第一个结束才启动；“快速切换后显示旧内容”，先看结果提交有没有校验当前版本。它们都发生在异步流程里，却需要不同的修正。
+
+能逐步说明这些动作之后，就不用靠背诵长串日志顺序来理解异步。Promise 管结果，任务与微任务决定后续代码的安排方式，浏览器调度决定何时继续其他工作；把三者分开，再按实际调用关系连起来，会更容易判断代码。
+
+### 参考与延伸阅读
+
+- [MDN：Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)——状态、结果接纳与组合方法。
+- [MDN：使用微任务](https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide)——任务、微任务与持续排空。
+- [MDN：深入理解微任务](https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide/In_depth)——执行环境与浏览器运行过程。
+- [MDN：await](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await)——恢复时机与异常传播。
+- [MDN：AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController)——给底层操作传递取消意图。
+- [MDN：requestAnimationFrame](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)——与渲染更新协作的边界。

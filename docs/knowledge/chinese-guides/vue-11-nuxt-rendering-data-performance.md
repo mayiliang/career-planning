@@ -2,160 +2,267 @@
 
 ## VUE-11 Nuxt 全栈渲染、数据获取与性能
 
-Nuxt 把 Vue 组件、文件路由、服务端渲染、数据获取、服务端 API 和部署适配器组合为全栈框架。关键不是记住目录，而是理解一段代码在哪里执行、首屏数据如何进入 HTML/payload、客户端如何 hydrate、缓存怎样按身份隔离，以及实验能力和版本升级如何保持稳定回退。
+第一次打开资料页，服务器已经把正文放进 HTML；浏览器接着加载 Vue，让链接和输入框可以交互。为什么这时不应该把同一份正文再请求一遍？为什么两个用户访问相同路径，不能共享私人笔记？Nuxt 的关键就在这次交接以及交接后的状态管理。
+
+本篇从一个完整的公开阅读台出发，依次观察首屏、Hydration 和客户端导航，再讨论私人数据、缓存、错误与部署。公开例子没有登录系统，不把它当成认证方案。
 
 ### 学习前先确认
 
-- 直接前置：[VUE-10 组件测试、性能与生产构建](../chinese-guides/vue-10-testing-performance-production-build.md#vue-10)。它会递归包含 Vue Router、组件、Pinia 相关路径、响应式和异步基础。
+- 直接前置：[VUE-10 组件测试、性能与生产构建](../chinese-guides/vue-10-testing-performance-production-build.md#vue-10)。先理解组件行为、构建产物和浏览器能够验证的范围。
+
+示例按 Nuxt 4.5.2 的目录与 API 编写，使用 Vue 3、Node 22 环境。实施信息核验于 2026-09-09；在线文档可能先展示后续版本标记，遇到新选项要对照实际安装版本。本例不启用实验 streaming。
 
-版本事实核验日期为 2026-08-30：官方 Nuxt 4 文档显示 4.5.2；Nuxt 4.5 发布于 2026-07-18，Nuxt 3 已于 2026-07-31 结束支持。实施时仍须重新核验。
+### 一次打开页面经历三个阶段
+
+**server-side rendering** 在请求时生成 HTML；**hydration** 让客户端 Vue 接管初始 DOM；之后点击站内链接，通常由浏览器完成客户端导航。Nuxt 将首屏数据放进 **payload**，使接管过程可以复用结果。
+
+```text
+直接请求 /lessons?id=a
+  服务器：匹配页面 → 读取资料 → 生成 HTML + payload
+  浏览器：显示 HTML → 读取 payload → Vue 接管交互
+点击资料 B
+  浏览器：导航 → 按新地址读取 B → 更新页面
+```
+
+HTML 与 payload 各有用途：前者让用户先看到内容，后者让客户端知道这些内容依据什么数据生成。payload 不是秘密区，浏览器可以检查它。
+
+如果只测站内点击，就可能漏掉首次响应错误；如果只看服务器 HTML，又看不到按钮接管、重复请求或后续导航的问题。
+
+### 运行位置由入口和阶段决定
+
+通用页面的 setup 可能在服务端和浏览器都执行。server/api 下的处理器属于服务端；客户端插件和 mounted 中的浏览器工作则有另一套生命周期。
+
+| 放在通用 setup 中的工作 | 首屏风险 | 更清楚的安排 |
+| --- | --- | --- |
+| 直接读取 localStorage | 服务器没有该对象 | 挂载后读取，先用一致默认值 |
+| 每次生成随机初始文字 | 两端输出不同 | 通过可序列化状态传递一次结果 |
+| 直接 $fetch 读取初始正文 | 可能两端各读一次 | 使用 Nuxt 数据 composable 交接 |
+| 创建模块级用户 ref | 多请求可能共用 | 在请求对应的 Nuxt 上下文创建 |
+
+Nuxt 的 SSR 与 React Server Components 不是同一协议。代码运行在哪、什么需要在浏览器执行，要看各自框架的入口，而不是只看名称里有没有 server。
+
+### 先创建能完整启动的小项目
+
+在独立 Nuxt 4 项目中安装 nuxt@4.5.2 与 vue，保留 package.json 的 module 模式。下面六个文件组成阅读台；使用 `npx nuxt dev` 开发，或 `npx nuxt build` 后运行 `.output/server/index.mjs` 查看 Node 产物。
+
+根目录 `nuxt.config.ts`：
+
+```ts example=nuxt11-config runtime=project file=nuxt.config.ts
+export default defineNuxtConfig({
+  compatibilityDate: '2026-09-09',
+  devtools: { enabled: false },
+  nitro: { preset: 'node-server' },
+  runtimeConfig: { catalogSecret: '', public: { siteName: 'B08 阅读台' } },
+  routeRules: { '/api/**': { headers: { 'cache-control': 'no-store' } } },
+});
+```
+
+这里保留空的服务端配置字段，用来说明私有与 public 的结构，没有硬编码凭据。实际部署可用 NUXT_CATALOG_SECRET 注入私有值，不能把它移到 public。示例数据来自本地公开记录，不需要这个凭据。
+
+`app/app.vue` 提供一直保留的布局：
+
+```vue example=nuxt11-shell runtime=project file=app/app.vue
+<script setup lang="ts">
+const config = useRuntimeConfig();
+const note = useState('b08-layout-note', () => '');
+</script>
+<template>
+  <main>
+    <header>{{ config.public.siteName }}</header>
+    <nav aria-label="资料导航">
+      <NuxtLink to="/" :prefetch="false">目录</NuxtLink>
+      <NuxtLink to="/lessons?id=a" :prefetch="false">资料 A</NuxtLink>
+      <NuxtLink to="/lessons?id=b" :prefetch="false">资料 B</NuxtLink>
+      <NuxtLink to="/lessons?id=fail" :prefetch="false">故障资料</NuxtLink>
+    </nav>
+    <label>布局临时笔记 <input v-model="note"></label>
+    <NuxtRouteAnnouncer />
+    <NuxtPage />
+  </main>
+</template>
+```
+
+本例关闭链接预取，便于看清每次请求是谁触发的；真实项目可以根据访问概率再启用。useState 在本次 Nuxt 上下文共享笔记并参与首屏交接，但没有写入数据库或浏览器存储，刷新会重新开始。
+
+### API 只返回阅读需要的字段
+
+创建 `server/api/lesson.get.ts`。这是公开只读 API，合法 ID 只有 a、b 和用于观察失败的 fail。内部维护备注留在服务端，返回时明确选择字段。
+
+```ts example=nuxt11-api runtime=project file=server/api/lesson.get.ts
+export default defineEventHandler(event => {
+  const id = getQuery(event).id;
+  if (id === 'fail') throw createError({ statusCode: 503, statusMessage: 'Reading unavailable' });
+  if (id !== 'a' && id !== 'b') throw createError({ statusCode: 404, statusMessage: 'Lesson not found' });
+  const records = {
+    a: { title: '组件协作', body: '先确定数据由谁保存，再安排组件之间的交互。', internalMemo: '仅供编辑维护' },
+    b: { title: '状态分层', body: 'URL、页面草稿和服务器数据各有自己的生命周期。', internalMemo: '仅供编辑维护' },
+  };
+  const record = records[id];
+  return { id, title: record.title, body: record.body };
+});
+```
+
+浏览器调用 `/api/lesson?id=a` 只能得到三个公开字段。客户端 pick、界面不展示字段或 TypeScript 类型限制，都不能替代 API 返回时的这次选择；原始响应如果已经包含内部备注，数据就已经公开。
 
-### 一、先区分 universal、client 与 server 代码
+真实私人接口还要每次认证、按资源授权、限制输入和处理版本冲突。目录名 server/api 只说明运行位置，不会自动实现这些规则。可对照 [服务端主体与输入](../chinese-guides/react-09-compiler-rsc-security-upgrades.md#把服务端操作拆成输入主体资源和版本)。
 
-请求时生成 HTML 是**服务端渲染（server-side rendering）**，浏览器生成主要内容是**客户端渲染（client-side rendering）**，构建时生成页面是**静态站点生成（static site generation）**。Nuxt 把首屏数据序列化为**页面载荷（page payload）**，把服务端私密/公开配置分层为**运行时配置（runtime configuration）**，并可用**路由规则（route rules）**选择每条路由的渲染与缓存策略。
+### 页面用 useFetch 接住首屏结果
 
-页面 setup 可能在首屏服务器执行，也会在客户端 hydrate/导航；`.client` 插件只在浏览器，`.server` 只在服务端；server routes 在 Nitro 端执行。直接在通用 setup 读 window/localStorage 会使 SSR 失败或首屏不一致。
+`app/pages/index.vue`：
+
+```vue example=nuxt11-index runtime=project file=app/pages/index.vue
+<script setup lang="ts">
+useHead({ title: '阅读目录' });
+</script>
+<template><section><h1>阅读目录</h1><p>从上方打开资料，比较直接访问与站内导航。</p></section></template>
+```
 
-秘密只能进入服务端 runtimeConfig 私有部分。公开 runtimeConfig/public 和任何序列化 payload 都会被客户端看到。
+`app/pages/lessons.vue`：
 
-### 二、SSR、CSR、预渲染与混合路由
+```vue example=nuxt11-lesson runtime=project file=app/pages/lessons.vue
+<script setup lang="ts">
+definePageMeta({
+  validate: route => typeof route.query.id === 'string' && ['a', 'b', 'fail'].includes(route.query.id)
+    ? true : { statusCode: 404, statusMessage: 'Lesson not found' },
+});
+const route = useRoute();
+const id = computed(() => typeof route.query.id === 'string' ? route.query.id : '');
+const { data, status, error, refresh } = await useFetch(() => `/api/lesson?id=${encodeURIComponent(id.value)}`);
+useHead({ title: () => data.value?.title ?? '资料暂不可读' });
+</script>
+<template>
+  <section :aria-busy="status === 'pending'">
+    <p v-if="status === 'pending'" role="status">正在读取资料</p>
+    <div v-else-if="error">
+      <h1>资料暂不可读</h1><p role="alert">读取失败，布局笔记仍然保留。</p>
+      <button @click="refresh()">重新读取</button>
+    </div>
+    <template v-else-if="data"><h1>{{ data.title }}</h1><p>{{ data.body }}</p></template>
+    <p v-else>尚无资料</p>
+  </section>
+</template>
+```
 
-例如公开且每天更新的文档列表适合预渲染并定期失效，个性化控制台适合按请求 SSR，强交互编辑器可以在受控壳内客户端渲染。选择条件来自内容公开性、新鲜度、服务器成本与交互需求，而不是全站只用一种模式。
+最后创建 `app/error.vue`，处理不存在的页面等全局错误：
 
-SSR 每请求生成 HTML，适合个性化/新鲜内容但增加服务器和缓存复杂度；CSR 由浏览器获取/渲染；预渲染在构建时生成稳定公开页面；route rules 可按路径组合缓存、ISR 或客户端模式。
+```vue example=nuxt11-error runtime=project file=app/error.vue
+<script setup lang="ts">
+import type { NuxtError } from '#app';
+defineProps<{ error: NuxtError }>();
+</script>
+<template>
+  <main>
+    <h1>{{ error.statusCode === 404 ? '资料或页面不存在' : '页面暂时无法打开' }}</h1>
+    <p>可以返回目录重新选择。</p>
+    <button @click="clearError({ redirect: '/' })">返回阅读目录</button>
+  </main>
+</template>
+```
 
-选择基于 SEO、首屏、个性化、新鲜度、成本和故障恢复，不是“SSR 一定更快”。同一应用可混合，但每种 route 需要明确数据与缓存合同。
+直接打开 `/lessons?id=a`，查看原始响应：HTML 中已包含“组件协作”。浏览器接管时复用 payload，正常情况下不会再为同一首屏补发一个重复 API 请求。输入布局笔记，再点 B：正文变为状态分层，布局笔记仍在。
 
-### 三、Hydration 接管服务器 HTML
+点故障资料，页面局部显示读取失败；重试仍可能失败，因为本例 fail 一直返回 503。改选 A 可以继续阅读。直接访问非法 ID 则由页面 validate 进入 404；API 自己也验证 ID，页面检查没有替代它。
 
-客户端 Vue 使用相同组件和初始数据连接服务器 DOM，这叫**水合（hydration）**。服务器与客户端首次输出不一致会出现 warning、DOM 修补、状态丢失或事件错位。
+该演示的 query 承载资料身份，便于并排观察；实际也可以用 app/pages/lessons/[id].vue 表达路径参数。无论采用哪种文件约定，都要处理重复参数、缺失值和非法输入。
 
-常见原因：当前时间/随机数、浏览器专属条件、无效 HTML、模块级状态、身份缓存串请求。应提供确定输入，在 mounted 后再显示客户端专属信息，不能通过关闭 warning 掩盖。
+### useFetch useAsyncData 与 fetch 各有合适位置
 
-### 四、`useFetch`/`useAsyncData` 避免首屏重复请求
+**useFetch** 连接 URL、请求选项和 Nuxt 数据交接；**useAsyncData** 适合自定义读取过程；**$fetch** 是底层请求工具，常用于事件提交或服务端内部调用。它们不是同义词。
 
-Nuxt 在服务器获取数据，将结果序列化进 payload，客户端 hydrate 时按 key 复用，避免 `$fetch` 在 setup 中服务器一次、客户端又一次。
+在通用 setup 中直接 await $fetch，服务器读完以后，浏览器再次执行 setup 时可能又读一次。useFetch/useAsyncData 把结果交给 payload，让接管阶段知道已有结果。之后的 refresh、参数变化和显式重取仍可能发请求，“避免首屏重复”不等于“永远只请求一次”。
 
-`useFetch` 适合基于 URL 的请求；`useAsyncData` 适合任意异步逻辑和更细控制；`$fetch` 适合事件动作或服务端内部调用。它们不是同义别名。
+自定义 handler 应返回有意义的值；用 undefined/null 表示“工作完成但没有数据”可能造成接管时再次获取。没有条目时可以返回 `{ items: [] }` 这样的明确结果。保存、发送邮件或累加计数也不适合放在可能重跑的读取 handler 中。
 
-### 五、数据 key 是缓存身份合同
+### 数据 key 标识结果不承担授权
 
-同 key 的 useAsyncData/useFetch 可能共享 data/error/status；选项不一致会产生难以理解行为。key 应包含影响结果的稳定参数，并在个性化场景包含适当身份/租户范围。
+一个 key 应说明是哪份数据。例如公开资料 a 与 b 应不同，私人笔记还要考虑账号或租户范围。不能把所有页面都叫 detail，再期待框架猜出区别。
 
-不要把 token 本身拼进 key 或日志。服务端可从请求上下文取得身份，用不可逆稳定范围标识；公共与私有缓存明确分开。
+```js example=nuxt11-key-identity
+function noteKey(account, lesson) {
+  return JSON.stringify(['private-note', account, lesson]);
+}
+console.log(noteKey('u1', 'a')); // => ["private-note","u1","a"]
+console.log(noteKey('u2', 'a')); // => ["private-note","u2","a"]
+console.log(noteKey('u1', 'a') === noteKey('u1', 'b')); // => false
+```
 
-### 六、Payload 只包含客户端需要的数据
+这是身份命名示例，不是认证实现。客户端即使改成 u2 的 key，也不能取得 u2 的私人数据，授权仍在服务端。不要把 cookie 或 token 拼进 key。
 
-payload 允许客户端接管而不重取，但任何内容都到浏览器。只返回 DTO，删除数据库字段、内部错误、token 和权限细节。检查生成 HTML/payload/网络，而不是相信 TypeScript private 名称。
+useFetch 会根据 URL 与相关选项生成 key；本例让 URL 随规范 ID 变化。useAsyncData 可以显式使用响应式 key。多个调用共享 key 时，应保持 handler、转换和数据选项一致；默认浅层数据也不意味着任意嵌套修改都会触发更新。
 
-序列化支持范围取决于 Nuxt/devalue 与 server API JSON 路径，Date/Map 等在不同路径可能不同。跨边界使用明确 DTO 和解析，避免类实例方法在客户端消失。
+refresh 是重新读取，clear 是清理对应异步状态，它们都不自动清空所有 HTTP、CDN 或数据库缓存。登录、注销与租户切换需要明确清理哪些私人数据，不能只给当前页面换个 key 就认为旧记录消失了。
 
-### 七、请求头转发必须白名单思维
+### Hydration 需要两端从相同输入开始
 
-服务端 useFetch 可转发部分用户 headers/cookie 给同源 API，但不应把任意 host、连接头或内部凭据传向外部 URL。服务端 API 根据会话授权，不能相信客户端传入 userId。
+服务端显示“第 3 页”，客户端第一次却显示“第 1 页”，可能导致修补、闪动或交互状态丢失。常见来源包括时区、随机数、浏览器存储、无效嵌套 HTML，以及服务端串用另一个请求的状态。
 
-外部请求使用专门 server service，限制目标域、超时、重试和响应大小，防 SSRF。错误对客户端脱敏，对服务端日志保留关联 ID。
+例如系统主题只存在 localStorage 时，服务端无法直接知道。可以先用相同默认值，挂载后更新；也可以在合适的请求数据中提供确定的主题。选择哪种取决于首屏体验和可用输入，而不是关闭警告。
 
-### 八、状态必须每请求隔离
+ClientOnly 可以隔开浏览器专属区域，但不应把整页搬进其中来掩盖交接问题。它也不会自动降低所有 JavaScript 成本，首屏内容与交互可用时间仍需分别看。
 
-模块级 ref/reactive/store 在长生命周期服务器中可能跨请求共享。使用 Nuxt `useState` 的唯一 key 或每请求 Pinia 实例，并保证默认工厂不复用可变对象。
+### SSR CSR 与预渲染按内容选择
 
-认证/租户切换要清理客户端缓存；服务端缓存 key 必须包含权限上下文。用两个并发身份测试 HTML/payload，证明不串数据。
+公开帮助文档更新较少，预渲染可能合适；个人学习台依赖当前身份，需要明确的私有读取；重交互编辑器也可以选择客户端工作更重的结构。不是每条路径都必须采用同一种策略。
 
-### 九、缓存从内容公开性开始设计
+| 策略 | 主要生成时间 | 要回答的问题 |
+| --- | --- | --- |
+| SSR | 请求到达时 | 数据读取多慢，是否会共享私人结果 |
+| CSR | 浏览器运行时 | 等待 JS 和数据期间显示什么 |
+| 预渲染 | 构建或生成时 | 内容多久更新，哪些路径需要生成 |
+| 混合路由 | 按路径约定 | 新路径是否落入正确规则 |
 
-公开文章可共享 CDN/route 缓存；用户订单不能按 URL 全局缓存。缓存合同包含 key、TTL、stale、失效、错误缓存、身份和部署版本。
+route rules 可以安排路径的渲染和缓存，但不能代替 API 授权。静态生成只有生成结果，不会凭空在静态托管平台运行 server/api；要么数据已经包含在静态结果中，要么另有可访问的服务。
 
-ISR/边缘缓存提高性能但可能服务旧内容。写操作后如何 revalidate、权限变化何时失效、旧版本 schema 是否兼容必须明确。Cache-Control 也是安全边界。
+### 缓存先分公开与私人再谈命中率
 
-### 十、客户端导航与首屏时序不同
+公开文章可以按资料身份共享；私人页面不能只按 `/dashboard` 这个 URL 缓存给所有用户。缓存约定至少包括身份范围、新鲜度、可接受陈旧时间、写入后的失效和错误是否可缓存。
 
-首屏服务器等待数据并输出 HTML；客户端导航可阻塞直到数据就绪，或 lazy 显示 pending。选择应根据是否可保留旧页面、目标数据是否关键和用户是否能取消。
+Nitro 缓存、CDN 缓存、浏览器 HTTP 缓存和 Nuxt 数据状态并不是同一个存储。某层禁止缓存，不证明其他层也没有保存响应。尤其 HTML 与 payload 都可能含个性化信息，要一起检查。
 
-同一页面测试地址栏首屏与应用内导航，比较请求次数、payload 和 DOM。只测试其中一种会漏掉重复请求或 hydration 差异。
+不要在服务器模块顶层创建可变的用户 ref、Pinia 或 router 单例。useState 的调用应在本次 Nuxt 上下文中；声明一个工厂函数与把每个用户共用的实例放到顶层，是不同做法。相关实例寿命见 [Pinia](../chinese-guides/vue-08-pinia-state-layers.md#跨-store-调用与-ssr-需要明确实例)。
 
-### 十一、Server Routes 形成可信 API 边界
+### 私有配置与请求头都需要明确出口
 
-`server/api`/`server/routes` 在服务端执行，可访问私有配置和数据库。每个 handler 解析 unknown 输入、认证、授权、限制资源、调用领域服务并返回最小 DTO。
+**runtime configuration** 中 public 部分可在客户端使用，私有字段只应由服务端读取。服务端把私有值返回给页面，仍然会造成公开；“原本存在哪里”不能替代“最后发给了谁”的判断。
 
-文件路由方便不等于安全。写操作需要 CSRF/来源策略、幂等、版本冲突和审计；错误不返回堆栈。客户端隐藏按钮不能替代这些检查。
+Nuxt 在服务端对相对 URL 使用 useFetch 时，可通过请求上下文转发适当的请求头和 cookie。底层 $fetch 或外部 URL 不是完全相同的情况；不要把全部请求头和内部凭据顺手转给任意外域。
 
-### 十二、错误页要覆盖服务端与客户端
+实际外部数据服务应限制目标、超时和响应范围。服务端输入中的 userId、role 和目标 URL 都需要独立校验。这个公开阅读台没有用户会话，因此只能说明交接和最小返回字段，不能证明双身份授权正确。
 
-服务器 render 失败、useFetch 错误、客户端 hydration 错误和导航 chunk 失败需要不同诊断。Nuxt error page 应有安全消息、状态码、返回/重试和可访问焦点。
+### 错误状态与 HTTP 状态要分别安排
 
-全局错误恢复不要陷入循环；清除错误后目标 route 仍坏时应提供稳定退出。日志关联 request/build/route，脱敏 payload。
+本例 API 对故障返回 503，但页面选择把失败作为局部结果展示，页面 HTML 响应不因此自动变成 503。非法页面身份则由 validate 进入全局 404。API 状态、页面响应状态和可见文案是三个相关但不同的决定。
 
-### 十三、性能要看 HTML、Payload、JS 和服务器
+useFetch 的 error 可以留在当前布局处理，严重页面错误可以进入 error.vue。clearError 的跳转要有可靠目的地；如果仍回到坏地址，无限自动重试只会制造更多等待。
 
-SSR 可改善首个内容但服务器慢会增加 TTFB；大 payload/JS 会拖慢 hydration；过多客户端组件增加交互成本。分别测 server timing、HTML/payload 大小、JS、LCP/INP、hydration 和客户端导航。
+NuxtRouteAnnouncer 提供页面位置公告，useHead 更新标题；它们不代替所有焦点与滚动设计。query 切换是否应该抢焦点，需要按实际任务决定。
 
-使用同一 route 在冷/热缓存、匿名/登录和移动设备对比。优化一层不应让另一层退化。
+### 性能要把服务器和浏览器连起来看
 
-### 十四、懒水合与流式能力要按稳定级别采用
+更早收到 HTML，不代表更早可以操作。服务器数据慢会提高首字节等待，payload 过大会增加传输和解析，客户端 JS 与 Hydration 仍可能占用主线程。
 
-Vue 3.5 异步组件支持不同 hydration 策略，Nuxt 4.5 推进实验 SSR streaming。它们能推迟工作或逐步发送，但改变事件重放、代理 buffering、错误与缓存时序。
+用同一路径比较直接打开和站内导航，先确认请求数量、响应大小和等待位置，再决定优化。懒水合可以推迟非关键区域接管，但要处理用户提前操作的行为；流式可以逐步发送内容，但代理缓冲和平台超时可能改变效果。
 
-实验能力不作为唯一生产路径。建立 feature flag 和稳定 SSR 回退，在真实 CDN/代理验证 chunk、断线、错误和可访问性；升级时重新核对 API。
+实验 streaming 的支持级别应按实际 Nuxt 版本核对。本例保留稳定 SSR，未验证流式代理。已经开始发送响应后，错误状态码与 fallback 的处理也有额外限制，不能照搬一次性响应。
 
-### 十五、Nuxt 4.5 的版本边界
+### 版本与部署要以当前制品为依据
 
-官方 4.5 发布说明包含 Vite 8、Rspack 2、unhead v3、实验 streaming、稳定错误码和面向 Nuxt 5 的 groundwork。升级可能暴露 Vite 插件、Rspack 自定义配置和更严格 useHead 类型变化。
+截至本次核验，官方 v4.5.2 发布页标记该补丁版本；本文固定它作为可复现例子，不把在线文档里标注更高版本的选项混入代码。Nuxt 3 的官方支持延长到 2026-07-31，旧项目应依据实际依赖安排迁移。
 
-截至核验日文档为 4.5.2。不要把 4.5.0 当安全/稳定终点；补丁与安全公告要看锁文件中的 Nuxt、devtools 和传递依赖组合。
+2026-07-27 的官方安全说明要求 Nuxt 4.5.1 / 3.21.10 及相关 devtools 修补，说明只处理更早公告可能仍不够。顶层版本、devtools、模块、Nitro 和制品中的真实依赖都需要核对；不把某个历史补丁当成覆盖未来漏洞的结论。
 
-### 十六、Nuxt 3 EOL 意味着迁移责任
+**Nitro preset** 决定目标运行环境。Node、边缘、serverless 与静态托管的文件系统、连接、后台任务、流式和超时不同。本机 Node 产物能运行，并不证明任意平台都支持同样行为。
 
-Nuxt 3 在 2026-07-31 EOL 后不应继续作为无计划生产基线。迁移先升级到受支持末端、清理弃用、运行 compatibility、再迁 Nuxt 4；记录 module 兼容、目录变化、Node 基线、构建和部署适配器。
+升级尽量分清安全修补、框架迁移和业务重构。保留兼容的资源和回退路径，安全回滚也应保留必要修补，不能重新部署已知受影响的旧依赖。
 
-无法立即迁移时要有风险接受、隔离、监控和明确截止，不把“还能运行”当受支持。
+### 参考与延伸阅读
 
-### 十七、安全升级核对实际依赖树
-
-顶层 Nuxt 版本不足以证明安全。检查 lockfile/why、构建制品、Nitro preset 和 devtools/模块。官方安全公告可能要求特定组合，升级后跑 server/API、SSR、payload、build 和 E2E。
-
-生产 devtools 不应暴露内部信息；source map、runtime config 和 payload 都要扫描。保持可执行回滚，但不能回退到已知漏洞版本。
-
-### 十八、部署适配器决定运行能力
-
-Node server、serverless、edge 与静态托管对文件系统、连接、流式、缓存和超时不同。选择 Nitro preset 后在目标环境验证，而不是只本地 node preview。
-
-长连接、后台任务和大响应可能不适合某平台。反向代理需正确传递 header、流式与客户端断开；健康检查不依赖私人页面。
-
-### 十九、测试三阶段与双身份
-
-对同一路由记录：首屏 HTML/响应；payload 与 hydration；客户端导航网络。用匿名/登录两身份并发，检查缓存 key、数据和 private token。注入服务失败、payload 不一致、旧 chunk 和实验 streaming 关闭。
-
-断言页面内容、请求次数、console hydration warning、焦点/路由播报、产物秘密扫描和服务器日志。所有证据关联同一 build/lockfile。
-
-### 二十、全栈边界审查问题
-
-代码在哪运行？数据由谁拥有？什么进入客户端？缓存按谁隔离？首屏与导航是否重复？未知输入在哪里解析？服务器在哪里授权？实验能力怎样关闭？版本/制品怎样回滚？回答不完整就不应仅凭页面可打开宣称全栈正确。
-
-### 二十一、Runtime Config 要区分服务端秘密与公开配置
-
-私密 runtime config 只在服务器读取；进入 public 区域的值会被序列化给客户端，必须视为公开。部署平台通过受控环境注入，启动时验证必需字段、格式和允许 URL，日志只输出是否存在与安全摘要。
-
-不要把整个 process environment 展开进 payload，也不要让客户端决定内部 API 地址或权限。密钥轮换后验证新实例、旧实例和回滚版本的兼容，并确保构建制品/source map 不包含历史值。
-
-### 二十二、Route Rules 把缓存和渲染选择变成可审查配置
-
-不同路由可选择预渲染、SSR、客户端渲染、缓存或代理规则。先按内容是否公开、个性化程度、更新频率和容忍陈旧时间分类，再设置规则。过宽通配可能把账号页缓存为公开，过细规则又可能在新 route 上失去保护。
-
-用匿名/两名用户和冷/热请求验证响应、缓存 header 与 HTML/payload；配置变更纳入代码审查和回滚。CDN 缓存、Nitro 缓存和数据源缓存必须分别记录 key 与失效责任。
-
-### 二十三、流式渲染会把失败与代理能力暴露得更早
-
-流式响应可以先发送外壳，再揭示慢边界，但代理缓冲、serverless 超时或客户端断开可能让效果消失。首字节变快不代表完成时间变快；同时测 TTFB、关键内容、可交互和服务器资源。
-
-流中失败需要已发送 HTML 的安全 fallback，不能再随意改状态码。敏感错误不进入流，取消后停止下游工作。实验能力通过 route/环境开关灰度，并保留非流式路径。
-
-### 二十四、可观测性要贯穿一次服务端请求与客户端导航
-
-为请求、payload、客户端 hydration 和后续 API 建立关联 ID，记录 route、缓存命中、数据源耗时、build 与安全的用户/租户标识。浏览器错误与服务器日志能沿同一链汇合，才可定位重复取数、串缓存或 hydration 失败。
-
-指标按匿名/登录、地区、设备与发布版本分层，但避免高基数字段和个人数据。告警对应用户影响与回滚阈值，而不是每个单次异常都制造噪音。
-
-### 学完后应能说明
-
-你应能比较 SSR/CSR/预渲染/混合，画出服务端取数—payload—hydration—客户端导航时序，设计身份隔离的 key/cache，保护 Server Route 与私密配置，测量全链性能，并按官方版本、依赖树和稳定回退治理 Nuxt 升级。
+- [Nuxt：Data Fetching](https://nuxt.com/docs/4.x/getting-started/data-fetching)：查首屏数据如何交接。
+- [Nuxt：useFetch](https://nuxt.com/docs/4.x/api/composables/use-fetch)：查 URL、响应式选项和 key。
+- [Nuxt：useAsyncData](https://nuxt.com/docs/4.x/api/composables/use-async-data)：查共享状态、handler 与版本标记。
+- [Nuxt：State Management](https://nuxt.com/docs/4.x/getting-started/state-management)：查请求状态与 useState。
+- [Vue：SSR](https://cn.vuejs.org/guide/scaling-up/ssr.html)：理解 Hydration 和跨请求状态。
+- [Nuxt 4.5.2 发布记录](https://github.com/nuxt/nuxt/releases/tag/v4.5.2)：核对本文示例版本。
+- [Nuxt 2026-07 安全说明](https://nuxt.com/blog/v4-5-security)：核对 Nuxt 与 devtools 的相关修补。
+- [Nuxt 3 支持期限说明](https://github.com/nuxt/nuxt/discussions/33918)：核对维护期限变更。
+- [Nuxt：Deployment](https://nuxt.com/docs/4.x/getting-started/deployment)：查产物和目标平台要求。

@@ -4,15 +4,24 @@ import { useRoute, useRouter } from 'vue-router';
 import { apiClient } from '@/api/client';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { extractMarkdownHeadings } from '@/utils/markdown';
+import { chapterConnections, chapterHref, findLearningBatch, findLearningChapter, learningMaterialCatalogs } from '@/content/learning-material-catalog';
+import { announceMaterialReady } from '@/utils/material-navigation';
 
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
 const error = ref('');
 const material = ref<Awaited<ReturnType<typeof apiClient.getKnowledgeMaterial>> | null>(null);
+const chapter = computed(() => findLearningChapter(material.value?.guide ?? ''));
+const batch = computed(() => findLearningBatch(material.value?.guide ?? ''));
+const connections = computed(() => chapter.value ? chapterConnections(chapter.value) : []);
+const chapterIndex = computed(() => batch.value?.chapters.findIndex((item) => item.guide === chapter.value?.guide) ?? -1);
+const previousChapter = computed(() => batch.value?.chapters[chapterIndex.value - 1]);
+const nextChapter = computed(() => batch.value?.chapters[chapterIndex.value + 1]);
 const readerRoot = ref<HTMLElement | null>(null);
 const activeHeading = ref('');
 const readingProgress = ref(0);
+const sectionVisit = ref(false);
 const tocOpen = ref(false);
 const copied = ref(false);
 const pronunciationFeedback = ref('');
@@ -459,11 +468,11 @@ const readingStateLabel = computed(() => currentReading.value.completed
   : currentReading.value.progressPercent > 0
     ? `已读 ${currentReading.value.progressPercent}%`
     : '未读');
-const materialDescription = computed(() => isAtomicPrerequisite.value
+const materialDescription = computed(() => chapter.value?.summary ?? (isAtomicPrerequisite.value
   ? '这是一份只解释一个前置概念的短文。读懂后可按文末链接返回相关知识点，不会把多个领域术语混在一起。'
   : isScopedMainGuide.value
     ? '这份讲义围绕知识点本身展开；所需前置在正文头部按需列出，练习与挑战不决定讲义结构。'
-    : '当前页只呈现这个知识点对应的 Markdown 章节，资料、练习与掌握挑战使用同一学习边界。');
+    : '当前页只呈现这个知识点对应的 Markdown 章节，资料、练习与掌握挑战使用同一学习边界。'));
 const materialKind = computed(() => isBeginnerGuide.value ? '阅读辅助' : isAtomicPrerequisite.value ? '前置知识短文' : '知识点主讲义');
 
 async function load() {
@@ -474,6 +483,7 @@ async function load() {
   try {
     const guide = String(route.params.guide ?? '');
     const anchor = String(route.params.anchor ?? '');
+    sectionVisit.value = Boolean(findLearningChapter(guide) && route.hash);
     const [materialData, readingRecords] = await Promise.all([
       apiClient.getKnowledgeMaterial(guide, anchor),
       pronunciationBatchByGuide.has(guide) ? apiClient.getMaterialReadingProgress() : Promise.resolve([]),
@@ -486,10 +496,15 @@ async function load() {
     error.value = reason instanceof Error ? reason.message : '学习资料加载失败';
   } finally {
     loading.value = false;
+    if (error.value) {
+      await nextTick();
+      announceMaterialReady(route.path);
+    }
   }
 }
 
 function updateReadingProgress() {
+  if (sectionVisit.value) return;
   const root = readerRoot.value;
   const markdownRoot = root?.querySelector<HTMLElement>('.markdown-body');
   if (!root || !markdownRoot) return;
@@ -581,8 +596,6 @@ function observeHeadings() {
     const element = readerRoot.value?.querySelector<HTMLElement>(`#${CSS.escape(heading.id)}`);
     if (element) headingObserver.observe(element);
   }
-  const targetId = decodeURIComponent(route.hash.replace(/^#/, ''));
-  if (targetId) window.setTimeout(() => scrollToHeading(targetId), 0);
   updateReadingProgress();
 }
 
@@ -695,10 +708,20 @@ async function playPronunciation(button: HTMLButtonElement) {
 function handleReaderClick(event: MouseEvent) {
   const target = event.target instanceof Element ? event.target : null;
   const button = target?.closest<HTMLButtonElement>('.pronunciation-button');
-  if (!button || !readerRoot.value?.contains(button)) return;
+  if (button && readerRoot.value?.contains(button)) {
+    event.preventDefault();
+    event.stopPropagation();
+    void playPronunciation(button);
+    return;
+  }
+  const link = target?.closest<HTMLAnchorElement>('a');
+  if (!link || !readerRoot.value?.contains(link) || event.defaultPrevented || event.button !== 0
+    || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank' || link.hasAttribute('download')) return;
+  const href = link.getAttribute('href') ?? '';
+  if (!href.startsWith('/knowledge/materials/') && !href.startsWith('#')) return;
   event.preventDefault();
-  event.stopPropagation();
-  void playPronunciation(button);
+  void flushReadingProgressSave();
+  void router.push(href.startsWith('#') ? `${route.path}${href}` : href);
 }
 
 function handleRendered() {
@@ -715,6 +738,10 @@ function handleRendered() {
         pronunciationFeedback.value = reason instanceof Error ? reason.message : '发音资源加载失败';
       }
     }
+    if (readerRoot.value && material.value?.guide === guide) {
+      readerRoot.value.dataset.readerReady = 'true';
+      announceMaterialReady(route.path);
+    }
   });
 }
 
@@ -723,8 +750,21 @@ function scrollToHeading(id: string) {
   if (!element) return;
   activeHeading.value = id;
   tocOpen.value = false;
-  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  window.history.replaceState(window.history.state, '', `${route.path}#${encodeURIComponent(id)}`);
+  if (route.hash === `#${encodeURIComponent(id)}` || route.hash === `#${id}`) {
+    element.scrollIntoView({ behavior: 'instant', block: 'start' });
+  } else {
+    void router.replace({ hash: `#${id}` });
+  }
+}
+
+function returnToReading() {
+  if (window.history.state?.back) router.back();
+  else void router.push(chapter.value ? `/knowledge/${chapter.value.id}` : '/knowledge');
+}
+
+function readFromStart() {
+  sectionVisit.value = false;
+  void router.replace({ hash: '' });
 }
 
 async function copyPageLink() {
@@ -768,11 +808,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="material-page" :class="{ 'without-toc': Boolean(material) && headings.length === 0 }">
+  <main class="material-page" :class="{ 'without-toc': Boolean(material) && headings.length === 0, 'is-catalog': Boolean(chapter) }">
     <div class="reading-progress" aria-hidden="true"><i :style="{ width: `${readingProgress}%` }"></i></div>
     <nav class="page-actions" aria-label="讲义操作">
-      <button class="back-link" type="button" @click="router.back()">← 返回知识点</button>
+      <button class="back-link" type="button" @click="returnToReading">← 返回上一页</button>
       <div>
+        <button v-if="sectionVisit" type="button" @click="readFromStart">从头阅读本篇</button>
         <button v-if="!isBeginnerGuide && !usesLinkedPrerequisites" type="button" @click="openBeginnerGuide">初学者术语讲义</button>
         <button type="button" @click="copyPageLink">{{ copied ? '链接已复制' : '复制本页链接' }}</button>
       </div>
@@ -782,16 +823,29 @@ onBeforeUnmount(() => {
     <div v-else-if="error" class="state-panel error" role="alert">{{ error }}</div>
 
     <template v-else-if="material">
+      <nav v-if="chapter && batch" class="batch-switch" aria-label="切换学习批次">
+        <RouterLink v-for="item in learningMaterialCatalogs" :key="item.batch" :to="chapterHref(item.chapters[0]!)" :aria-current="item.batch === batch.batch ? 'true' : undefined">{{ item.batch }}</RouterLink>
+      </nav>
+      <nav v-if="chapter && batch" class="batch-path" :aria-label="`${batch.batch} 阅读路线`">
+        <div><span>{{ batch.batch }} · 核心路线</span><strong>{{ batch.title }}</strong></div>
+        <ol :style="{ '--chapter-count': batch.chapters.length }">
+          <li v-for="(item, index) in batch.chapters" :key="item.id">
+            <RouterLink :to="chapterHref(item)" :aria-current="item.id === chapter.id ? 'page' : undefined">
+              <span>{{ String(index + 1).padStart(2, '0') }}</span><div><small>{{ item.id }}</small><strong>{{ item.title }}</strong></div>
+            </RouterLink>
+          </li>
+        </ol>
+      </nav>
       <header class="material-hero">
         <div>
-          <p>站内中文讲义 <span>·</span> {{ material.anchor.toUpperCase() }}</p>
+          <p>{{ chapter && batch ? `${batch.batch} · 第 ${chapterIndex + 1} / ${batch.chapters.length} 篇` : '站内中文讲义' }} <span>·</span> {{ material.anchor.toUpperCase() }}</p>
           <h1>{{ material.title }}</h1>
           <span>{{ materialDescription }}</span>
         </div>
         <dl>
           <div><dt>预计阅读</dt><dd>{{ readingMinutes }} 分钟</dd></div>
-          <div><dt>正文规模</dt><dd>{{ characterCount.toLocaleString('zh-CN') }} 字</dd></div>
-          <div><dt>内容定位</dt><dd>{{ materialKind }}</dd></div>
+          <div v-if="!chapter"><dt>正文规模</dt><dd>{{ characterCount.toLocaleString('zh-CN') }} 字</dd></div>
+          <div v-if="!chapter"><dt>内容定位</dt><dd>{{ materialKind }}</dd></div>
           <div v-if="tracksReadingProgress" class="reading-state" :data-state="currentReading.completed ? 'completed' : currentReading.progressPercent > 0 ? 'reading' : 'unread'"><dt>阅读状态</dt><dd>{{ readingStateLabel }}</dd></div>
         </dl>
       </header>
@@ -803,6 +857,10 @@ onBeforeUnmount(() => {
       <div class="reading-layout" :class="{ 'toc-open': tocOpen, 'has-toc': headings.length > 0 }">
         <aside v-if="headings.length" class="toc-rail" aria-label="本页目录">
           <small>本页目录</small>
+          <div v-if="sectionVisit" class="section-visit-note">
+            <span>正在查阅相关小节</span>
+            <button type="button" @click="readFromStart">从头阅读本篇 →</button>
+          </div>
           <nav>
             <button
               v-for="heading in headings"
@@ -814,22 +872,39 @@ onBeforeUnmount(() => {
           </nav>
         </aside>
 
-        <article ref="readerRoot" class="material-sheet" @click="handleReaderClick">
-          <div class="sheet-note">
+        <article ref="readerRoot" class="material-sheet" :data-material-path="route.path" @click="handleReaderClick">
+          <div v-if="chapter" class="chapter-intro">
+            <span>这一篇，读懂一个问题</span>
+            <h2>{{ chapter.question }}</h2>
+            <ul><li v-for="outcome in chapter.outcomes" :key="outcome">{{ outcome }}</li></ul>
+          </div>
+          <div v-else class="sheet-note">
             <strong>{{ isBeginnerGuide ? '这是一份阅读辅助' : isAtomicPrerequisite ? '只补当前需要的一个台阶' : '先理解，再复现' }}</strong>
             <span>{{ isBeginnerGuide ? '用于补齐陌生术语和隐含前置知识，不单独作为考核题源。' : isAtomicPrerequisite ? '读懂定义和最小示例后，沿文末链接回到原知识点；不需要继续阅读无关术语。' : '建议先读机制与边界，再运行示例，并保留日志、截图或测试结果作为学习证据。' }}</span>
           </div>
           <MarkdownRenderer class="reader-content" :source="material.markdown" @rendered="handleRendered" />
+          <nav v-if="chapter" class="chapter-pagination" aria-label="继续学习">
+            <RouterLink v-if="previousChapter" :to="chapterHref(previousChapter)"><small>← 上一篇</small><strong>{{ previousChapter.title }}</strong></RouterLink>
+            <RouterLink v-if="nextChapter" :to="chapterHref(nextChapter)"><small>接着读 →</small><strong>{{ nextChapter.title }}</strong></RouterLink>
+            <RouterLink v-else :to="`/knowledge/${chapter.id}`"><small>{{ batch?.batch }} · 最后一篇</small><strong>返回知识点，整理理解 →</strong></RouterLink>
+          </nav>
           <footer>
-            <span>{{ currentReading.completed ? '本资料已自动标记为看完' : '正文阅读超过 80% 后会自动标记为看完' }}</span>
-            <button type="button" @click="router.back()">带着理解返回知识点 →</button>
+            <span>{{ sectionVisit ? '本次查阅小节，不改变整篇阅读进度' : currentReading.completed ? '本资料已自动标记为看完' : '正文阅读超过 80% 后会自动标记为看完' }}</span>
+            <button type="button" @click="returnToReading">返回上一页 →</button>
           </footer>
           <span class="pronunciation-feedback" aria-live="polite">{{ pronunciationFeedback }}</span>
           <span class="reading-save-feedback" aria-live="polite">{{ readingSaveFeedback }}</span>
         </article>
 
         <aside class="support-rail">
-          <section>
+          <section v-if="chapter" class="concept-connections">
+            <small>知识连接</small>
+            <p>遇到疑惑时，跳到相关小节。返回后继续刚才的阅读。</p>
+            <RouterLink v-for="connection in connections" :key="connection.concept" :to="connection.href">
+              <small>{{ connection.chapterId }}</small><strong>{{ connection.title }} ↗</strong><span>{{ connection.reason }}</span>
+            </RouterLink>
+          </section>
+          <section v-else>
             <small>阅读方法</small>
             <ol>
               <li>先用自己的话解释“是什么”。</li>
@@ -844,7 +919,7 @@ onBeforeUnmount(() => {
             <p>术语讲义会同时保留中文译名与英文原名，并解释它在代码、练习和排错中的实际作用。</p>
             <button type="button" @click="openBeginnerGuide">打开初学者术语讲义 →</button>
           </section>
-          <section>
+          <section v-if="!chapter">
             <small>考核边界</small>
             <p>阅读辅助不扩张知识点范围。挑战仍只依据知识点明确列出的资料、题目输入和交付物评分。</p>
           </section>
@@ -855,6 +930,13 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.batch-switch{display:flex;justify-content:flex-end;gap:6px;margin:0 0 12px}.batch-switch a{padding:6px 13px;border:1px solid #dce5df;border-radius:8px;color:#65736d;background:#ffffffb3;text-decoration:none;font-size:.75rem}.batch-switch a[aria-current=true]{color:#165e4c;border-color:#82aa9b;background:#eaf5ef}.batch-switch a:hover{background:#fff;border-color:#83ad9f}.batch-switch a:focus-visible{outline:2px solid #2c8068;outline-offset:3px}
+.section-visit-note{display:grid;gap:4px;margin:0 10px 14px 0;padding:10px;border:1px solid #cfe1d5;border-radius:9px;background:#eef7f1}.section-visit-note span{font-size:.7rem;color:#60796b}.section-visit-note button{padding-left:0;color:#23684d;font-weight:650}
+.is-catalog .material-hero dl:has(.reading-state){grid-template-columns:repeat(2,minmax(92px,1fr))}
+@media(max-width:800px){.is-catalog .page-actions{display:flex;align-items:center;gap:6px}.is-catalog .page-actions>div{display:flex}.is-catalog .page-actions button{font-size:.76rem;padding:8px}.is-catalog .material-hero h1{font-size:1.45rem}.is-catalog .material-hero>div>span{font-size:.85rem}}
+.batch-path{margin-bottom:24px}.batch-path>div{display:flex;align-items:baseline;gap:16px;margin-bottom:13px}.batch-path>div>span{font-size:.72rem;color:#647970}.batch-path>div>strong{font-size:.92rem;font-weight:650}.batch-path ol{display:grid;grid-template-columns:repeat(var(--chapter-count,4),minmax(0,1fr));gap:9px;margin:0;padding:0;list-style:none}.batch-path a{display:flex;align-items:center;gap:12px;height:100%;padding:13px 16px;color:#65736d;border:1px solid #dce5df;border-radius:12px;background:#ffffffb3;text-decoration:none;transition:background .15s,border-color .15s}.batch-path a>span{font:500 1.2rem ui-monospace;color:#9baaa2}.batch-path a div{display:grid;gap:4px;min-width:0}.batch-path a small{font-size:.63rem;letter-spacing:.07em}.batch-path a strong{font-size:.82rem;font-weight:650}.batch-path a:hover{border-color:#83ad9f;background:#fff}.batch-path a[aria-current=page]{color:#165e4c;border-color:#82aa9b;background:#eaf5ef}.batch-path a[aria-current=page]>span{color:#2e7b61}.batch-path a:focus-visible,.concept-connections a:focus-visible,.chapter-pagination a:focus-visible{outline:2px solid #2c8068;outline-offset:3px}
+.chapter-intro{padding:27px 42px;background:#f3f8f5;border-bottom:1px solid #e0e8e2}.chapter-intro>span{font-size:.71rem;color:#728379}.chapter-intro h2{margin:9px 0 14px;font-size:1.2rem;line-height:1.6;letter-spacing:0}.chapter-intro ul{display:grid;gap:8px;margin:0;padding-left:1.1em;color:#53685d;font-size:.83rem;line-height:1.7}.chapter-pagination{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:22px 30px;border-top:1px solid #e0e7e3}.chapter-pagination a{display:grid;gap:7px;padding:15px;border:1px solid #d6e3da;border-radius:12px;color:#245e4b;background:#f8fbf9;text-decoration:none}.chapter-pagination a:last-child{grid-column:2;text-align:right}.chapter-pagination small{font-size:.72rem;color:#71847a}.chapter-pagination strong{font-size:.88rem;font-weight:650}.chapter-pagination a:hover{background:#ecf5ef;border-color:#8bb6a3}.concept-connections a{display:grid;gap:7px;margin-top:16px;padding-top:15px;border-top:1px solid #e0e7e3;text-decoration:none}.concept-connections a small{margin:0;font-size:.62rem}.concept-connections a strong{color:#275e4d;font-size:.8rem;font-weight:650;line-height:1.6}.concept-connections a span{font-size:.73rem;line-height:1.65;color:#6c7d74}.concept-connections a:hover strong{text-decoration:underline}.is-catalog .material-hero h1{font-size:clamp(1.65rem,2.5vw,2.65rem);line-height:1.35;letter-spacing:-.025em}.is-catalog .reader-content :deep(.markdown-body){line-height:1.95}.is-catalog .reader-content :deep(a){text-underline-offset:4px}.is-catalog .reader-content :deep(.material-reading-badge){display:none}
+@media(max-width:800px){.batch-path>div{align-items:flex-start;flex-direction:column;gap:5px}.batch-path ol{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-path a{padding:12px 10px;gap:8px}.batch-path a strong{font-size:.75rem}.batch-path a>span{font-size:1rem}.chapter-intro{padding:22px 21px}.chapter-pagination{padding:18px;gap:8px}.chapter-pagination a{padding:12px}.is-catalog .material-hero dl:has(.reading-state){grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.is-catalog .material-hero dd{white-space:normal}.is-catalog .material-hero{gap:20px}.is-catalog .reader-content :deep(.markdown-body){font-size:.98rem}}
 .material-page{--ink:#193028;--muted:#667970;--paper:#fffefa;--line:#dce5df;--accent:#176a55;--accent-warm:#c85d37;width:min(1460px,calc(100% - 36px));margin:0 auto;padding:20px 0 72px;color:var(--ink)}.material-page.without-toc{width:min(1280px,calc(100% - 36px))}
 .reading-progress{position:fixed;top:0;left:0;z-index:80;width:100%;height:3px;background:rgba(23,106,85,.1)}.reading-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#4e9a80,var(--accent-warm));transition:width .12s linear}
 .page-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.page-actions>div{display:flex;gap:8px}.page-actions button{padding:8px 11px;color:#385b4f;font-weight:750;background:rgba(255,255,255,.72);border:1px solid #d6e1db;border-radius:9px;cursor:pointer}.page-actions button:hover{border-color:#91b2a6;background:#fff}.back-link{border-color:transparent!important;background:transparent!important}

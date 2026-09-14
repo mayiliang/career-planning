@@ -2,157 +2,224 @@
 
 ## REACT-09 React Compiler、服务端组件边界与安全升级
 
-框架演进不只是新 API。React Compiler 改变手工 memo 的必要性；Server Components/Server Functions 改变代码运行位置、序列化和攻击面；安全公告可能连续修补同一机制。高级开发者要把功能、编译、运行时信任边界、实际依赖树和可回滚升级连接起来。
+装了 Compiler，组件就一定更快吗？文件写了 use server，就能相信传进来的 userId 吗？package.json 中 React 已升级，为什么服务器仍可能带着旧的协议包？这些问题分别属于编译、执行位置和实际制品，不能用一个版本号回答。
+
+本篇把三条线分开讲清，再用编译对照、隐藏区域和服务端规则模拟把它们连接起来。新能力应在已有知识上增加明确的收益，不应让正确性依赖难以解释的魔法。
 
 ### 学习前先确认
 
-- 直接前置：[REACT-07 性能测量、memo 与大列表](../chinese-guides/react-07-performance-memo-large-lists.md#react-07)、[REACT-08 错误边界、异步 UI 与可恢复体验](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#react-08)。两份资料共享更早祖先，但分别提供性能证据与异步/服务端边界所需概念，不互相替代。
+- 直接前置：[REACT-07 性能测量、memo 与大列表](../chinese-guides/react-07-performance-memo-large-lists.md#react-07)、[REACT-08 错误边界、异步 UI 与可恢复体验](../chinese-guides/react-08-error-boundaries-suspense-recovery.md#react-08)。两篇分别提供性能观察和异步恢复基础。
 
-版本事实核验日期为 2026-08-30。版本号不是背诵目标，实际升级必须重新阅读官方公告与锁文件。
+实施信息核验于 2026-09-09。正文使用 React 19.2 API；Compiler 示例固定 babel-plugin-react-compiler 1.0.0，便于观察一组确定的源码变换。安全说明以官方具体公告为依据，不能把本文数字作为永久安全承诺。
 
-### 一、先分清四个变化层
+### 运行时编译器与框架各管一层
 
-自动分析并缓存组件工作的工具称为**React 编译器（React Compiler）**。只在服务器运行并把描述结果发送给客户端的是**服务端组件（server component）**，可由客户端触发的服务器入口是**服务端函数（server function）**。安全公告中的**远程代码执行（remote code execution）**和**拒绝服务（denial of service）**代表不同影响；**软件物料清单（software bill of materials）**帮助定位真实制品依赖。
+| 层次 | 主要工作 | 不能由它自动证明的事 |
+| --- | --- | --- |
+| React 与 React DOM | 渲染、状态、调度和 DOM 接管 | 所有服务器依赖已更新 |
+| React Compiler | 构建时分析组件与 Hook，缓存可复用工作 | 业务模型、授权和算法正确 |
+| RSC 集成与传输包 | 服务端组件结果和远程调用的协议 | 所有输入都可信 |
+| 框架、构建器和适配器 | 路由、构建、执行环境和发布 | 插件及部署组合永远兼容 |
 
-React 版本包含运行时 API；Compiler 是构建期优化；RSC/Server Functions 通常由框架和打包器提供端到端协议；路由/全栈框架还有自己的版本与适配器。只升级 `react` 顶层包不能证明其他层安全或兼容。
+**React Compiler** 不等于 React 运行时内置的一个开关。服务器项目还可能包含 react-server-dom-webpack、turbopack 或 parcel 集成。顶层 React 与真正部署的框架、传输包可能不是同一条升级链。
 
-记录 `react`、`react-dom`、`react-server-dom-*`、框架、bundler plugin 和锁文件解析版本，理解谁实际进入服务器/客户端制品。
+### 自动缓存需要先有正确的组件
 
-### 二、React Compiler 自动分析并缓存
+Compiler 识别可以复用的值、函数与 JSX，减少重复工作。它依赖组件纯度、Hook 规则和可分析的数据流，不会补全遗漏的业务依赖，也不会把昂贵算法变成更好的算法。
 
-Compiler v1.0 可在兼容代码中自动应用与 memo/useMemo/useCallback 类似的优化，减少不必要重渲染。它依赖组件/Hook 遵守纯度与规则，不会修复错误状态模型或副作用。
+“可以编译”“行为相同”“有性能收益”是三种结论。先确保关闭编译时仍正确，再看哪些代码被处理，最后在相同条件下测量。不能只看到 DevTools 的编译标记就宣布页面更快。
 
-编译是优化而非语义前提：关闭 Compiler 应仍正确。启用前以现有性能脚本建立基线，逐目录/组件渐进，观察编译诊断、bundle、Profiler 与行为测试。
+### 用同一份源码对照编译结果
 
-### 三、不要一次删除全部手工 memo
+把以下内容放入 React + TypeScript 项目的 `src/App.tsx`。这个例子没有手工 memo；输入临时笔记不改变资料筛选条件。
 
-Compiler 能优化许多场景，但现有自定义 comparator、外部库合同和性能热点需逐项核验。先启用并测量，再删除一处 memo 复测。某些 memo 可能承担误用的语义保证，应先修正确性。
-
-lint 规则可发现不兼容模式。不要通过大量忽略注释“强行编译”；记录 bailout 原因，优先修不纯和违规 Hook，对第三方/复杂区域保留稳定回退。
-
-### 四、编译产物需要和源码同等审查
-
-检查 source map、错误堆栈、开发/生产差异、HMR 和测试转换。Compiler 插件顺序要与 Babel/Vite/框架官方集成一致，避免不同环境一个启用一个未启用。
-
-性能对比使用相同 React、数据和制品；缓存优化可能降低 render 但增加内存。只有用户指标和维护成本共同改善才推广。
-
-### 五、Server Component 决定代码运行位置
-
-Server Component 在服务端执行并把可序列化描述传给客户端，能直接访问服务端数据源且不把其组件代码发送客户端。Client Component 处理交互和浏览器 API，通过边界引用。
-
-`'use client'` 标记客户端模块边界，不表示文件只在浏览器绝不参与服务构建；`'use server'`/Server Function 也不是授权注解。具体协议由框架实现，必须按框架文档理解。
-
-### 六、跨边界 props 必须可序列化且最小
-
-函数、数据库连接、类实例和秘密不能随意传到客户端。只传界面需要的最小 DTO，避免把完整用户/权限对象序列化。日期、Map 等是否支持取决于框架协议，不应假设普通 JSON 或任意对象都可传。
-
-序列化边界也需要运行时校验和版本兼容。客户端返回的 action 参数仍是不可信输入。
-
-### 七、Server Function 是远程入口
-
-即使调用写在组件中，Server Function 最终可被构造成网络请求。服务端必须认证当前主体、验证输入、授权具体资源/动作、防重与记录审计。隐藏按钮、闭包捕获 userId 或 TypeScript 类型都不是安全控制。
-
-```ts
-export async function approveOrder(input: unknown) {
-  const actor = await requireSession();
-  const command = parseApproveCommand(input);
-  await authorize(actor, 'approve', command.orderId);
-  return approveWithVersion(command);
+```tsx example=react09-compiler-app runtime=project file=src/App.tsx
+import { useState } from 'react';
+const lessons = [
+  { id: 'a', title: '组件协作', category: '基础' },
+  { id: 'b', title: '状态分层', category: '进阶' },
+];
+function Results({ category }: { category: string }) {
+  'use memo';
+  const visible = lessons.filter(item => category === '全部' || item.category === category);
+  return <ul>{visible.map(item => <li key={item.id}>{item.title}</li>)}</ul>;
+}
+export default function App() {
+  return <Workbench />;
+}
+function Workbench() {
+  const [category, setCategory] = useState('全部');
+  const [note, setNote] = useState('');
+  return <main>
+    <label>资料分类 <select value={category} onChange={e => setCategory(e.target.value)}>
+      <option>全部</option><option>基础</option><option>进阶</option>
+    </select></label>
+    <label>临时笔记 <input value={note} onChange={e => setNote(e.target.value)} /></label>
+    <Results category={category} />
+  </main>;
 }
 ```
 
-错误响应不泄漏堆栈或内部数据，写操作使用版本/幂等协议。
+为单独观察变换，安装 `@babel/core` 与 `babel-plugin-react-compiler@1.0.0`，创建 `tools/inspect-compiler.mjs`：
 
-### 八、RSC 引入新的反序列化攻击面
+```js example=react09-inspect-compiler runtime=project file=tools/inspect-compiler.mjs
+import { readFile, writeFile } from 'node:fs/promises';
+import { transformAsync } from '@babel/core';
+import compiler from 'babel-plugin-react-compiler';
+const source = await readFile('src/App.tsx', 'utf8');
+const result = await transformAsync(source, {
+  filename: 'src/App.tsx', configFile: false, babelrc: false,
+  parserOpts: { plugins: ['typescript', 'jsx'] },
+  plugins: [[compiler, { target: '19', compilationMode: 'annotation' }]],
+});
+if (!result?.code) throw new Error('没有得到编译结果');
+await writeFile('compiler-preview.txt', result.code);
+console.log('已生成 compiler-preview.txt，请对照 Results 的缓存逻辑');
+```
 
-服务端必须解析客户端发来的协议 payload。2025-12 的 RSC 远程代码执行公告表明，即使应用未显式写 Server Function，只要框架支持 RSC 也可能处于受影响面。首次补丁随后又出现 DoS、源码暴露和不完整修补。
+从项目根目录运行 `node tools/inspect-compiler.mjs`。annotation 模式只选择显式标注的函数，Results 中的 use memo 因此有实际作用；没有安装并接入 Compiler 时，这个字符串本身不会优化代码。
 
-安全响应不能只看“我们没用那个 API”。要检查实际服务器包、框架能力、暴露端点和传递依赖。
+生成文件是用于阅读的变换结果，还保留需要后续工具处理的语法，不能直接当作浏览器入口。实际接入应按所用框架或构建器的官方集成说明配置，确保开发、检查和生产使用同一策略。默认推断模式通常不需要给每个组件都加 use memo。
 
-### 九、连续公告意味着补丁也要再核验
+### 保留手工缓存需要理由删除也需要理由
 
-官方 2026-01-26 更新指出 19.0.3/19.1.4/19.2.3 补丁仍不完整，安全回补为 19.0.4/19.1.5/19.2.4。安全基线来自对应 `react-server-dom-*` 包与框架解析树，不等于只把 react-dom 升到某版本。
+已有 useMemo、useCallback 或自定义 comparator 不应一次全部删除。先核对它有没有掩盖错误语义，再逐处比较结果与成本。自定义比较器漏掉回调的反例见 [函数属性与过期闭包](../chinese-guides/react-07-performance-memo-large-lists.md#忽略函数属性会保留过期的行为)。
 
-截至本讲核验日，React 文档主线仍为 19.2；但任何实施都应重新读取同一公告最新更新时间、框架 advisory 与包管理器 audit，不能永久复制本讲数字。
+Compiler 跳过不支持的代码，不一定意味着整个应用失效。查看诊断、修复纯度和 Hook 问题；确需暂时退出优化时，用局部配置或 use no memo 并写明原因，不用大量忽略注释追求“全部编译”。
 
-### 十、理解 RCE、DoS、源码暴露与 CVE/CVSS
+目标 React 版本、插件版本、源码转换顺序都属于接入条件。缓存可能减少执行，也可能增加内存；推广依据应包括实际用户动作，而不是产物中多了几个缓存槽。
 
-RCE 表示攻击者可能执行代码，DoS 表示消耗 CPU/内存使服务不可用，源码暴露可能泄漏业务逻辑/秘密线索。CVE 是漏洞标识，CVSS 是通用严重度参考，不替代本组织暴露面和数据风险评估。
+### Activity 保留状态同时结束隐藏区域的 Effect
 
-修复优先级还看是否公网、是否可利用、可回滚性和补偿控制。WAF 可临时减轻部分请求，不是依赖升级替代品。
+**Activity** 让区域隐藏时保留状态与 DOM，同时清理其中的 Effect；重新显示时再建立 Effect。它与简单 CSS 隐藏、条件卸载都有区别。
 
-### 十一、从锁文件确认真实版本
+下面第二个独立 App.tsx 不使用计时器，而是由按钮模拟外部通知。通知发给当前仍订阅的区域；隐藏后没有订阅，就不会累加那些通知。
 
-使用包管理器 why/list 检查每个 RSC 包由谁引入、是否有多版本、框架是否内嵌。扫描服务器制品/容器，而不仅 package.json。Monorepo 各应用可能解析不同依赖。
+```tsx example=react09-activity runtime=project file=src/App.tsx
+import { Activity, useEffect, useState } from 'react';
+function Notes() {
+  const [draft, setDraft] = useState('');
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const receive = () => setCount(value => value + 1);
+    window.addEventListener('b08-notice', receive);
+    return () => window.removeEventListener('b08-notice', receive);
+  }, []);
+  return <section>
+    <label>区域笔记 <textarea value={draft} onChange={e => setDraft(e.target.value)} /></label>
+    <p>活动期间收到：{count}</p>
+  </section>;
+}
+export default function App() {
+  const [visible, setVisible] = useState(true);
+  return <main>
+    <button onClick={() => setVisible(value => !value)}>{visible ? '隐藏笔记区域' : '显示笔记区域'}</button>
+    <button onClick={() => window.dispatchEvent(new Event('b08-notice'))}>模拟一条通知</button>
+    <Activity mode={visible ? 'visible' : 'hidden'}><Notes /></Activity>
+  </main>;
+}
+```
 
-升级后重新生成锁文件并审查 diff，避免无关大范围更新。CI 应拒绝受影响组合，SBOM/制品扫描关联发布版本。
+写入笔记，交付一条通知，再隐藏；隐藏期间交付两条，恢复后笔记仍在，读数仍是 1。继续交付才变为 2。开发 Strict Mode 的额外 setup/cleanup 不应产生重复订阅。
 
-### 十二、升级前建立可复核基线
+隐藏不是暂停整个 JavaScript 世界：没有由 Effect 清理的工作仍可能继续，隐藏子树也可以以较低优先级响应 props。音视频、外部连接和资源需要自己的停止规则。跨页面保留区域的范围仍由状态所有者决定。
 
-记录类型、单元、E2E、build、bundle、关键 route、SSR/hydration、Server Function 授权与回滚。Compiler 另外记录 Profiler；RSC 记录网络 payload、缓存与错误路径。
+### Server Component 与 SSR 不是同一个概念
 
-不要同时升级 React、Router、框架、构建器并重构业务。拆分可回滚步骤，先补安全时采用最小兼容补丁，再规划功能迁移。
+**Server Component** 在服务器或构建阶段执行，其组件实现不作为交互代码发送到浏览器。SSR 则是生成初始 HTML 的过程；Client Component 也可能参与服务器生成初始页面，随后在浏览器接管。
 
-### 十三、灰度与回滚必须包含数据/协议兼容
+use client 声明模块依赖图的客户端边界，不等于“所有代码只会在浏览器执行”。把 use server 写在函数或模块中，是声明可被远程调用的 Server Function，也不是把整个组件变成 Server Component 的标记。
 
-前后两版本可能并存，Server Function payload、缓存和 HTML/chunk 要兼容。灰度监控错误、延迟、内存、授权拒绝和 fallback；触发阈值时能回退旧制品，但旧制品不能回到已知漏洞版本。
+一个服务端页面可以读取公开资料，只把标题与必要 ID 交给客户端收藏按钮。收藏按钮负责交互，服务端读取实现不必进入客户端。但只要把某字段放进 HTML 或序列化结果，它就已交给浏览器。
 
-数据库迁移需向后兼容。静态资源保留多版本，避免旧 HTML 请求被删除 chunk。
+### 可序列化与可以公开必须分别判断
 
-### 十四、RSC 缓存必须按身份与数据敏感度划分
+RSC 支持的边界值不完全等同 JSON；Date、Map、Set 等有明确协议规则，普通函数、任意类实例或数据库连接不能随意穿过边界。Server Function 引用也有专门语义。
 
-服务端缓存键如果缺少用户/租户/权限上下文，可能把个性化结果串给他人。公开数据可共享缓存，私有数据默认按身份隔离或不缓存。注销/权限变化要失效相关条目。
+“能传输”不代表“该传输”。用户对象里的内部字段、令牌和整份权限资料即使可以编码，也不应因此公开。构造最小 DTO，让页面只取得当前任务所需字段。
 
-不要把 access token、cookie 或服务端秘密放进客户端 payload。检查 HTML、Flight 数据、source map 和日志，而不只看页面文字。
+检查范围包括 HTML、RSC payload、网络响应、source map 和日志。页面没显示某个字段，不能证明浏览器没有收到它。框架提供的污点辅助机制或输出编码也不能替代最小化返回数据。
 
-### 十五、PPR、resume 与实验能力要可回退
+### 把服务端操作拆成输入主体资源和版本
 
-React 19.2 引入/推进 Activity、useEffectEvent、cacheSignal、Performance Tracks、PPR/resume 等能力，但部分依赖框架/实验通道。生产采用前核对稳定级别、部署适配器、缓存/流式代理和浏览器行为。
+**Server Function** 应按远程入口理解。下面是可独立运行的领域规则模拟：actor 表示可信会话层已经取得的主体，command 才来自客户端。它不实现 HTTP、会话认证或数据库，只让你看清二者不能混在一起。
 
-每项能力建立最小对照，保留不使用它的稳定实现。不要因为顶层 React 版本支持，就假设当前框架已安全集成。
+```ts example=react09-server-rule
+ type Actor = { id: string } | null;
+ type Command = { lessonId: string; title: string; version: number };
+ const records = new Map([['a', { owner: 'u1', title: '旧标题', version: 1 }]]);
+ function parse(value: unknown): Command | null {
+   if (typeof value !== 'object' || value === null) return null;
+   if (Object.keys(value).some(key => !['lessonId', 'title', 'version'].includes(key))) return null;
+   if (!('lessonId' in value) || typeof value.lessonId !== 'string') return null;
+   if (!('title' in value) || typeof value.title !== 'string' || value.title.trim().length < 2) return null;
+   if (!('version' in value) || typeof value.version !== 'number' || !Number.isSafeInteger(value.version) || value.version < 1) return null;
+   return { lessonId: value.lessonId, title: value.title.trim(), version: value.version };
+ }
+ function rename(actor: Actor, input: unknown): string {
+   if (!actor) return '需要登录';
+   const command = parse(input);
+   if (!command) return '输入无效';
+   const record = records.get(command.lessonId);
+   if (!record || record.owner !== actor.id) return '不能修改这篇资料';
+   if (command.version !== record.version) return '版本已变化';
+   records.set(command.lessonId, { ...record, title: command.title, version: record.version + 1 });
+   return '已保存';
+ }
+ const command = { lessonId: 'a', title: '新标题', version: 1 };
+ console.log(rename(null, command)); // => 需要登录
+ console.log(rename({ id: 'u2' }, { ...command, role: 'admin' })); // => 输入无效
+ console.log(rename({ id: 'u2' }, command)); // => 不能修改这篇资料
+ console.log(rename({ id: 'u1' }, command)); // => 已保存
+ console.log(rename({ id: 'u1' }, command)); // => 版本已变化
+```
 
-### 十六、安全测试不复现真实攻击也能建立证据
+没有 role 字段并不会自动获得权限，资源所有者仍来自记录。实际 Server Function 还必须在每次调用中认证会话，不能让客户端直接传入上例的 actor；数据库的版本比较与更新需要原子执行，进程内 Map 不能证明跨实例并发正确。
 
-可以用依赖树断言、受影响版本拒绝门禁、Server Function 未授权/跨资源请求、恶意结构输入的安全拒绝、秘密产物扫描和速率/超时验证。不要在生产或未授权环境复现漏洞 payload。
+写入口还要结合框架处理来源与 CSRF、请求大小、频率、重放、超时和安全错误。绑定参数、闭包捕获或隐藏按钮，都不免除服务端校验。取消等待也不等于撤销已经写入的数据。
 
-测试边界：未登录、普通用户越权、陈旧版本、重复提交、超大/深层输入、取消与错误脱敏。服务端日志记录 request/actor/action，不记录秘密。
+### 安全公告要追到后续修补
 
-### 十七、版本资料的阅读方法
+**remote code execution** 是远程执行代码，**denial of service** 是让服务资源耗尽或无法正常工作。RSC 协议处理可能出现这些问题，业务中“没写那个按钮”不一定排除受影响框架能力。
 
-稳定中文学习页用于理解机制；release blog、changelog 和安全公告用于实施日核验。记录访问日期、受影响包、修复版本、后续更新和本项目证据。第三方摘要只能做线索，最终以官方公告和锁文件为准。
+2026 年 1 月的修补不能自动覆盖后续发现的问题。以下是本次核对的官方公告示例，针对其列出的 react-server-dom-parcel、turbopack 与 webpack 包：
 
-截至 2026-08-30，React 官方后续安全公告给出的安全回补版本为 19.0.4、19.1.5 与 19.2.4，并说明先前的 19.0.3、19.1.4、19.2.3 修复不完整。这是一条会变化的实施信息：每次升级都必须再次打开官方公告核验。
+| 官方公告时间 | 对应公告 | 该公告列出的修补版本 |
+| --- | --- | --- |
+| 2026-04-08 | GHSA-479c-33wc-g2pg | 19.0.5 / 19.1.6 / 19.2.5 |
+| 2026-05-06 | GHSA-rv78-f8rc-xrxh | 19.0.6 / 19.1.7 / 19.2.6 |
+| 2026-07-21 | GHSA-wx67-qw84-cm4g | 19.0.8 / 19.1.9 / 19.2.8 |
 
-### 十八、Compiler 上线要区分可编译、行为正确与真实收益
+这张表说明为什么早期“已修补”不能永久沿用。它不是对所有 React 框架和所有漏洞的安全认证，也不能只比较顶层 react 版本；实施日还应查看官方公告列表、框架说明和真实解析树。
 
-第一阶段只在 CI 编译并收集不兼容诊断，不改变生产；第二阶段按目录/组件灰度，比较测试、错误和性能；最后才扩大范围。Compiler 跳过某段代码不一定是缺陷，强行改写到“全绿”可能改变语义。
+### 依赖声明锁文件与部署制品不是同一份证据
 
-对关键组件保存编译前后 Profiler 基线、bundle diff 和交互测试。确认收益后再删除冗余 memo；如果无收益或诊断成本高，保留回退开关。自动缓存减少手工工作，不免除纯 render、稳定 identity 和 effect 边界设计。
+package.json 表达允许的版本范围，锁文件记录一次解析，安装树说明当前实际存在的包，最终镜像或部署包才是服务真正执行的内容。工作区里升级成功，不代表旧镜像已被替换。
 
-### 十九、Server Function 需要完整的远程入口防线
+使用对应包管理器的 list/why 查看谁引入协议包、是否并存多版本、框架是否内嵌依赖。**software bill of materials** 可以帮助记录制品包含什么，但生成清单本身不会修复漏洞。
 
-把调用视为 HTTP/RPC：解析 schema、认证当前会话、对具体资源授权、限制 body/嵌套深度与频率、处理 CSRF/重放、设置超时，并返回可序列化的安全错误。客户端传来的 userId、role 和价格都只是声明，服务端从可信主体和数据库重新取得。
+CVE 标识与 CVSS 严重度帮助定位公告，修复优先级还取决于实际暴露面。WAF 或流量限制可以缓解部分风险，不能被当成已经完成依赖修补。框架更新、构建版本与实际部署记录要能相互对应。
 
-写操作使用幂等键或业务版本处理重复提交。审计记录 actor、action、resource、request ID 与结果，不记录 cookie、token 或完整敏感 payload。异常堆栈只进入受控日志。
+### 身份缓存与安全回滚都要考虑旧状态
 
-### 二十、供应链证据要从依赖树延伸到发布制品
+公开文章可以共享缓存，个性化结果则要按身份、租户和权限范围隔离或不缓存。token 不适合直接拼进缓存 key；退出登录还需要清理当前浏览器保留的私人数据。cache 等框架能力有自己的作用域，不能自动等同跨请求永久缓存。
 
-锁文件、包管理器解析树和 SBOM 用于回答“真正打进了哪个版本”；构建 provenance、制品 hash 和部署记录用于回答“测试的版本是否真的上线”。仅搜索源码的版本字符串无法证明传递依赖或预构建镜像安全。
+安全补丁上线后，回到含已知漏洞的旧制品不是合格退路。可以回退功能、关闭实验能力，或准备保留补丁的兼容版本。前后端协议、数据库变化和旧 HTML 引用的 chunk 也需兼容滚动发布。
 
-安全门禁应拒绝已知受影响组合，保留例外的责任人、期限和缓解措施。补丁后重新生成锁文件/制品证据并扫描客户端 bundle、Flight payload、source map 与服务器镜像，避免秘密或旧代码残留。
+Activity、Effect Event、cacheSignal、流式与 resume 等能力的执行环境各不相同。稳定 API 仍可能需要特定框架集成；实验能力保留明确关闭路径，不根据一个运行时版本就推断整套部署支持。
 
-### 二十一、CSP 与输出编码是纵深防御而非 RSC 专属补丁
+### 用有限证据回答明确的问题
 
-框架默认转义文本仍不能保护 `dangerouslySetInnerHTML`、不可信 URL、脚本 nonce 配置和第三方资源。建立内容净化、允许协议、严格 CSP、cookie 属性与必要的 Subresource Integrity；每项策略在真实 SSR/流式响应上验证，避免开发配置与生产不同。
+Compiler 观察源码变换、行为对照与性能；Activity 观察状态保留和 Effect 清理；服务端入口检查主体、输入、资源和版本；安全升级核对公告、解析树和制品。每条线都有自己的结论，不能用一次 build 成功代替全部。
 
-CSP 报告是线索，不应自动加入宽泛 allowlist。修复根因后再最小放行，记录哪个组件/第三方确实需要该能力。
+CSP、输出编码和安全 cookie 是各自有用的防护，不能修复任意 RSC 协议漏洞。这里的规则模拟也不执行漏洞载荷，不应把“示例通过”误写成“服务器已通过安全审计”。
 
-### 进阶：安全回滚不能重新暴露已知漏洞
+### 参考与延伸阅读
 
-常规功能回滚可切回旧制品，但安全补丁发布后，旧制品若仍含受影响依赖就不是安全退路。应准备“修补版本上的功能降级”或向前修复，静态资源和协议保持兼容，数据库迁移可逆或向后兼容。
-
-发布门禁保存最低安全版本、例外期限和制品 hash；回滚工具在执行前同样检查依赖策略。事故演练验证停止流量、撤销实验能力、保留修补版本和恢复业务，而不是只验证部署按钮可用。
-
-### 学完后应能说明
-
-你应能区分 React 运行时、Compiler、RSC 协议与框架，设计渐进编译评估，解释 Server Function 为何必须重新授权，按实际依赖树响应连续安全公告，并建立从基线、灰度到安全回滚的升级证据。
+- [React Compiler：安装](https://react.dev/learn/react-compiler/installation)：查对应构建器的真实集成方式。
+- [React Compiler：use memo](https://react.dev/reference/react-compiler/directives/use-memo)：查 annotation 与 infer 模式。
+- [React：Activity](https://react.dev/reference/react/Activity)：查隐藏、状态保留和 Effect。
+- [React：Server Components](https://react.dev/reference/rsc/server-components)：查服务端执行与模块边界。
+- [React：use server](https://react.dev/reference/rsc/use-server)：查可序列化值和远程入口责任。
+- [React 官方安全公告列表](https://github.com/react/react/security/advisories)：实施时先确认后续公告。
+- [2026-04-08 公告](https://github.com/react/react/security/advisories/GHSA-479c-33wc-g2pg)、[2026-05-06 公告](https://github.com/react/react/security/advisories/GHSA-rv78-f8rc-xrxh)、[2026-07-21 公告](https://github.com/react/react/security/advisories/GHSA-wx67-qw84-cm4g)：核对上表的受影响包和修补范围。

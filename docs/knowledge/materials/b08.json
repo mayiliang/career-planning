@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 1,
+  "batch": "B08",
+  "title": "从可靠导航走向性能、构建与服务端交接",
+  "reviewedOn": "2026-09-09",
+  "chapters": [
+    {
+      "id": "VUE-07",
+      "title": "Vue 路由与导航",
+      "question": "地址变了以后，正文、笔记和浏览器历史怎样保持一致？",
+      "summary": "在完整阅读台中观察参数复用、异步清理、标签历史与离开确认。",
+      "outcomes": [
+        "让 URL 与页面状态各有明确来源",
+        "处理组件复用、导航取消与读取失败",
+        "区分生成路由、授权和深链部署的职责"
+      ],
+      "guide": "vue-07-router-navigation-boundaries.md",
+      "anchor": "vue-07",
+      "prerequisites": [
+        "vue-06-composables-injection-reuse.md#vue-06"
+      ],
+      "concepts": [
+        {
+          "id": "vue-router-url",
+          "heading": "URL 先说明哪些状态值得带走"
+        },
+        {
+          "id": "vue-router-query",
+          "heading": "查询参数要有确定的解释规则"
+        },
+        {
+          "id": "vue-router-shell",
+          "heading": "先搭起能保留布局的阅读台"
+        },
+        {
+          "id": "vue-router-param-fetch",
+          "heading": "同一组件里的参数变化也要重新读取"
+        },
+        {
+          "id": "vue-router-draft",
+          "heading": "离开守卫既要覆盖卸载也要覆盖复用"
+        },
+        {
+          "id": "vue-router-failure",
+          "heading": "导航失败与页面数据失败分开观察"
+        },
+        {
+          "id": "vue-router-focus",
+          "heading": "滚动与焦点各自回答不同问题"
+        },
+        {
+          "id": "vue-router-generation",
+          "heading": "文件路由和类型化路由属于生成工具"
+        },
+        {
+          "id": "vue-router-authorization",
+          "heading": "Meta 重定向与别名不能代替授权"
+        },
+        {
+          "id": "vue-router-ssr",
+          "heading": "深链与 SSR 需要服务器配合"
+        },
+        {
+          "id": "vue-router-review",
+          "heading": "把核对集中在真正会改变用户结果的路径"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "router-state-url",
+          "reason": "对照两个框架怎样从 URL 恢复页面状态。"
+        },
+        {
+          "concept": "effect-request-eligibility",
+          "reason": "参数切换后的异步工作仍要判断提交资格。"
+        },
+        {
+          "concept": "pinia-store-lifetime",
+          "reason": "离开页面与共享状态的寿命并不相同。"
+        },
+        {
+          "concept": "nuxt-three-stages",
+          "reason": "把客户端导航继续延伸到首屏的服务端交接。"
+        }
+      ]
+    },
+    {
+      "id": "REACT-07",
+      "title": "性能与大列表",
+      "question": "页面变慢时，怎样找到真正值得减少的工作？",
+      "summary": "用缓存、错误比较器、窗口列表和延后结果理解优化的适用范围。",
+      "outcomes": [
+        "区分用户等待、React 渲染与浏览器成本",
+        "解释缓存命中和函数闭包的正确性条件",
+        "权衡列表窗口、焦点与实际性能收益"
+      ],
+      "guide": "react-07-performance-memo-large-lists.md",
+      "anchor": "react-07",
+      "prerequisites": [
+        "react-06-reducer-context-state-domains.md#react-06"
+      ],
+      "concepts": [
+        {
+          "id": "react-perf-layers",
+          "heading": "把用户等待的时间拆开看"
+        },
+        {
+          "id": "react-profiler-values",
+          "heading": "Profiler 提供线索而不是用户体验分数"
+        },
+        {
+          "id": "react-memo-workbench",
+          "heading": "用一份清单观察三个缓存边界"
+        },
+        {
+          "id": "react-reference-equality",
+          "heading": "引用相同与内容相同不是一回事"
+        },
+        {
+          "id": "react-comparator-closure",
+          "heading": "忽略函数属性会保留过期的行为"
+        },
+        {
+          "id": "react-reduce-work",
+          "heading": "先减少一次动作造成的工作"
+        },
+        {
+          "id": "react-window-math",
+          "heading": "大列表先算清需要多少 DOM"
+        },
+        {
+          "id": "react-window-demo",
+          "heading": "用固定高度窗口观察节点数量"
+        },
+        {
+          "id": "react-deferred-results",
+          "heading": "延后结果不等于让计算更少"
+        },
+        {
+          "id": "react-perf-resources",
+          "heading": "网络内存与 Hydration 仍在性能范围内"
+        },
+        {
+          "id": "react-perf-stop",
+          "heading": "何时保留优化何时停下来"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "domain-context-propagation",
+          "reason": "先理解共享值怎样传播，再判断更新是否多余。"
+        },
+        {
+          "concept": "state-source-facts",
+          "reason": "减少重复状态常比增加缓存更直接。"
+        },
+        {
+          "concept": "compiler-source-pair",
+          "reason": "在同一份源码上对照手工缓存与编译优化。"
+        },
+        {
+          "concept": "vue-quality-update",
+          "reason": "比较 Vue 中变化传播与稳定输入的作用。"
+        }
+      ]
+    },
+    {
+      "id": "VUE-10",
+      "title": "组件质量与构建",
+      "question": "怎样用足够的证据确认行为、性能和产物各自可靠？",
+      "summary": "围绕可控制结果的保存表单，再把观察延伸到更新成本与发布入口。",
+      "outcomes": [
+        "用公开交互保护校验、失败保留和重试",
+        "区分 Vue 更新与外部异步完成",
+        "检查实际产物、子路径、配置与预算"
+      ],
+      "guide": "vue-10-testing-performance-production-build.md",
+      "anchor": "vue-10",
+      "prerequisites": [
+        "vue-07-router-navigation-boundaries.md#vue-07"
+      ],
+      "concepts": [
+        {
+          "id": "vue-quality-scope",
+          "heading": "先说清要保护哪一种结果"
+        },
+        {
+          "id": "vue-quality-form",
+          "heading": "一个保存表单先把公开合同写完整"
+        },
+        {
+          "id": "vue-quality-delivery",
+          "heading": "手动交付结果比随机等网络更容易理解"
+        },
+        {
+          "id": "vue-quality-tests",
+          "heading": "两个行为测试就能保护关键约定"
+        },
+        {
+          "id": "vue-quality-doubles",
+          "heading": "替身只能证明它实际参与的部分"
+        },
+        {
+          "id": "vue-quality-update",
+          "heading": "Vue 性能先看变化传播到了哪里"
+        },
+        {
+          "id": "vue-quality-cache",
+          "heading": "缓存和窗口化都有不适用的时候"
+        },
+        {
+          "id": "vue-quality-build",
+          "heading": "构建把模块变成可以请求的文件"
+        },
+        {
+          "id": "vue-quality-base",
+          "heading": "子路径发布要把三个位置对齐"
+        },
+        {
+          "id": "vue-quality-config",
+          "heading": "配置值进入浏览器以后就是公开内容"
+        },
+        {
+          "id": "vue-quality-evidence",
+          "heading": "预算与发布检查应该服务于具体问题"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "vue-router-ssr",
+          "reason": "真实入口的响应决定深链是否可用。"
+        },
+        {
+          "concept": "react-window-demo",
+          "reason": "窗口算法可以对照，框架和焦点合同需要分别实现。"
+        },
+        {
+          "concept": "pinia-observation",
+          "reason": "调用动作的替身不证明真实状态变化。"
+        },
+        {
+          "concept": "nuxt-hydration",
+          "reason": "全栈页面还需要核对服务器与客户端的交接。"
+        }
+      ]
+    },
+    {
+      "id": "REACT-09",
+      "title": "Compiler 与服务端边界",
+      "question": "新能力在哪一层生效，又需要哪些独立证据？",
+      "summary": "对照实际编译、Activity 和服务端规则，追踪安全公告与最终依赖。",
+      "outcomes": [
+        "区分运行时、编译器、RSC 与框架",
+        "观察隐藏区域的状态保留和 Effect 清理",
+        "按主体、输入、资源、版本审查服务端操作"
+      ],
+      "guide": "react-09-compiler-rsc-security-upgrades.md",
+      "anchor": "react-09",
+      "prerequisites": [
+        "react-07-performance-memo-large-lists.md#react-07",
+        "react-08-error-boundaries-suspense-recovery.md#react-08"
+      ],
+      "concepts": [
+        {
+          "id": "compiler-layers",
+          "heading": "运行时编译器与框架各管一层"
+        },
+        {
+          "id": "compiler-purity",
+          "heading": "自动缓存需要先有正确的组件"
+        },
+        {
+          "id": "compiler-source-pair",
+          "heading": "用同一份源码对照编译结果"
+        },
+        {
+          "id": "compiler-manual-cache",
+          "heading": "保留手工缓存需要理由删除也需要理由"
+        },
+        {
+          "id": "react-activity-effects",
+          "heading": "Activity 保留状态同时结束隐藏区域的 Effect"
+        },
+        {
+          "id": "rsc-versus-ssr",
+          "heading": "Server Component 与 SSR 不是同一个概念"
+        },
+        {
+          "id": "rsc-payload-public",
+          "heading": "可序列化与可以公开必须分别判断"
+        },
+        {
+          "id": "rsc-server-rules",
+          "heading": "把服务端操作拆成输入主体资源和版本"
+        },
+        {
+          "id": "rsc-security-updates",
+          "heading": "安全公告要追到后续修补"
+        },
+        {
+          "id": "rsc-artifact-evidence",
+          "heading": "依赖声明锁文件与部署制品不是同一份证据"
+        },
+        {
+          "id": "rsc-cache-rollback",
+          "heading": "身份缓存与安全回滚都要考虑旧状态"
+        },
+        {
+          "id": "rsc-evidence-scope",
+          "heading": "用有限证据回答明确的问题"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "react-comparator-closure",
+          "reason": "自动优化不能替代正确的 props 与闭包关系。"
+        },
+        {
+          "concept": "recovery-resource-retry",
+          "reason": "重建资源与隐藏保留是不同操作。"
+        },
+        {
+          "concept": "effect-round-lifecycle",
+          "reason": "Activity 继续依赖每轮 Effect 的清理责任。"
+        },
+        {
+          "concept": "nuxt-private-config",
+          "reason": "比较不同全栈框架如何限制发送给浏览器的数据。"
+        }
+      ]
+    },
+    {
+      "id": "VUE-11",
+      "title": "Nuxt 渲染与数据交接",
+      "question": "服务器生成的页面，怎样连同正确的数据交给浏览器？",
+      "summary": "从可启动的阅读台观察 HTML、payload、Hydration 与后续导航。",
+      "outcomes": [
+        "解释首屏与客户端导航的不同阶段",
+        "用 Nuxt 数据入口和 key 管理结果身份",
+        "区分公开数据、私有配置、缓存与部署能力"
+      ],
+      "guide": "vue-11-nuxt-rendering-data-performance.md",
+      "anchor": "vue-11",
+      "prerequisites": [
+        "vue-10-testing-performance-production-build.md#vue-10"
+      ],
+      "concepts": [
+        {
+          "id": "nuxt-three-stages",
+          "heading": "一次打开页面经历三个阶段"
+        },
+        {
+          "id": "nuxt-execution-place",
+          "heading": "运行位置由入口和阶段决定"
+        },
+        {
+          "id": "nuxt-project-shell",
+          "heading": "先创建能完整启动的小项目"
+        },
+        {
+          "id": "nuxt-public-dto",
+          "heading": "API 只返回阅读需要的字段"
+        },
+        {
+          "id": "nuxt-fetch-page",
+          "heading": "页面用 useFetch 接住首屏结果"
+        },
+        {
+          "id": "nuxt-fetch-tools",
+          "heading": "useFetch useAsyncData 与 fetch 各有合适位置"
+        },
+        {
+          "id": "nuxt-key-identity",
+          "heading": "数据 key 标识结果不承担授权"
+        },
+        {
+          "id": "nuxt-hydration",
+          "heading": "Hydration 需要两端从相同输入开始"
+        },
+        {
+          "id": "nuxt-rendering-choice",
+          "heading": "SSR CSR 与预渲染按内容选择"
+        },
+        {
+          "id": "nuxt-cache-privacy",
+          "heading": "缓存先分公开与私人再谈命中率"
+        },
+        {
+          "id": "nuxt-private-config",
+          "heading": "私有配置与请求头都需要明确出口"
+        },
+        {
+          "id": "nuxt-error-status",
+          "heading": "错误状态与 HTTP 状态要分别安排"
+        },
+        {
+          "id": "nuxt-performance",
+          "heading": "性能要把服务器和浏览器连起来看"
+        },
+        {
+          "id": "nuxt-version-deploy",
+          "heading": "版本与部署要以当前制品为依据"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "vue-router-param-fetch",
+          "reason": "客户端参数变化仍需要明确数据读取身份。"
+        },
+        {
+          "concept": "vue-quality-base",
+          "reason": "可运行的构建仍要配合正确部署入口。"
+        },
+        {
+          "concept": "rsc-versus-ssr",
+          "reason": "不要把 Nuxt SSR 与 React 服务端组件协议混为一谈。"
+        },
+        {
+          "concept": "pinia-request-instance",
+          "reason": "请求之间不能共享可变的用户实例。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,430 @@
+{
+  "schemaVersion": 1,
+  "batch": "B12",
+  "title": "从工程沟通到桌面界面",
+  "reviewedOn": "2026-09-12",
+  "chapters": [
+    {
+      "id": "CAREER-02",
+      "title": "画清边界与取舍",
+      "question": "一张图怎样帮助别人判断请求、数据和责任经过了哪里？",
+      "summary": "从统一事实清单出发，用系统图、容器图、保存时序与 ADR 解释边界和选择。",
+      "outcomes": [
+        "按读者的问题选择图的视角",
+        "沿保存路径说明信任、数据与失败",
+        "记录设计代价与重新讨论的条件"
+      ],
+      "guide": "career-02-architecture-diagrams-boundaries-adrs.md",
+      "anchor": "career-02",
+      "prerequisites": [],
+      "concepts": [
+        {
+          "id": "arch-question",
+          "heading": "先确定读者需要作出什么判断"
+        },
+        {
+          "id": "arch-fact-source",
+          "heading": "用同一份事实清单约束所有图"
+        },
+        {
+          "id": "arch-context",
+          "heading": "系统上下文先交代人与外部关系"
+        },
+        {
+          "id": "arch-containers",
+          "heading": "容器视图展示应用和存储单元"
+        },
+        {
+          "id": "arch-arrows",
+          "heading": "箭头需要说明目的和数据方向"
+        },
+        {
+          "id": "arch-save-sequence",
+          "heading": "时序把一次保存的成功与冲突展开"
+        },
+        {
+          "id": "arch-trust-data",
+          "heading": "把信任数据与故障边界逐项说清"
+        },
+        {
+          "id": "arch-deployment",
+          "heading": "部署视图区分逻辑单元与实际实例"
+        },
+        {
+          "id": "arch-adr",
+          "heading": "ADR 保存当时的选择和接受的代价"
+        },
+        {
+          "id": "arch-migration",
+          "heading": "迁移过程也需要可阅读的中间态"
+        },
+        {
+          "id": "arch-calibration",
+          "heading": "用运行约束校准图的可信度"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "incident-timeline",
+          "reason": "把架构版本与事故当时的事实对应起来。"
+        },
+        {
+          "concept": "review-maintainability",
+          "reason": "把边界与未来变化转成可以讨论的评审理由。"
+        },
+        {
+          "concept": "career-evidence-table",
+          "reason": "用来源约束图与项目叙述中的重要主张。"
+        },
+        {
+          "concept": "eng-deploy-version",
+          "reason": "沿运行单元继续追踪实际发布版本与旧资源。"
+        }
+      ]
+    },
+    {
+      "id": "CAREER-04",
+      "title": "恢复用户任务与复盘",
+      "question": "怎样判断用户已经恢复，并让一次事故改变后续工程？",
+      "summary": "沿旧页面资源缺失的模拟事件，组织影响、角色、证据、缓解、恢复与改进。",
+      "outcomes": [
+        "按用户影响协调响应与更新",
+        "用技术、任务和数据三层确认恢复",
+        "把条件分析转成有验收依据的行动"
+      ],
+      "guide": "career-04-incident-response-postmortem-learning.md",
+      "anchor": "career-04",
+      "prerequisites": [
+        "debug-01-systematic-debugging-evidence-causality.md#debug-01"
+      ],
+      "concepts": [
+        {
+          "id": "incident-impact",
+          "heading": "用用户任务描述事故而不是复述告警"
+        },
+        {
+          "id": "incident-roles",
+          "heading": "分配角色以减少互相干扰的操作"
+        },
+        {
+          "id": "incident-preserve",
+          "heading": "先保存会被后续操作改变的证据"
+        },
+        {
+          "id": "incident-mitigation",
+          "heading": "比较缓解动作时同时看收益和代价"
+        },
+        {
+          "id": "incident-timeline",
+          "heading": "用事实时间线保留决定发生时的信息"
+        },
+        {
+          "id": "incident-updates",
+          "heading": "状态更新先回答用户此刻关心什么"
+        },
+        {
+          "id": "incident-recovery",
+          "heading": "恢复确认要穿过三个观察层次"
+        },
+        {
+          "id": "incident-causal-conditions",
+          "heading": "复盘解释条件组合而不止寻找最后一个人"
+        },
+        {
+          "id": "incident-actions",
+          "heading": "行动项需要能判断完成的结果"
+        },
+        {
+          "id": "incident-metrics",
+          "heading": "事故时长先定义起点终点再计算"
+        },
+        {
+          "id": "incident-handoff",
+          "heading": "交接与演练要减少对某个人的依赖"
+        },
+        {
+          "id": "incident-learning",
+          "heading": "让复盘进入下一次真实变更"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "arch-migration",
+          "reason": "保留故障发生时的新旧版本与依赖关系。"
+        },
+        {
+          "concept": "review-comments",
+          "reason": "让复盘行动进入下一次变更的具体评审请求。"
+        },
+        {
+          "concept": "eng-deploy-version",
+          "reason": "解释旧页面为何仍会请求历史版本资源。"
+        },
+        {
+          "concept": "debug-facts",
+          "reason": "用事实与假设分离减少高压下的错误归因。"
+        }
+      ]
+    },
+    {
+      "id": "CAREER-05",
+      "title": "写出可行动的评审",
+      "question": "如何把一个疑问变成有证据、能修改、可复核的反馈？",
+      "summary": "用请求逆序完成的错误与修复对照，展开风险判断、评论、分歧和批准范围。",
+      "outcomes": [
+        "沿输入和结果阅读实际变更",
+        "给评论补触发条件、后果与请求",
+        "核对当前版本并跟进决定"
+      ],
+      "guide": "career-05-code-review-risk-communication.md",
+      "anchor": "career-05",
+      "prerequisites": [
+        "git-03-commits-remotes-pr-worktrees-collaboration.md#git-03"
+      ],
+      "concepts": [
+        {
+          "id": "review-intent",
+          "heading": "先复述变更想解决的问题"
+        },
+        {
+          "id": "review-risk-path",
+          "heading": "按风险与数据流安排阅读顺序"
+        },
+        {
+          "id": "review-counterexample",
+          "heading": "用可控顺序把疑问变成反例"
+        },
+        {
+          "id": "review-result-guard",
+          "heading": "修改后还要说明守卫保护了哪一层"
+        },
+        {
+          "id": "review-comments",
+          "heading": "评论要把触发条件与修改请求连起来"
+        },
+        {
+          "id": "review-priorities",
+          "heading": "区分阻塞建议与尚待确认的问题"
+        },
+        {
+          "id": "review-evidence",
+          "heading": "验证证据应来自正在评审的改动"
+        },
+        {
+          "id": "review-maintainability",
+          "heading": "可维护性意见需要连接未来变化"
+        },
+        {
+          "id": "review-large-change",
+          "heading": "大 PR 先拆出可理解的阅读路径"
+        },
+        {
+          "id": "review-disagreement",
+          "heading": "分歧用需求证据和明确决定收束"
+        },
+        {
+          "id": "review-approval",
+          "heading": "批准对应的是特定版本与检查范围"
+        },
+        {
+          "id": "review-calibration",
+          "heading": "评审能力需要通过后续结果持续校准"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "arch-containers",
+          "reason": "把结构意见连接到真实职责与运行边界。"
+        },
+        {
+          "concept": "incident-actions",
+          "reason": "从已发生的缺口找到应保护的条件。"
+        },
+        {
+          "concept": "test-oracle",
+          "reason": "判断现有检查是否能发现具体错误。"
+        },
+        {
+          "concept": "css-cascade",
+          "reason": "把样式评审落到实际覆盖来源与规则。"
+        }
+      ]
+    },
+    {
+      "id": "WEB-02",
+      "title": "看懂布局与覆盖",
+      "question": "长文件名、窄面板与弹层为什么会改变页面的表现？",
+      "summary": "用可直接打开的桌面资料页，观察尺寸、滚动、方向、层叠与原生对话框。",
+      "outcomes": [
+        "解释轨道与项目的最小尺寸",
+        "区分层叠顺序、定位和绘制层级",
+        "保留长内容、键盘和打印路径"
+      ],
+      "guide": "web-02-layout-cascade-responsive-logical-properties.md",
+      "anchor": "web-02",
+      "prerequisites": [
+        "web-01-html-semantics-forms-accessibility.md#web-01"
+      ],
+      "concepts": [
+        {
+          "id": "css-box-flow",
+          "heading": "从正常流与盒模型建立尺寸直觉"
+        },
+        {
+          "id": "css-layout-lab",
+          "heading": "先打开一个完整的桌面布局页面"
+        },
+        {
+          "id": "css-intrinsic",
+          "heading": "内在尺寸解释长内容为什么撑开网格"
+        },
+        {
+          "id": "css-flex-grid",
+          "heading": "Flex 与 Grid 分别分配哪一部分空间"
+        },
+        {
+          "id": "css-desktop-breakpoint",
+          "heading": "适应桌面空间时让内容决定断点"
+        },
+        {
+          "id": "css-logical",
+          "heading": "逻辑属性沿文字方向表达空间"
+        },
+        {
+          "id": "css-cascade",
+          "heading": "层叠先确定候选再比较选择器"
+        },
+        {
+          "id": "css-specificity",
+          "heading": "选择器优先级要按组成比较"
+        },
+        {
+          "id": "css-position-stacking",
+          "heading": "包含块与层叠上下文是两个问题"
+        },
+        {
+          "id": "css-overflow-sticky",
+          "heading": "滚动裁剪与 sticky 要找到实际祖先"
+        },
+        {
+          "id": "css-text-size",
+          "heading": "文字放大与字体变化也是布局输入"
+        },
+        {
+          "id": "css-print-preferences",
+          "heading": "打印与用户偏好要保留信息和焦点"
+        },
+        {
+          "id": "css-layout-debug",
+          "heading": "用逐层对照找到应修改的位置"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "modern-container",
+          "reason": "区分视口宽度与组件实际可用空间。"
+        },
+        {
+          "concept": "modern-layer",
+          "reason": "用明确层次管理样式来源。"
+        },
+        {
+          "concept": "review-evidence",
+          "reason": "为布局改动提供与风险相称的实际观察。"
+        },
+        {
+          "concept": "e2e-visual-baseline",
+          "reason": "区分外观差异与用户行为的验证。"
+        }
+      ]
+    },
+    {
+      "id": "WEB-03",
+      "title": "适应空间与渐进增强",
+      "question": "怎样让同一组件适应不同宿主，同时保留可用的基础形式？",
+      "summary": "在同一桌面页面切换容器布局、轨道共享与主题，观察级联结果并说明能力边界。",
+      "outcomes": [
+        "选择正确的尺寸容器与组件边界",
+        "解释普通声明与 important 的层次",
+        "区分可关闭增强和真实兼容证明"
+      ],
+      "guide": "web-03-modern-css-architecture-container-progressive.md",
+      "anchor": "web-03",
+      "prerequisites": [
+        "web-02-layout-cascade-responsive-logical-properties.md#web-02"
+      ],
+      "concepts": [
+        {
+          "id": "modern-baseline",
+          "heading": "先决定没有增强时用户还能做什么"
+        },
+        {
+          "id": "modern-card-lab",
+          "heading": "在同一视口放入两种宽度的卡片"
+        },
+        {
+          "id": "modern-layer",
+          "heading": "级联层先决定来源顺序再看选择器"
+        },
+        {
+          "id": "modern-container",
+          "heading": "容器查询读取的是哪一个祖先"
+        },
+        {
+          "id": "modern-container-units",
+          "heading": "容器单位与断点要服务实际内容"
+        },
+        {
+          "id": "modern-subgrid",
+          "heading": "Subgrid 共享轨道而不是固定每张卡片高度"
+        },
+        {
+          "id": "modern-scope-nesting",
+          "heading": "scope 与嵌套分别管理范围和重复"
+        },
+        {
+          "id": "modern-tokens",
+          "heading": "自定义属性表达可以变化的设计含义"
+        },
+        {
+          "id": "modern-supports-color",
+          "heading": "新颜色与能力检测都需要明确回退"
+        },
+        {
+          "id": "modern-anchor-motion",
+          "heading": "锚点定位与滚动动画只承担呈现"
+        },
+        {
+          "id": "modern-render-cost",
+          "heading": "渲染优化不能让关键内容依赖偶然触发"
+        },
+        {
+          "id": "modern-migration",
+          "heading": "迁移样式时记录来源与退出条件"
+        },
+        {
+          "id": "modern-verification",
+          "heading": "让验证覆盖最有解释力的条件"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "css-intrinsic",
+          "reason": "把组件的可用空间接回内容与最小尺寸。"
+        },
+        {
+          "concept": "css-cascade",
+          "reason": "理解层次与选择器优先级的比较位置。"
+        },
+        {
+          "concept": "review-evidence",
+          "reason": "在 PR 中明确增强、回退与检查范围。"
+        },
+        {
+          "concept": "eng-build-inputs",
+          "reason": "把 CSS 迁移结果对应到同一版本与构建输入。"
+        }
+      ]
+    }
+  ]
+}
