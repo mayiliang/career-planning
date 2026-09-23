@@ -1,147 +1,374 @@
-# 浏览器运行时知识点讲义
+# 浏览器协作机制学习资料
 
-## BROWSER-02 观察器、调度、页面生命周期与多标签页协同
+## BROWSER-02 让页面及时响应，也能暂停与恢复
 
-现代页面常同时处理滚动可见性、元素尺寸、批量计算、后台保存与多标签页协调。把这些需求都塞进定时器，会得到高频轮询、长任务、隐藏页耗电和重复副作用。本讲从浏览器已经提供的变化信号出发，逐层说明如何选择观察器、把工作切片、响应页面生命周期，并用广播、锁与服务端协议建立可恢复协作。
+页面里有三类常见工作：卡片接近阅读区域时加载内容，批量整理资料时持续显示进度，两个标签页都打开时避免重复执行同一任务。它们分别需要变化通知、调度和协调，不能都靠一个高频定时器解决。
+
+本篇把这些工作拆开，再用可操作的例子把它们接起来。重点是理解：谁发出信号，谁执行工作，何时让出主线程，暂停后靠什么恢复。
 
 ### 学习前先确认
 
-- 直接前置：[BROWSER-01 渲染流水线、DOM 事件与存储](../chinese-guides/browser-01-render-events-storage.md#browser-01)。事件循环和 Web 基础由该讲的前置递归提供，这里不重复列出。
-
-### 一、观察器表达“什么变化值得通知”
-
-轮询每隔几十毫秒读取几何或扫描整个 DOM，即使没有变化也持续占用资源。**观察器（Observer）**让代码订阅浏览器已经掌握的变化，并把记录批量交付。它减少无意义检查，却不会让回调免费，也不保证在变化发生的同一瞬间同步执行。
-
-常见观察器的职责不同：
-
-| API | 观察对象 | 适合 | 不适合 |
-| --- | --- | --- | --- |
-| IntersectionObserver | 目标与根的交叉状态 | 懒加载、曝光、接近视口预取 | 每像素同步跟随指针 |
-| ResizeObserver | 元素盒尺寸 | 组件响应宿主、图表重排 | 回调中反复改变被观察尺寸 |
-| MutationObserver | DOM 子树、属性或文本变化 | 接入不可控 DOM、编辑器同步 | 代替应用自己的状态流 |
-| PerformanceObserver | 性能条目 | LCP、long task 等现场采集 | 从一次本地记录推断全体用户 |
-
-每个订阅都要明确目标、阈值、数据量和停止条件。组件断开时 `disconnect()` 或 `unobserve()`，否则目标与闭包可能继续存活。
-
-### 二、IntersectionObserver 观察交叉而非可见真相
-
-交叉比例由目标矩形、root、rootMargin 与阈值计算。元素与视口相交不等于用户真正看见：它可能被遮挡、透明、位于后台标签或快速滚过。曝光统计需要时间阈值、页面可见性和业务去重共同判断。
-
-懒加载图片时，提前的 rootMargin 能在接近视口时开始请求，过大则失去节流价值。虚拟列表中 DOM 节点可能复用，要把记录与当前数据 ID 对齐，不能只信元素引用。观察器回调后更新状态仍经过事件循环，不能拿它做像素级吸附。
-
-隐藏内容与 `display:none`、滚动容器、变换和 iframe 会改变几何语境。用真实容器构造阈值两侧测试，并在不支持时回退为直接加载或简化逻辑。
-
-### 三、ResizeObserver 适合组件尺寸，回调要避免反馈环
-
-容器查询能解决纯样式响应；需要重算 Canvas、图形比例或非 CSS 数据时才使用 ResizeObserver。根据目标选择 content-box、border-box 或 device-pixel-content-box，并承认后者支持与设备行为需要核验。
-
-若回调读到宽度后立刻写一个又改变该宽度的样式，可能在同一渲染周期反复触发，浏览器最终报告 resize loop。解决方法不是吞掉错误，而是让写入收敛、比较新旧值、把非紧急写入安排到后续帧，或重新设计成 CSS 容器查询。
-
-图表重排可保留最后尺寸，尺寸未变化就跳过；连续变化时取消上一轮昂贵布局，只提交最新结果。测试窄宽边界、字体加载和父容器显隐，不只拖动窗口。
-
-### 四、MutationObserver 是跨边界适配器
-
-应用自己创建的 DOM 通常已有状态源，不需要再观察 DOM 反推状态。MutationObserver 更适合富文本编辑器、第三方脚本或浏览器扩展等无法直接控制的边界。
-
-配置 `subtree:true, attributes:true` 会扩大记录量；限定根、attributeFilter 和 mutation 类型。回调获得记录批次，应先归并同一目标的多次变化，再执行一次处理。回调自己的 DOM 写入也会产生新记录，因此要标记来源、比较目标状态或在写入期间暂时断开，确保协议收敛。
-
-观察器不会提供业务事务。多个节点变化可能属于同一用户操作，也可能跨多批交付；需要由编辑器或应用层的 operation ID 组合。
-
-### 五、PerformanceObserver 把现场条目变成指标输入
-
-PerformanceObserver 可订阅 navigation、resource、longtask、largest-contentful-paint、layout-shift、event 等浏览器暴露的条目。支持集合因浏览器而异，先检查 `supportedEntryTypes`，对 buffer 和丢失条目有明确策略。
-
-条目需要关联路由、发布版本、设备等级与用户任务，采样并脱敏。单个 long task 不一定伤害用户，只有它阻塞关键交互或持续发生时才有优先级。LCP 候选也会在页面更新中变化，最终值的采集要遵循指标定义。
-
-现场监控与本地 trace 配合：监控告诉你哪里、多少用户受影响，trace 用来解释一条可复现路径。不能把二者互相替代。
-
-### 六、帧、任务、微任务与让出的区别
-
-浏览器从任务队列执行一段 JavaScript，清空相应微任务，再获得渲染机会。微任务链可以不断追加，从而长期推迟输入与绘制；把长循环改成 `await Promise.resolve()` 只是在微任务间让出，通常没有把机会交给下一任务和渲染。
-
-`requestAnimationFrame()` 适合下一次绘制前更新视觉状态，不适合任意后台计算；空闲回调只适合允许长时间推迟的可选工作，且可能很久不执行。`setTimeout(0)` 会创建未来任务但受最小延迟、后台限流影响。
-
-**让出（Yield）**是结束当前执行片段，让宿主先处理更有价值的工作。切片要小到交互可响应，又不能小到调度开销淹没计算。根据时间预算和设备测量动态调整通常比固定“每 100 项”稳健。
-
-### 七、Scheduling API 表达优先级但不提供截止保证
-
-`scheduler.postTask()` 可以按 user-blocking、user-visible、background 表达相对价值，`scheduler.yield()` 让当前任务的延续在未来继续。优先级是调度提示，不是实时系统的期限保证，也不能让同步函数中途被浏览器强制打断。
-
-应用必须检测 API 并提供回退，例如 MessageChannel 或 setTimeout 分片。回退路径也要可取消、可观测、结果一致。不要以浏览器名称分支，也不要因为新 API 缺失就一次性执行整个长任务。
-
-切片循环在每批前后检查 AbortSignal，记录已处理范围；取消后不再提交 UI。若底层操作不可中断，至少能忽略迟到结果并释放后续资源。优先级提升/降低要与当前用户任务关联，后台预取不能抢占正在输入的交互。
-
-### 八、Worker 是并行边界，不是调度按钮
-
-大量纯计算可移到 Worker，但 DOM、许多 UI API 和部分对象不能直接使用。传递大数据会发生结构化克隆或 transferable 所有权转移；若每批复制成本超过计算收益，Worker 反而更慢。
-
-设计消息协议包含 version、jobId、sequence、type 与错误分类。主线程取消时通知 Worker，Worker 在批次间检查；迟到消息按 jobId 丢弃。终止 Worker 是最后手段，会丢失内部状态和清理机会。
-
-主线程切片适合轻量渐进工作，Worker 适合可隔离的重计算，两者可组合。选择前比较总耗时、交互延迟、数据搬运和内存峰值。
-
-### 九、页面会在 visible、hidden、frozen 与 discarded 间变化
-
-**页面生命周期（Page Lifecycle）**不是只有 load/unload。`visibilitychange` 到 hidden 往往是最后可靠的保存信号；冻结后可冻结任务队列暂停，页面可能不再恢复；系统舍弃页面时无法运行收尾代码；后退前进还可能从 BFCache 恢复完整内存状态。
-
-不要依赖 unload 保存关键数据，它会损害 BFCache 且并不可靠。hidden 时幂等保存小状态、停止轮询和非必要媒体；freeze/pagehide 时释放锁、数据库连接、频道与网络资源。不能保证执行的清理必须由租约过期、幂等写入或下次启动恢复兜底。
-
-`pageshow.persisted` 表示可能从 BFCache 恢复。恢复逻辑先检查资源是否仍存在，再重建缺失项，不能无条件再添加监听器和计时器。`document.wasDiscarded` 可帮助新加载解释上次状态丢失，但不是跨浏览器永久保证。
-
-### 十、生命周期保存必须可重复且有版本
-
-保存函数记录数据 revision，重复 hidden/freeze 不产生重复副作用。页面恢复时重新读取真源或验证内存快照版本，避免用长时间冻结前的权限、账号或网络状态继续操作。
-
-草稿保存包含 documentId、revision、updatedAt 和 schemaVersion；并发标签写入时使用版本检查或合并协议。高风险写请求不能在页面关闭事件里“尽力发送”后假定成功；`sendBeacon` 也只表示尝试排队，服务端仍需幂等与审计。
-
-媒体、WebSocket、锁和 Worker 的暂停策略不同。恢复时不要一次性补发冻结期间所有定时器 tick，而是重新计算当前状态和下一截止时间。
-
-### 十一、BroadcastChannel 传消息，不保存状态也不互斥
-
-BroadcastChannel 在同源页面、frame 与 Worker 之间广播可结构化克隆的消息；发送者通常不收到自身消息。频道没有历史，新标签不会自动获得旧状态。频道名不是权限，页面中任何同源脚本都可能加入。
-
-消息结构包含 version、senderId、sequence、type 和最小 payload。接收端验证类型与范围，对 `(senderId, sequence)` 去重，未知版本安全忽略或请求快照。消息通知接收端重新读取持久真源，比把每条消息当完整数据库更可靠。
-
-后台限流、冻结和崩溃会使心跳延迟。仅靠“最后听到谁”选领导者会出现两个标签都认为对方已死的脑裂，尤其不能用于重复支付、上传或同步写入。
-
-### 十二、Web Locks 提供同源协调任期
-
-**Web Locks API**让同源上下文请求命名锁，回调存续期间持锁，完成或失败后释放。锁可排队，也可用 `ifAvailable` 尝试；AbortSignal 能取消等待。独占锁适合单领导者任务，共享锁适合允许并发读的场景。
-
-持锁回调不应无限等待无法取消的 Promise。领导者有 termId 和 AbortController，hidden/freeze/pagehide 时结束任期；新标签获得锁后从持久检查点恢复。消息中的 leader 声明只是观察信息，锁的实际持有才是本地互斥依据。
-
-Web Locks 只覆盖同一 origin 且支持该 API 的浏览器上下文，不覆盖多设备、服务实例或被清理的页面。真正产生外部副作用的任务仍需服务端幂等键、版本或租约。没有 Web Locks 时，安全降级可以停用单实例副作用并说明原因，或把协调完全交给服务端；不要用脆弱心跳假装强互斥。
-
-### 十三、领导者恢复需要幂等检查点
-
-长任务把进度写成 `{jobId, revision, nextChunk, status}`，每个块的副作用按 jobId/chunkId 幂等。新领导者先读取检查点和服务端结果，再决定继续、重试或人工确认。它不能只相信上一任广播的“已完成”。
-
-任期变化使用 fencing token 或单调 epoch。服务端拒绝旧 epoch 的写入，避免旧领导者从冻结恢复后继续提交。只有本地只读计算时可省略服务端 fencing，但仍要防止同一 UI 重复呈现。
-
-恢复协议必须覆盖浏览器崩溃、标签冻结、锁 API 缺失、消息版本不兼容和账号切换。安全状态优先于“永远有一个 leader”。
-
-### 十四、避免定时器风暴与重复订阅
-
-把计时器、观察器、频道、锁和 Worker 收进一个资源所有者。mount 时创建 AbortController，unmount 时统一 abort/close/disconnect；resume 先判定现有状态，确保调用两次仍只有一份订阅。
-
-隐藏页定时器会被限流，恢复时多个到期回调可能聚集。调度函数根据当前时间重新计算，不循环补偿每个错过的间隔。指数退避也要在可见性变化后保留预算，不能恢复瞬间所有客户端同时请求。
-
-开发环境严格模式、热更新和 BFCache 都能暴露重复挂载。记录资源计数而非只看控制台输出：activeTimers、observerTargets、channelCount、leaderTerm 与 listenerCount 在稳定状态应符合预期。
-
-### 十五、验证调度与协同要控制变量
-
-长任务实验固定输入、工作函数、设备与浏览器，分别记录不切片、主线程切片和 Worker 的总耗时、最长任务、INP/输入延迟、内存与取消延迟。总耗时略增但交互明显改善可能是合理权衡。
-
-生命周期实验覆盖前台、hidden、freeze/BFCache 恢复和重新加载，断言保存幂等、轮询停止、订阅唯一。双标签实验记录 tabId、epoch、role、lock state、jobId、chunk 和消息版本，证明任一时刻外部副作用只有一个有效提交者。
-
-故意注入消息丢失、未知版本、领导者崩溃和无 API 路径。只有成功路径没有证明恢复能力。日志脱敏并使用单调时间或明确时间来源，避免用不同页面的墙上时钟推断精确顺序。
-
-### 十六、选择 API 的决策顺序
-
-先问工作是否必要、是否能由 CSS/HTML 完成；然后问浏览器是否已有精确信号；再决定是否需要主线程同帧更新、可延迟任务、Worker 并行或跨标签协调。每增加一种并发原语，都同时增加取消、清理、版本和恢复责任。
-
-Observer 负责变化通知，rAF 负责帧前视觉更新，scheduler 负责相对优先和让出，Worker 负责隔离计算，BroadcastChannel 负责消息，Web Locks 负责同源互斥，服务端协议负责跨设备真相。它们不可因 API 名字相近而互换。
-
-### 学完后应能说明
-
-你应能为交叉、尺寸、DOM 与性能变化选择正确观察器，解释任务、微任务、帧、让出和优先级的差异；能让计算可取消并在缺少新 API 时安全回退；能处理 hidden、freeze、BFCache 与舍弃；还能用版本化消息、Web Locks 任期、幂等检查点和服务端 fencing 设计无脑裂的多标签协同。
-
+- 直接前置：[BROWSER-01 渲染流水线、DOM 事件与存储](../chinese-guides/browser-01-render-events-storage.md#browser-01)。需要理解事件回调、渲染机会和事务提交。
+
+### 一、先选择信号，再安排工作
+
+**观察器（Observer）**是订阅变化的工具。它通常批量交付记录，减少没变化时仍不断检查的浪费；回调仍需要时间，并不会因为 API 名字里有 Observer 就变成后台线程。
+
+| 你真正想知道的事 | 合适入口 | 容易选错的做法 |
+| --- | --- | --- |
+| 目标是否接近滚动区域 | IntersectionObserver | 每 16 ms 扫全页矩形 |
+| 组件实际宽度是否变化 | ResizeObserver | 只监听窗口 resize |
+| 外部脚本改了哪些 DOM 属性 | MutationObserver | 从整个 body 反推应用状态 |
+| 浏览器产生了哪些性能条目 | PerformanceObserver | 用 console 时间当作全部用户指标 |
+| 纯 CSS 布局能否随容器变化 | CSS 容器查询 | 为每个断点安装尺寸回调 |
+
+观察器只回答它负责的问题。拿到“交叉了”的记录后，加载多少数据、是否取消旧请求、怎样处理失败，仍由应用决定。可以先读 [WEB-03 的容器查询](../chinese-guides/web-03-modern-css-architecture-container-progressive.md#web-03)，避免用脚本重复实现纯样式需求。
+
+### 二、交叉不等于用户真的读到了
+
+**IntersectionObserver** 比较目标与 root 的交叉几何。root 可以是视口，也可以是指定滚动容器；rootMargin 调整判定范围，threshold 决定关注哪些比例变化。
+
+例如为文章末尾的“下一篇”设置正的 rootMargin，是让它还没真正进入视野时就开始准备数据。此时收到记录，不能直接计为“用户看到了推荐”。目标也可能被其他内容遮住、透明，或所在标签处于后台。
+
+曝光通常还需要持续时间、页面可见状态、业务 ID 与去重。快速滚过一次不等于认真阅读。虚拟列表复用 DOM 时，应核对元素当前对应哪份资料，不要把上一次绑定的 ID 留在闭包里。
+
+回调也会给出初始观测记录，并非只有用户滚动后才调用。观察到目标离开区域的记录同样正常。需要逐像素跟随指针时，这个异步几何通知不是合适的同步输入源。
+
+### 三、同时观察宽度、滚动与属性
+
+保存为 `observers.html` 并打开：切换宽度时，看内容盒宽度变化；滚动框到底部，看交叉状态变化；点击“切换外部属性”，看 MutationObserver 收到的属性记录。这里用按钮模拟外部代码，不是在推荐应用先改 DOM 再反推自己的状态。
+
+```html example=browser-observers runtime=project file=observers.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>三个不同的变化信号</title>
+<style>
+  body { margin: 3rem; font: 18px/1.7 system-ui; color: #172d3c; }
+  button { font: inherit; padding: .6rem; margin: .4rem; }
+  :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+  #box { width: 360px; height: 180px; overflow: auto; border: 2px solid #73899b; }
+  #space { height: 400px; background: linear-gradient(#eef4fa, #d8e7f3); }
+  #target { height: 60px; background: #173f61; color: white; }
+</style>
+<main>
+  <h1>三个不同的变化信号</h1>
+  <button id="width">切换宽度</button><button id="mutate">切换外部属性</button>
+  <button id="stop">停止观察</button>
+  <div id="box" tabindex="0" role="region" aria-label="可滚动示例">
+    <div id="space">向下滚动，找到底部目标。</div>
+    <div id="target" data-state="idle">底部目标</div>
+  </div>
+  <p id="size">等待尺寸记录</p><p id="intersection">等待交叉记录</p>
+  <p id="mutation">尚未改变属性</p><p id="status" role="status"></p>
+</main>
+<script>
+  const el = (id) => document.getElementById(id);
+  const box = el('box');
+  const target = el('target');
+  const observers = [];
+  if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(([entry]) => {
+      el('size').textContent = `内容盒宽度：${Math.round(entry.contentRect.width)} px`;
+    });
+    ro.observe(box); observers.push(ro);
+  } else el('size').textContent = '此浏览器没有 ResizeObserver';
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(([entry]) => {
+      el('intersection').textContent = entry.isIntersecting ? '目标已交叉' : '目标未交叉';
+    }, { root: box, threshold: [0, 1] });
+    io.observe(target); observers.push(io);
+  } else el('intersection').textContent = '此浏览器没有 IntersectionObserver';
+  if ('MutationObserver' in window) {
+    const mo = new MutationObserver((records) => {
+      el('mutation').textContent = `${records[0].attributeName}：${target.dataset.state}`;
+    });
+    mo.observe(target, { attributes: true, attributeFilter: ['data-state'] });
+    observers.push(mo);
+  } else el('mutation').textContent = '此浏览器没有 MutationObserver';
+  let wide = false;
+  el('width').onclick = () => { wide = !wide; box.style.width = wide ? '520px' : '360px'; };
+  el('mutate').onclick = () => {
+    target.dataset.state = target.dataset.state === 'idle' ? 'ready' : 'idle';
+  };
+  el('stop').onclick = () => {
+    observers.forEach((observer) => observer.disconnect());
+    el('status').textContent = '观察已停止，界面仍可操作；刷新可重新开始。';
+  };
+</script>
+</html>
+```
+
+预期宽度从 360 变为 520，底部目标从未交叉变为已交叉，属性记录从尚未改变变成 `data-state：ready`。停止观察后按钮仍会改变 DOM，但显示的观测结果保持不动。显示区域的文字不是实时数据源，只是上一次收到通知时的记录。
+
+代码把观察结果写到被观察区域之外，且没有修改目标宽度。这避免了“读到宽度—把宽度加 10—再次读到更大宽度”的反馈环。
+
+### 四、尺寸回调必须能够收敛
+
+**ResizeObserver** 可以观察内容盒或边框盒等尺寸，选择要与计算目的对应。文字换行、侧栏展开、字体加载都可能改变组件尺寸，即使窗口大小完全没变。
+
+若回调不断给自己观察的元素加宽，浏览器可能报告 resize loop，或把部分通知延后。把写入塞进 requestAnimationFrame 只能改变发生时机，不能让“每次加 10”这个无终点规则自动收敛。
+
+可以记录期望尺寸，只在新旧结果确实不同时更新；或观察外层、修改不会反过来影响外层的内部画布分辨率。Canvas 的 CSS 尺寸与像素尺寸还要分别处理，并考虑 devicePixelRatio。纯样式布局则优先让 CSS 完成。
+
+观察器的成本也取决于回调。拖动桌面分栏时，若每次尺寸通知都重新构造几千个图形，仍然会卡；可以合并到最近一帧，只处理最新尺寸，而不是依次重放所有中间状态。
+
+### 五、DOM 记录与性能条目有不同用途
+
+**MutationObserver** 适合接入编辑器、第三方控件等自己无法直接拥有状态的边界。限定根、变化类型与 attributeFilter，减少无关记录。回调再次修改所观察的属性，可能产生后续记录；比较目标值、划分所有权，比无条件重新写一遍更可靠。
+
+**PerformanceObserver** 订阅浏览器提供的性能条目。不同环境的 supportedEntryTypes 不同，不能把某一种 entry 当作所有浏览器都有。下面是可在页面控制台运行的独立观察片段，运行十秒后自动停止；没有 longtask 支持时明确说明。
+
+```js example=browser-performance-observer runtime=project
+if ('PerformanceObserver' in window &&
+    PerformanceObserver.supportedEntryTypes.includes('longtask')) {
+  const observer = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+      console.log('longtask', Math.round(entry.duration), 'ms');
+    }
+  });
+  observer.observe({ type: 'longtask', buffered: true });
+  setTimeout(() => observer.disconnect(), 10000);
+} else {
+  console.log('当前环境不提供 longtask 条目');
+}
+```
+
+没有输出可能只是这段时间没有符合条件的条目。longtask 也不是 INP；指标采集需要遵循对应定义，处理候选更新、页面状态与样本。实际监控应尽量记录版本、路径和必要设备信息，避免把用户正文当作性能日志上传。
+
+### 六、让出主线程与等待 Promise 不同
+
+`await Promise.resolve()` 会把后续工作安排到微任务。持续追加微任务，仍可能延迟输入与绘制；它不是保证页面响应的切片工具。
+
+| 入口 | 适合的工作 | 不保证什么 |
+| --- | --- | --- |
+| requestAnimationFrame | 绘制前提交一批视觉变化 | 不提供新的计算线程，也不保证后台持续运行 |
+| scheduler.yield | 让当前工作在后续任务继续 | 不保证下一次一定先绘制，也不自动中断当前同步片段 |
+| scheduler.postTask | 表达相对优先级 | 不是必须在某毫秒前完成的截止承诺 |
+| setTimeout | 建立未来任务，作为简单回退 | 0 不表示立刻执行，隐藏页还可能限流 |
+| requestIdleCallback | 可以推迟的可选工作 | 不适合必须尽快完成的保存步骤 |
+| Worker | 隔离可并行计算 | 不能直接操作页面 DOM |
+
+**让出（Yield）**的关键，是结束当前片段，让浏览器有机会安排其他工作。切片改善的可能是响应延迟，总耗时反而略长。单次同步工作仍很大时，外面包再多 yield 也无法把它从中间切开。
+
+### 七、运行一段可以取消的批量计算
+
+保存为 `sliced-work.html`。开始计算后仍可点击“试试响应”或“取消”；完成后显示已处理 200000 项。勾选“强制使用定时器回退”再运行，结果仍应相同。示例计算每项平方根之和来制造可重复的 CPU 工作，不代表真实业务算法。
+
+```html example=browser-sliced-work runtime=project file=sliced-work.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>能暂停的批量计算</title>
+<style>
+  body { max-width: 52rem; margin: 3rem auto; padding: 0 2rem;
+    font: 18px/1.7 system-ui; color: #172d3c; }
+  button { font: inherit; padding: .6rem; margin: .4rem; }
+  :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+  progress { display: block; width: 100%; margin-block: 1rem; }
+</style>
+<main>
+  <h1>能暂停的批量计算</h1>
+  <label><input id="fallback" type="checkbox">强制使用定时器回退</label>
+  <p><button id="start">开始计算</button><button id="cancel" disabled>取消</button>
+    <button id="ping">试试响应</button></p>
+  <label for="progress">处理进度</label><progress id="progress" max="200000" value="0"></progress>
+  <p id="detail">尚未开始</p><p id="ping-result">响应次数：0</p>
+  <p id="result" role="status"></p>
+</main>
+<script>
+  const el = (id) => document.getElementById(id);
+  let active = null;
+  let responses = 0;
+  el('ping').onclick = () => { el('ping-result').textContent = `响应次数：${++responses}`; };
+  el('cancel').onclick = () => active?.abort();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) active?.abort();
+  });
+  el('start').onclick = async () => {
+    const controller = new AbortController();
+    active = controller;
+    const forceTimer = el('fallback').checked;
+    const canYield = !forceTimer && typeof globalThis.scheduler?.yield === 'function';
+    const pause = () => canYield ? globalThis.scheduler.yield()
+      : new Promise((resolve) => setTimeout(resolve, 0));
+    el('start').disabled = true; el('cancel').disabled = false; el('fallback').disabled = true;
+    el('progress').value = 0; el('result').textContent = '计算中，可取消。';
+    let done = 0;
+    let checksum = 0;
+    try {
+      while (done < 200000) {
+        controller.signal.throwIfAborted();
+        const deadline = performance.now() + 4;
+        do {
+          for (let j = 0; j < 200; j++) checksum += Math.sqrt(done + j);
+          done++;
+        } while (done < 200000 && performance.now() < deadline);
+        controller.signal.throwIfAborted();
+        el('progress').value = done;
+        el('detail').textContent = `已处理 ${done} 项；${canYield ? 'scheduler.yield' : '定时器回退'}`;
+        if (done < 200000) await pause();
+      }
+      controller.signal.throwIfAborted();
+      el('result').textContent = `完成：${done} 项，校验和 ${Math.round(checksum)}`;
+    } catch (error) {
+      el('result').textContent = controller.signal.aborted
+        ? `已取消，停在 ${done} 项；再次开始会从头计算。`
+        : `计算失败：${error.message}`;
+    } finally {
+      if (active === controller) active = null;
+      el('start').disabled = false; el('cancel').disabled = true; el('fallback').disabled = false;
+    }
+  };
+</script>
+</html>
+```
+
+进度文字不设为 live region，避免每几毫秒打断阅读；最终结果才通过状态区提示。开始按钮在执行时禁用，因此本例只有一个任务。若产品允许新任务替换旧任务，还需要 jobId 或递增序号，防止旧结果覆盖新任务。
+
+4 ms 是教学预算，不是所有设备的最佳值。一次内层计算若已超过预算，JavaScript 仍会把它执行完，再检查时钟。取消同样发生在代码检查 signal 时，并非按下按钮就能中断当前指令。
+
+本例隐藏页面时取消计算，再开始从头运行。它展示的是清楚的取消语义，没有假装已实现检查点续算。两个分支使用同样的输入与计算顺序，应该得到相同校验和；响应性与总耗时则需分开观察。
+
+### 八、什么时候把工作搬进 Worker
+
+**Worker** 有自己的执行环境，适合可隔离的解析、搜索索引或图像计算。若工作需要频繁直接读取 DOM，先把数据提取出来，才能移动计算边界。
+
+发送对象通常涉及结构化克隆；转移 ArrayBuffer 的所有权后，发送侧不能继续把原缓冲当作可用数据。数据搬运、Worker 启动与内存峰值都需要计算在收益里，不能只比较循环运行时间。
+
+一个清楚的协议可以包含 `{type, jobId, sequence, payload}`。开始后主线程只接受当前 jobId 的结果；取消时通知 Worker，Worker 在自己的片段边界检查。若 Worker 正在执行一段长同步循环，它也要等处理消息的机会，取消消息不会在任意指令中间插入。
+
+终止 Worker 可以立即结束它，但会失去内部进度；需要恢复的任务先设计检查点。主线程切片与 Worker 不是二选一，Worker 内部也可能需要分段，方便响应新的控制消息。
+
+### 九、页面隐藏、冻结和返回时发生什么
+
+**页面生命周期（Page Lifecycle）**不止 load 与 unload。切换标签使页面 hidden；浏览器可能进一步冻结部分任务，或直接舍弃页面；后退前进也可能从 BFCache 恢复原有页面内存。
+
+| 信号或状态 | 可以做什么 | 不能假定什么 |
+| --- | --- | --- |
+| visibilitychange → hidden | 停止不必要工作，尽早保存小状态 | 不代表页面一定关闭 |
+| pagehide | 为离开或进入缓存释放资源 | 不是所有退出都一定送达 |
+| freeze / resume | 在支持的环境协助暂停与恢复 | 不是所有浏览器都有的通用事件 |
+| pageshow.persisted 为 true | 识别从 BFCache 恢复 | 不应重新安装一遍仍存在的监听器 |
+| 页面被 discarded | 下次加载从持久状态恢复 | 被舍弃时没有收尾回调可依赖 |
+
+**往返缓存（Back-Forward Cache）**可以保留完整页面状态。恢复时不能直接把启动函数无条件再执行一次，否则容易出现两份轮询、两条连接。也不能直接相信冻结前的账号、权限和数据仍然有效，应按需要重新验证。
+
+hidden 往往是能较早捕获的保存机会，但任何关闭信号都不是持久化保证。重要草稿在编辑过程中就应持续保存，隐藏时再尽力补齐；不要等 unload 才第一次写入。sendBeacon 返回 true 只表示浏览器接受排队，不是服务器成功处理的收据。
+
+### 十、广播是提醒，不是可靠状态历史
+
+**BroadcastChannel** 在满足同源与存储分区条件的上下文间通信。不同顶层站点下嵌入的同源页面，不一定属于同一可通信分区。调用 postMessage 的频道对象不会收到自己的那次消息；另一个同页频道对象也可能是接收者，不能笼统写成“本页绝不收到”。
+
+频道没有历史。A 广播完再打开 B，B 不会自动补收到过去的消息。因此消息可以设计为 `{v: 1, type: 'draft-changed', id, revision}`，接收端核对版本与字段后重新读取真源；启动时也主动读取。
+
+广播和心跳都不负责互斥。A 长时间没有听见 B，可能是 B 被限流或冻结，并不能证明 B 已退出。依赖“谁最近没说话”决定唯一领导者，很容易让两边同时开始。
+
+### 十一、用两个标签页观察锁的持有与释放
+
+**Web Locks** 让同一受支持协调范围内的上下文申请命名锁。独占锁的回调开始执行时才算获得锁；回调返回的 Promise 结束后释放。取消等待用请求的 signal，已经拿到锁后则要让回调自行结束，不能把 abort 等待信号当作强制释放按钮。
+
+下面保存为 `tab-lock.html`，通过本地 HTTP 服务打开，并复制相同 URL 到第二个标签页。可以在只含示例文件的目录运行 `python -m http.server 43813 --bind 127.0.0.1`，随后访问 `http://127.0.0.1:43813/tab-lock.html`。localhost 属于可使用相关安全上下文 API 的本地开发场景；不要用 file URL 证明跨标签同源行为。
+
+点击 A 的“尝试占用”，再点 B 的同名按钮。B 应立即显示占用中。释放 A 后，再点 B，它才能持锁。为了让这个对照容易观察，本例不会在切换到 B 导致 A 隐藏时自动释放；离开页面时会释放，它不模拟生产后台领导者策略。
+
+```html example=browser-tab-lock runtime=project file=tab-lock.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>两个标签轮流持锁</title>
+<style>
+  body { max-width: 48rem; margin: 3rem auto; font: 18px/1.7 system-ui; color: #172d3c; }
+  button { font: inherit; padding: .6rem; margin: .4rem; }
+  :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+</style>
+<main>
+  <h1>两个标签轮流持锁</h1>
+  <p>复制当前 HTTP 地址到另一张标签页，再交替操作。</p>
+  <button id="acquire">尝试占用</button><button id="release" disabled>释放</button>
+  <p id="state" role="status">尚未申请</p><p id="message">尚未收到广播；消息不保存历史。</p>
+</main>
+<script>
+  const el = (id) => document.getElementById(id);
+  let release = null;
+  let channel = null;
+  let leaving = false;
+  function connect() {
+    if (channel || !('BroadcastChannel' in window)) return;
+    channel = new BroadcastChannel('b13-lock-demo-v1');
+    channel.onmessage = ({ data }) => {
+      if (data?.v !== 1 || !['held', 'released'].includes(data.type)) return;
+      el('message').textContent = `收到提示：${data.type}；是否可占用仍以锁结果为准。`;
+    };
+  }
+  connect();
+  el('acquire').onclick = async () => {
+    if (!navigator.locks?.request) {
+      el('state').textContent = '当前环境不支持 Web Locks，此演示停用占用功能。';
+      return;
+    }
+    el('acquire').disabled = true;
+    try {
+      await navigator.locks.request('b13-demo-exclusive', { ifAvailable: true }, async (lock) => {
+        if (!lock) { el('state').textContent = '其他标签正在占用，请稍后重试。'; return; }
+        if (leaving) return;
+        el('state').textContent = '本标签已持锁'; el('release').disabled = false;
+        const untilReleased = new Promise((resolve) => { release = resolve; });
+        channel?.postMessage({ v: 1, type: 'held' });
+        try { await untilReleased; }
+        finally { release = null; el('release').disabled = true; }
+      });
+      if (el('state').textContent === '本标签已持锁') {
+        el('state').textContent = '本标签已释放';
+        channel?.postMessage({ v: 1, type: 'released' });
+      }
+    } catch (error) { el('state').textContent = `申请失败：${error.message}`; }
+    finally { el('acquire').disabled = false; }
+  };
+  el('release').onclick = () => release?.();
+  window.addEventListener('pagehide', () => {
+    leaving = true; release?.(); channel?.close(); channel = null;
+  });
+  window.addEventListener('pageshow', () => { leaving = false; connect(); });
+</script>
+</html>
+```
+
+这个例子没有存储任务进度，没有同步到服务器，也没有宣称锁能抵抗任意页面冻结。它只演示同一锁名的互斥和消息提醒之间的差别。新标签的广播栏仍可能空白，但只要已有标签持锁，它依然无法拿到锁。
+
+### 十二、恢复靠检查点，外部副作用靠幂等
+
+假设一个导入任务有十块数据，上一标签显示“处理到第六块”后崩溃。新的持锁者不能只相信内存或广播，应读取持久检查点，确认哪些块已经提交，再继续处理。
+
+检查点可记录 jobId、版本、下一块编号和状态；每块外部写入使用稳定幂等键，例如 jobId 与 chunkId 的组合。若服务器已提交而本地没来得及记账，重试相同幂等键应返回已有结果，而不是重复新增。
+
+Web Locks 只协调本地符合条件的上下文，不能约束另一个浏览器或另一台设备。服务端租约过期后旧执行者仍可能恢复，此时需要由权威端发放递增的 fencing token，并拒绝旧 token 的写入；客户端随机 termId 只能标识任期，不能凭空提供这种顺序保证。
+
+没有 Web Locks 时，可以停用需要本地唯一执行者的功能，或者交由服务端协调。把 localStorage 心跳包装成“可靠锁”，会把未解决的并发问题藏在更好看的名字下面。
+
+### 十三、资源要有明确的主人
+
+一个阅读页面可能同时持有观察器、事件监听器、计时器、数据库连接和频道。为每一类写清创建、停止、恢复，能避免“离开页面后还在工作”。
+
+停止函数应允许重复调用；恢复函数只创建缺失资源。本文频道例子用 `if (channel) return` 保证重复恢复不会创建多份对象。真正的页面还要处理 freeze、账号变化和路由卸载，按任务选择保存或取消。
+
+恢复后也不应补跑隐藏期间错过的每一个定时器 tick。例如定时更新“距离截止还有多久”，应按当前时间重新计算一次，而不是重放一小时内的 3600 次更新。网络重连则保留退避和预算，避免所有标签同时发请求。
+
+### 十四、用少量对照确认自己理解了什么
+
+本文例子的观察点很具体：停止观察后记录不再更新；计算两种调度分支结果一致，取消后不出现完成结果；一张标签持锁时另一张失败，释放后可以接替。
+
+这些结果不等于真实屏幕阅读器验证、完整页面冻结测试或服务器幂等证明。记录浏览器版本与操作即可，扩展到产品时再补对应证据。需要验证后台策略，就真的切换标签或使用浏览器生命周期工具；调用一个处理函数只能证明函数分支，不等于页面实际进入了冻结状态。
+
+学完后可以尝试解释三个问题：为什么把长循环换成连续 await Promise.resolve 仍可能卡；为什么把 ResizeObserver 写入推迟一帧仍可能无限增宽；为什么广播“我是 leader”不能证明独占资格。它们分别对应调度、收敛与协调，正是本篇最需要分开的三个机制。
+
+### 参考与延伸阅读
+
+审校日期：2026-09-14。兼容性按具体 API 与目标环境核对，入口存在不等于所有子行为都已验证。
+
+- [MDN：Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API)、[ResizeObserver](https://developer.mozilla.org/en-US/docs/Web/API/ResizeObserver)：几何通知与尺寸反馈环。
+- [MDN：MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver)、[PerformanceObserver](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceObserver)：DOM 记录与性能条目的不同用途。
+- [MDN：scheduler.yield](https://developer.mozilla.org/en-US/docs/Web/API/Scheduler/yield)：让出、优先级继承和兼容表。
+- [Chrome：Page Lifecycle API](https://developer.chrome.com/docs/web-platform/page-lifecycle-api)：隐藏、冻结、舍弃和资源释放。
+- [MDN：Broadcast Channel API](https://developer.mozilla.org/en-US/docs/Web/API/Broadcast_Channel_API)：同源、存储分区与无历史通信。
+- [MDN：Web Locks API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API)：持锁回调、可用性检查与请求取消。

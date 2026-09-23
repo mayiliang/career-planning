@@ -12,10 +12,6 @@
     "comp-01-component-responsibility-api-composition.md"
   ],
   "terms": {
-    "backpressure": {
-      "file": "6a06ac7024efc018.wav",
-      "text": "Backpressure"
-    },
     "cache invalidation": {
       "file": "d3d1b3f8d3576615.wav",
       "text": "Cache Invalidation"
@@ -28,17 +24,21 @@
       "file": "730d725c8a59d3a7.wav",
       "text": "Composition"
     },
-    "conflict resolution": {
-      "file": "284c622fae433459.wav",
-      "text": "Conflict Resolution"
+    "discriminated union": {
+      "file": "9971b58fca81d2e0.wav",
+      "text": "Discriminated Union"
     },
     "escape hatch": {
       "file": "189d31b588392ad6.wav",
       "text": "Escape Hatch"
     },
-    "idempotency key": {
-      "file": "8a3f6aee00f005cd.wav",
-      "text": "Idempotency Key"
+    "gctime": {
+      "file": "a6ea23c9cb384172.wav",
+      "text": "gcTime"
+    },
+    "in-flight deduplication": {
+      "file": "8f8880da23d090c1.wav",
+      "text": "In-flight Deduplication"
     },
     "optimistic update": {
       "file": "5754d7b712bdd395.wav",
@@ -52,21 +52,25 @@
       "file": "55b7b94dc0769e18.wav",
       "text": "Query Key"
     },
+    "refetchinterval": {
+      "file": "b969c6039105325e.wav",
+      "text": "refetchInterval"
+    },
     "semantic variant": {
       "file": "e481aee4fc8803fe.wav",
       "text": "Semantic Variant"
-    },
-    "server sent events": {
-      "file": "d908e0944e8ce678.wav",
-      "text": "Server Sent Events"
     },
     "server state": {
       "file": "914b2780464926d9.wav",
       "text": "Server State"
     },
-    "stale time": {
-      "file": "e00ae27ad848eee0.wav",
-      "text": "Stale Time"
+    "server-sent events": {
+      "file": "f589f41e7262c1da.wav",
+      "text": "Server-Sent Events"
+    },
+    "staletime": {
+      "file": "296ca7c4b42beab5.wav",
+      "text": "staleTime"
     },
     "websocket": {
       "file": "7ce54cbababdd648.wav",

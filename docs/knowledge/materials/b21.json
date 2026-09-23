@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "batch": "B21",
+  "title": "从交付证据到页面呈现",
+  "reviewedOn": "2026-09-20",
+  "chapters": [
+    {
+      "id": "BIZ-08",
+      "title": "让一条规则找到执行与证据",
+      "question": "页面、接口和报告都说完成了，怎样确认它们保护的是同一条业务规则？",
+      "summary": "从代班复核的到期反例出发，连接稳定规则、验收条件、双向追踪、变更影响和当前版本证据。",
+      "outcomes": [
+        "区分业务目标、规则、设计和实际观察",
+        "沿规则变化找到候选影响并逐项确认",
+        "判断一份证据是否适用于当前交付"
+      ],
+      "prerequisites": [
+        "biz-01-domain-objects-relations-ubiquitous-language.md#biz-01",
+        "eng-05-quality-gates-lint-types-tests-ci.md#eng-05"
+      ],
+      "guide": "biz-08-requirement-acceptance-traceability.md",
+      "anchor": "biz-08",
+      "concepts": [
+        {
+          "id": "delivery-trace-layers",
+          "heading": "一、把目标、规则和实现决定分开"
+        },
+        {
+          "id": "delivery-trace-identity",
+          "heading": "二、稳定编号保留规则身份，版本说明规则变化"
+        },
+        {
+          "id": "delivery-trace-criteria",
+          "heading": "三、验收条件写输入、观察和不能发生的事"
+        },
+        {
+          "id": "delivery-trace-forward",
+          "heading": "四、正向追踪找到每条承诺的执行位置"
+        },
+        {
+          "id": "delivery-trace-backward",
+          "heading": "五、反向追踪解释分支为何存在"
+        },
+        {
+          "id": "delivery-trace-matrix",
+          "heading": "六、矩阵只放能帮助判断的关系"
+        },
+        {
+          "id": "delivery-trace-impact",
+          "heading": "七、规则变化先推导候选影响，再逐项确认"
+        },
+        {
+          "id": "delivery-trace-baseline",
+          "heading": "八、证据要对应这次规则和这次构建"
+        },
+        {
+          "id": "delivery-trace-decisions",
+          "heading": "九、验收标准、完成定义和设计决定各有职责"
+        },
+        {
+          "id": "delivery-trace-nonfunctional",
+          "heading": "十、把性能和易用性也写成可观察承诺"
+        },
+        {
+          "id": "delivery-trace-automation",
+          "heading": "十一、AI 和自动检查帮助找缺口，不能制造依据"
+        },
+        {
+          "id": "delivery-trace-operations",
+          "heading": "十二、运行中的差异应回到原规则"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-access-enforcement",
+          "reason": "按钮提示与服务端执行分别承担规则的不同部分。"
+        },
+        {
+          "concept": "test-oracle",
+          "reason": "观察有明确预期，才能判断是否真的满足承诺。"
+        },
+        {
+          "concept": "contract-test-matrix",
+          "reason": "接口变化要确认所有仍受支持的版本组合。"
+        },
+        {
+          "concept": "render-choice-evidence",
+          "reason": "把渲染体验拆成相同条件下可观察的任务结果。"
+        }
+      ]
+    },
+    {
+      "id": "TEST-04",
+      "title": "验证真实消费者依赖的合同",
+      "question": "接口仍返回合法 JSON，为什么最新页面正常，旧阅读页却坏了？",
+      "summary": "通过真实消费函数、必要字段匹配和版本矩阵，说明消费者契约、状态准备、提供者验证与兼容迁移。",
+      "outcomes": [
+        "让消费代码真实执行所声明的交互",
+        "区分通过、失败与没有验证的版本组合",
+        "说明 HTTP、二进制和消息合同的验证边界"
+      ],
+      "prerequisites": [
+        "biz-04-api-contract-dto-frontend-model.md#biz-04",
+        "test-01-test-design-oracles-properties-mutation.md#test-01"
+      ],
+      "guide": "test-04-api-contract-consumer-driven-testing.md",
+      "anchor": "test-04",
+      "concepts": [
+        {
+          "id": "contract-test-scope",
+          "heading": "一、兼容性属于一个交互和一组版本"
+        },
+        {
+          "id": "contract-test-consumer",
+          "heading": "二、消费者测试必须执行真实的消费逻辑"
+        },
+        {
+          "id": "contract-test-matchers",
+          "heading": "三、匹配器只放宽无关差异，保留关键含义"
+        },
+        {
+          "id": "contract-test-state",
+          "heading": "四、Provider State 只准备前提，不伪造被测结果"
+        },
+        {
+          "id": "contract-test-artifact",
+          "heading": "五、两边的证据通过同一份契约连接"
+        },
+        {
+          "id": "contract-test-matrix",
+          "heading": "六、发布判断不能把未知组合当成通过"
+        },
+        {
+          "id": "contract-test-http",
+          "heading": "七、HTTP 合同还包含错误、头和流的结束"
+        },
+        {
+          "id": "contract-test-schema",
+          "heading": "八、Schema 和 Protobuf 检查提供另一层证据"
+        },
+        {
+          "id": "contract-test-messages",
+          "heading": "九、消息内容与消息投递分别验证"
+        },
+        {
+          "id": "contract-test-rollout",
+          "heading": "十、兼容迁移要等真实消费者离开旧合同"
+        },
+        {
+          "id": "contract-test-diagnosis",
+          "heading": "十一、从故障差异定位最小修复"
+        },
+        {
+          "id": "contract-test-budget",
+          "heading": "十二、让检查投入与边界风险相称"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-api-presence",
+          "reason": "字段存在性、零值和未知状态必须有明确消费含义。"
+        },
+        {
+          "concept": "delivery-trace-baseline",
+          "reason": "契约结果需要对应实际规则、构建与环境。"
+        },
+        {
+          "concept": "business-recovery-delta",
+          "reason": "消息格式兼容之后，重复与缺口仍需要独立恢复规则。"
+        },
+        {
+          "concept": "e2e-real-boundaries",
+          "reason": "契约验证之外，用真实连接确认代理和完整用户路径。"
+        }
+      ]
+    },
+    {
+      "id": "RENDER-01",
+      "title": "按路由决定内容在哪里生成",
+      "question": "公开讲义、私有记录和地区目录，为什么不应该照搬同一种渲染策略？",
+      "summary": "把导航、HTML 生成、数据时效、缓存复用和交互成本分开，用时间线与陈旧策略形成可复核的路由决定。",
+      "outcomes": [
+        "区分 SPA 导航与 CSR、SSR、SSG 的生成时机",
+        "解释增量再生、陈旧上限和私有缓存边界",
+        "结合故障和桌面观测选择简单可维护的方案"
+      ],
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01"
+      ],
+      "guide": "render-01-spa-ssr-ssg-isr-hybrid-decisions.md",
+      "anchor": "render-01",
+      "concepts": [
+        {
+          "id": "render-choice-dimensions",
+          "heading": "一、SPA 是导航方式，CSR 是生成界面的方式"
+        },
+        {
+          "id": "render-choice-phases",
+          "heading": "二、把内容可读与交互可用放到时间线上"
+        },
+        {
+          "id": "render-choice-csr",
+          "heading": "三、CSR 适合的场景，也需要可恢复的起点"
+        },
+        {
+          "id": "render-choice-ssr",
+          "heading": "四、SSR 把数据等待移到响应路径"
+        },
+        {
+          "id": "render-choice-ssg",
+          "heading": "五、SSG 把生成成本放到发布之前"
+        },
+        {
+          "id": "render-choice-isr",
+          "heading": "六、ISR 的再生成间隔不是严格陈旧上限"
+        },
+        {
+          "id": "render-choice-cache",
+          "heading": "七、缓存键描述哪些请求可以共享结果"
+        },
+        {
+          "id": "render-choice-hybrid",
+          "heading": "八、混合渲染按内容责任拆开"
+        },
+        {
+          "id": "render-choice-status",
+          "heading": "九、状态码和元数据也属于页面输出"
+        },
+        {
+          "id": "render-choice-failure",
+          "heading": "十、故障策略要和正常策略一起选择"
+        },
+        {
+          "id": "render-choice-evidence",
+          "heading": "十一、比较策略时固定用户任务与观测条件"
+        },
+        {
+          "id": "render-choice-decisions",
+          "heading": "十二、把决定写成可调整的路由卡"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "network-cache",
+          "reason": "继续核对 HTTP 缓存怎样影响返回结果与验证。"
+        },
+        {
+          "concept": "render-stream-hydration",
+          "reason": "正文先出现以后，还要计算框架接管所需的客户端工作。"
+        },
+        {
+          "concept": "delivery-trace-nonfunctional",
+          "reason": "把快、可读和可操作改成明确的任务与测量条件。"
+        },
+        {
+          "concept": "contract-test-rollout",
+          "reason": "旧 HTML 与旧客户端仍在使用，发布需要真实兼容窗口。"
+        }
+      ]
+    },
+    {
+      "id": "RENDER-02",
+      "title": "分开观察内容到达与交互就绪",
+      "question": "正文已经可以阅读，为什么按钮还在等脚本，慢区域又该如何恢复？",
+      "summary": "从等待屏障走到流式响应、Hydration 快照和 Islands，再用真实 Node 分段页面观察内容、脚本和原生表单。",
+      "outcomes": [
+        "分清写出、到达、显示和交互就绪的时刻",
+        "维护首次快照、序列化和导航结果的正确边界",
+        "在分段、延迟脚本、局部失败与无 JS 下观察恢复"
+      ],
+      "prerequisites": [
+        "render-01-spa-ssr-ssg-isr-hybrid-decisions.md#render-01"
+      ],
+      "guide": "render-02-streaming-ssr-hydration-islands.md",
+      "anchor": "render-02",
+      "concepts": [
+        {
+          "id": "render-stream-barrier",
+          "heading": "一、找出是谁让主要内容继续等待"
+        },
+        {
+          "id": "render-stream-transport",
+          "heading": "二、流式输出沿服务器、网络和浏览器逐步发生"
+        },
+        {
+          "id": "render-stream-status",
+          "heading": "三、开始发送以后，状态码的决定窗口已经改变"
+        },
+        {
+          "id": "render-stream-hydration",
+          "heading": "四、Hydration 需要客户端重建一致的首次理解"
+        },
+        {
+          "id": "render-stream-snapshot",
+          "heading": "五、首次渲染使用同一快照，再考虑刷新"
+        },
+        {
+          "id": "render-stream-serialization",
+          "heading": "六、序列化状态就是向浏览器公开数据"
+        },
+        {
+          "id": "render-stream-islands",
+          "heading": "七、Islands 把客户端工作限制在需要交互的区域"
+        },
+        {
+          "id": "render-stream-lab",
+          "heading": "八、运行一个真的分段页面，分开观察脚本和内容"
+        },
+        {
+          "id": "render-stream-consistency",
+          "heading": "九、区域可以独立到达，事实却不能随意混版"
+        },
+        {
+          "id": "render-stream-navigation",
+          "heading": "十、导航离开后，迟到片段必须先核对归属"
+        },
+        {
+          "id": "render-stream-recovery",
+          "heading": "十一、占位、错误与接管都要保持可操作"
+        },
+        {
+          "id": "render-stream-evidence",
+          "heading": "十二、在实际部署链上核对收益与恢复"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "render-choice-phases",
+          "reason": "将流式收益放回正文与交互各自的时间线。"
+        },
+        {
+          "concept": "contract-parser",
+          "reason": "客户端收到初始数据后仍需要可信的解析边界。"
+        },
+        {
+          "concept": "business-edit-snapshot",
+          "reason": "接管和更新不能抹掉用户已经产生的新输入。"
+        },
+        {
+          "concept": "network-abort-outcome",
+          "reason": "取消观察减少无用工作，却不能证明业务提交被撤销。"
+        }
+      ]
+    }
+  ]
+}

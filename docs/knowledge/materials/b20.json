@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 1,
+  "batch": "B20",
+  "title": "从业务权限到一致性恢复",
+  "reviewedOn": "2026-09-20",
+  "chapters": [
+    {
+      "id": "BIZ-03",
+      "title": "把权限落实到具体对象",
+      "question": "同样是编辑者，为什么能修改这份资料，却不能读取另一个目录？",
+      "summary": "从角色到属性与关系，把数据范围、字段能力、列表查询、缓存失效和真正的执行边界连起来。",
+      "outcomes": [
+        "用主体、动作、资源和环境表达授权决定",
+        "区分对象范围、字段能力与接口执行",
+        "解释策略变化和临时委托如何影响缓存"
+      ],
+      "prerequisites": [
+        "biz-01-domain-objects-relations-ubiquitous-language.md#biz-01"
+      ],
+      "guide": "biz-03-rbac-abac-data-permissions.md",
+      "anchor": "biz-03",
+      "concepts": [
+        {
+          "id": "business-access-decision",
+          "heading": "一、先把一次授权决定说成完整句子"
+        },
+        {
+          "id": "business-access-roles",
+          "heading": "二、角色压缩稳定职责，不负责列出所有数据范围"
+        },
+        {
+          "id": "business-access-attributes",
+          "heading": "三、属性把能力收窄到当前对象与条件"
+        },
+        {
+          "id": "business-access-actions",
+          "heading": "四、读取、导出、字段查看和批量操作分别命名"
+        },
+        {
+          "id": "business-access-enforcement",
+          "heading": "五、策略决定之后，还要有人真正执行拒绝"
+        },
+        {
+          "id": "business-access-queries",
+          "heading": "六、先限定可见集合，再排序、分页和计数"
+        },
+        {
+          "id": "business-access-fields",
+          "heading": "七、允许看字段，不等于允许修改字段"
+        },
+        {
+          "id": "business-access-cache",
+          "heading": "八、权限缓存必须跟着关系、策略和时间一起变化"
+        },
+        {
+          "id": "business-access-ui",
+          "heading": "九、界面消费能力快照，也准备好被服务端纠正"
+        },
+        {
+          "id": "business-access-relations",
+          "heading": "十、关系继承与临时委托必须有方向和边界"
+        },
+        {
+          "id": "business-access-evidence",
+          "heading": "十一、用反例验证规则，再确认入口确实拦得住"
+        },
+        {
+          "id": "business-access-evolution",
+          "heading": "十二、策略变化也要有迁移、失效和回退"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-model-relations",
+          "reason": "关系本身有生命周期，权限继承也需要明确对象与有效期。"
+        },
+        {
+          "concept": "session-late-response",
+          "reason": "退出或切换账户后，旧能力快照和迟到响应都必须失效。"
+        },
+        {
+          "concept": "business-job-artifacts",
+          "reason": "任务完成不代表下载权限永久有效，领取时还要重新授权。"
+        },
+        {
+          "concept": "business-api-models",
+          "reason": "把服务端返回的能力映射成页面可理解的动作。"
+        }
+      ]
+    },
+    {
+      "id": "BIZ-04",
+      "title": "让接口字段成为可靠事实",
+      "question": "字段缺失、null 和 0，为什么不能在页面里统一显示为“暂无”？",
+      "summary": "通过完整解析与转换例子，明确 DTO、领域和展示模型，继续解释 PATCH、错误、版本、事件与兼容。",
+      "outcomes": [
+        "让缺失、空值、零值和未知状态各有含义",
+        "区分缓存验证、写入前提与错误恢复",
+        "说明字段演进和通知事件的兼容边界"
+      ],
+      "prerequisites": [
+        "biz-01-domain-objects-relations-ubiquitous-language.md#biz-01",
+        "ts-07-runtime-contracts-validation-error-models.md#ts-07"
+      ],
+      "guide": "biz-04-api-contract-dto-frontend-model.md",
+      "anchor": "biz-04",
+      "concepts": [
+        {
+          "id": "business-api-promises",
+          "heading": "一、先写调用者能得到什么承诺"
+        },
+        {
+          "id": "business-api-models",
+          "heading": "二、DTO、领域模型和展示模型分别解决一个问题"
+        },
+        {
+          "id": "business-api-presence",
+          "heading": "三、缺失、null、零值和空集合要分别解释"
+        },
+        {
+          "id": "business-api-mapper",
+          "heading": "四、完整转换器先解析，再处理未知状态"
+        },
+        {
+          "id": "business-api-patch",
+          "heading": "五、局部修改必须说明省略和清空分别代表什么"
+        },
+        {
+          "id": "business-api-errors",
+          "heading": "六、错误结构应该告诉调用方下一步做什么"
+        },
+        {
+          "id": "business-api-metadata",
+          "heading": "七、版本、时间、单位和分页都属于合同"
+        },
+        {
+          "id": "business-api-conditions",
+          "heading": "八、缓存验证与写入前提解决不同问题"
+        },
+        {
+          "id": "business-api-protobuf",
+          "heading": "九、换成 Protobuf，也不能省掉字段含义"
+        },
+        {
+          "id": "business-api-events",
+          "heading": "十、通知事件不替代状态查询，Webhook 也需要合同"
+        },
+        {
+          "id": "business-api-compatibility",
+          "heading": "十一、兼容看消费者实际依赖了什么"
+        },
+        {
+          "id": "business-api-examples",
+          "heading": "十二、把合同落实到例子和运行观察"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "contract-parser",
+          "reason": "从 unknown 进入页面以前，先在边界建立可信结果。"
+        },
+        {
+          "concept": "business-edit-baselines",
+          "reason": "传输和展示模型分清以后，再处理已确认值与编辑草稿。"
+        },
+        {
+          "concept": "business-job-progress",
+          "reason": "进度字段需要所属阶段和分母，才能形成可信的页面文案。"
+        },
+        {
+          "concept": "business-recovery-version",
+          "reason": "写入前提用来识别其他意图已改变当前版本。"
+        }
+      ]
+    },
+    {
+      "id": "BIZ-05",
+      "title": "保住保存期间的新输入",
+      "question": "点下保存以后继续输入，慢响应回来时应该更新哪一份内容？",
+      "summary": "把服务端事实、比较起点、当前草稿和发送快照分别保存，用桌面观察页亲手处理迟到响应与冲突。",
+      "outcomes": [
+        "解释草稿规范化、Dirty 与 Touched 的区别",
+        "在保存成功、拒绝和版本冲突后保留正确输入",
+        "协调列表投影、自动保存和跨页面恢复"
+      ],
+      "prerequisites": [
+        "biz-02-state-machines-business-invariants.md#biz-02",
+        "biz-04-api-contract-dto-frontend-model.md#biz-04"
+      ],
+      "guide": "biz-05-form-table-detail-state-consistency.md",
+      "anchor": "biz-05",
+      "concepts": [
+        {
+          "id": "business-edit-baselines",
+          "heading": "一、同一份资料，至少有四种不同的值"
+        },
+        {
+          "id": "business-edit-drafts",
+          "heading": "二、草稿允许不完整，提交时再形成合法业务值"
+        },
+        {
+          "id": "business-edit-dirty",
+          "heading": "三、Dirty 比较业务差异，Touched 记录交互历史"
+        },
+        {
+          "id": "business-edit-snapshot",
+          "heading": "四、发送快照冻结以后，新输入属于下一次提交"
+        },
+        {
+          "id": "business-edit-merge",
+          "heading": "五、后台刷新与冲突都要保留比较起点"
+        },
+        {
+          "id": "business-edit-status",
+          "heading": "六、保存状态说明当前知道什么，以及用户能做什么"
+        },
+        {
+          "id": "business-edit-lab",
+          "heading": "七、用观察页亲手交付慢响应和冲突"
+        },
+        {
+          "id": "business-edit-projections",
+          "heading": "八、列表、详情和统计更新同一事实，各自维护投影"
+        },
+        {
+          "id": "business-edit-optimistic",
+          "heading": "九、乐观更新需要明确谁拥有这次临时变化"
+        },
+        {
+          "id": "business-edit-autosave",
+          "heading": "十、自动保存控制请求数量，也控制提交顺序"
+        },
+        {
+          "id": "business-edit-recovery",
+          "heading": "十一、批量保存和导航恢复也要保留结果归属"
+        },
+        {
+          "id": "business-edit-evidence",
+          "heading": "十二、挑能发现丢输入的路径来核对"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-api-presence",
+          "reason": "草稿转提交值时仍然必须保留零值、空串与缺失的区别。"
+        },
+        {
+          "concept": "business-flow-version",
+          "reason": "版本冲突说明比较起点已旧，不能直接覆盖最新事实。"
+        },
+        {
+          "concept": "business-recovery-unknown",
+          "reason": "请求没有回音时，先确认原意图是否已经成功。"
+        },
+        {
+          "concept": "session-late-response",
+          "reason": "对象或账户切换后，用作用域隔离迟到的结果。"
+        }
+      ]
+    },
+    {
+      "id": "BIZ-06",
+      "title": "让后台任务随时可恢复",
+      "question": "任务跑到 100% 后断网，再打开页面应该继续等、重新跑，还是领取结果？",
+      "summary": "围绕任务身份、阶段进度、有限轮询、断线恢复、取消检查点和结果留存，逐步说明长任务的完整生命周期。",
+      "outcomes": [
+        "区分业务任务、网络连接和执行尝试的状态",
+        "用版本、预算和检查点处理断线与重复执行",
+        "分别处理任务完成、下载凭据与文件过期"
+      ],
+      "prerequisites": [
+        "biz-02-state-machines-business-invariants.md#biz-02",
+        "js-05-promise-errors-async-control-flow.md#js-05"
+      ],
+      "guide": "biz-06-async-jobs-import-export-progress.md",
+      "anchor": "biz-06",
+      "concepts": [
+        {
+          "id": "business-job-resource",
+          "heading": "一、创建请求结束以后，任务仍然有自己的生命"
+        },
+        {
+          "id": "business-job-identity",
+          "heading": "二、意图 ID、任务 ID 和执行尝试不是同一个身份"
+        },
+        {
+          "id": "business-job-state",
+          "heading": "三、任务状态与页面连接状态分别保存"
+        },
+        {
+          "id": "business-job-progress",
+          "heading": "四、进度需要明确分子、分母和所属阶段"
+        },
+        {
+          "id": "business-job-polling",
+          "heading": "五、轮询一次等一次，异常后有上限地退避"
+        },
+        {
+          "id": "business-job-push",
+          "heading": "六、推送负责及时提醒，查询负责断线后的恢复"
+        },
+        {
+          "id": "business-job-cancel",
+          "heading": "七、取消观察、请求取消与实际停止分三步"
+        },
+        {
+          "id": "business-job-lease",
+          "heading": "八、租约和检查点帮助恢复，但不能允许旧 worker 继续写"
+        },
+        {
+          "id": "business-job-imports",
+          "heading": "九、导入报告区分成功、失败和根本没处理"
+        },
+        {
+          "id": "business-job-artifacts",
+          "heading": "十、任务完成、下载凭据和文件留存有三个期限"
+        },
+        {
+          "id": "business-job-recovery",
+          "heading": "十一、失败重试与人工恢复都沿同一条任务时间线"
+        },
+        {
+          "id": "business-job-ux",
+          "heading": "十二、让用户随时知道现在该等、该查还是该修"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-api-events",
+          "reason": "事件有自己的合同，完整快照和增量需要不同恢复办法。"
+        },
+        {
+          "concept": "business-recovery-intent",
+          "reason": "创建请求重试时沿用原意图，避免生成两份后台任务。"
+        },
+        {
+          "concept": "business-access-enforcement",
+          "reason": "任务查询、取消和领取结果都必须实际执行授权。"
+        },
+        {
+          "concept": "business-recovery-delta",
+          "reason": "推送出现序号缺口时，不能把缺失的业务变化直接跳过去。"
+        }
+      ]
+    },
+    {
+      "id": "BIZ-07",
+      "title": "把未知结果恢复成可确认事实",
+      "question": "服务端可能已经完成操作，页面却只收到超时，此时怎样安全地继续？",
+      "summary": "从失败分类出发，连起意图幂等、版本前提、原子提交、Outbox、消息去重、补偿与对账。",
+      "outcomes": [
+        "区分结果未知、明确拒绝和可重试失败",
+        "解释意图幂等、并发版本与重复消息各自解决什么",
+        "为补偿、重试和差异修复保留可追踪的身份"
+      ],
+      "prerequisites": [
+        "biz-02-state-machines-business-invariants.md#biz-02",
+        "biz-04-api-contract-dto-frontend-model.md#biz-04"
+      ],
+      "guide": "biz-07-errors-idempotency-eventual-consistency.md",
+      "anchor": "biz-07",
+      "concepts": [
+        {
+          "id": "business-recovery-outcome",
+          "heading": "一、先判断知道多少，再决定让用户做什么"
+        },
+        {
+          "id": "business-recovery-intent",
+          "heading": "二、幂等键标识同一意图，不是每次请求的新编号"
+        },
+        {
+          "id": "business-recovery-unknown",
+          "heading": "三、结果未知时查询原意图，不要先换一个新键"
+        },
+        {
+          "id": "business-recovery-version",
+          "heading": "四、版本前提保护不同意图之间的并发"
+        },
+        {
+          "id": "business-recovery-atomic",
+          "heading": "五、原子提交要把业务效果与识别重复的证据一起保存"
+        },
+        {
+          "id": "business-recovery-outbox",
+          "heading": "六、Outbox 让待发送事实随业务一起提交"
+        },
+        {
+          "id": "business-recovery-delta",
+          "heading": "七、旧快照可以忽略，增量缺口不能随手跳过"
+        },
+        {
+          "id": "business-recovery-consistency",
+          "heading": "八、最终一致需要明确哪些事实暂时落后"
+        },
+        {
+          "id": "business-recovery-compensation",
+          "heading": "九、补偿是一个新的业务动作，有自己的结果"
+        },
+        {
+          "id": "business-recovery-retry",
+          "heading": "十、重试有预算，且只能发生在知道语义的一层"
+        },
+        {
+          "id": "business-recovery-reconciliation",
+          "heading": "十一、对账把漏掉的差异变成可追踪的修复"
+        },
+        {
+          "id": "business-recovery-evidence",
+          "heading": "十二、用故障发生的位置判断证据是否充分"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-edit-merge",
+          "reason": "版本冲突回到比较起点、当前草稿与最新值的三方比较。"
+        },
+        {
+          "concept": "business-job-identity",
+          "reason": "用户意图、任务和执行尝试分别保存身份，恢复才能沿用正确对象。"
+        },
+        {
+          "concept": "business-model-events",
+          "reason": "业务事件记录已发生的事实，传递失败不抹去原提交。"
+        },
+        {
+          "concept": "bff-idempotency",
+          "reason": "把未知结果和重试语义接回浏览器与服务端的 HTTP 边界。"
+        }
+      ]
+    }
+  ]
+}

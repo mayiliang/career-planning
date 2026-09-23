@@ -1,132 +1,288 @@
-# Web 平台组件知识点讲义
+# Web 平台组件学习资料
 
-## WEB-05 Web Components、Shadow DOM 与跨框架互操作
+## WEB-05 把组件做成清楚的 DOM 接口
 
-Web Components 不是用平台 API 重写一套 React 或 Vue，而是用浏览器原生元素、DOM 边界和事件合同提供可跨宿主消费的组件。真正困难的部分不在 `attachShadow()`，而在公开表面：属性如何序列化，property 如何保留类型，生命周期如何清理，事件怎样穿过边界，表单与无脚本内容如何降级，以及多个框架和多个版本怎样共享同一标签名。
+同一个评分控件，要在普通页面、React 页面和 Vue 页面里使用。如果调用方必须知道它内部的类名、框架实例和节点层级，复用很快就会变成互相迁就。
+
+Web Components 提供另一种边界：调用方认识一个 HTML 标签，通过属性、方法、事件和插槽与它协作。本篇做一个 0～5 分的资料评分控件，把注册、升级、表单和清理放进同一个可观察的例子。
 
 ### 学习前先确认
 
-- 直接前置：[BROWSER-01 渲染流水线、DOM 事件与存储](../chinese-guides/browser-01-render-events-storage.md#browser-01)。该讲已递归链接 HTML 语义和事件循环；本讲直接使用 DOM、事件传播与生命周期。
+- 直接前置：[BROWSER-01 渲染流水线、DOM 事件与存储](../chinese-guides/browser-01-render-events-storage.md#browser-01)。需要认识 DOM 节点、事件传播和监听器清理。
 
-### 一、Web Components 是一组平台能力
+### 一、平台组件提供了哪些零件
 
-**Web 组件（Web Components）**通常指 Custom Elements、Shadow DOM、`<template>` 与 `<slot>` 的组合。它没有统一状态管理器、路由或构建方案，也不自动提供设计系统。每项能力可以单独使用：只注册自定义元素而不创建 shadow root，或只在普通元素上使用 template。
+**Web Components** 通常指 Custom Elements、Shadow DOM、template 和 slot 等可组合使用的平台能力。它们不附带路由、数据缓存或统一状态管理，也不要求每个组件把这些零件全部用上。
 
-自定义元素名称必须含连字符，避免与未来 HTML 元素冲突。Autonomous custom element 继承 HTMLElement；Customized built-in element 继承原生元素但兼容与消费方式更复杂。跨框架公共组件通常先从独立自定义元素开始。
+自定义元素扩展标签的行为；Shadow DOM 划分内部子树与样式边界；template 保存待使用的结构；slot 接收宿主提供的内容。例如一个简单的格式化时间元素，可以只注册自定义元素，不创建 shadow root。
 
-浏览器在注册前把未知标签当普通 HTMLElement；定义出现后执行 **升级（Upgrade）**，把已有节点连接到相应类。由此产生一个重要原则：组件脚本晚到之前，light DOM 应尽量保持可读和可操作。
+本篇使用继承 HTMLElement 的独立自定义元素。名称带连字符，例如 study-score，可以与内建标签区分。Customized built-in elements 则在已有原生标签基础上扩展，兼容与消费方式另有约束，不能把两种方案当成一样。
 
-### 二、先设计消费合同，再决定内部结构
+### 二、先写调用方能依赖什么
 
-一个稳定组件合同至少包含：标签名、attributes、properties、methods、events、slots、CSS 自定义属性、parts、表单行为、可访问性与版本策略。内部 class 名、shadow tree 层级和框架实例不是公共 API。
+把评分控件的公开约定写成一张小表，再决定内部布局：
 
-以评分控件为例，可以约定：`score` attribute 是可序列化初始值，`element.score` property 是有限非负整数；`score-change` 事件给出 `{score}`；title slot 提供标题；表单提交固定字段；`::part(increment)` 仅开放稳定按钮部件。消费端不应查询 `.internal-button` 或修改 shadowRoot 私有节点。
+| 入口 | 本例约定 | 调用方可以做什么 |
+| --- | --- | --- |
+| 标签 | study-score | 放入表单，与其他 HTML 一起使用 |
+| value attribute | 0～5 的整数字符串；非法值按 0 显示 | 在 HTML 中提供初始值 |
+| value property | 0～5 的整数；非法值抛错 | 用 JavaScript 更新当前值 |
+| disabled | 按是否存在解释 | 禁止用户调整 |
+| score-change | 用户调整完成后发出，detail.value 为数字 | 更新宿主状态，不查询内部按钮 |
+| title slot | 评分区域的可见标题 | 提供自己的文案 |
+| name / FormData | 支持表单关联时提交一份 score 字段 | 与原生输入共同提交 |
+| CSS 入口 | --score-accent 与 part(control) | 修改颜色及公开按钮外观 |
 
-合同应写出无脚本、升级中、已连接、断开重连和禁用状态。只描述“正常渲染截图”的 API 仍不足以跨框架使用。
+本例程序设置 property 不发用户事件，避免宿主回写状态时再次触发业务处理。事件名字看不出这些细节，所以触发时机也要写进文档。
 
-### 三、Attribute 与 property 属于两种世界
+### 三、运行一个会升级的评分表单
 
-HTML attribute 本质是字符串或存在性标记，适合服务端输出、DOM 序列化与 CSS 选择；DOM property 可以保存数字、布尔、对象或函数。二者是否反射必须明确，不是所有 property 都应写回 attribute。
+保存为 `score-field.html`，用桌面浏览器打开。页面先输出带 label 的普通数字输入；脚本注册组件后，在支持表单关联的环境中接管它。注册前先设置 property 为 4，故意模拟“宿主先传值、组件定义后到”的情况。
 
-布尔 attribute 以“是否存在”决定真假，`disabled="false"` 仍表示禁用。数字 attribute 要解析、检查有限性和范围；无效值选择默认、保留旧值或进入错误状态，不能静默产生 NaN。
+点击“查看表单”应得到一个 score 值；加分到 5 后再提交，值为 5；重置回到 HTML 初始值 2。点“断开再接回”两次，再调整一次，事件次数只增加一。
 
-反射协议只有一个规范化入口：setter 规范化值，比较序列化结果后按需 `setAttribute`；`attributeChangedCallback` 再应用内部状态。若两边无条件互调，会形成回写循环。对象配置通常只作为 property，不塞入 JSON attribute；需要 SSR 时拆成稳定原始字段或引用资源。
+```html example=web-score-field runtime=project file=score-field.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>评分组件与原生表单</title>
+<style>
+  body { max-width: 54rem; margin: 3rem auto; padding: 0 2rem;
+    font: 18px/1.7 system-ui; color: #172d3c; background: #f5f8fa; }
+  button, input { font: inherit; padding: .5rem .8rem; margin: .3rem; }
+  :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+  study-score { display: block; --score-accent: #1a557d; margin: 1.5rem 0; }
+  study-score::part(control) { border-radius: .5rem; }
+  pre { padding: 1rem; background: #e5eef5; }
+</style>
+<main>
+  <h1>评分组件与原生表单</h1>
+  <p>只演示本页表单；没有向服务器保存。</p>
+  <form id="form">
+    <fieldset id="fields">
+      <legend>资料反馈</legend>
+      <study-score id="score" name="score" value="2">
+        <span slot="title">这份资料有多大帮助？</span>
+        <span data-fallback><label for="plain-score">评分（0～5）</label>
+          <input id="plain-score" name="score" type="number" min="0" max="5" step="1" value="2"></span>
+      </study-score>
+    </fieldset>
+    <button type="submit">查看表单</button><button type="reset">重置</button>
+  </form>
+  <button id="move" type="button">断开再接回</button>
+  <label><input id="disable" type="checkbox">禁用字段组</label>
+  <p id="events" role="status">用户变更次数：0</p><pre id="result">等待提交</pre>
+</main>
+<script>
+  document.getElementById('score').value = 4;
+</script>
+<script type="module">
+  const supportsForm = 'ElementInternals' in window &&
+    'setFormValue' in ElementInternals.prototype;
+  const fromAttribute = (raw) => {
+    const number = raw === null || raw.trim() === '' ? NaN : Number(raw);
+    return Number.isInteger(number) && number >= 0 && number <= 5 ? number : 0;
+  };
+  class StudyScore extends HTMLElement {
+    static formAssociated = true;
+    static observedAttributes = ['value', 'disabled'];
+    #internals; #panel; #minus; #plus; #output; #connection;
+    #initial = null; #disabledByForm = false;
+    constructor() {
+      super();
+      this.#internals = supportsForm ? this.attachInternals() : null;
+      const root = this.attachShadow({ mode: 'open' });
+      const style = document.createElement('style');
+      style.textContent = `:host{display:block} .panel{padding:1rem;border:1px solid #8195a5}
+        button{font:inherit;padding:.5rem .8rem;color:var(--score-accent,#173f61)}
+        button:focus-visible{outline:3px solid #005fcc;outline-offset:3px}
+        output{margin:0 1rem} [hidden]{display:none}`;
+      const title = document.createElement('slot'); title.name = 'title';
+      this.#panel = document.createElement('div'); this.#panel.className = 'panel';
+      this.#panel.hidden = true;
+      this.#minus = document.createElement('button'); this.#minus.textContent = '减分';
+      this.#plus = document.createElement('button'); this.#plus.textContent = '加分';
+      for (const button of [this.#minus, this.#plus]) {
+        button.type = 'button'; button.setAttribute('part', 'control');
+      }
+      this.#output = document.createElement('output');
+      this.#output.setAttribute('aria-label', '当前评分');
+      this.#output.setAttribute('aria-live', 'off');
+      this.#panel.append(this.#minus, this.#output, this.#plus);
+      root.append(style, title, this.#panel, document.createElement('slot'));
+    }
+    get value() { return fromAttribute(this.getAttribute('value')); }
+    set value(number) {
+      if (!Number.isInteger(number) || number < 0 || number > 5) throw new RangeError('评分须为 0～5 的整数');
+      if (this.getAttribute('value') !== String(number)) this.setAttribute('value', String(number));
+    }
+    connectedCallback() {
+      if (!this.#internals) return; // 保留 light DOM 的原生输入。
+      if (this.#initial === null) {
+        this.#initial = this.value;
+        if (Object.hasOwn(this, 'value')) {
+          const earlyValue = this.value;
+          delete this.value;
+          // 初始值来自 HTML，提前设置的 property 优先成为当前值。
+          this.#initial = fromAttribute(this.getAttribute('value'));
+          this.value = earlyValue;
+        }
+      }
+      const fallback = this.querySelector('[data-fallback]');
+      if (fallback) { fallback.hidden = true; fallback.querySelector('input').disabled = true; }
+      this.#panel.hidden = false;
+      this.#connection?.abort(); this.#connection = new AbortController();
+      const change = (delta, source) => {
+        if (this.#disabledByForm || this.hasAttribute('disabled')) return;
+        this.value = Math.max(0, Math.min(5, this.value + delta));
+        source.dispatchEvent(new CustomEvent('score-change', {
+          bubbles: true, composed: true, detail: { value: this.value },
+        }));
+      };
+      this.#minus.addEventListener('click', () => change(-1, this.#minus), { signal: this.#connection.signal });
+      this.#plus.addEventListener('click', () => change(1, this.#plus), { signal: this.#connection.signal });
+      this.#render();
+    }
+    disconnectedCallback() { this.#connection?.abort(); }
+    attributeChangedCallback() { this.#render(); }
+    formDisabledCallback(disabled) { this.#disabledByForm = disabled; this.#render(); }
+    formResetCallback() { this.value = this.#initial ?? 0; }
+    formStateRestoreCallback(state) { this.value = fromAttribute(state); }
+    #render() {
+      if (!this.#internals) return;
+      const value = this.value;
+      this.#internals.setFormValue(String(value), String(value));
+      this.#output.value = `${value} / 5`;
+      const disabled = this.#disabledByForm || this.hasAttribute('disabled');
+      this.#minus.disabled = disabled || value === 0;
+      this.#plus.disabled = disabled || value === 5;
+    }
+  }
+  if (!customElements.get('study-score')) customElements.define('study-score', StudyScore);
+  const score = document.getElementById('score');
+  let count = 0;
+  document.getElementById('form').addEventListener('score-change', (event) => {
+    document.getElementById('events').textContent = `用户变更次数：${++count}；该次评分 ${event.detail.value}；target=${event.target.localName}`;
+  });
+  document.getElementById('form').onsubmit = (event) => {
+    event.preventDefault();
+    document.getElementById('result').textContent = JSON.stringify([...new FormData(event.currentTarget)]);
+  };
+  document.getElementById('move').onclick = () => {
+    score.remove(); document.getElementById('fields').append(score);
+  };
+  document.getElementById('disable').onchange = (event) => {
+    document.getElementById('fields').disabled = event.target.checked;
+  };
+</script>
+</html>
+```
 
-### 四、构造器保持轻量，连接回调拥有外部资源
+例子把 HTML 放在注册脚本之前，module 脚本在解析结束后运行，因此连接时能找到 fallback 子节点。若库会在文档解析前注册，不能假设 connectedCallback 里子节点已经完整；应另行约定初始化时机或观察所需子节点。
 
-constructor 适合建立私有字段、attachInternals、创建静态 shadow 结构；不要依赖尚未完成解析的子节点、文档位置或业务 attribute。connectedCallback 每次进入文档都会执行，disconnectedCallback 也不代表实例永久销毁。
+事件日志记录最近一次用户调整，重置和程序赋值不新增用户事件；当前值以控件或重新读取的 FormData 为准。
 
-监听器、Observer、计时器与外部订阅应由一次连接任期拥有。连接时先清旧资源或创建新的 AbortController，断开时 abort/disconnect。元素被移动、缓存或框架重排后再次连接，一次点击仍只能处理一次。
+页面脚本禁用时，数字输入仍可操作，但静态示例没有保存后端。缺少表单关联能力时，也保留该输入；预先设置的组件 property 不会替原生输入修改值，基础路径初始值仍为 2。
 
-adoptedCallback 用于节点跨 document 移动的少见情况；attributeChangedCallback 只响应 observedAttributes。每个回调都应幂等，并避免在同步回调里执行大量布局工作。
+### 四、Attribute 与 property 不会自动同步
 
-### 五、Shadow DOM 提供封装，不提供安全沙箱
+**属性反射（Reflection）**是组件自己定义的同步规则。attribute 适合 HTML 序列化，主要是字符串或存在性标记；property 可以保持数字、对象或函数等类型。`disabled="false"` 仍有 disabled 属性，不能按英文单词理解成启用。
 
-**影子 DOM（Shadow DOM）**把内部子树附着在 host 上，形成样式选择与 DOM 查询边界。外部普通选择器不会直接匹配内部节点，内部规则也不会任意泄漏；但继承属性和 CSS custom properties 可以穿过边界。
+本例 setter 接受整数并反射到 attribute，attributeChangedCallback 统一更新界面与表单值；相同序列化结果不重复写回。非法 attribute 保留原始字符串、显示为 0，非法 property 则抛出 RangeError，两种入口的处理已经在公开约定中说明。
 
-`mode:'closed'` 只限制通过 `element.shadowRoot` 的普通访问，页面内被劫持的代码、浏览器扩展或提前打补丁仍可能观察内部。它不能保护密钥、权限或敏感数据，也不能阻止同源 XSS。
+对象配置通常更适合 property。把复杂对象放进 HTML attribute，需要额外编码、解析和版本约定，还可能暴露原本不该出现在页面源码里的数据。是否反射应根据消费需要决定。
 
-Shadow DOM 不等于完全样式隔离：字体、颜色和自定义属性会继承，`:host`、`:host-context()`、`::slotted()` 和 parts 建立显式接口。封装的目标是减少偶然耦合，不是让组件不可诊断。
+注册前执行 `element.value = 4`，会创建实例自己的 value 属性；定义升级后，它可能遮住类原型上的 setter。例子保存该值、删除自有属性，再经过 setter 设置，这是处理晚加载组件的一种明确方式。仅等待 whenDefined，不会自动替你清除已经遮住 setter 的属性。
 
-### 六、Slot 投影不改变节点所有权
+### 五、连接回调可以发生很多次
 
-light DOM 子节点通过 slot 分配到 shadow tree 的插槽。节点仍属于宿主的 light DOM，事件与样式需要按真实树和扁平树分别理解。默认 slot 接受未命名内容，命名 slot 接受匹配 `slot` attribute 的节点。
+**生命周期（Lifecycle）**描述实例经历的阶段。constructor 做轻量内部初始化，不依赖尚未准备好的外部 attributes、子节点或布局。connectedCallback 建立本次连接的资源，disconnectedCallback 结束它们；断开不代表实例永久销毁。
 
-`slotchange` 表示分配集合变化，不一定捕获已分配节点内部文字的所有变化。读取 `assignedElements({flatten:true})` 前明确是否要穿过嵌套 slot。fallback 内容只在没有匹配节点时显示。
+本例“断开再接回”保留实例值，却重新建立内部点击监听。每次连接前 abort 旧监听，所以不会因重复挂载导致一次加分处理两次。与外部窗口、频道、Observer 的订阅尤其需要明确归属，可接回 [BROWSER-02 的资源管理](../chinese-guides/browser-02-observers-scheduling-lifecycle-coordination.md#browser-02)。
 
-Slot 是内容组合合同。不要依靠消费端传入特定深层 DOM 再查询内部 class；为标题、说明和动作区定义少量有语义的插槽，并说明允许的内容与可访问名称关系。
+普通 DOM 移动也可能触发断开与连接。新的 moveBefore / connectedMoveCallback 可在支持环境提供保留状态的移动路径，但不应把所有宿主框架的重排都假定为使用它。adoptedCallback 则对应跨 document 的移动，所依赖的窗口与文档资源需要重新核对。
 
-### 七、事件跨边界会重定向
+### 六、Shadow DOM 隔离了什么
 
-Shadow DOM 事件到达外部时，`event.target` 常重定向为 host，保护内部细节。调试真实路径使用 `composedPath()`。自定义事件要穿过 shadow boundary，需要 `composed:true`；要供祖先委托，还需要 `bubbles:true`。
+**Shadow DOM** 给宿主元素挂上一棵内部子树。外部普通选择器通常不会直接匹配内部按钮，普通 document 查询也不会穿透；但字体、颜色等继承值以及 CSS 自定义属性可以进入边界。
 
-事件名、detail schema、是否可取消和触发时机属于公共合同。用完成时态还是意图时态要清楚：`score-change` 可表示状态已改变，`score-request` 可取消并让宿主审批。不要在 detail 暴露可变内部对象，优先结构化克隆友好的小数据。
+本例宿主通过 --score-accent 与 ::part(control) 修改公开样式。内部类名 panel 没有成为承诺，调用方也不需要向 shadowRoot 注入样式。开放少量稳定入口，比把每个内部节点都标成 part 更容易维护。
 
-原生 click 等事件已有 composed 行为，不能假设所有事件相同。框架对自定义事件的绑定语法和版本支持会变化，互操作测试应落在真实 DOM 事件，而不是只通过框架模拟回调。
+open root 便于调试。closed 主要限制通过 shadowRoot 属性的常规访问，不提供安全沙箱；同页面的恶意脚本仍处于高权限环境。不要把密钥或授权判断藏进 closed root，安全问题会在 [SEC-01](../chinese-guides/sec-01-xss-csrf-trust-boundaries.md#sec-01) 继续展开。
 
-### 八、焦点与可访问性仍依赖原生语义
+### 七、Slot 接收内容，不接管内容所有权
 
-shadow tree 中的 button、input 等原生控件仍进入可访问树。内部需要标签、名称、状态和键盘顺序；host 的自定义标签名不会自动产生正确角色。可用 ElementInternals 设置部分语义，但优先让内部原生元素表达行为。
+**插槽（Slot）**把 light DOM 内容分配到 shadow tree 中的显示位置。传入的标题仍由宿主管理，不是被复制进组件内部。宿主修改标题文本，组件应自然展示变化，不必拿 querySelector 把它重建一遍。
 
-`delegatesFocus` 会改变点击 host 与程序聚焦的行为，支持和具体表现应核验；它不替代明确焦点协议。外部 `document.activeElement` 可能只看到 host，深入诊断要沿 shadowRoot.activeElement 查看。
+命名 slot 接收带相应 slot 属性的节点；默认 slot 接收未命名内容，fallback 内容在没有分配节点时显示。slotchange 关注分配集合变化，并不承诺报告已分配节点内部的每次文本修改。
 
-高对比度、缩放、减少运动和读屏测试都要在组件真实宿主中进行。Shadow DOM 不是跳过 A11Y 测试的理由，也不能用 closed root 阻止测试；提供公开行为合同和可观测事件。
+`::slotted()` 不是任意深入所有投影子孙的选择器。若组件要求传入一个固定深层结构才能正常工作，实际已经形成了隐含 API，最好把所需内容改成清楚的 slot 或 property。
 
-### 九、ElementInternals 连接原生表单协议
+### 八、事件穿界与焦点定位要看两层
 
-表单关联自定义元素声明 `static formAssociated = true` 并调用 `attachInternals()`。通过 `setFormValue()` 提交值，`setValidity()` 与 validationMessage 表达约束，formDisabledCallback、formResetCallback 和 formStateRestoreCallback 响应表单生命周期。
+本例从 shadow 内的按钮发出 score-change，bubbles 让祖先能够委托监听，composed 让它能越过 shadow 边界。外部日志里的 target 是 study-score，体现了事件重定向；composedPath 可帮助理解对外暴露的路径。
 
-表单字段名、禁用、重置、自动填充和状态恢复都要定义。只在点击 submit 时手工拼对象，会错过 FormData、原生校验和宿主框架。若目标环境不支持 ElementInternals，保留 light DOM 原生 input 或外部隐藏 input 的清晰回退，但要防止升级后重复提交同一字段。
+如果事件直接在 host 上派发，则不需要先越过它自己的 shadow 边界。不要只背“自定义事件一律加两个 true”，要先看派发位置和预期接收者。事件 detail 应传小而明确的数据，不暴露可以任意修改的内部模型。
 
-升级前 fallback input 可用；升级成功后由组件接管并禁用/隐藏 fallback。若脚本加载失败，fallback 不应提前由 CSS 永久隐藏。
+焦点也有内外两层：document.activeElement 可能是 host，shadowRoot.activeElement 才是内部按钮。原生 button 的名称、Enter/Space 激活与禁用行为仍有价值。自定义标签本身不会自动变成一个语义完整的评分控件，复杂键盘模式还要单独设计。相关基础见 [A11Y-01](../chinese-guides/a11y-01-wcag-testing-governance.md#a11y-01)。
 
-### 十、CSS 接口只开放稳定入口
+### 九、表单关联不只是提交时拼一个对象
 
-CSS custom property 适合颜色、间距和尺寸 token，会继承进 shadow tree；`::part(name)` 允许宿主样式化明确标记的内部部件。二者是版本化 API，改名可能是破坏性变化。
+**ElementInternals** 让自定义元素参与原生表单协议。formAssociated 声明关联资格，setFormValue 提交值，表单禁用、重置与恢复通过相应回调处理。
 
-不要鼓励 `element.shadowRoot.querySelector()` 注入样式，也不要开放所有内部节点的 part。组件应保持可读默认样式，并在 forced-colors、暗色、打印和不同宿主字号下测试。宿主 `display`、尺寸和可替换性也应文档化。
+本例接管后禁用 fallback input，所以 FormData 只出现一份 score。若只把 fallback 隐藏，它仍可能参与提交；同一个字段出现两份值时，后端如何取值就变成额外歧义。
 
-Constructable stylesheet 可以复用样式对象，但服务器、测试环境和旧浏览器需要回退。样式加载不能让未升级内容长期闪烁或不可用。
+本例把非法值规范为 0，因此没有额外自定义校验错误。真实组件需要约束校验时，可用 setValidity 提供 flags、错误信息和适当的内部焦点锚点，并在有效时清除错误。它不能代替服务端验证。
 
-### 十一、SSR 先输出有意义的 light DOM
+重置的含义也要明确。本例回到第一次连接时的 HTML 初始值 2，不回到最近一次 property 赋值 4。状态恢复回调接收到的类型由 setFormValue 的 state 约定决定；这里始终写入字符串，不应照搬到使用 File 或 FormData 状态的组件。
 
-服务端无法执行普通自定义元素类时，仍可以输出标签、标题、文本与原生表单 fallback。客户端脚本加载后 upgrade 并增强。这样抓取、首屏、无脚本和脚本失败都有基本内容。
+### 十、React 与 Vue 消费同一份约定
 
-Declarative Shadow DOM 可在 HTML 中声明 shadow root，但服务端与框架支持、序列化和水合策略要按当前工具链核验。它不消除数据一致性问题：服务器内容、attribute 与客户端初始 state 必须一致，避免升级时闪烁或重复。
+原生调用方可以设置 `element.value` 并 addEventListener。框架适配也只需要做这层转换，不应复制评分规则。
 
-框架 hydration 与 custom element upgrade 是两套生命周期，发生顺序可能不同。不要让双方同时重建同一内部 DOM；确定谁拥有 light DOM、谁拥有 shadow tree，并保存直接 URL 与禁用脚本测试。
+下面是已有 React 项目中的薄适配片段，组件定义须在入口注册完成。它把宿主的 value 写到 property，把自定义事件交给回调，并在依赖变化或卸载时清理监听。
 
-### 十二、React、Vue 与原生都应消费 DOM 合同
+```jsx example=web-react-score-adapter runtime=project
+import { useEffect, useRef } from 'react';
+export function ScoreField({ value, onValue }) {
+  const ref = useRef(null);
+  useEffect(() => { ref.current.value = value; }, [value]);
+  useEffect(() => {
+    const element = ref.current;
+    const change = (event) => onValue(event.detail.value);
+    element.addEventListener('score-change', change);
+    return () => element.removeEventListener('score-change', change);
+  }, [onValue]);
+  return <study-score ref={ref} name="score"><span slot="title">资料评分</span></study-score>;
+}
+```
 
-原生消费端设置 property、监听 addEventListener 事件；Vue 通常能把 kebab-case attribute 与原生事件绑定，但对象 property 和 TypeScript 类型可能需要明确包装；React 的自定义元素支持随版本演进，仍要用真实版本验证 property/event 行为。
+当前 React 官方文档也说明了自定义 HTML 元素的 property 与事件支持；旧版 React 的经验不能直接套到所有版本。这个片段使用显式桥接，便于看清生命周期，但没有为不支持表单关联的环境输出 fallback，也不等于完整 SSR 适配。
 
-建立薄适配层时只转换框架约定到 DOM 合同，例如把 React callback 绑定到 `score-change`，不要复制组件业务。适配层卸载时移除监听，服务端渲染时仍保留 light DOM fallback。
+Vue 模板中可按需要用 `.prop` 明确传 property，用自定义事件接收值；例如 `:value.prop="score"` 与 `@score-change="score = $event.detail.value"`。编译器还需要通过 isCustomElement 把 study-score 识别为原生自定义标签，这通常属于构建插件的模板编译配置。不要只在运行时消掉警告，却让编译器继续尝试解析成 Vue 组件。
 
-类型声明可扩展 JSX intrinsic elements 或导出元素类接口，但 `.d.ts` 不能证明运行时已注册。消费端等待 `customElements.whenDefined()` 只用于确需调用方法的增强，核心内容不应依赖等待。
+### 十一、SSR、注册表与版本由谁负责
 
-### 十三、注册表与版本所有权是组织问题
+服务端先输出有意义的 light DOM，脚本晚到时内容仍可读。Declarative Shadow DOM 可以直接在 HTML 表达 shadow root，但它与自定义元素升级、框架 hydration 是不同过程：谁保留已有子树、谁更新数据，都需要明确所有权。
 
-同一 Window 的默认 CustomElementRegistry 对标签名全局唯一。再次 define 同名会抛错；`customElements.get()` 守卫能避免重复执行异常，却不能让不兼容的 v1/v2 同名实现共存。
+本例是客户端新建 shadow tree，没有演示 Declarative Shadow DOM 水合。不要直接拿同一个 constructor 去接管已有服务端 shadow 内容，而不检查初始化策略。
 
-组织需要明确标签前缀所有者、语义版本、兼容窗口和弃用计划。微前端共享窗口时统一运行时或使用不同标签名；不能让加载顺序决定最终实现。较新的 scoped registry 能改善某些隔离场景，但支持与框架集成要核验，基础合同仍不能混乱。
+默认注册表中的标签名是全局资源。get 守卫防止再次 define 抛错，却不能确保先注册的实现与后注册的使用方兼容。微前端应统一版本、明确标签前缀所有者，或使用不同标签名。scoped registries 属于另一种能力，应按实际浏览器和宿主工具链核对。
 
-发布包还要避免打包两份基类或副作用注册失控。可分离“导出类”和“注册入口”，让宿主决定何时注册，同时确保普通应用有简单默认入口。
+### 十二、用公开行为判断组件是否可靠
 
-### 十四、性能边界来自实例数量与工作内容
+本文最有价值的检查是：升级前后内容存在，提前赋值生效，重连后事件不重复，表单只有一个字段，禁用后不提交该字段，重置有明确结果。它们直接对应调用方能依赖的行为。
 
-Shadow DOM 本身不是自动性能优化。大量实例各自创建相同 style、监听器和 Observer 会占用内存；复杂 slot 与样式也参与渲染。复用 stylesheet、事件委托或共享服务前先测量，并保持实例清理。
+大量实例时，还要看首次升级、重复样式、监听器数量和属性更新中的工作量；Shadow DOM 不会自动带来性能提升。需要网络数据的组件，也不能在每次 attributeChangedCallback 中无条件发请求，数据缓存与取消通常由上层统一管理。
 
-不要在 attributeChangedCallback 同步做网络请求或大布局。把业务数据获取交给拥有缓存与取消的上层，组件接收模型并发出意图。需要自管理时明确请求身份、断开取消和迟到结果抑制。
+学完后尝试回答：为什么 attribute 是 "false" 的 disabled 仍然禁用；为什么定义加载后 value setter 可能仍没有运行；为什么事件从内部按钮出来后 target 变成 host；为什么隐藏 fallback 后 FormData 仍可能重复。把这些机制连起来，才能写出真正可跨宿主消费的接口。
 
-性能测试覆盖首次升级、批量创建、属性更新、断开重连和内存回收，不只测一个组件点击。
+### 参考与延伸阅读
 
-### 十五、验证跨框架公共合同
+审校日期：2026-09-14。主例以平台 DOM 与原生表单为核心，框架片段说明适配方式，不等于所有版本的兼容结论。
 
-使用同一 HTML/属性/property/event/slot/form/CSS contract，在无框架、React 与 Vue 宿主运行。断言属性规范化、property 类型、事件次数与 detail、键盘激活、FormData、样式入口和断开重连。
-
-另跑禁用脚本、延迟注册、SSR 输出、重复模块、无 ElementInternals、未知 attribute 与错误事件版本。外部测试只通过公开表面观察，少量内部单元测试验证私有算法；若所有测试都穿透 shadow tree，说明合同设计不足。
-
-### 学完后应能说明
-
-你应能解释 custom element 的注册与升级、attribute/property 反射、连接生命周期、Shadow DOM 与 slot、事件重定向、表单关联和 SSR 回退；能说明 Shadow DOM 为什么不是安全沙箱，并为原生、React、Vue 与微前端设计稳定、可版本化、可验证的 DOM 公共合同。
-
+- [MDN：Using custom elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)：注册、升级和生命周期。
+- [MDN：Using Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM)：封装、slot 与样式边界。
+- [MDN：ElementInternals](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals)：表单值、校验与状态。
+- [React：Custom HTML elements](https://react.dev/reference/react-dom/components#custom-html-elements)：当前 React 的属性与自定义事件行为。
+- [Vue：Vue and Web Components](https://vuejs.org/guide/extras/web-components.html)：模板识别、property 与框架消费。

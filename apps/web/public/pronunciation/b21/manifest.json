@@ -16,65 +16,65 @@
       "file": "ca02a7161f884baf.wav",
       "text": "Acceptance Criteria"
     },
-    "backward compatibility": {
-      "file": "10d3577519466d2f.wav",
-      "text": "Backward Compatibility"
+    "adr": {
+      "file": "0fc8146d0908e8a4.wav",
+      "text": "ADR"
     },
-    "backward traceability": {
-      "file": "d9a4f557a41314c3.wav",
-      "text": "Backward Traceability"
+    "consumer-driven contract": {
+      "file": "e5c97ef1f2d71404.wav",
+      "text": "Consumer-Driven Contract"
     },
-    "client side rendering": {
-      "file": "6f6cfc3586508a4f.wav",
-      "text": "Client Side Rendering"
+    "csr": {
+      "file": "c27338c453067b43.wav",
+      "text": "CSR"
     },
-    "consumer driven contract": {
-      "file": "b197bb844da8a9fa.wav",
-      "text": "Consumer Driven Contract"
+    "definition of done": {
+      "file": "01f7e7e98c1f7820.wav",
+      "text": "Definition of Done"
     },
-    "forward traceability": {
-      "file": "8bd3201b042dfb72.wav",
-      "text": "Forward Traceability"
+    "evidence": {
+      "file": "ee8250fb76e094b3.wav",
+      "text": "Evidence"
     },
     "hydration": {
       "file": "4163fe8dc2507164.wav",
       "text": "Hydration"
     },
-    "hydration mismatch": {
-      "file": "cc744b2896302fcc.wav",
-      "text": "Hydration Mismatch"
-    },
-    "incremental static regeneration": {
-      "file": "3cd9ff12510a1e18.wav",
-      "text": "Incremental Static Regeneration"
-    },
     "islands architecture": {
       "file": "46ba6c85ecd98304.wav",
       "text": "Islands Architecture"
     },
-    "pact broker": {
-      "file": "9fc33183fd18c37d.wav",
-      "text": "Pact Broker"
+    "isr": {
+      "file": "977664d09433c9e2.wav",
+      "text": "ISR"
     },
     "provider state": {
       "file": "48c84d879c6ab0ae.wav",
       "text": "Provider State"
     },
-    "server side rendering": {
-      "file": "91de977cf03a6c6b.wav",
-      "text": "Server Side Rendering"
+    "spa": {
+      "file": "01698ce1dc071ffe.wav",
+      "text": "SPA"
     },
-    "static site generation": {
-      "file": "876da7cc854bc9b0.wav",
-      "text": "Static Site Generation"
+    "ssg": {
+      "file": "6286783ee2dc2582.wav",
+      "text": "SSG"
     },
-    "streaming server rendering": {
-      "file": "5b5067ee15b21e08.wav",
-      "text": "Streaming Server Rendering"
+    "ssr": {
+      "file": "2e2501506595f756.wav",
+      "text": "SSR"
+    },
+    "streaming ssr": {
+      "file": "1c2591d0e386ec7f.wav",
+      "text": "Streaming SSR"
     },
     "traceability": {
       "file": "30dd2e1b99d3c8a2.wav",
       "text": "Traceability"
+    },
+    "traceability matrix": {
+      "file": "61f60163c5876fa3.wav",
+      "text": "Traceability Matrix"
     }
   }
 }

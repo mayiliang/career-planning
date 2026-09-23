@@ -12,9 +12,65 @@
     "sec-02-csp-trusted-types-reporting.md"
   ],
   "terms": {
+    "abortsignal": {
+      "file": "1f840e7d0ca40bdb.wav",
+      "text": "AbortSignal"
+    },
+    "content security policy": {
+      "file": "820e6d69ef7e8208.wav",
+      "text": "Content Security Policy"
+    },
+    "cors": {
+      "file": "6f780a3c5df85fbb.wav",
+      "text": "CORS"
+    },
+    "csrf": {
+      "file": "7ce12ba8782a32f7.wav",
+      "text": "CSRF"
+    },
+    "dom clobbering": {
+      "file": "d15b59e9bc1b8c43.wav",
+      "text": "DOM Clobbering"
+    },
+    "elementinternals": {
+      "file": "5cf4e10509bf1f48.wav",
+      "text": "ElementInternals"
+    },
+    "hash": {
+      "file": "d04b98f48e8f8bcc.wav",
+      "text": "Hash"
+    },
+    "http cache": {
+      "file": "c0b99f7e1136ca69.wav",
+      "text": "HTTP Cache"
+    },
+    "lifecycle": {
+      "file": "f31168c67a1482e7.wav",
+      "text": "Lifecycle"
+    },
     "nonce": {
       "file": "78377b525757b494.wav",
       "text": "Nonce"
+    },
+    "outbox": {
+      "file": "7772189a259534b2.wav",
+      "text": "Outbox"
+    },
+    "prototype pollution": {
+      "file": "13ab3bbd7b623496.wav",
+      "text": "Prototype Pollution"
+    },
+    "reflection": {
+      "file": "f30409c51a78ed69.wav",
+      "text": "Reflection"
+    },
+    "report-only": {
+      "file": "1dbf0c082e3b6f36.wav",
+      "text": "Report-Only"
+    },
+    "sanitization": {
+      "file": "2473cb25fc38ef59.wav",
+      "text": "Sanitization"
     },
     "shadow dom": {
       "file": "aa6c1570010aa4a3.wav",
@@ -23,6 +79,14 @@
     "singleflight": {
       "file": "b54223b66181efb9.wav",
       "text": "Singleflight"
+    },
+    "slot": {
+      "file": "6558838331b742a6.wav",
+      "text": "Slot"
+    },
+    "strict-dynamic": {
+      "file": "f4204a7d62ec85ce.wav",
+      "text": "strict-dynamic"
     },
     "threat model": {
       "file": "d292a62567f67220.wav",
@@ -36,13 +100,17 @@
       "file": "be49875b36656615.wav",
       "text": "Trusted Types"
     },
-    "upgrade": {
-      "file": "7fef9479c8bc5a3c.wav",
-      "text": "Upgrade"
+    "violation report": {
+      "file": "e994acb0d5c90763.wav",
+      "text": "Violation Report"
     },
     "web components": {
       "file": "4462ce8986035340.wav",
       "text": "Web Components"
+    },
+    "xss": {
+      "file": "58e0413224af6b6d.wav",
+      "text": "XSS"
     }
   }
 }

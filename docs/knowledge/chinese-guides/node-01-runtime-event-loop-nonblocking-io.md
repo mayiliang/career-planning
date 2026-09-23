@@ -2,139 +2,314 @@
 
 ## NODE-01 Node 运行时、事件循环与非阻塞 I/O
 
-浏览器和 Node.js 都执行 JavaScript，却不是同一个宿主。Node.js 把 JavaScript 引擎、操作系统 I/O、libuv、线程池和进程生命周期组合成服务端运行时。学这一点的目的不是背一张阶段图，而是能解释：一段代码现在占用哪条执行路径，等待发生在哪里，为什么“用了异步 API”仍可能拖慢所有请求，以及应当用什么证据决定分片、卸载或限流。
+一个资料导入接口用了 await readFile，为什么导入时连“服务正常吗”都迟迟不回复？因为等待文件和解析文件是两段不同的工作：读取可以异步等待，JSON.parse 仍可能长时间占着 JavaScript 主线程。
+
+本讲先认清工作在哪里执行，再看回调何时获得机会，最后用分片、worker 和测量解释怎样减少相互拖累。示例使用 Node.js 22，保存为标注的文件后执行 node 文件名；.cjs 与 .mjs 的区别是实验输入的一部分，不要把代码直接贴进浏览器控制台。
 
 ### 学习前先确认
 
-- 直接前置：[JS-04 异步、Promise 与事件循环](../chinese-guides/js-04-async-promise-browser-event-loop.md#js-04)。本讲直接使用调用栈、任务、微任务、Promise reaction、取消和饥饿等概念，再说明 Node.js 宿主与浏览器的差别。
+- 直接前置：[JS-04 异步、Promise 与事件循环](../chinese-guides/js-04-async-promise-browser-event-loop.md#js-04)。本讲沿用调用栈、任务与微任务，再补充 Node 宿主的差别。
 
-### 一、先把 JavaScript 线程、内核 I/O 与线程池分开
+### 一、一个 Node 进程不止一种执行路径
 
-默认情况下，一段 Node.js JavaScript 在主线程上执行。主线程完成入口模块的同步初始化，注册回调和异步操作，然后反复处理已经就绪的工作。**事件循环（Event Loop）**就是协调这些回调与 I/O 就绪事件的运行机制，不是“另一个帮你执行 JavaScript 的线程”。
+**运行时（Runtime）**提供 JavaScript 与外部世界交互的能力。V8 执行代码，Node 提供文件、网络等 API，libuv 与操作系统协作安排等待和就绪通知。
 
-网络套接字通常可由操作系统通知就绪；文件系统、部分 DNS、加密与压缩操作可能交给 libuv 的工作线程池；`worker_threads` 则是应用显式创建的 JavaScript 线程。三者都可能在后台推进，但最终大多数 JavaScript 回调仍回到所属线程按顺序运行。若主线程正在执行一个 300 ms 的同步循环，已经完成的网络读取也只能等待回调机会。
+| 工作 | 通常由谁推进 | 回到 JavaScript 后的成本 |
+| --- | --- | --- |
+| 普通函数、JSON.parse、复杂循环 | 当前 JavaScript 线程 | 会占用该线程，其他回调等待 |
+| 网络连接等待 | 操作系统的网络机制与事件通知 | 读取结果、解析与业务回调仍需执行 |
+| 异步文件操作、部分 DNS、加密和压缩 | libuv 工作线程池等实现路径 | 完成回调仍需获得机会 |
+| 显式创建的 worker_threads 任务 | 独立 JavaScript 线程 | 通信、复制与主线程处理仍有成本 |
 
-因此，异步有两层含义：调用者不在原地等待结果；宿主能够让等待中的操作推进。它不保证回调很短，也不保证线程池永不排队，更不保证多核会自动利用。
+不要把“默认一个 JavaScript 主线程”理解为整个进程只有一个线程。也不要把所有异步操作都画进线程池：网络等待与文件操作的实现路径通常不同。
 
-### 二、非阻塞描述等待方式，不描述全部成本
+把餐厅比喻用到这里就足够了：接待员可以在厨房备餐时接待下一位，但如果接待员自己连续计算三分钟账单，已经做好的菜也得等。接下来要靠实际 API 和测量判断，不能用比喻替代运行机制。
 
-**非阻塞 I/O（Nonblocking Input Output）**表示发起 I/O 后，执行线程可以先处理别的工作，待就绪后再继续。这里把 I/O 在读音标签中展开为 Input Output，以便语音引擎清晰朗读。它适合大量时间花在网络等待上的服务，但不能消除序列化、解析、正则匹配、压缩、加密和业务计算的 CPU 成本。
+### 二、异步等待结束后，回调仍可能阻塞
 
-下面的代码虽然把读取写成了异步，`JSON.parse` 仍在主线程同步执行：
+给一个函数加 async，不会让函数内部的计算自动离开当前线程。await 让出的是等待结果期间的执行机会，不会把前后的同步工作搬到别处。
 
-```js
-import { readFile } from 'node:fs/promises';
-
-const body = await readFile('large.json', 'utf8');
-const data = JSON.parse(body);
-```
-
-读取期间事件循环可继续工作；解析开始后，其他回调要等它结束。输入越大，阻塞越久。正确问题不是“这个 API 名字是否带 async”，而是每一段工作在哪条线程上、单次成本受什么输入控制、排队是否有上限。
-
-### 三、阶段图是导航，不是万能顺序表
-
-Node.js 的循环会处理 timers、pending callbacks、poll、check、close callbacks 等阶段。`setImmediate` 在 check 阶段运行，计时器在达到阈值后取得运行资格，I/O 回调主要在 poll 相关路径被处理。计时器的延迟参数是最早可运行时间，不是精确预约时间。
-
-从 Node.js 20 使用的 libuv 1.45 起，循环中的计时器处理位置发生过调整；不同 Node 版本、操作系统、调用位置和是否处在 I/O 回调中，都会影响 `setTimeout(0)` 与 `setImmediate` 的观察顺序。服务端代码不应依赖主模块中二者的偶然先后。真正需要顺序时，用显式 Promise 链、队列或状态机表达因果关系。
-
-可以把阶段理解为“哪些就绪回调有机会被选择”的边界，而不是每次循环都完整走一遍、每格只执行一个回调的动画。
-
-### 四、nextTick 与 Promise 微任务都可能制造饥饿
-
-`process.nextTick` 队列不属于阶段图中的普通阶段；当前 JavaScript 操作结束后，它会在事件循环继续之前被处理。Promise reaction 也在微任务检查点运行。二者都比下一轮 I/O 更早得到机会，因此递归地产生新任务时，会让 poll、timer 和渲染类观察迟迟得不到调度。
-
-```js
-function starve() {
-  process.nextTick(starve);
+```js example=node01-async-cost
+const steps = [];
+async function parseNow() {
+  steps.push('开始解析');
+  const value = JSON.parse('{"count":3}');
+  steps.push('解析结束');
+  return value.count;
 }
-starve();
+const pending = parseNow();
+steps.push('调用者继续');
+console.log(steps.join(' → ')); // => 开始解析 → 解析结束 → 调用者继续
+console.log(await pending); // => 3
 ```
 
-这段代码不会因调用栈无限增长而立刻终止，因为每次调用被排到下一次 nextTick 处理；但它不断补充队列，使 I/O 饥饿。Promise 的无界递归也有类似风险。解决方法是给工作设预算，批量处理有限条目后用 `setImmediate` 或受控调度让出机会，并对队列长度和输入规模设上限。
+先看到解析结束，才看到调用者继续，原因是 parseNow 在返回 Promise 前已完成同步解析。把输入换成巨大 JSON，基本关系不变，耗时却可能显著增长。
 
-### 五、公平性是应用必须维护的工程属性
+完整导入还有多份内存：文件字节、解码后的字符串、解析后的对象、生成的新结果。只看文件体积容易低估峰值。应先限制输入，再决定整块处理、逐条处理还是卸载计算。[NODE-02](../chinese-guides/node-02-files-streams-buffers-errors.md#node-02)会把这个问题接到字节和记录边界。
 
-Node.js 用少量线程服务许多连接，效率来自等待期间复用线程。代价是应用要保证每个客户在一次回调中只占用合理时间。某个输入触发高复杂度正则、巨大 JSON 或无界遍历时，不仅它自己变慢，还会惩罚同进程的其他请求；恶意输入甚至能形成拒绝服务。
+### 三、先比较模块入口，再讨论微任务顺序
 
-公平性可以从三处控制：在入口限制字节数、深度、集合长度和计算预算；在实现中把可分工作切成有界批次；在系统层用并发、队列和租户配额限制在途工作。不要把“机器 CPU 还有空闲核心”误当成主线程没有阻塞，因为一个 JavaScript 主线程仍可能饱和。
+**事件循环（Event Loop）**安排就绪的回调。process.nextTick 有独立队列，Promise reaction 与 queueMicrotask 使用微任务队列；“nextTick 总在 Promise 前”却不是脱离调用位置的通用结论。
 
-### 六、延迟、吞吐与利用率要一起看
+先保存为 order.cjs：
 
-平均请求耗时会掩盖尾部卡顿。至少观察事件循环延迟分布、请求延迟分位、吞吐、CPU、工作线程池等待和在途队列。`monitorEventLoopDelay()` 可以采样调度延迟；`performance.eventLoopUtilization()` 提供**事件循环利用率（Event Loop Utilization）**的活动/空闲比例。前者回答“本应得到机会的工作晚了多久”，后者回答“循环在观察窗口内有多忙”。
+```js example=node01-order-cjs runtime=project file=order.cjs
+console.log('同步');
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('Promise'));
+queueMicrotask(() => console.log('microtask'));
+console.log('结束');
+// => 同步
+// => 结束
+// => nextTick
+// => Promise
+// => microtask
+```
 
-高延迟、高利用率通常提示主线程长期忙碌；高延迟但 CPU 不高可能与进程暂停、容器限额、同步系统调用或测量窗口有关；低利用率也不能证明下游没有慢，因为服务可能大部分时间在等待数据库。要把运行时指标与请求 trace、CPU profile、输入规模和下游耗时关联起来。
+再把同样的四类动作放到 order.mjs：
 
-```js
+```js example=node01-order-esm runtime=project file=order.mjs
+console.log('同步');
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('Promise'));
+queueMicrotask(() => console.log('microtask'));
+console.log('结束');
+// => 同步
+// => 结束
+// => Promise
+// => microtask
+// => nextTick
+```
+
+这里差异来自 ESM 模块求值的异步上下文：顶层代码已经处在相应微任务执行过程中。本例 Promise 和 queueMicrotask 的相对顺序来自入队顺序。两段输出用于解释这两个明确入口，不能外推为每个回调、每个嵌套任务都相同。
+
+真正依赖先后的业务应显式 await 或使用有顺序的队列，不应借一个“通常先执行”的 API 偷渡因果关系。
+
+### 四、在 I/O 回调里看 poll、check 与计时器
+
+阶段图适合定位 API 的机会，不适合当作精确时钟。poll 处理 I/O 就绪，check 运行 setImmediate，timer 达到阈值后才有资格执行。pending callbacks 和 close callbacks 还处理各自的待办。
+
+```js example=node01-io-order runtime=project file=io-order.mjs
+import { readFile } from 'node:fs';
+readFile(new URL(import.meta.url), error => {
+  if (error) throw error;
+  console.log('I/O 回调');
+  process.nextTick(() => console.log('nextTick'));
+  Promise.resolve().then(() => console.log('Promise'));
+  setImmediate(() => console.log('immediate'));
+  setTimeout(() => console.log('timer'), 0);
+});
+// => I/O 回调
+// => nextTick
+// => Promise
+// => immediate
+// => timer
+```
+
+本例把两个调度操作放进同一次文件读取回调，在这个 I/O 上下文里 immediate 先于 timer。移到主模块入口，二者不应被当成稳定的业务排序机制。虽然文件是 .mjs，这里的回调顺序也不等于上一节的顶层求值顺序。
+
+Node 官方文档特别说明 libuv 1.45、Node 20 起的计时器阶段变化。记录实际 Node、libuv、操作系统与调用位置，比背“零毫秒就是立即执行”更有用。setTimeout(0) 还有最小延迟处理，也会受已有工作和系统调度影响。
+
+### 五、让出微任务不等于让出 I/O 机会
+
+不断 await Promise.resolve()，仍可能让微任务一直排下去。有限演示足以观察这种效果，不必运行会卡死进程的无限 nextTick 递归。
+
+```js example=node01-yield runtime=project file=yield.mjs
+import { setImmediate as yieldToLoop } from 'node:timers/promises';
+
+let observer = false;
+setImmediate(() => { observer = true; });
+for (let i = 0; i < 100; i++) await Promise.resolve();
+console.log('微任务循环后', observer); // => 微任务循环后 false
+
+await yieldToLoop();
+console.log('让出循环后', observer); // => 让出循环后 true
+
+let sum = 0;
+for (let start = 0; start < 1000; start += 100) {
+  for (let i = start; i < start + 100; i++) sum += i;
+  await yieldToLoop();
+}
+console.log(sum); // => 499500
+```
+
+**饥饿（Starvation）**描述某类工作一直得不到机会。分片让计算在有界批次之间暂停，让其他回调可以运行；总计算量并没有减少，也没有因此使用更多核心。
+
+“每 100 条让一次”只适合成本接近且有上限的条目。如果某一条就可能做巨大的 JSON.parse，再小的批次也救不了这一条。可以结合时间预算分片，但一次不可中断操作仍是最小边界；输入限额和算法选择必须先做。
+
+### 六、worker 的价值是隔开 CPU 执行位置
+
+**工作线程（Worker Thread）**适合独立且较重的 CPU 工作。它拥有自己的 JavaScript 执行环境，不是给每个网络请求都开一个新线程的理由。
+
+下面两份文件一起保存。work.mjs 接收一个只含数字的教学任务，在自己的线程中累计结果；故障参数只用于演示错误传播。
+
+```js example=node01-worker-body runtime=project file=work.mjs
+import { parentPort, workerData } from 'node:worker_threads';
+if (workerData.fail) throw new Error('教学任务失败');
+let sum = 0;
+for (let i = 0; i < workerData.count; i++) sum += i;
+parentPort.postMessage({ sum });
+```
+
+worker.mjs 为任务设置上限，接住 message、error 和没有结果的 exit，并在退出后才把结果交给调用者：
+
+```js example=node01-worker-owner runtime=project file=worker.mjs
+import { Worker } from 'node:worker_threads';
+
+export function runTask({ count, fail = false }, { signal } = {}) {
+  if (!Number.isSafeInteger(count) || count < 0 || count > 10_000_000) {
+    return Promise.reject(new RangeError('任务规模越界'));
+  }
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./work.mjs', import.meta.url), {
+      workerData: { count, fail },
+    });
+    let result, failure, received = false;
+    const stop = reason => {
+      failure ??= reason;
+      void worker.terminate().catch(error => { failure ??= error; });
+    };
+    const onAbort = () => stop(signal.reason);
+    const timer = setTimeout(() => stop(new Error('任务超时')), 5000);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    worker.on('message', value => {
+      if (received || !value || !Number.isSafeInteger(value.sum)) {
+        stop(new Error('无效任务结果'));
+      } else {
+        received = true; result = value.sum;
+      }
+    });
+    worker.on('error', error => { failure ??= error; });
+    worker.once('exit', code => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      if (signal?.aborted) failure ??= signal.reason;
+      if (failure) reject(failure);
+      else if (code !== 0 || !received) reject(new Error('任务退出但没有完整结果'));
+      else resolve(result);
+    });
+  });
+}
+console.log(await runTask({ count: 1000 })); // => 499500
+try { await runTask({ count: 10, fail: true }); }
+catch (error) { console.log(error.message); } // => 教学任务失败
+const controller = new AbortController();
+controller.abort(new Error('已取消'));
+try { await runTask({ count: 10 }, { signal: controller.signal }); }
+catch (error) { console.log(error.message); } // => 已取消
+```
+
+这个顺序实验一次只跑一个任务，尚未实现生产 worker 池。实际池需要限定线程数、队列长度、每租户份额和任务期限；排队时间也算等待，不应在拿到线程之后才开始计时。
+
+terminate 是强制停止，适合这里没有外部写入的纯计算。需要提交文件或数据库的任务，应定义协作取消点与事务边界，不能假设强杀线程等于撤销副作用。
+
+### 七、通信要同时考虑复制、所有权与迟到结果
+
+普通对象传给 worker 通常经过结构化克隆。把很大的解析对象发过去，可能先在主线程付出复制成本；更合理的边界有时是把受控字节交给 worker 解析，再返回小结果。
+
+可转移的 ArrayBuffer 会移动所有权，发送方对应缓冲区会失效；SharedArrayBuffer 则是共享，必须设计同步。Node 的 Buffer 可能使用内存池，不能见到 buffer 属性就假设能安全转移；应根据 API 和分配方式核对所有权。
+
+结果也有“属于哪次请求”的问题。任务结束时，页面可能已经退出或请求已经超时。先确认任务编号、当前版本与取消状态，再发布结果。这个关系可对照[B17 的迟到响应](../chinese-guides/identity-01-session-cookie-token-browser-boundaries.md#八退出之后迟到响应不能让页面重新登录)：停止等待与不让旧结果生效是两件事。
+
+### 八、测量要包含真实的观察窗口
+
+**事件循环利用率（Event Loop Utilization）**衡量观察窗口内循环活跃与空闲的比例；monitorEventLoopDelay 记录调度延迟，单位是纳秒。一个指标不能包办“用户为什么慢”。
+
+把下面保存为 measure.mjs。示例用受控忙循环制造短暂阻塞，只在本地实验中运行：
+
+```js example=node01-measure runtime=project file=measure.mjs
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
+import { setTimeout as sleep } from 'node:timers/promises';
 
-const delay = monitorEventLoopDelay({ resolution: 20 });
-const before = performance.eventLoopUtilization();
-delay.enable();
-
-// 在固定负载窗口后记录 p50/p99 与利用率差值
-const utilization = performance.eventLoopUtilization(before);
-console.log({
-  p99Ms: delay.percentile(99) / 1e6,
-  utilization: utilization.utilization,
+async function measure(label, action) {
+  const histogram = monitorEventLoopDelay({ resolution: 10 });
+  const before = performance.eventLoopUtilization();
+  const started = performance.now();
+  histogram.enable();
+  await sleep(30); // 先让采样器进入事件循环。
+  await action();
+  await sleep(30); // 让延迟样本有机会被记录。
+  const utilization = performance.eventLoopUtilization(before);
+  histogram.disable();
+  console.log(JSON.stringify({
+    label, windowMs: Math.round(performance.now() - started),
+    maxDelayMs: Math.round(histogram.max / 1e6),
+    p99DelayMs: Math.round(histogram.percentile(99) / 1e6),
+    utilization: Number(utilization.utilization.toFixed(3)),
+  }));
+}
+console.log(JSON.stringify({ node: process.version, uv: process.versions.uv, platform: process.platform }));
+await measure('异步等待', () => sleep(120));
+await measure('同步占用', () => {
+  const end = performance.now() + 120;
+  while (performance.now() < end) { /* 受控教学负载 */ }
 });
 ```
 
-采样工具本身也有成本，生产阈值应来自本系统基线和服务目标，而不是复制一个通用数字。
+采样窗口包含前后各 30 ms 的等待。数值随机器和负载变化，不应把 120 ms 写成所有平台都必须得到的 p99。先看同步占用是否明显抬高最大延迟和利用率，再重复观察。样本很少时分位数容易失真；不要在样本尚不充分时频繁重置直方图再据此下结论。本例只用来认清指标，不是容量测试。
 
-### 七、分片适合可暂停工作，线程适合隔离 CPU 工作
+真正的服务实验还要同时记录轻请求延迟、吞吐、CPU、RSS、输入规模和下游耗时；先保持输入不变，再切换主线程、分片与 worker。监测到高延迟只是线索，CPU profile、排队记录和调用路径才帮助定位原因。
 
-若计算可以在小批次之间保存进度，分片能让事件循环定期处理 I/O，实施成本低，但总 CPU 没有减少，也没有利用多个核心。若任务是较重且边界清晰的 CPU 计算，可使用**工作线程（Worker Thread）**。它能在另一个 JavaScript 线程执行，却需要设计消息、数据所有权、取消、超时、崩溃和容量。
+### 九、工作池拥堵与主线程拥堵需要分别处理
 
-把一个巨大对象传给 worker 可能产生结构化克隆成本；可转移的 `ArrayBuffer` 会转移所有权，原线程不应继续使用；共享内存又引入同步和数据竞争。线程池大小也必须有上限，否则请求高峰会把内存、CPU 和排队时间一起放大。
+libuv 的工作线程池与 worker_threads 不是同一个池。异步文件读取、部分密码学操作等会竞争有限资源；主线程很空闲，也可能有任务排队很久。
 
-分片与 worker 不是二选一的教条。小而偶发的计算可能直接执行更简单；稳定、可分割的批处理可分片；昂贵且独立的计算可放入 worker；若业务本质是重计算平台，还应评估专门服务或其他运行时。
+例如，批量哈希把池占满，同时到来的文件操作会变慢。此时把 JSON 解析移入 worker 未必解决问题。反过来，JSON.parse 卡住主线程时，只增加 UV_THREADPOOL_SIZE 也不会让解析自动并行。
 
-### 八、工作线程池也会被阻塞
+先记录任务提交、开始和结束时间，限制并发，再针对已证实的瓶颈调整。线程更多可能增加内存和上下文切换，存储也可能成为新的瓶颈。密码计算应隔离容量，不应为了延迟好看而随意降低安全成本。
 
-libuv 线程池并非无限资源。多个慢文件读取、密码哈希或压缩任务会相互排队，并影响使用同一池的其他功能。把同步 API 换成异步 API，只是把阻塞从主线程移动到工作池；若单个任务成本无界，服务仍可能出现吞吐下降和尾延迟放大。
+### 十、让请求上下文沿异步链走，别把它当权限证明
 
-监测时要区分主线程延迟与线程池排队。可以用受控并发提交不同大小的任务，观察完成时间是否随并发非线性上升；对密码学等必须昂贵的任务，采用独立容量和拒绝策略，而不是降低安全参数来追求速度。
+**异步上下文（Async Context）**帮助日志回答“这个回调属于哪次请求”。AsyncLocalStorage 能保存受控的请求信息，不必依赖会被其他请求覆盖的全局 currentRequest。
 
-### 九、错误、取消和进程退出都属于运行模型
+```js example=node01-context runtime=project file=context.mjs
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { setTimeout as sleep } from 'node:timers/promises';
+const context = new AsyncLocalStorage();
+function work(id, delay) {
+  return context.run({ id }, async () => {
+    await sleep(delay);
+    return context.getStore().id;
+  });
+}
+console.log((await Promise.all([work('A', 15), work('B', 1)])).join(',')); // => A,B
+console.log(context.getStore() === undefined); // => true
+```
 
-异步工作失败后要回到一个明确的所有者。Promise 必须被等待或返回；worker 的 `error`、`exit` 和消息协议要统一收敛；取消只是发出停止意图，接收方仍需在安全检查点停止并丢弃迟到结果。
+Promise.all 保留输入顺序，所以输出 A,B 不代表 A 先完成。这个小差别也说明日志要记录阶段和时间，不能仅凭结果数组推断时间线。
 
-进程退出取决于是否仍有活跃句柄和请求。强行 `process.exit()` 会截断日志、文件刷新和响应；长期未清理的 timer、socket 或 worker 又会让进程无法自然退出。生产服务应在停止信号到来后拒绝新工作、取消或排空在途任务、关闭句柄，再设置退出结果。
+上下文里的租户、身份必须在入口确认；存入一个字符串不会让它自动可信。定时后台任务、队列消费和跨进程消息要明确建立新的上下文。需要更底层追踪时可研究 async_hooks 或 AsyncResource，但先证明现有传播在哪里断了，避免为每个函数增加复杂钩子。
 
-### 十、用对照实验形成可复核结论
+### 十一、进程能否退出取决于还活着的资源
 
-准备一个同时包含轻请求和重计算的最小服务：固定输入规模与并发，记录基线；分别注入同步文件读取、主线程解析、递归 nextTick、分片和 worker 版本；每次只改变一个因素。保存 Node 版本、操作系统、启动参数、请求分位、事件循环延迟、利用率与 CPU profile。
+活跃 timer、socket、worker 和 I/O 请求可能让进程继续运行；单独一个永不兑现的普通 Promise 并不保证进程一直活着。unref 可以让某些句柄不再阻止退出，却不会替你完成重要写入。
 
-如果 worker 版本尾延迟下降但吞吐不升，可能受消息复制或 CPU 配额限制；如果分片后 p99 改善但总耗时增加，这是用吞吐/完成时间换公平性；如果异步文件操作仍很慢，应检查线程池和存储，而不是只盯主线程。结论必须能由同一脚本重放。
+资源应有所有者和释放时机：请求结束清理计时器；任务结束回收 worker；服务退出停止新任务并排空现有任务。不要用 process.exit() 掩盖句柄泄漏，它可能截断输出和文件操作。
 
-### 十一、异步资源追踪用于回答“这次回调从哪里来”
+```mermaid
+flowchart TB
+  A["接受有界任务"] --> B["选择等待、分片或 worker"]
+  B --> C["运行并记录所属请求"]
+  C --> D{"成功、失败或取消"}
+  D --> E["检查结果是否仍有效"]
+  E --> F["释放计时器、线程和其他资源"]
+  F --> G["发布允许发布的结果"]
+```
 
-复杂服务中，一个 Promise、timer 或 socket 回调可能离入口很远。`AsyncLocalStorage` 可沿异步链保存 request id、租户或 trace 上下文，避免把上下文参数穿过每层函数；`async_hooks` 能观察异步资源创建与生命周期，但成本和复杂度更高，通常由诊断库封装。
+这张图强调所有路径都要回收资源。正式 HTTP 服务怎样停止接流量，可继续看[NODE-04](../chinese-guides/node-04-http-bff-production-engineering.md#node-04)。
 
-上下文传播不是权限证明。来自请求的租户信息仍要在可信入口校验，后台任务和重试要显式建立新上下文，不能让已经结束的请求状态泄漏到另一个任务。第三方库若破坏传播，应以最小复现确认边界，必要时在队列消息或函数参数中携带稳定 ID。
+### 十二、容量与版本都是结论的一部分
 
-资源追踪可以发现未释放 timer、socket 和 Promise 链，却不能单独证明业务因果。把资源 ID 与请求 trace、日志阶段和所有者连接，才能回答哪次入口创建、何时应关闭、为什么仍保持进程活跃。
+“同时请求 20 个都成功”只能说明这组输入在这次环境下成功。它不说明队列有没有上限、流量峰值能否恢复、慢下游会不会拖垮服务。
 
-### 十二、容量保护要在循环饱和前触发
+在容量接近上限前拒绝或降级，通常比让所有请求一起超时更好。限制在途数、队列、输入体积和单任务成本；每租户配额防止一个来源挤占全部机会。测试从低负载逐步升高再回落，看积压是否消退。
 
-事件循环延迟已经飙升时再接受更多请求，会形成正反馈：队列更长、超时更多、重试更多。入口应依据在途数、队列、CPU/延迟和下游容量提前拒绝，返回可重试的过载结果。每租户配额避免一个大客户挤压全部小请求，优先级也要防止低优先任务永久饥饿。
+运行记录至少写 Node、V8、libuv、操作系统、CPU/内存限制、输入规模、调度模式与观察窗口。版本升级后对照同一负载，不把一次模块输出测试通过当作性能没有变化。数据和图表应能支持“改善了什么、代价是什么、仍未验证什么”的具体结论。
 
-负载测试要逐步提高到饱和点再回落，观察服务是否恢复。若流量回落后延迟仍长期高，可能存在积压、内存压力或失败重试风暴。容量数字来自目标硬件、容器配额和真实工作分布；开发机上的单请求速度不能直接换算生产并发。
+### 参考与延伸阅读
 
-### 十三、版本与启动参数属于实验输入
-
-Node、V8、libuv 和操作系统更新会改变计时、垃圾回收、线程池或诊断接口。项目锁定并记录支持的 Node 版本，升级时用相同负载比较延迟分布、内存和顺序假设。不要只因单元测试通过就认为运行时升级没有性能影响。
-
-`UV_THREADPOOL_SIZE`、容器 CPU quota、内存上限和诊断 flag 都会影响结果。扩大线程池可能缓解某类排队，也可能增加上下文切换、存储竞争与内存；调整前先证明瓶颈确在线程池，并用回归负载验证其他任务没有退化。
-
-### 常见误解
-
-- “单线程”不等于进程只有一个线程，也不等于所有 I/O 都在主线程完成。
-- “异步”不等于不消耗 CPU，更不等于无限并发安全。
-- `setTimeout(fn, 0)` 表示达到最小阈值后等待机会，不表示立即执行。
-- worker 不是请求级无限创建的线程，也不会自动共享主线程对象。
-- 事件循环阶段顺序不能代替对特定 Node 版本与调用位置的实验。
-
-### 学完后应能说明
-
-你应能沿着“入口同步代码—异步提交—内核或线程池等待—就绪回调—微任务—下一阶段”解释一次请求，区分主线程阻塞与工作池排队，用延迟、利用率和 profile 建立证据，并根据工作可分性、数据传输成本、取消与容量选择直接执行、分片、worker 或独立服务。
+- [Node.js：事件循环](https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick)：阶段、I/O 内的调度与计时器变化。
+- [Node.js：不要阻塞事件循环与工作池](https://nodejs.org/en/learn/asynchronous-work/dont-block-the-event-loop)：公平性、输入成本与分片思路。
+- [Node.js：process.nextTick](https://nodejs.org/api/process.html#processnexttickcallback-args)：队列与 ESM 上下文；使用时核对实际运行版本。
+- [Node.js：worker_threads](https://nodejs.org/api/worker_threads.html)、[性能测量](https://nodejs.org/api/perf_hooks.html)、[AsyncLocalStorage](https://nodejs.org/api/async_context.html)：按本讲涉及的 API 查询所有权、测量和上下文。

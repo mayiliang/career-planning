@@ -1,170 +1,326 @@
-# Docker Compose 多服务系统知识点讲义
+# 服务都启动了，为什么它们还是连不上
 
 ## DOCKER-02 Compose、网络、卷与环境隔离
 
-单个镜像能启动，不表示由 Web、API、数据库、缓存和任务组成的系统可复现。Compose 用声明式文件描述服务、网络、卷、配置和依赖，适合本地开发、测试与单机编排；它仍不能自动保证服务就绪、数据可恢复、秘密安全或生产级高可用。本讲把配置合并、服务发现、持久化、健康和环境差异纳入一个可验证拓扑。
+Web、API、数据库各自都能运行，放进 Compose 后 API 却一直报连接失败。把地址从 localhost 改成服务名后恢复了，重建容器又发现数据不见了。这里有两个不同问题：请求从哪个网络空间发出，以及数据属于哪一个生命周期。
 
-适用场景例如开发与测试中的 Web、API 与数据库组合，以及明确接受单机故障域的小型部署；跨节点调度、自动高可用和全局流量不属于 Compose 单独解决的范围。
+本讲先画通信与数据关系，再阅读 Compose 配置。完整例子使用 Web 网关和一个文件计数服务，帮助观察服务名、就绪条件与命名卷；数据库迁移与一致性备份另外解释，不把简单文件当成数据库替身。
 
 ### 学习前先确认
 
-- 直接前置：[DOCKER-01 镜像、容器、Dockerfile 与构建缓存](../chinese-guides/docker-01-images-containers-dockerfile-cache.md#docker-01)。本讲假定镜像具有明确入口、用户、信号、端口和健康语义。
-- 直接前置：[LINUX-02 进程、端口、日志与网络诊断](../chinese-guides/linux-02-process-port-log-network-diagnostics.md#linux-02)。本讲直接诊断服务、监听、DNS、日志和网络链路。
+- 直接前置：[DOCKER-01 镜像、容器、Dockerfile 与构建缓存](../chinese-guides/docker-01-images-containers-dockerfile-cache.md#docker-01)。需要分清镜像、实例、入口与运行条件。
+- 直接前置：[LINUX-02 进程、端口、日志与网络诊断](../chinese-guides/linux-02-process-port-log-network-diagnostics.md#linux-02)。需要按观察位置解释 DNS、监听和连接结果。
 
-### 一、Compose 描述局部系统拓扑
+### 一、先画出服务和数据各自属于谁
 
-**多容器编排（Docker Compose）**把多个服务的镜像/构建、命令、环境、网络、卷、端口、健康和依赖写入可合并模型。service 是期望配置，container 是一次实例；重建容器不应改变持久化事实或制品身份。
+**Docker Compose** 是定义和运行多容器应用的工具，将一组服务、网络、卷和运行配置组织在一起。其中 service 表示配置中的角色，container 是该角色的一次运行实例。一个 API 可以重建多次，但它管理的数据不应该因此自动获得一个全新的身份。
 
-先画服务图：每个服务拥有的数据、依赖、提供端口、内部协议、公开入口、启动/停止和失败影响。Compose 文件应能从图中读出关键关系，而不是依赖开发者记住启动顺序。
+```mermaid
+flowchart TB
+  Browser["宿主浏览器"] --> Port["回环端口 18081"]
+  Port --> Web["web：公开实验入口"]
+  Web -->|"api:8080，back 网络"| API["api：唯一文件写入者"]
+  API --> Volume["counter-data 命名卷"]
+  Web --> Edge["edge 网络"]
+```
 
-用 `docker compose config` 查看变量插值和多文件合并后的最终配置，保存输出用于审查。不要只读基础 YAML 猜生产实际值。
-
-### 二、项目与资源命名形成隔离边界
-
-Compose project name 前缀化网络、卷和容器资源。不同分支/测试若复用同项目名，会抢端口、共享数据或互相停止。CI 为每次运行使用稳定且唯一的 project name，并清理自己拥有的资源。
-
-显式 `container_name` 会破坏扩缩、多项目隔离和 DNS 预期，通常不需要。服务间用 service 名称发现，外部脚本通过 Compose 查询或公开入口，不依赖随机容器名。
-
-labels 标记 owner、环境和清理范围。清理命令先确认 project 和资源，特别是卷；不要全局删除其他项目对象。
-
-### 三、服务发现使用内部名称
-
-**服务发现（Service Discovery）**在 Compose 网络中把服务名解析到当前容器地址。容器 IP 可随重建变化，消费者连接 `db:5432`，不固定 IP。DNS 成功只代表发现，服务仍可能未就绪。
-
-每个网络只连接需要通信的服务：frontend/proxy 网络与 backend/data 网络可分离，数据库不接公开网络。网络隔离不是应用授权替代，服务仍认证并最小权限。
-
-`localhost` 在容器内指该容器，不是宿主或另一个服务。连接宿主的方式跨平台不同，应显式配置并避免生产依赖本机特殊名称。
-
-### 四、端口发布与内部端口分开
-
-service 内部通过容器端口通信，不需要发布到宿主。`ports` 将端口暴露到宿主地址，若省略绑定地址可能对所有接口开放；数据库通常不需公网发布。
-
-开发调试可绑定 `127.0.0.1:5432`，生产只发布反向代理/Web 入口。检查 IPv4/IPv6 和宿主防火墙，不因 YAML 看起来只一行就忽略外部可达性。
-
-端口冲突由项目并行、残留容器或宿主服务引起。用 Compose 状态与 `ss` 关联，不直接 kill 未知进程。
-
-### 五、启动顺序不等于业务就绪
-
-`depends_on` 表达创建/启动依赖，并可结合健康条件，但容器 running 不表示数据库接受连接、迁移完成或应用已准备。每个服务定义真实 healthcheck，并由消费者处理短暂不可用。
-
-健康检查有 start period、interval、timeout 和 retries，避免初始化较慢时误杀，也不能设置得迟钝。检查命令必须存在于镜像、以正确主机/凭据执行并反映关键能力。
-
-生产系统仍需应用层有限重试、退避和错误状态，因为依赖可在运行中失效。编排启动条件只解决初始协作的一部分。
-
-### 六、一次性初始化与迁移
-
-数据库迁移不应由多个 API 实例无协调并发执行。可用独立一次性 job、锁或迁移工具保证唯一/幂等，完成后 API 才接流量。失败状态保留日志并阻止不兼容版本运行。
-
-seed 数据区分开发 fixture 与生产初始化，禁止测试账号/密码进入生产。迁移有前向/后向兼容窗口和备份/恢复，不以容器重启反复尝试危险 DDL。
-
-Compose 可表达依赖但不替代迁移策略。记录 schema version 与应用 digest，回滚前确认数据兼容。
-
-### 七、命名卷保存容器外的数据
-
-**命名卷（Named Volume）**由 Docker 管理并独立于单个容器生命周期，适合数据库等持久数据。删除/重建容器后卷仍在；`down -v` 会删除卷，属于数据破坏操作，必须明确目标和备份。
-
-卷不是备份。误写、应用 bug、加密勒索和卷损坏都会保留。用数据库一致性备份/快照，并定期恢复演练。记录 volume driver、位置、owner 与生命周期。
-
-容器内 UID/GID 要与卷权限匹配。初始化 chown 需最小化，不以 root 每次递归修改大卷。多容器同时写入是否安全由应用/文件系统决定。
-
-### 八、bind mount 与开发便利
-
-bind mount 把宿主路径直接映射，适合源码热更新和本地配置，但强依赖宿主路径、权限、大小写和平台性能。生产优先不可变镜像和受控卷，避免任意宿主目录写入。
-
-只读挂载配置/源码，必要写目录单独挂载。不要挂 Docker socket 给普通服务，它等同高权限宿主控制。相对路径按 Compose 文件/project 解析，使用 config 展开验证。
-
-Windows/macOS 文件共享语义与 Linux 不同，监听、权限和原生依赖需在目标环境测试。开发优化不应静默进入生产覆盖。
-
-### 九、配置、环境与秘密
-
-**健康检查（Health Check）**虽是关键运行语义，但其地址、凭据与阈值也属于环境配置；先定义哪些配置公开、哪些敏感、谁提供和优先级。Compose 插值、env_file、environment 和 shell 环境可能覆盖，必须用最终 config 复核（同时避免打印秘密）。
-
-`.env` 常用于插值，不是秘密保险箱；不要提交生产凭据。秘密用平台秘密、受控文件或 Docker secrets 能力（注意非 Swarm Compose 的具体语义/版本），权限最小并可轮换。
-
-前端公开变量与服务端秘密分开。不要把同一数据库密码传给 web、api 和迁移所有服务；每个主体用独立凭据和权限。
-
-### 十、基础文件与环境覆盖
-
-基础 Compose 描述共同拓扑和安全默认，开发覆盖增加源码挂载、调试端口和开发命令；生产覆盖使用固定 digest、资源限制、日志和受控配置。避免复制整份文件导致漂移。
-
-合并规则对 map/list/replace 的行为需以当前 Compose 版本和 `config` 验证。profiles 可启用可选工具，但关键依赖不应因忘记 profile 静默缺失。
-
-生产部署保存所有输入文件、环境标识和最终展开（敏感值脱敏）。若只能在某个人电脑启动，系统不可复现。
-
-### 十一、镜像构建与拉取策略
-
-开发可 `build`，共享/生产优先使用 CI 已验证 digest。Compose 同时有 build/image 时明确行为，避免目标机重新构建未经测试字节。设置 pull 策略并记录实际 digest。
-
-服务升级按依赖兼容顺序，先准备数据库/协议，再滚动应用。Compose 单机重建可能有短暂中断，不能承诺集群级无损发布。
-
-镜像凭据最小且不写文件。拉取失败区分认证、网络、tag 不存在和平台不匹配。
-
-### 十二、重启策略与故障循环
-
-restart policy 可在崩溃后拉起，但配置错误会造成快速循环、刷日志和压垮依赖。应用对不可恢复配置错误应明确退出，运维看到失败而非无限假健康。
-
-健康失败与进程退出是不同信号，Compose 行为按版本/使用方式验证。不要用重启掩盖内存泄漏或迁移失败。设置告警和最大运维干预。
-
-停止时 Compose 发送信号并等待 grace period；镜像需正确处理。测试依赖逆序停止、在途请求和数据库刷盘。
-
-### 十三、日志与可观测
-
-服务写结构化日志到 stdout/stderr，Compose 可聚合查看；添加 service、container、project 与 request ID。设置日志驱动、轮转和大小，防宿主磁盘耗尽。
-
-多服务时间同步并在请求中传 correlation ID，从入口到 API/数据库关联。不要把秘密和完整 payload 写日志。健康与重启事件也要纳入时间线。
-
-指标/trace 工具作为独立可选服务时，数据卷和端口同样最小。调试 UI 不应默认公开。
-
-### 十四、资源边界与容量
-
-为服务定义内存、CPU、文件描述符等边界，并确认本地 Compose 实现/模式是否实际执行配置。无边界服务可拖垮整机；过低会产生 OOM/restart 循环。
-
-数据库/缓存卷还受宿主磁盘与 inode 限制。监控容器和宿主两层，保存 OOM、throttling 和磁盘证据。容量测试包含多个服务同时峰值。
-
-Compose 适合单机拓扑，不提供跨节点调度和自动高可用。需求超出边界时选择编排平台，而不是用脚本复制多台 Compose 并假装集群。
-
-### 十五、开发数据库与数据隔离
-
-每项目/分支使用独立卷或明确共享策略。测试自动创建唯一项目与临时数据，结束只删除自己资源。不要默认连接开发者个人长期数据库产生互相污染。
-
-fixture 可重复、可清理且不含真实个人数据。复制生产数据前脱敏并授权，设置保留。备份文件同样受保护。
-
-账号切换、租户和缓存 key 在应用层隔离；容器网络不是多租户安全边界。
-
-### 十六、网络故障与 DNS 变化
-
-重建服务后 IP 变化，长连接/连接池需重新解析或恢复。消费者不能永久缓存容器 IP。注入服务重建，验证通过名称重连。
-
-网络分区、慢响应和连接拒绝要分别测试。依赖健康失败时 API 可降级或返回明确错误，不能无界重试。恢复时随机退避，防多个服务同时冲击数据库。
-
-用 `docker compose exec`, network inspect, 容器内 DNS/连接和宿主端口逐层诊断；不要只从宿主 curl 得结论。
-
-### 十七、数据恢复与删除安全
-
-写清 `stop`, `down`, `down -v`, `rm` 对容器、网络和卷的影响。任何带卷删除的操作先列项目、卷、数据 owner、备份与恢复测试；CI 清理只匹配唯一项目标签。
-
-备份任务以应用一致方式读取数据，输出到不同故障域并校验。恢复到新卷，启动相同/兼容版本，验证业务记录和权限。生产恢复有 RTO/RPO。
-
-卷迁移/升级在副本演练，失败保留旧卷不可写，避免自动脚本覆盖唯一副本。
-
-### 十八、安全边界
-
-服务最小用户、只读根、drop capabilities、限制挂载和网络。Compose 文件能配置部分运行控制，实际宿主和平台仍需验证。不要使用 `privileged: true` 作为权限问题捷径。
-
-只公开入口服务，数据库/缓存内部化；应用认证授权照常。管理端点独立网络/凭据。镜像 digest、签名和 SBOM由供应链链路验证。
-
-项目成员能操作 Docker daemon 通常拥有宿主高权限，访问 socket 和组成员需严格控制审计。
-
-### 十九、验证矩阵
-
-在干净环境运行 config、pull/build、up，检查服务/网络/卷和公开端口。创建数据，停止、重建容器并验证保留；备份到新卷恢复。让数据库启动慢/健康失败、迁移失败、DNS 变化、卷满和错误秘密，观察消费者状态与日志。
-
-验证开发/测试/生产覆盖的最终差异，确认生产无源码挂载、调试端口和本地 build。记录 Compose CLI、镜像 digest、项目名和环境来源。
-
-停止整个项目，检查信号、退出码和无孤儿资源；再启动验证幂等。清理练习卷前先打印准确资源并确认属于临时项目。
-
-### 二十、最终复核
-
-每个服务回答：制品 digest、拥有数据、依赖、监听/公开端口、网络、健康、启动/停止、重启、配置/秘密、用户、资源、日志和恢复。系统层回答：项目隔离、最终配置、迁移顺序、数据备份、故障降级、环境差异和清理范围。
-
-Compose 的高级用法不是写更多 YAML，而是让拓扑中的身份、网络、数据和生命周期显式化，并能在干净环境和故障条件下复现。容器可以随时重建，数据与业务事实仍有明确所有者；启动顺序只是开始，真正可靠性来自就绪、恢复和验证合同。
+先明确谁需要访问谁。真实数据库场景可以是 web → api → db，只有 api 和 db 加入 data 网络，web 不加入；数据库无需发布宿主端口。网络分组限制通信范围，但不能替代数据库认证或应用授权。
+
+Compose 适合清晰的本地、测试和单机拓扑。它本身不提供跨主机调度、主机故障自动接管或数据库高可用。资源都在同一台机器时，卷仍与主机共处一个故障域。
+
+### 二、项目名决定哪些资源属于同一套环境
+
+默认情况下，Compose 用 project name 给容器、网络和命名卷组织身份。测试分支若用了同一个项目名，可能操作同一批资源；项目名不同也不能避免两个项目争用同一个宿主端口。
+
+示例统一使用 `-p atlas-b24-lab`，这样查看、停止和重建都指向同一实验。不要今天省略 -p、明天换目录后再 down，并假设仍在操作原项目。实际项目名的来源也可能是环境、配置或目录，关键是检查最终选择。
+
+显式的资源 `name:`、external 网络/卷、固定 bind mount 路径及宿主端口可能跨项目共享；项目名前缀不是完整隔离证明。通常无需配置 `container_name`，服务发现用 service 名称，固定容器名反而会限制扩缩和并行环境。
+
+清理先列资源与归属，保留回滚所需的卷和镜像。全局 prune 不是一个项目的退出步骤。
+
+### 三、localhost 要连同观察位置一起读
+
+| 发请求的位置 | 要访问的目标 | 本例地址 |
+| --- | --- | --- |
+| 宿主浏览器 | 发布出来的 Web | `http://127.0.0.1:18081` |
+| web 容器 | 同一 back 网络中的 api | `http://api:8080` |
+| api 容器自己 | 自己的健康端点 | `http://127.0.0.1:8080/healthz` |
+
+web 中的 localhost 指向 web 自己，不是 api，也不是宿主。**服务发现（Service Discovery）**让同网络中的服务名解析到当前实例地址；实例重建后 IP 可以变化，所以不要把查到的 IP 永久写进配置。
+
+**端口发布（Port Publishing）**将宿主地址端口连接到容器端口。容器间使用容器端口，通常不需要 ports。expose 是元数据，不是网络访问控制；同一网络的服务能否访问仍由监听与实际网络规则决定。
+
+不写宿主绑定地址的 ports 可能对所有接口开放。本例仅绑定回环供学习，但真实边界仍要结合 Docker 版本、网络模式和宿主规则验证。Docker 与 UFW 的路径差异见 [LINUX-04](../chinese-guides/linux-04-server-security-ssh-users-firewall.md#七端口规则要同时说明来源与观察方向)。
+
+### 四、同一个变量名可能在两个阶段生效
+
+先有 Compose 读取 YAML 并插值，再有容器启动时获得 environment 或 env_file。用于插值的 `.env` 不会仅凭存在就把所有变量自动注入每个容器。
+
+```yaml
+# 说明片段，不是完整服务。
+services:
+  api:
+    image: "${API_IMAGE:?请提供经过核对的镜像引用}"
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+```
+
+这里 API_IMAGE 参与选择镜像，LOG_LEVEL 被明确写入容器环境。`:-` 对未设置和空值使用默认；必须存在的生产值可以用 `:?` 拒绝缺失。shell、--env-file、多文件配置和容器 env_file 各有作用位置，先分阶段再查优先级。
+
+Compose 中 `$$` 可保留一个 `$` 给后续命令，例如 CMD-SHELL 中让变量在容器 Shell 展开；exec 数组不自动经过 Shell，也就不会自行展开 `$NAME`。用 `docker compose config` 看合并与插值结果，必要时使用 `--environment` 查插值来源，但输出可能含敏感值，不能无差别上传。
+
+secrets 可以按服务授权为文件提供内容，应用仍需主动读相应路径；本地 Compose secrets 不等于外部加密密钥库，宿主源文件和访问权限仍需管理。`_FILE` 形式的变量只在支持它的镜像或应用中有效。
+
+### 五、启动依赖只约束一次启动过程
+
+`depends_on` 的简单形式建立启动顺序，不保证被依赖服务已经能处理业务。`condition: service_healthy` 等待该服务定义的健康检查；`service_completed_successfully` 可表达一次性任务已成功完成。检查内容决定它证明到哪里。
+
+数据库进程启动、数据库接受连接、应用账号可查询、迁移完成，是不同阶段。只运行端口探测不能证明表结构已准备。迁移可以是受协调的一次性任务，但多副本不能各自无锁执行同一危险变更。
+
+运行中依赖仍可能退出、重建或超时，消费者需要自己的连接恢复和有限重试。`depends_on` 下的 `restart: true` 与服务顶层的 restart policy 不同，前者涉及显式 Compose 操作导致的依赖更新，不意味着任何依赖崩溃都会自动级联重启。
+
+unhealthy 也不同于进程退出。不要把健康状态标签、进程重启和流量就绪当成同一个保证。相关生命周期见 [DOCKER-01](../chinese-guides/docker-01-images-containers-dockerfile-cache.md#十端口健康状态和重启不是一个开关)。
+
+### 六、完整实验先给服务一个明确的数据合同
+
+在新目录保存本节的 service.mjs 和下一节的 Dockerfile、compose.yaml。需要 Node.js 22 与支持所用字段的现代 Compose v2。API 只管理一个非敏感计数，只有一个进程写它；没有认证、事务数据库或多副本协调，端口只用于本机实验。
+
+```js example=docker02-service runtime=project file=service.mjs
+import http from 'node:http';
+import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+const role = process.env.ROLE ?? 'api';
+if (!['api','web'].includes(role)) throw new Error('ROLE 无效');
+const port = Number(process.env.PORT ?? 8080);
+if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('PORT 无效');
+const dataDir = process.env.DATA_DIR ?? './counter-data';
+const file = join(dataDir, 'counter.txt');
+let count = 0;
+let queue = Promise.resolve();
+if (role === 'api') {
+  await mkdir(dataDir, { recursive:true });
+  let raw;
+  try { raw = await readFile(file, 'utf8'); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    await writeFile(file, '0\n', { flag:'wx' });
+    raw = '0';
+  }
+  if (!/^\d+\s*$/.test(raw) || !Number.isSafeInteger(Number(raw))) throw new Error('计数文件无效，拒绝覆盖');
+  count = Number(raw);
+}
+const upstream = role === 'web' ? new URL(process.env.UPSTREAM ?? 'http://api:8080') : null;
+const send = (response, status, body) => {
+  response.writeHead(status, { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store' });
+  response.end(JSON.stringify(body));
+};
+const server = http.createServer((request, response) => {
+  if (request.method === 'GET' && request.url === '/healthz') { send(response, 200, { ready:true, role }); return; }
+  const read = request.method === 'GET' && request.url === '/counter';
+  const increment = request.method === 'POST' && request.url === '/increment';
+  if (!read && !increment) { send(response, 404, { error:'未知操作' }); return; }
+  if (role === 'web') {
+    void (async () => {
+      try {
+        const result = await fetch(new URL(request.url, upstream), { method:request.method, signal:AbortSignal.timeout(2000) });
+        const body = await result.json();
+        send(response, result.status, body);
+      } catch { send(response, 502, { error:'未取得 API 结果；写入结果可能未知' }); }
+    })();
+    return;
+  }
+  if (read) { send(response, 200, { count }); return; }
+  queue = queue.then(async () => {
+    if (!Number.isSafeInteger(count + 1)) throw new Error('计数超出范围');
+    const next = count + 1;
+    await writeFile(join(dataDir, 'counter.next'), `${next}\n`);
+    await rename(join(dataDir, 'counter.next'), file);
+    count = next;
+    send(response, 200, { count });
+  }).catch(() => send(response, 500, { error:'计数未确认，请查询当前值' }));
+});
+server.listen(port, process.env.HOST ?? '0.0.0.0', () => {
+  console.log(JSON.stringify({ event:'listening', role, port:server.address().port }));
+});
+let stopping = false;
+const stop = () => {
+  if (stopping) return;
+  stopping = true;
+  const deadline = setTimeout(() => { server.closeAllConnections(); process.exit(1); }, 5000);
+  deadline.unref();
+  server.close(() => {
+    void queue.finally(() => { clearTimeout(deadline); process.exitCode = 0; });
+  });
+};
+process.on('SIGTERM', stop);
+process.on('SIGINT', stop);
+```
+
+API 在读取并验证文件之后才监听，因此本例健康检查至少表明初始化完成。计数增加在本进程内串行处理，临时文件替换避免读到半个文本；它没有 fsync 持久性协议，也不支持多个写入者，不能当成生产计数器或交易存储。
+
+网关不会自动重试 POST。超时后 API 可能已完成写入，只是结果没到达网关；再次增加会产生新效果。查询当前计数只能帮助观察，不能在并发环境中证明某个特定意图是否完成，生产需要 [BIZ-07 的操作身份与恢复](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#biz-07)。
+
+### 七、再用 Compose 连接网络、用户与存储
+
+`Dockerfile` 创建由 node 用户拥有的数据目录，程序文件仍由 root 管理：
+
+```dockerfile example=docker02-image runtime=project file=Dockerfile
+# syntax=docker/dockerfile:1
+FROM node:22-bookworm-slim
+WORKDIR /app
+COPY --chown=0:0 service.mjs ./
+RUN mkdir /data && chown node:node /data
+USER node
+ENV PORT=8080 HOST=0.0.0.0
+CMD ["node", "service.mjs"]
+```
+
+同样，基础 tag 是教学默认，发布时应替换成已经验证的平台与 digest。compose.yaml 如下：
+
+```yaml example=docker02-topology runtime=project file=compose.yaml
+x-runtime: &runtime
+  build: .
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: "no"
+  stop_grace_period: 8s
+  mem_limit: 128m
+  cpus: 0.5
+  pids_limit: 64
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  web:
+    <<: *runtime
+    environment:
+      ROLE: web
+      UPSTREAM: http://api:8080
+    ports:
+      - "127.0.0.1:18081:8080"
+    networks: [edge, back]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/healthz',{signal:AbortSignal.timeout(1500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+  api:
+    <<: *runtime
+    environment:
+      ROLE: api
+      DATA_DIR: /data
+    volumes:
+      - counter-data:/data
+    networks: [back]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/healthz',{signal:AbortSignal.timeout(1500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+networks:
+  edge: {}
+  back:
+    internal: true
+volumes:
+  counter-data: {}
+```
+
+API 没有 ports，web 通过 back 网络的服务名访问它。back 的 internal 属性限制该网络的外部连接，但 web 同时加入 edge，仍可能具备外部通信能力；双网服务不是“整个系统无出站”的证明。
+
+首次使用空命名卷时，Docker 的初始化行为与挂载点元数据影响目录权限。已存在的卷不会因为重建镜像就自动重置 owner；若无法写入，检查实际卷、UID/GID 和挂载，不要用全局 777 掩盖问题。
+
+为这个新目录添加 `.dockerignore`，内容为 `*`，以及分别一行 `!Dockerfile`、`!.dockerignore`、`!service.mjs`。本机实验产生的 counter-data 或备份就不会被构建上下文顺手带走。
+
+### 八、从浏览器入口验证重建后的数据
+
+```bash
+docker compose version
+docker compose -p atlas-b24-lab config --quiet
+docker compose -p atlas-b24-lab up -d --build --wait
+docker compose -p atlas-b24-lab ps
+curl --noproxy '*' --connect-timeout 2 --max-time 5 http://127.0.0.1:18081/counter
+curl --noproxy '*' --connect-timeout 2 --max-time 5 -X POST http://127.0.0.1:18081/increment
+```
+
+全新卷的计数从 0 开始，POST 后变成 1。已有实验卷可能保留旧计数，不要因此自动清空。然后只重建 API：
+
+```bash
+docker compose -p atlas-b24-lab up -d --no-deps --force-recreate api
+curl --noproxy '*' --connect-timeout 2 --max-time 5 http://127.0.0.1:18081/counter
+docker compose -p atlas-b24-lab logs --since 5m --tail 80 api web
+```
+
+等待 API 重新就绪后，原计数应保留。这里 `--no-deps` 不保证网关永远无中断，短暂 502 需要结合日志解释；可重复读取，不能为了“直到成功”盲目重放写入。
+
+再把 web 的 UPSTREAM 在一份实验覆盖配置里改成 `http://127.0.0.1:9999`，重建 web 并只请求 GET /counter。web 会尝试连接自己容器里的 9999，若那里没有服务，就应返回 502。API 仍然健康，说明依赖本身正常与消费者地址正确需要分别验证。恢复原配置并重建 web 后，再读取原计数。
+
+这些是目标环境中的预期观察；在没有 Docker Engine 的机器上运行 Node，只能验证应用逻辑，不能据此证明服务 DNS、internal 网络、卷、限制或启动条件生效。
+
+### 九、卷保留数据，备份提供另一条恢复路径
+
+**命名卷（Named Volume）**独立于单个容器的可写层。重建容器并重新挂载同一个卷，可以继续读取数据；应用误删也会真实地改这个卷，所以“有卷”不等于“有备份”。
+
+| 操作 | 一般用途与数据影响 |
+| --- | --- |
+| stop / start | 停止和重新启动已有容器 |
+| up 触发重建 | 更换容器，命名卷可继续挂载 |
+| down | 移除该项目容器和相应网络；默认保留命名卷 |
+| down -v | 还会删除相应命名卷及匿名卷；external 卷另有生命周期 |
+
+匿名卷虽然可能在容器删除后留下，但缺少稳定引用，后续 up 不一定重新挂载它。数据库或重要文件应明确命名与归属，而不是靠残留卷碰运气。
+
+这个单写入者计数实验可先停止 API，再导出 counter.txt，恢复到**另一个新卷**后启动并比较计数；保留原卷直到恢复验证完成。真实数据库要使用数据库支持的一致性备份或受控快照，运行中随手 tar 数据目录可能得到不一致副本。
+
+备份需有独立故障域、访问控制、保留与恢复演练。恢复旧数据可能丢失备份之后的写入，RPO/RTO 应从业务目标倒推，不能只看文件校验相同就宣称所有用户操作都已恢复。
+
+### 十、挂载与覆盖文件会改变你以为的镜像
+
+**Bind Mount** 把宿主路径提供给容器，可覆盖同一路径原先的镜像内容；并不是把目录自动合并成一个更完整的目录。开发时把源码挂到 `/app`，可能把镜像里安装好的文件一起遮住，导致“镜像中明明有，容器里却没有”。
+
+只读挂载能限制这个挂载点的写入，但不能限制进程通过其他路径操作。宿主路径还受平台、文件共享与权限影响，Docker Desktop 的行为不能直接替代原生 Linux 主机结论。不要把 Docker socket 当成普通开发配置文件挂给应用。
+
+多份 Compose 文件合并也不是简单“最后一份全部替换”。某些映射会合并，ports、volumes 等还有特定规则；基础文件的公开端口可能继续存在。相对路径通常以第一份配置文件为基准，阅读最终 config 才能确认实际对象。[Compose 合并规则](https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/)
+
+开发与生产可使用不同覆盖，但最终生产配置要确认没有源码写挂载、调试端口和示例凭据。修改 environment 后只 restart 不会重新创建容器以应用新配置，应按所需变更执行 up 并检查实际结果。
+
+### 十一、服务失效以后，由应用决定怎样继续
+
+服务 DNS 给出地址，不保证已有长连接自动迁移。API 重建后，消费者需要识别断开、重新解析与建连；依赖恢复时要限制重试预算，避免所有实例一起冲击服务。协议层的恢复见 [LINUX-02](../chinese-guides/linux-02-process-port-log-network-diagnostics.md#十二用最小修复回答完整问题)。
+
+内存、CPU、PID、文件描述符和磁盘限制要查看实际容器状态，不能只看 YAML 中有几个字段。本例限制用于小实验，不是生产容量建议。宿主空闲也不证明容器没达到自己的限制；日志与数据卷同样消耗宿主资源。
+
+日志应包含 service、实例、时间和请求上下文，并设置轮转。检查之前先限定时间与行数，避免输出秘密或海量正文。重启策略能恢复部分退出故障，也可能反复触发错误配置；记录最早错误，而不是只看最后一个“starting”。
+
+### 十二、升级与回滚要带着数据版本一起考虑
+
+生产运行应优先使用已验证的制品摘要，避免在目标机临时重新构建不同字节。变更记录包括镜像、Compose 输入、非敏感环境、卷与 schema 版本。回滚旧应用前，先问旧代码能否读取当前数据结构。
+
+一次性迁移任务可以阻止未准备的 API 开始服务，但“迁移命令成功”不等于任意旧版本仍兼容。需要约定前后兼容窗口、幂等策略、并发控制和恢复方式。测试 seed 与生产初始化分别管理，不把示例账号作为默认生产事实。
+
+结束这个实验可执行 `docker compose -p atlas-b24-lab down`，保留数据以便下次继续。若确实需要删除卷，先确认最终项目与卷名、数据归属和恢复需求，再单独执行明确的清理；不要把 `down -v` 藏在通用启动脚本里。
+
+### 动手想一想
+
+API 容器删除后计数仍在，宿主磁盘损坏后却无法恢复，这与“卷能持久化”矛盾吗？两个不同 project name 使用同一个显式 external 卷，又是否真正实现了环境隔离？
+
+最后读一遍配置：谁有 ports、谁加入 back、谁能写 /data、healthcheck 证明了什么。能用实际地址与路径回答这些问题，Compose 才不再是一份需要背诵的 YAML。
+
+### 参考与延伸阅读
+
+- [Compose networking](https://docs.docker.com/compose/how-tos/networking/)：项目网络、服务名和实例替换。
+- [Startup order](https://docs.docker.com/compose/how-tos/startup-order/)：依赖、健康和一次性完成条件。
+- [Variable interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/)：插值来源与默认值。
+- [Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/)：按服务授予文件访问。
+- [Docker volumes](https://docs.docker.com/engine/storage/volumes/)：初始化、挂载、生命周期和备份。
+- [Merge Compose files](https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/)：合并规则与相对路径。
+- [Compose services reference](https://docs.docker.com/reference/compose-file/services/)：端口、健康、重启与运行约束。

@@ -1,146 +1,337 @@
-# 浏览器网络知识点讲义
+# 浏览器网络学习资料
 
-## NET-01 浏览器网络协议、Fetch 与请求可靠性
+## NET-01 分清请求成功、取消与结果未知
 
-前端发起一次请求，真正经历的是浏览器缓存、域名解析、连接与加密、代理和服务、HTTP 状态、正文解析、业务判断以及最终 UI 提交。只会写 `await fetch()`，无法解释旧响应覆盖、新旧缓存冲突、401 风暴和写请求结果未知。可靠请求层必须把各层成功、取消、去重、重试和证据分开。
+点击“保存”后没有收到响应，究竟是请求没发出去、服务器拒绝了，还是服务器已经保存而回包丢了？如果不先区分这些状态，界面很容易一边显示“失败”，一边自动重发，最后产生重复记录。
+
+本篇沿一次请求从传输走到界面，解释 Fetch、缓存、取消和重试。中间的本地实验会故意返回 404、错误 JSON、迟到响应，以及“已经写入但客户端停止等待”的结果。
 
 ### 学习前先确认
 
-- 直接前置：[BROWSER-01 渲染流水线、DOM 事件与存储](../chinese-guides/browser-01-render-events-storage.md#browser-01)。它已递归链接异步与事件循环；本讲直接使用 Fetch、缓存来源、Abort 与界面提交。
-
-### 一、从 URL 到界面状态有四条链
-
-浏览器链可能经过 Service Worker、HTTP Cache、DNS、连接复用、TLS 与实际网络；服务链可能经过 CDN、反向代理、网关、应用和数据库；应用链要检查状态、解析与业务契约；界面链还要确认结果属于当前请求、当前账号和仍连接的页面。
-
-任一层失败都应有不同证据。Network 面板的 TTFB 长不能直接证明数据库慢，Fetch resolve 不能证明 HTTP 成功，200 也不能证明业务成功，正确业务响应还可能因请求已经过时而不得提交 UI。
-
-建立 requestId、route、account scope 和 release 关联，让日志从浏览器请求连接到服务端 trace。敏感标头、正文和 URL 参数先脱敏。
-
-### 二、DNS、连接与 TLS 是传输准备
-
-DNS 把域名解析为地址，但浏览器、系统、网络与权威服务都有缓存。HTTP/1.1 与常见 HTTP/2 使用 TCP，HTTPS 还要 TLS 握手；HTTP/3 基于 QUIC。已有连接、会话恢复和代理会让某些阶段不再单独出现。
-
-证书验证包括主机名、有效期和信任链。HTTPS 保护传输并认证服务端域名，不证明用户身份、业务授权或页面脚本无 XSS。企业代理、VPN、IPv4/IPv6 与网络切换都可能改变实际路线。
-
-前端通常不能强制 h2/h3 或指定连接。以 Network 的 Protocol、Remote Address、Connection ID、Timing 和服务端日志为准。
-
-### 三、HTTP 版本改变传输，不改变业务契约
-
-HTTP/1.1 常通过多连接并发；HTTP/2 在一条 TCP 连接多路复用，TCP 丢包仍可能影响连接上的流；HTTP/3 的 QUIC 将丢包恢复更多隔离到流。协议升级可能改善握手与队头阻塞，但资源优先级、服务器处理、体积和主线程消费仍决定体验。
-
-方法、状态码、标头、缓存和应用接口语义在版本间保持。不要用域名分片等旧优化机械对待 h2/h3，也不要看到 h3 就宣布性能完成。以真实用户网络分布和对照测量决策。
-
-### 四、HTTP 方法承载安全与幂等语义
-
-GET/HEAD 按语义是 safe，不应改变服务端业务状态；PUT/DELETE 规范上幂等，即重复执行预期效果一致；POST 通常不幂等。这是客户端和中间设施做缓存、重试和预取的重要合同，错误服务端实现会破坏整个链路。
-
-状态码按类别表达结果：2xx 成功，3xx 重定向，4xx 请求或权限问题，5xx 服务端暂时失败。但具体 API 还要定义 202 异步接受、204 空正文、409 冲突、412 前置条件、429 限流和 Retry-After。
-
-不要用 200 包装所有错误再让前端猜字符串。稳定错误 code、requestId、可重试性和用户消息分工属于接口合同。
-
-### 五、HTTP Cache 由新鲜度与验证器驱动
-
-Cache-Control 决定缓存资格和新鲜度，ETag/If-None-Match、Last-Modified/If-Modified-Since 用于重新验证。`no-cache` 允许存储但复用前验证，`no-store` 要求不存这次响应，却不会删除已存在旧副本。
-
-内容散列静态资源适合长期 immutable，因为内容变化会产生新 URL；HTML 通常使用 no-cache 与验证器，确保入口能发现新资源；个性化 GET 至少 private，并正确设置 Vary。Cookie 存在不会自动阻止共享缓存。
-
-`Vary` 把请求标头纳入缓存键，漏掉 Origin、Accept-Encoding 或语言会串响应，过度 Vary 又降低命中。缓存规则要同时检查浏览器、CDN 与代理，每层的 Age、Via、Cache-Status 或自定义证据互相印证。
-
-### 六、Service Worker Cache 与应用缓存是另外两层
-
-Service Worker 的 fetch handler 可以从 Cache API 返回响应，完全绕过一次网络；应用内 Map/Query Cache 又以业务 key 保存 Promise 或数据。三层键、版本、生命周期和失效不同。
-
-Network 显示 from ServiceWorker 不等于 HTTP Cache 命中。更新失败可能来自旧 Worker、旧 Cache API 条目、CDN 或应用内状态，清掉所有缓存只会丢失定位线索。记录每层的 source、version 与命中原因。
-
-离线策略先定义真源与可接受陈旧时间。Cache-first、network-first、stale-while-revalidate 是组合模板，不是万能答案；用户身份变化和敏感响应要隔离。
-
-### 七、CORS 控制脚本读取，不是权限系统
-
-**跨源资源共享（Cross-Origin Resource Sharing, CORS）**让服务器声明哪些 origin 的浏览器脚本可读取响应。非简单请求先发 OPTIONS 预检；携带凭据时不能使用 `Access-Control-Allow-Origin:*`，还要明确允许 credentials，Cookie 的 SameSite/第三方策略仍可能阻止发送。
-
-简单跨源 form 或某些请求可在攻击者读不到响应的情况下产生服务端副作用，所以 CORS 不能替代 CSRF 防护。CORS 成功也不证明用户有权读取该对象；服务端必须按当前身份和资源重新授权。
-
-动态回显允许 origin 时采用严格 allowlist 并 `Vary: Origin`。浏览器给脚本的错误常很概括，结合控制台、预检与服务端日志定位，不能让用户关闭浏览器安全策略。
-
-### 八、Cookie 是请求状态载体，不是前端数据库
-
-Cookie 按 Domain、Path、Secure、HttpOnly、SameSite 与过期规则匹配请求。HttpOnly 阻止普通脚本读取，仍会随匹配请求发送；Secure 限制 HTTPS；SameSite 缩小跨站发送范围但不是完整 CSRF 防线。
-
-会话 Cookie 体积小、随请求重复发送，不适合存业务对象。Domain 放宽会让更多子域参与信任，优先 host-only 或 `__Host-` 约束。退出、轮换、并发会话和吊销属于服务端身份协议。
-
-前端请求层负责 credentials 选项和错误状态，不应读取 Cookie 判断“已登录”。真实会话以服务端响应为准。
-
-### 九、Fetch 有传输、HTTP、业务和 UI 四层成功
-
-Fetch 在网络错误、CORS 阻断或 Abort 时 reject；收到 404/503 仍 resolve Response。读取正文还可能因空 body、格式或流中断失败。可靠解码顺序是检查状态与 Content-Type，限制体积，解析为 unknown，再用运行时 schema 验证业务结构。
-
-业务成功不等于界面可提交。搜索 A 发出后搜索 B 发出，A 晚到就必须被标记 stale；账号切换或组件卸载也使响应失去所有权。提交前检查单调 sequence、query key、accountId 与 mounted/navigation identity。
-
-错误模型区分 network、timeout、abort、http、parse、contract、business 与 stale，让 UI 给出正确恢复而不是统一“网络错误”。
-
-### 十、流式响应需要背压、取消与增量解析
-
-Response body 是 ReadableStream 时，可以逐块读取；chunk 边界不等于 UTF-8 字符、JSON 行或业务事件边界。使用 TextDecoder streaming 模式与明确帧协议，保存残余缓冲，限制单帧与总大小。
-
-消费者处理慢会形成背压；不要把所有 chunk 先累积再声称“流式”。渲染频率与网络读取频率分离，批量提交 UI并响应 Abort。连接结束要区分正常完成、协议不完整、服务端错误帧和客户端取消。
-
-流已经显示部分内容后失败，需要产品定义保留、标记不完整或回滚；不能悄悄把半个对象当成功。
-
-### 十一、Abort 停止等待，不撤销远端副作用
-
-AbortSignal 能通知 Fetch 和消费代码停止。用户取消、路由取代、组件卸载与超时使用不同 reason，组合信号后仍保留来源。finally 清理 timer 与 listener。
-
-读取请求中止后可丢弃结果；写请求在响应前中止，服务端可能已执行，属于 outcome unknown。不能自动再发一次付款或删除；显示“确认中”，使用业务 ID/幂等键查询最终状态。
-
-后端也应传播取消到下游并设置超时，但客户端 Abort 不是事务回滚协议。对不可取消 SDK，至少用 sequence 抑制迟到提交。
-
-### 十二、并发去重、取代与缓存不是一回事
-
-相同账号、相同 key 的并发 GET 可共享一次 in-flight Promise，这叫 **单飞（Singleflight）**。Promise settle 后从 map 删除，失败也不能永久缓存。消费者各自取消时要决定只取消等待还是在最后消费者离开后取消底层请求。
-
-搜索输入的“后一次取代前一次”不是去重：即使 query 字符相同，用户意图和页面身份也可能不同。数据缓存还要处理 stale time、失效和更新，而 singleflight 只合并同时发生的执行。
-
-key 包含 URL 规范化、方法、账号/租户、locale、授权维度和影响响应的 Vary 信息。遗漏会跨用户串数据，过度包含随机 requestId 又无法去重。
-
-### 十三、401 刷新需要单飞与重放上限
-
-多个请求同时 401 时，只允许一个 refresh Promise，其余等待同一结果。刷新成功后每个原请求最多重放一次；再次 401 进入统一退出或再认证，不能递归刷新风暴。
-
-请求 body 若是已消费流、上传或不可重复操作，不可透明重放。刷新期间账号切换要取消旧等待者，清理内存缓存和提交序号。refresh 失败把一致错误传给等待者，不让每个请求各自显示不同登录弹窗。
-
-更稳健的方案是服务端令牌生命周期、提前刷新和 BFF 会话共同设计，而不是让前端响应拦截器承担全部身份协议。
-
-### 十四、重试只对有资格且有预算的操作
-
-瞬时网络错误、429 和部分 5xx 可能重试；认证、参数错误和业务拒绝通常不重试。自动重试先检查方法语义、幂等协议、用户取消和 Retry-After，再使用指数退避与 jitter，设置最大次数和总时间预算。
-
-幂等键由客户端为一次业务意图生成稳定 ID，服务端原子记录 processing/completed 结果，重复请求返回同一结果。只加请求头而服务端不保存没有意义。键还需作用域、过期和参数一致性检查。
-
-重试指标记录首次失败、每次等待、最终结果与额外负载。无限重试会放大故障并制造惊群；熔断、并发限制和服务端过载信号需要跨层协作。
-
-### 十五、离线写入需要 outbox 和冲突协议
-
-`navigator.onLine` 只是网络线索，不证明目标服务可达。离线 outbox 保存业务意图、账号/租户、幂等键、创建时间、版本、重试预算和用户可见状态。恢复前重新认证并确认账号，不把 A 的队列交给 B。
-
-区分从未发出、已发出结果未知、明确失败和已确认成功。普通读取可重新取快照，高风险写入默认要求用户确认或服务端结果查询。并发修改使用版本/ETag/If-Match 或领域合并，不以最后写入者静默覆盖。
-
-队列加密不能替代设备与脚本信任边界。配额驱逐、schema 升级和永久失败都要有可恢复 UI。
-
-### 十六、Network 与 HAR 建立分层证据
-
-录制时说明冷/热缓存，保留日志并清除无关请求；显示 Method、Protocol、Priority、Initiator、Connection ID 与 Service Worker 来源。Timing 中 queued/stalled、DNS、connect/TLS、request sent、waiting TTFB、download 分别解释。
-
-用离线、延迟、限速、状态覆盖和服务端故障注入验证取消、重试和缓存。导出 HAR 前删除 Authorization、Cookie、签名 URL、查询、正文和个人数据；工具声称 sanitized 后仍人工检查。
-
-把 HAR 与服务端 trace、缓存标头、应用 requestId 和最终 UI state 对齐。只截一张红色请求截图无法证明哪层失败。
-
-### 十七、可靠请求层需要可观测不变量
-
-定义并自动验证：旧请求不能覆盖新请求；同 key 同账号并发只发一次；刷新任一时刻一个；每个请求最多重放一次；取消后不提交；非幂等写默认不自动重试；结果未知进入查询；缓存命中来源可解释。
-
-测试故意让旧请求晚到、Mock 忽略 Abort、刷新失败、GET 503 后恢复、POST 响应丢失、离线账号切换和 schema 错误。成功和失败路径都保存请求计数、状态机与脱敏日志。
-
-### 学完后应能说明
-
-你应能从 DNS/TLS/HTTP/缓存到业务与 UI 画出请求全生命周期，区分 CORS、Cookie、授权和 CSRF；能正确处理 Fetch 状态、流式解析、Abort、迟到响应、singleflight、刷新、重试、幂等和离线 outbox；还能用 Network、HAR 与服务端 trace 证明问题属于哪一层。
-
+- 直接前置：[BROWSER-01 渲染流水线、DOM 事件与存储](../chinese-guides/browser-01-render-events-storage.md#browser-01)。需要理解异步回调、缓存来源和数据提交。
+
+### 一、一次请求有四层结果
+
+| 层次 | 成功说明什么 | 仍可能出什么问题 |
+| --- | --- | --- |
+| 传输与浏览器检查 | Fetch 得到 Response | HTTP 状态可能是 404 或 503 |
+| HTTP | 状态符合接口约定 | 正文可能为空、破损或结构不符 |
+| 应用数据 | 解析与校验通过 | 业务仍可能拒绝当前操作 |
+| 界面提交 | 结果仍属于当前任务 | 账号、页面或查询已改变时，应放弃旧结果 |
+
+`fetch()` 遇到 HTTP 错误状态通常不会 reject。收到 404 后依然有 Response，必须查看 status 或 ok；网络失败、部分浏览器策略阻断、取消等才会以拒绝的形式出现。读取 body 又是后续异步过程，不能只在拿到响应头时宣布全部完成。
+
+正确数据也可能已经过期：搜索 A 后紧接着搜索 B，A 晚到时不应覆盖 B。取消旧请求可以节省资源，提交资格检查才决定它是否还能改变界面。
+
+### 二、DNS、连接和 HTTP 版本解释哪一段时间
+
+域名解析、连接建立、TLS、代理与服务处理都可能出现在请求路径中。浏览器复用连接、使用缓存或经过 Service Worker 时，不一定重新经历每个阶段。
+
+HTTP/1.1、HTTP/2 和 HTTP/3 改变传输方式，不改变“这个用户能否修改这份资料”的业务约定。HTTP/2 在连接上多路复用，底层 TCP 丢包仍可能影响多个流；HTTP/3 使用 QUIC，改善部分传输阻塞情形，但不能替你缩小正文或消除主线程长任务。
+
+Network 面板的 TTFB 包括多种等待，不能直接读成数据库耗时。先看 Protocol、Timing、Initiator 与缓存来源，再结合服务端 trace。具体调试方法可接回 [DEBUG-01](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#debug-01)。
+
+HTTPS 保护传输并验证相应服务端身份，不证明页面脚本安全，也不代替用户认证或对象授权。
+
+### 三、缓存新鲜度与重新验证分开看
+
+**HTTP Cache** 保存响应副本。Cache-Control 描述复用条件，ETag 等验证器帮助浏览器询问“这份副本还有效吗”。
+
+| 声明或现象 | 正确理解 |
+| --- | --- |
+| max-age=600 | 在条件满足时，十分钟内可直接复用新鲜响应 |
+| no-cache | 可以存储，复用前需要验证 |
+| no-store | 不应存储本次响应；不是删除所有历史副本的命令 |
+| private | 只允许私有缓存存储，不表示内容已经加密或获得授权 |
+| 304 | 验证后复用已有正文；不是再传一次完整正文 |
+| Vary | 某些请求头也参与选择响应副本 |
+
+例如入口 HTML 使用重新验证，带内容散列的静态文件使用长期缓存，是两种不同生命周期的配合。身份变化后还要清理或隔离应用内数据缓存；Cookie 的存在不会自动保证共享缓存不会串内容。
+
+HTTP Cache、Service Worker 的 Cache API、组件查询缓存是三层。显示旧标题时，应先记录是哪一层返回了哪个版本，不能把“全部清缓存”当成根因解释。发布资源的版本关系见 [ENG-05](../chinese-guides/eng-05-quality-gates-lint-types-tests-ci.md#eng-05)。
+
+### 四、启动一个只在本机运行的请求实验
+
+将以下三个文件放进单独目录，使用 Node.js 22 运行 `node server.mjs`，打开 `http://127.0.0.1:43814`。服务器只监听回环地址，数据只在进程内存中；重启后归零。这是教学服务，没有真实账号、数据库或认证功能。
+
+先保存 `server.mjs`。GET 的不同路径提供明确结果；POST 模拟“先写入、后延迟回包”，幂等键相同的请求返回同一记录。
+
+```js example=net-lab-server runtime=project file=server.mjs
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+const records = new Map();
+let writes = 0;
+const json = (res, status, value) => {
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(value));
+};
+createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, 'http://127.0.0.1:43814');
+    if (req.method === 'GET' && ['/', '/client.js'].includes(url.pathname)) {
+      const file = url.pathname === '/' ? 'index.html' : 'client.js';
+      res.writeHead(200, { 'Content-Type': file.endsWith('.js') ? 'text/javascript' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(await readFile(new URL(file, import.meta.url))); return;
+    }
+    if (req.method === 'GET' && url.pathname === '/api/read') {
+      const mode = url.searchParams.get('mode');
+      if (mode === 'missing') { json(res, 404, { code: 'NOT_FOUND' }); return; }
+      if (mode === 'bad-json') {
+        res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{broken'); return;
+      }
+      if (mode === 'bad-shape') { json(res, 200, { title: 42 }); return; }
+      if (mode === 'A') await new Promise(r => setTimeout(r, 300));
+      json(res, 200, { title: mode === 'A' ? '资料 A' : '资料 B' }); return;
+    }
+    if (req.method === 'POST' && url.pathname === '/api/save') {
+      const key = req.headers['idempotency-key'];
+      if (typeof key !== 'string' || !/^[a-f0-9-]{36}$/.test(key)) {
+        json(res, 400, { code: 'INVALID_KEY' }); return;
+      }
+      req.resume(); // 本例写入固定内容，不读取用户正文。
+      if (records.has(key)) { json(res, 200, records.get(key)); return; }
+      const result = { key, writes: ++writes, title: '教学草稿' };
+      records.set(key, result); // 先发生副作用，随后才返回响应。
+      await new Promise(r => setTimeout(r, 500));
+      json(res, 200, result); return;
+    }
+    if (req.method === 'GET' && url.pathname === '/api/result') {
+      const result = records.get(url.searchParams.get('key'));
+      json(res, result ? 200 : 404, result ?? { code: 'NOT_FOUND' }); return;
+    }
+    json(res, 404, { code: 'NOT_FOUND' });
+  } catch { if (!res.headersSent) json(res, 500, { code: 'LAB_ERROR' }); else res.end(); }
+}).listen(43814, '127.0.0.1', () => console.log('请求实验：http://127.0.0.1:43814'));
+```
+
+再保存 `index.html`：
+
+```html example=net-lab-page runtime=project file=index.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>请求结果观察台</title>
+<style>
+  body { max-width: 56rem; margin: 3rem auto; padding: 0 2rem; font: 18px/1.7 system-ui; color: #172d3c; }
+  button { font: inherit; padding: .6rem; margin: .3rem; }
+  :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+  section { padding: 1rem; margin-block: 1rem; border: 1px solid #8e9daa; border-radius: .6rem; }
+</style>
+<main>
+  <h1>请求结果观察台</h1>
+  <section aria-labelledby="read-title">
+    <h2 id="read-title">读取与过期响应</h2>
+    <button data-read="A">读取 A（慢）</button><button data-read="B">读取 B（快）</button>
+    <button data-read="missing">返回 404</button><button data-read="bad-json">错误 JSON</button>
+    <button data-read="bad-shape">错误结构</button><button id="cancel">取消读取</button>
+    <p id="read-result" role="status">尚未读取</p>
+  </section>
+  <section aria-labelledby="write-title">
+    <h2 id="write-title">写入与结果未知</h2>
+    <button id="write">写入后停止等待</button><button id="query" disabled>查询上次写入</button>
+    <button id="retry" disabled>用同一标识再发</button>
+    <p id="write-result" role="status">尚未写入</p>
+  </section>
+</main>
+<script type="module" src="./client.js"></script>
+</html>
+```
+
+最后保存 `client.js`。读取使用序号阻止旧结果覆盖，故意不主动取消被新查询取代的请求，方便观察提交资格与网络取消的差别；“取消读取”才真正中止当前等待。
+
+```js example=net-lab-client runtime=project file=client.js
+const el = (id) => document.getElementById(id);
+class RequestError extends Error {
+  constructor(kind, message) { super(message); this.kind = kind; }
+}
+async function requestJson(url, { signal, timeout = 3000, ...options } = {}) {
+  const controller = new AbortController();
+  const forward = () => controller.abort(signal.reason);
+  if (signal?.aborted) forward(); else signal?.addEventListener('abort', forward, { once: true });
+  const timer = setTimeout(() => controller.abort(new DOMException('等待超时', 'TimeoutError')), timeout);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (!response.ok) throw new RequestError('http', `HTTP ${response.status}`);
+    if (!response.headers.get('content-type')?.includes('application/json')) {
+      throw new RequestError('format', '响应不是 JSON');
+    }
+    try { return await response.json(); }
+    catch (error) {
+      if (controller.signal.aborted) throw error;
+      throw new RequestError('parse', 'JSON 解析失败');
+    }
+  } catch (error) {
+    if (controller.signal.aborted) throw controller.signal.reason;
+    throw error;
+  } finally {
+    clearTimeout(timer); signal?.removeEventListener('abort', forward);
+  }
+}
+let sequence = 0;
+let reading = null;
+for (const button of document.querySelectorAll('[data-read]')) {
+  button.onclick = async () => {
+    const current = ++sequence;
+    reading = new AbortController();
+    const signal = reading.signal;
+    el('read-result').textContent = `读取 ${button.dataset.read} 中…`;
+    try {
+      const data = await requestJson(`/api/read?mode=${encodeURIComponent(button.dataset.read)}`, { signal });
+      if (!data || typeof data.title !== 'string') throw new RequestError('contract', '资料结构不符合约定');
+      if (current === sequence) el('read-result').textContent = data.title;
+    } catch (error) {
+      if (current === sequence) el('read-result').textContent = `${error.kind ?? error.name}：${error.message}`;
+    }
+  };
+}
+el('cancel').onclick = () => {
+  ++sequence; reading?.abort(new DOMException('用户取消', 'AbortError'));
+  el('read-result').textContent = '已取消当前读取';
+};
+let lastKey = null;
+const describe = (data) => `已确认：${data.title}；本服务累计写入 ${data.writes} 次`;
+el('write').onclick = async () => {
+  lastKey = crypto.randomUUID();
+  const key = lastKey;
+  el('write').disabled = true; el('query').disabled = true; el('retry').disabled = true;
+  el('write-result').textContent = '正在发送教学写入…';
+  try {
+    const data = await requestJson('/api/save', { method: 'POST', headers: { 'Idempotency-Key': key }, timeout: 80 });
+    el('write-result').textContent = describe(data);
+  } catch {
+    el('write-result').textContent = '写入结果未知，请查询；停止等待不等于撤销。';
+  } finally {
+    el('write').disabled = false; el('query').disabled = false; el('retry').disabled = false;
+  }
+};
+async function confirm(retry) {
+  if (!lastKey) return;
+  const key = lastKey;
+  el('write').disabled = true; el('query').disabled = true; el('retry').disabled = true;
+  try {
+    const data = retry
+      ? await requestJson('/api/save', { method: 'POST', headers: { 'Idempotency-Key': key } })
+      : await requestJson(`/api/result?key=${encodeURIComponent(key)}`);
+    el('write-result').textContent = describe(data);
+  } catch (error) { el('write-result').textContent = `确认失败：${error.message}`; }
+  finally { el('write').disabled = false; el('query').disabled = false; el('retry').disabled = false; }
+}
+el('query').onclick = () => confirm(false);
+el('retry').onclick = () => confirm(true);
+```
+
+依次尝试：慢 A 后立刻点快 B，最终仍显示 B；404、破损 JSON、错误结构分别得到不同错误；写入后停止等待，再查询，通常能确认服务已写入；同一标识再发不增加那次写入的次数。如果本机首次请求连服务都没到就超时，查询可能 404，这仍属于要查明的结果，不能倒推“超时一定已经写入”。
+
+### 五、解码要遵守接口约定
+
+例子先看 HTTP，再看 Content-Type，再解析，最后检查 title 类型。这种顺序让“服务返回 404”和“成功正文不是资料对象”能够分开呈现。TypeScript 的类型断言不会验证网络 JSON，实际输入仍要做运行时检查。
+
+本例只处理很小的教学 JSON，没有实现字节上限、通用错误 schema 或所有 JSON media type。正式请求层应根据接口约定接受 `application/*+json` 等类型，并限制解析规模。204 没有正文时，也不应无条件调用 json。
+
+错误消息同样需要分层：给用户提供可理解的下一步，给诊断保留稳定 code、status 和 requestId；不要把服务器堆栈或完整响应直接显示给用户。读取正文流期间的连接中断，也可能表现为读取失败，不能把所有 body 异常都确定归为“后端发错 JSON”。
+
+### 六、取消的是等待，写入结果还要确认
+
+**AbortSignal** 是协作式取消信号。Fetch 和支持它的消费代码可以停止工作；你自己写的耗时计算也要在适当位置检查。取消原因应区分用户操作、超时、路由替换与账号变化，并在 finally 中清理监听和计时器。
+
+本例写入的关键顺序是：服务器记录结果，然后等待 500 ms 才回包；客户端只等 80 ms。因此存在“服务器已完成，客户端未知”的窗口。真实网络里，回包丢失也会造成同样的不确定性。
+
+对读取，放弃旧结果通常可以接受；对付款、创建资源等写操作，不能看到 AbortError 就再用新标识重做一次。应查询原操作，或在明确支持幂等的接口上重试同一个意图。界面可以显示“结果确认中”，而不是过早显示“未发生”。
+
+### 七、过期结果、单飞和数据缓存各管一件事
+
+本例序号只保护当前读取的界面提交，旧 A 仍可能到达服务器。若为了节省资源再加入 abort，仍应保留序号或查询身份检查，因为有些 SDK 不响应取消，或者工作已经完成。
+
+**单飞（Singleflight）**把相同范围内同时发生的请求合并为一个 Promise。它既不是长期缓存，也不是“后一次请求取代前一次”。下面的小例子在完成后删除登记，失败也走同一条清理路径。
+
+```js example=net-singleflight
+const running = new Map();
+function singleflight(key, work) {
+  if (running.has(key)) return running.get(key);
+  const task = Promise.resolve().then(work).finally(() => {
+    if (running.get(key) === task) running.delete(key);
+  });
+  running.set(key, task);
+  return task;
+}
+let calls = 0;
+const load = async () => { calls++; return '资料'; };
+const values = await Promise.all([singleflight('account-a:note-7', load), singleflight('account-a:note-7', load)]);
+console.log(values.join(','), calls);
+// => 资料,资料 1
+await singleflight('account-a:note-7', load);
+console.log(calls);
+// => 2
+```
+
+key 应包含影响响应的账号、租户、语言等范围。单个调用者取消时，不应随意中止其他调用者还在等待的共享请求；可以只停止该调用者等待，或在没有消费者时再结束底层请求。更完整的状态取舍可回看 [DATA-01 的服务端状态与缓存](../chinese-guides/data-01-server-state-cache-keys-invalidation-deduplication.md#data-01)。
+
+### 八、重试要有资格，也要有预算
+
+HTTP 的 safe 描述预期业务状态不因该方法改变，idempotent 描述重复执行的预期效果一致；两者不是“绝无日志”或“响应字节每次完全一样”。GET 不该承担业务写操作，PUT/DELETE 的语义也不能替错误服务端实现兜底。
+
+| 情况 | 常见处理方向 |
+| --- | --- |
+| 用户主动取消读取 | 停止，不自动重试 |
+| 429 或部分暂时性 5xx | 结合 Retry-After、次数与总时限决定 |
+| 参数校验或业务拒绝 | 修改输入或操作，不原样循环 |
+| 写入响应未知 | 查原操作或按已有幂等协议恢复 |
+| 401 | 按认证流程处理，不无限重复原请求 |
+
+退避和 jitter 减少大量客户端同时重试带来的压力，但重试次数、总等待时间和并发上限仍需明确。Retry-After 可以是秒数或 HTTP 日期，不应只当作一个固定字符串忽略。
+
+本例幂等表在单个 Node 进程同步登记固定内容，只能说明“重复键返回同一结果”。正式服务需要把账号、参数一致性、processing/completed 状态、原子写入、有效期与多实例竞争都纳入设计；只添加一个请求头并不会自动实现幂等。
+
+### 九、401 刷新与离线队列不能偷偷串账号
+
+多个请求同时 401 时，可共享一次刷新过程，刷新后每个请求最多重放一次。再次 401 应进入一致的再认证流程，避免递归刷新风暴。流式上传正文可能已经消费，不能像普通 GET 一样透明重放。
+
+账号切换应让旧等待者失去提交资格，清理相应缓存与队列。离线 **Outbox** 保存的是带账号、操作标识和版本的业务意图，不是“网络恢复后随便发一遍”的请求列表。
+
+还要区分从未发送、已发送但未知、明确拒绝、已确认成功。navigator.onLine 只提供网络线索，不能证明目标服务可达。冻结后恢复与多标签协调可继续阅读 [BROWSER-02](../chinese-guides/browser-02-observers-scheduling-lifecycle-coordination.md#browser-02)。
+
+### 十、流的 chunk 不等于一条消息
+
+ReadableStream 的分块受传输与实现影响，不能假定一次 read 就得到一个完整汉字、一行 JSON 或一个业务事件。下面把 UTF-8 的“中”从中间切开，用流式 TextDecoder 保留未完成字节。
+
+```js example=net-stream-decoding
+const bytes = new TextEncoder().encode('中\n');
+const decoder = new TextDecoder();
+const first = decoder.decode(bytes.slice(0, 1), { stream: true });
+const second = decoder.decode(bytes.slice(1), { stream: true }) + decoder.decode();
+console.log(JSON.stringify(first));
+// => ""
+console.log(JSON.stringify(second));
+// => "中\n"
+```
+
+字符解码之后还要按协议分帧，例如保存未完成的行，等下一批拼齐。限制单帧和总量，区分正常结束、错误帧与残缺结尾；已经展示一半的正文不能在断流后伪装成完整结果。
+
+读取速度、计算速度与渲染频率也应分开。每来一个 chunk 就重绘全文，会把网络问题变成主线程问题；可以批量更新，同时保留取消与错误恢复。
+
+### 十一、CORS 与 Cookie 解释不同边界
+
+**CORS** 决定跨源脚本能否读取符合规则的响应。某些请求需要先 OPTIONS 预检；携带凭据时不能用通配符作为允许源，还需要正确的凭据允许配置。动态按允许列表返回 Origin 时，也要考虑 Vary。
+
+`credentials: 'include'` 只是请求带凭据的模式，并不会突破 SameSite、第三方 Cookie 或存储分区限制。HttpOnly 限制脚本直接读取 Cookie，不阻止浏览器在符合条件时发送它。
+
+`mode: 'no-cors'` 也不是修复 API 的办法，它会带来 opaque 响应等读取限制。攻击者不需要读到响应就可能造成写操作，所以 CORS 不是 CSRF 或授权方案；下一篇 [SEC-01](../chinese-guides/sec-01-xss-csrf-trust-boundaries.md#sec-01) 会把这几道检查分别展开。
+
+### 十二、把网络证据接回用户结果
+
+抓请求时记录操作、版本、缓存条件与 requestId，区分排队、连接、等待响应与下载。相同 URL 并不代表相同来源：Service Worker、CDN、HTTP Cache 和应用缓存都可能改变结果。
+
+本篇例子可以先用状态、请求数量、最终文本和服务端结果证明机制。它没有部署真实 TLS、CDN、跨源 Cookie 或 HTTP/3，不能用它推断这些环境的表现。导出 HAR 时要去掉 Cookie、Authorization、签名参数与个人正文，再共享给协作者。
+
+学完后应能解释：404 为什么还能拿到 Response，取消为什么不能撤销服务器写入，单飞为什么完成后还会重新请求，以及 CORS 失败为什么不一定说明副作用没发生。先把这些事实说清，请求层才能给用户可靠的反馈。
+
+### 参考与延伸阅读
+
+审校日期：2026-09-14。示例服务与数据为本地教学设定，不是当前系统的请求层实现。
+
+- [MDN：Using Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)：状态、正文读取和取消。
+- [MDN：HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching)：新鲜度、验证器与 Vary。
+- [MDN：CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)：预检、凭据和响应读取。
+- [MDN：HTTP request methods](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods)：safe 与 idempotent 的方法语义。
+- [MDN：TextDecoder.decode](https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder/decode)：跨分块解码。
+- [Chrome：Network reference](https://developer.chrome.com/docs/devtools/network/reference)：分层观察请求来源与时序。

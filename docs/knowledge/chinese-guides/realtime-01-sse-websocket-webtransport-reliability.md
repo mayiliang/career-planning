@@ -1,130 +1,280 @@
-# 实时通信与可靠性知识点讲义
+# 连接重新打开以后，怎样知道消息已经补齐
 
 ## REALTIME-01 SSE、WebSocket、WebTransport 与消息可靠性
 
-“实时”不是某个协议的名字，而是业务能容忍多大的延迟、丢失、重复和乱序。行情提示、聊天、协同编辑、任务进度与设备遥测看似都在持续收消息，但它们的方向、频率、可靠性和恢复要求完全不同。成熟设计先写消息语义和故障恢复，再选择传输；若只凭“需要双向通信”就上长连接，通常会遗漏代理超时、断线补偿、身份过期和慢消费者。
+资料标题发生变化，阅读页通过推送及时更新。网络断开后，连接很快恢复，界面亮起“已连接”；但中间少了一条发布事件，用户看到的列表仍然不完整。连接恢复与数据恢复不是同一个结果。
+
+本讲先定义消息的含义，再比较传输方式，最后运行一个真实 SSE 观察页。它会故意重复事件、切断响应、制造缺口和缩短历史窗口。所有消息都是本地合成资料，不涉及真实账号、通知或生产连接。
 
 ### 学习前先确认
 
-- 直接前置：[NET-01 浏览器网络协议、Fetch 与请求可靠性](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。本讲直接使用 HTTP、TLS、代理、超时、重试、取消和连接时序。
-- 直接前置：[BIZ-07 异常边界、幂等与最终一致性](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#biz-07)。本讲假定你能区分失败、未知结果、重复副作用和一致性窗口。
+- 直接前置：[NET-01 浏览器网络协议、Fetch 与请求可靠性](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。先理解 HTTP、连接、超时、取消与网络结果。
+- 直接前置：[BIZ-07 异常边界、幂等与一致性](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#biz-07)。本讲使用重复效果、未知结果和事件恢复的基本区分。
 
-### 一、先把“实时”写成可度量合同
+### 一、消息的确认要说清已经走到哪一步
 
-为每类消息写明生产者、消费者、方向、峰值速率、载荷上限、可接受延迟、是否可丢、是否必须有序、重复是否安全、离线多久仍需补齐，以及用户看见的确认含义。页面出现“已发送”可能只表示浏览器写入连接，不能冒充服务器已接收、持久化或其他用户已读。
+“已发送”可能只说明客户端把消息交给了 API，不说明服务端已经接收、持久化、广播，更不说明其他用户已读。设计消息前先选定每个状态对应的事实。
 
-把端到端过程分成创建、接受、持久化、广播、应用、确认。每个阶段都有独立时间和失败状态。只有界定最终承诺，客户端才能在断线后决定补拉、重发或提示人工处理。
+```js example=realtime01-ack-meaning
+const stages = ['created', 'queued', 'accepted', 'committed', 'applied'];
+function hasReached(actual, required) {
+  const a = stages.indexOf(actual), r = stages.indexOf(required);
+  return a >= 0 && r >= 0 && a >= r;
+}
+console.log(hasReached('queued', 'committed'));
+console.log(hasReached('committed', 'applied'));
+console.log(hasReached('applied', 'committed'));
+// => false
+// => false
+// => true
+```
 
-实时性也有预算：例如 1 秒内显示任务进度、5 秒内补齐漏项、30 秒无心跳判定连接失效。没有预算就无法选择轮询还是持续连接，也无法判断“偶尔慢”是否事故。
+本例约定应用顺序如数组所示，别的系统可能有不同阶段；它不证明真实持久化。作用是逼我们把 UI 文案放到明确位置，不把 socket 的 `send()` 返回当成业务成功。
 
-### 二、单向事件流优先考虑 SSE
+消息目录还要说明方向、大小、峰值、可容忍延迟、能否丢弃、重复是否安全、顺序范围和可恢复多久。光标位置通常可以用新值覆盖旧值；发布、扣减和审计事件则不能照搬这个策略。
 
-**服务器发送事件（Server Sent Events）**建立普通 HTTP 响应，由服务器持续发送带字段的文本事件，浏览器 `EventSource` 自动接收。它天然适合通知、构建日志和任务进度等服务器到浏览器的低中频流；客户端写操作仍可走普通 HTTP，权限、幂等和错误模型更清楚。
+### 二、协议选择跟着消息任务走
 
-事件可带 `id`，断开后浏览器以 `Last-Event-ID` 续接。服务端应把 ID 解释为可恢复游标，而不是内存数组下标；保留窗口外返回“需要完整重取”，不能静默跳到最新。注释帧或心跳可防止代理因空闲关闭，但心跳不是业务事件。
+| 方式 | 适合观察的任务 | 仍需自己设计 |
+| --- | --- | --- |
+| 轮询或长轮询 | 低频状态、可靠快照查询 | 退避、时效、取消和条件读取 |
+| SSE | 服务端持续下发通知、进度、日志 | 授权、事件留存、恢复游标和处理确认 |
+| WebSocket | 持续双向消息、互动协作 | 应用 ACK、重放、版本、队列边界 |
+| WebTransport | 有依据的多流或数据报需求 | 支持与可达性、消息可靠性分类、回退 |
 
-SSE 是 UTF-8 文本、浏览器方向固定，也受浏览器连接限制和代理缓冲影响。高频二进制、客户端持续上行或需要多个独立流时并不合适。部署前要验证反向代理不缓存流、超时足够、压缩没有积压小帧，并在真实网络下检查重连。
+客户端偶尔发布指令、服务端频繁通知，可以用 HTTP 写入加 SSE 下行，不一定要把所有操作搬进双向连接。低频状态查询用有限轮询也可以达到延迟目标。
 
-### 三、双向消息通道使用 WebSocket
+“浏览器有这个 API”只证明接口入口存在，不证明目标服务器、代理和网络能够建立连接。选型时同时考虑部署链、运行成本、恢复复杂度和实际桌面环境，不凭协议名称判断先进程度。
 
-**全双工套接字（WebSocket）**经 HTTP 握手升级为双向帧连接，适合聊天、多人 presence、游戏控制或高频仪表盘。协议只提供传输帧，不自动提供业务消息 ID、确认、重放、授权续期或跨节点广播；这些必须由应用协议定义。
+### 三、SSE 帧有格式，事件 ID 却没有自动业务语义
 
-设计消息信封：`type`、`version`、`messageId`、`correlationId`、`sentAt`、`payload`。服务端对未知类型或版本明确拒绝；客户端按类型校验载荷，不能把收到的 JSON 当可信对象。命令和事件分开：命令表达请求改变，事件表达已经发生，二者确认含义不同。
+**Server-Sent Events** 使用 `text/event-stream` 的 UTF-8 文本流。浏览器 `EventSource` 解析事件，事件之间用空行分隔；注释行可以用作保持连接的信号。
 
-WebSocket 基于有序可靠字节流。某个大帧或丢包可能阻塞后续消息，且浏览器经典 API 没有内建背压。高峰时应限制发送队列、合并可覆盖状态、丢弃允许丢的遥测、暂停生产或主动断开慢消费者，不能让内存无限增长。
+```text
+id: 102
+event: material
+data: {"seq":102,"title":"摄影基础"}
 
-### 四、WebTransport 解决的是多流与数据报
+```
 
-**Web 传输（WebTransport）**通常运行于 HTTP/3，能同时提供可靠的单向/双向流和不可靠数据报。独立流可减少一条可靠流上的队头阻塞；数据报适合最新位置、音视频控制或允许丢失的高频状态。它不是“更现代的 WebSocket 替代品”，兼容性、基础设施和运维可观测性都要实际验证。
+这个事件的 `id` 可用于重新连接时的 `Last-Event-ID`，但浏览器不会替应用保存可重放日志。更重要的是，浏览器记住某个已解析 ID，不等于业务处理函数已经成功把事件写进状态或本地数据库。
 
-每类信息仍需选择可靠流还是数据报：账户变更不能用可丢数据报；光标位置可只保留最新值；大文件与控制消息不应互相阻塞。应用仍负责认证、授权、版本、重连、限流与业务确认。使用前要有回退通道，并按目标浏览器和企业网络实测 QUIC/UDP 是否可达。
+若消息处理需要异步事务，应维护“最后连续应用成功”的游标，并围绕它设计恢复。原生自动重连的 ID 与应用确认游标不能未经分析就当同一值。多行 data、retry 和事件 ID 的具体解析规则以 [HTML 标准](https://html.spec.whatwg.org/multipage/server-sent-events.html) 为准。
 
-### 五、轮询有时是更可靠的正确选择
+原生 EventSource 构造接口不提供任意自定义请求头选项。需要认证时，使用符合安全策略的同源会话或明确的受控方案；不能为了方便把长期令牌放到 URL。自行用 fetch 读取流又需要自己处理分帧、重连和取消，不等于只换一个构造函数。
 
-低频更新、后台标签页、基础设施受限或状态天然可查询时，带条件请求和退避的轮询更简单。轮询以权威快照纠正漂移，失败路径也容易与普通 API 统一。可见时快、隐藏时慢，服务端返回 `ETag` 或版本，没有变化就返回轻量结果。
+### 四、可靠传输不等于业务恰好处理一次
 
-长轮询在服务端有变化或超时时返回，再立即建立下一次请求。它减少空响应，但仍要处理并发旧请求、代理超时和取消。不要为了“看起来高级”引入持续连接；协议成本必须由延迟收益证明。
+**WebSocket** 建立双向连接，在同一连接中传递有序消息。断线前是否提交、重连后是否重复，以及跨节点事件顺序，都不由这一传输性质保证。客户端若并发异步处理消息，即使到达有序，处理完成也可能乱序。
 
-选择矩阵至少比较方向、频率、载荷、可靠性、浏览器覆盖、代理/CDN 支持、鉴权刷新、扩缩容、恢复窗口和团队运维能力。公开通知可 SSE，聊天可 WebSocket，允许丢的多流遥测才考虑 WebTransport。
+经典浏览器 WebSocket API 没有接收端自动背压；`bufferedAmount` 反映发送队列的字节，不是接收业务队列长度。发送缓冲归零也不是服务端业务 ACK。[MDN WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
 
-### 六、断线重连先恢复身份与游标
+**WebTransport** 提供流和数据报等不同通信能力，常见部署围绕 HTTP/3。可靠流内部顺序与不同流之间的顺序是不同保证，数据报也不适合承载不能丢的业务变化。独立流可以减少彼此等待，但仍共享网络容量和拥塞影响。
 
-连接关闭原因可能是网络切换、代理空闲、服务滚动、令牌到期、页面休眠或服务器过载。客户端状态至少分 connecting/open/degraded/reconnecting/offline/closed，不要仅用一个布尔值。
+使用前检查当前浏览器、运行时、服务器和网络能力，并实际验证连接；UDP/QUIC 不可达时的回退要保护核心任务。不能只检测 `typeof WebTransport` 后就宣称服务可用。[MDN WebTransport](https://developer.mozilla.org/en-US/docs/Web/API/WebTransport)
 
-重连使用指数退避和随机抖动，设置最大间隔，并尊重服务器给出的重试提示。所有客户端同时立即重连会造成惊群。网络恢复事件只能触发尝试，不能证明服务已可用；每次连接都要重新认证或验证会话。
+### 五、只推进已经连续应用的游标
 
-恢复请求提交最后已应用的连续游标。服务端从可保留日志补发；若游标过旧，返回 snapshot-required，客户端先取快照，再从快照版本之后接流。先接流再取快照需要缓冲并按版本合并，否则会在间隙丢事件。
+假设本例事件序号在当前订阅流内连续，当前应用到 102，收到 104 就存在缺口。对于增量事实，不能先把游标写成 104，然后永远跳过 103。
 
-### 七、至少一次交付意味着必须去重
+```ts example=realtime01-contiguous-cursor
+type MaterialEvent = { seq: number; title: string };
+type Projection = { seq: number; title: string };
+function apply(current: Projection, event: MaterialEvent): { result: string; state: Projection } {
+  if (event.seq <= current.seq) return { result: '重复或旧事件', state: current };
+  if (event.seq !== current.seq + 1) return { result: '存在缺口，停止推进', state: current };
+  return { result: '已应用', state: { ...event } };
+}
+let state: Projection = { seq: 102, title: '摄影基础' };
+for (const event of [{ seq: 104, title: '摄影实践' }, { seq: 103, title: '摄影进阶' }, { seq: 103, title: '摄影进阶' }]) {
+  const next = apply(state, event); state = next.state;
+  console.log(next.result, state.seq);
+}
+// => 存在缺口，停止推进 102
+// => 已应用 103
+// => 重复或旧事件 103
+```
 
-现实系统常选择至少一次：发送方在未收到确认时重试，因此消费者可能收到重复消息。每条业务事件有稳定 ID，客户端保存已应用 ID 或单调游标；操作必须幂等。不要依赖“这个连接上没见过”，因为重连、跨节点和离线恢复会打破连接边界。
+代码相信事件已经按协议解析，只展示游标规则。真实流的 ID 可能不连续，例如全局序列经权限筛选后自然跳号，此时不能机械要求 `+1`，应使用服务器定义的续接 token、前驱关系或订阅内顺序协议。
 
-至多一次允许丢失，适合可覆盖状态；恰好一次通常只是对特定边界、事务和保留期的承诺，不应由 UI 口号推断。产品应明确“消息可能重复但不会重复扣款”这类业务保证。
+快照也要带一致的水位：先取得“截至 S 的快照”，再重放 S 之后的事件，并确认历史仍覆盖这段窗口；否则需要缓冲、重取或其他协调。简单“先 GET，再连上”可能漏掉两步之间的变化。
 
-乱序处理依赖序列号、实体版本或逻辑时间。全局顺序昂贵且常无必要；可按会话、房间或实体局部有序。收到缺口时缓存短暂后补拉，超时则取权威快照，不能无界等待。
+```mermaid
+flowchart TB
+  Message["收到事件"] --> Check{"与已应用游标比较"}
+  Check -->|已经处理| Ignore["忽略重复"]
+  Check -->|正好下一条| Apply["应用成功后推进"]
+  Check -->|存在缺口| Recover["暂停增量<br/>补齐或取得快照"]
+```
 
-### 八、慢消费者和背压是容量边界
+### 六、用真实 SSE 观察重复、续接和补齐
 
-**背压（Backpressure）**是消费者跟不上生产速度时，系统向上游限制、合并、采样或拒绝的机制。浏览器渲染、JSON 解析、后台节流都可能让消费变慢，即使网络仍畅通。
+保存完整文件为 `events-lab.mjs`，用 Node.js 22 运行 `node events-lab.mjs`，打开打印的地址。选择场景后点击“开始观察”；重复事件不会推进两次，断线场景会按应用游标续接，缺口与历史过期则要求获取完整快照。
 
-为接收队列设置条数和字节上限，记录队列年龄。可覆盖的状态按实体保留最新值；日志可分批渲染；不可丢业务事件则暂停读取、减小订阅范围或断开并要求从游标恢复。任何策略都要注明被丢的是“中间状态”还是“业务事实”。
+```js example=realtime01-events-lab runtime=project file=events-lab.mjs
+import { createServer } from 'node:http';
+const events = [
+  { seq: 101, title: '摄影入门' }, { seq: 102, title: '摄影基础' },
+  { seq: 103, title: '摄影进阶' }, { seq: 104, title: '摄影实践' },
+  { seq: 105, title: '摄影作品复盘' },
+];
+const client = `
+const el = id => document.getElementById(id);
+let source = null, timer = null, generation = 0, attempts = 0;
+let applied = 100, title = '尚未同步';
+function log(text) { const li = document.createElement('li'); li.textContent = text; el('log').append(li); while (el('log').children.length > 20) el('log').firstElementChild.remove(); }
+function render() { el('cursor').textContent = String(applied); el('title').textContent = title; }
+function stop() { generation += 1; clearTimeout(timer); timer = null; if (source) source.close(); source = null; }
+function reset() { stop(); attempts = 0; applied = 100; title = '尚未同步'; el('log').replaceChildren(); el('status').textContent = '等待开始'; render(); }
+function connect() {
+  stop(); const mine = generation;
+  if (++attempts > 3) { el('status').textContent = '达到重连预算，请检查后手动恢复'; return; }
+  const mode = el('mode').value;
+  const stream = new EventSource('/events?after=' + applied + '&mode=' + encodeURIComponent(mode)); source = stream;
+  el('status').textContent = '正在连接，从应用游标 ' + applied + ' 继续';
+  stream.onopen = () => { if (mine === generation) el('status').textContent = '已连接，仍需核对数据'; };
+  stream.addEventListener('material', event => {
+    if (mine !== generation) return;
+    let data; try { data = JSON.parse(event.data); } catch { stop(); el('status').textContent = '消息损坏，请获取快照'; return; }
+    if (!data || typeof data !== 'object' || !Number.isSafeInteger(data.seq) || typeof data.title !== 'string' || event.lastEventId !== String(data.seq)) { stop(); el('status').textContent = '协议不符，请获取快照'; return; }
+    if (data.seq <= applied) { log('忽略重复 ' + data.seq); return; }
+    if (data.seq !== applied + 1) { log('缺口：当前 ' + applied + '，收到 ' + data.seq); stop(); el('status').textContent = '存在缺口，请获取完整快照'; return; }
+    applied = data.seq; title = data.title; render(); log('应用 ' + applied);
+  });
+  stream.addEventListener('reset', () => { if (mine !== generation) return; stop(); el('status').textContent = '历史已过期，请获取完整快照'; log('服务端要求重建快照'); });
+  stream.addEventListener('done', () => { if (mine !== generation) return; stop(); el('status').textContent = '已补齐到当前水位 ' + applied; });
+  stream.onerror = () => {
+    if (mine !== generation) return; stream.close(); source = null;
+    el('status').textContent = '连接中断，等待有限重连'; log('从已应用游标 ' + applied + ' 恢复');
+    timer = setTimeout(() => { if (mine === generation) connect(); }, 300 * attempts);
+  };
+}
+el('start').onclick = () => { attempts = 0; connect(); };
+el('stop').onclick = () => { stop(); el('status').textContent = '已停止观察，保留当前副本'; };
+el('mode').onchange = reset;
+el('snapshot').onclick = async () => {
+  stop(); const mine = generation; el('status').textContent = '正在读取快照';
+  try {
+    const response = await fetch('/snapshot', { cache: 'no-store' });
+    if (!response.ok) throw new Error('snapshot'); const data = await response.json();
+    if (mine !== generation) return;
+    if (!data || typeof data !== 'object' || !Number.isSafeInteger(data.seq) || typeof data.title !== 'string') throw new Error('shape');
+    applied = data.seq; title = data.title; render(); log('采用快照 ' + applied); attempts = 0; connect();
+  } catch { if (mine === generation) el('status').textContent = '快照失败，可重试'; }
+};
+window.addEventListener('pagehide', stop); reset();
+`;
+const html = `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>事件恢复观察室</title>
+<style>:root{font:16px/1.8 system-ui,"Microsoft YaHei",sans-serif;color:#183f38;background:#edf3ef}*{box-sizing:border-box}body{margin:0;padding:36px}main{max-width:1120px;margin:auto}h1{font-size:34px;margin:6px 0}h2{font-size:21px;margin:0 0 12px}.tag{font-size:13px;letter-spacing:.1em;color:#55776a}section{background:white;border:1px solid #cdddD3;border-radius:16px;padding:25px;margin:20px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.grid>*{min-width:0}button,select{font:inherit;padding:8px 12px;border:1px solid #93b3a5;border-radius:8px;background:#f6faf7;color:inherit;margin:8px 5px 8px 0}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid #b67b22;outline-offset:3px}#cursor{font-size:42px;font-weight:700}#status{color:#815619;font-weight:650}#log{padding-left:24px;max-height:350px;overflow:auto}.muted{font-size:14px;color:#5c766b}</style>
+<main><div class="tag">B22 · 连接状态 / 应用游标 / 完整快照</div><h1>事件恢复观察室</h1><p>收到事件、应用成功和连接打开，分别观察。</p>
+<section><label for="mode">故障场景</label><select id="mode"><option value="normal">重复事件</option><option value="cut">102 后断线再续接</option><option value="gap">缺少 103</option><option value="expired">历史窗口已过期</option></select><div><button id="start">开始观察</button><button id="stop">停止观察</button><button id="snapshot">获取完整快照</button></div><p id="status" role="status"></p></section>
+<div class="grid"><section><h2>当前资料副本</h2><p id="title"></p><p class="muted">最后连续应用的游标</p><div id="cursor">100</div><p class="muted">演示水位为 105；连接打开并不等于已经补齐。</p></section><section><h2>应用记录</h2><ol id="log" aria-label="事件处理记录"></ol><p class="muted">只保留最近 20 条诊断；服务端事件是固定的合成数据。</p></section></div></main><script src="/client.js"></script></html>`;
+const server = createServer((req, res) => {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return; }
+  if (url.pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); return; }
+  if (url.pathname === '/client.js') { res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' }); res.end(client); return; }
+  if (url.pathname === '/snapshot') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(events.at(-1))); return; }
+  if (url.pathname !== '/events') { res.writeHead(404); res.end(); return; }
+  const raw = req.headers['last-event-id'] ?? url.searchParams.get('after') ?? '100';
+  const after = Number(raw), mode = url.searchParams.get('mode');
+  if (!/^\d+$/.test(String(raw)) || !Number.isSafeInteger(after)) { res.writeHead(400); res.end('Invalid cursor'); return; }
+  res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8' });
+  res.write(': stream started\n\n');
+  if (after < (mode === 'expired' ? 102 : 100) || after > 105) { res.end('event: reset\ndata: {}\n\n'); return; }
+  let rows = events.filter(e => e.seq > after);
+  if (mode === 'normal') rows = rows.flatMap(e => e.seq === 102 ? [e, e] : [e]);
+  if (mode === 'gap') rows = rows.filter(e => e.seq !== 103);
+  let index = 0, timer;
+  const tick = () => {
+    if (res.destroyed) return;
+    if (mode === 'cut' && after === 100 && index === 2) { res.end(); return; }
+    const event = rows[index++];
+    if (!event) { res.end('event: done\ndata: {}\n\n'); return; }
+    if (!res.write('id: ' + event.seq + '\nevent: material\ndata: ' + JSON.stringify(event) + '\n\n')) { res.destroy(); return; }
+    timer = setTimeout(tick, 140);
+  };
+  res.on('close', () => clearTimeout(timer)); tick();
+});
+server.listen(Number(process.env.PORT ?? 43742), '127.0.0.1', () => console.log('观察页：http://127.0.0.1:' + server.address().port));
+```
 
-发送侧也要观察缓冲量和确认延迟。按钮连续操作不能无界写 socket；高风险命令应经有幂等键的 HTTP 或带确认的应用协议，达到阈值后明确拒绝或降级。
+观察页在错误时关闭原生自动重连，由应用以自己的确认游标建立新连接；总共最多三次连接尝试，手动操作可重新开始。为了容易看出时序，重连延迟使用简单倍数；生产环境需要按负载增加抖动和退避上限。
 
-### 九、鉴权、授权与跨站边界
+固定事件日志只存在进程内，重启后重放的是同一组教学数据；快照也固定在 105，没有实现持续写入时的快照竞态、认证和持久日志。发送缓冲满时主动断开，避免无限堆积，这是本例的容量处理选择，不是通用服务器背压方案。
 
-建立连接时认证不代表连接存续期间权限永远有效。长连接要处理会话过期、角色撤销、租户切换与主题权限变化。服务端对每次订阅和命令重新授权，连接身份只是输入之一；撤权应主动取消订阅或断开。
+### 七、重复、乱序与快照需要分别解释
 
-浏览器 WebSocket 握手会携带环境中的 Cookie，服务端必须验证 Origin、CSRF 设计和允许来源。不要把长期令牌写 URL，因为它可能进入日志和历史。短期票据要一次性、绑定用户/目标并快速过期。
+至少一次交付意味着消费者可能再次收到同一事件，应在业务效果边界处理去重。只在当前 WebSocket 实例里保存 seen 集合，不能覆盖刷新、重连和进程切换。
 
-客户端只订阅必要主题；服务端不能信任房间 ID。载荷限长、类型校验、速率限制和审计必不可少。错误信息避免泄露其他租户是否存在。
+完整快照可以用同一对象的较新版本替换旧快照；增量“增加 1”不能在缺前一项时直接跳过去。不同实体的版本号也不能直接比较成全局时间。快照与增量的区别见 [BIZ-07](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#七旧快照可以忽略增量缺口不能随手跳过)。
 
-### 十、扩缩容需要共享事件身份
+处理异步副作用时，应用记录与游标应按需要一起持久化；否则先推进游标后崩溃，副作用可能永远遗漏，先做副作用后崩溃，又可能重复。客户端状态演示不能证明数据库事务或外部系统的恰好一次效果。
 
-多实例部署后，连接可能落在不同节点。粘性会话能减少迁移，却不能替代共享事件日志、广播层和游标。节点重启后仍应从持久化位置恢复；只存在单机内存的事件无法兑现重放承诺。
+### 八、慢消费者需要有边界的队列
 
-区分瞬时 presence 与必须保存的业务事件。presence 可有 TTL 并允许重建；订单状态必须先持久化再广播。广播成功不是事务提交，前端收到事件后仍可按版本读取权威对象。
+```js example=realtime01-coalesce-presence
+const latest = new Map();
+function receive(update) {
+  if (!latest.has(update.person) && latest.size >= 2) return '容量已满，拒绝新实体';
+  const previous = latest.get(update.person);
+  if (!previous || update.version > previous.version) latest.set(update.person, update);
+  return '保留该实体最新位置';
+}
+receive({ person: 'lin', version: 1, x: 10 });
+receive({ person: 'lin', version: 3, x: 30 });
+receive({ person: 'lin', version: 2, x: 20 });
+receive({ person: 'mei', version: 1, x: 5 });
+console.log(latest.get('lin').x, latest.size);
+console.log(receive({ person: 'zhou', version: 1, x: 0 }));
+// => 30 2
+// => 容量已满，拒绝新实体
+```
 
-容量规划同时计算连接数、心跳、每连接订阅、峰值消息、序列化成本、出站带宽和慢消费者内存。压测要模拟断线重连风暴，而不仅是稳定连接。
+这是允许覆盖的光标状态，丢掉的是中间位置。发布事件、计费记录和审计日志不能直接使用同样策略。对不可丢事件，可以减少订阅、暂停生产，或断开后从持久游标恢复；恢复窗口不够时要能回到快照。
 
-### 十一、前端状态机与用户体验
+真实容量还要限制字节、单条大小和最老消息年龄，不能只数数组长度。渲染批次可以合并，但不要因为页面只画了最后值就丢掉必须执行的业务处理。
 
-连接状态、数据新鲜度和业务操作状态是三条轴。连接断开时，缓存数据可能仍可读；连接打开时，某实体仍可能缺事件。界面显示“正在重连”“数据更新于 10 秒前”“此操作等待确认”，不要统一成红色离线遮罩。
+### 九、连接身份不是永久订阅许可
 
-在标签页休眠或切后台后，回来先检查时间差和游标，不假设定时器持续运行。多个标签页可协调一个连接，但 leader 选举和崩溃恢复本身复杂；没有数据证明前不必过早优化。
+会话过期、角色撤销和机构切换时，已有订阅也必须响应。服务器验证订阅主题与每个业务命令的权限；客户端传入房间 ID，不等于具有访问权限。
 
-用户手动重试应与自动重连共享状态机，避免并发连接。注销时取消订阅、清空租户游标与敏感缓存，防止下一账号继承事件。
+浏览器 WebSocket 可能携带匹配的 Cookie，应校验允许的 Origin，并按业务设计跨站保护；WebSocket 不应被误当成自动受普通 fetch CORS 规则保护。错误消息和游标也不能泄露其他机构的事件是否存在。
 
-### 十二、可观测性和故障演练
+退出时关闭连接、停止重连、失效旧回调，并处理私有缓存与游标。下一账号不能继承上一账号“最后应用到哪里”。后台标签页计时器可能节流，连接对象仍显示 open，也不能证明业务链路健康。
 
-指标包括建立连接成功率/耗时、活跃连接、异常关闭码、重连次数、消息端到端延迟、队列长度、丢弃/合并数、游标缺口、补拉量和鉴权拒绝。日志以 connectionId、sessionId、messageId 与 correlationId 关联，但不记录令牌和敏感载荷。
+### 十、实时事件把查询与写入连接起来
 
-演练网络切换、代理 60 秒空闲关闭、服务滚动、令牌过期、重复和乱序、游标超出保留期、慢消费者、广播节点故障。每次都检查用户提示、资源释放、补偿结果与恢复后是否重复副作用。
+对于“资料已变化”的通知，最稳妥的起点往往是定向失效查询；若事件确实携带完整、已授权的新对象，再按版本更新副本。查询模型见 [DATA-01](../chinese-guides/data-01-server-state-cache-keys-invalidation-deduplication.md#十预取与实时通知都只是刷新策略的一部分)。
 
-服务端返回过载时主动延长重试间隔；客户端降级到低频轮询或只读快照。降级不是静默少收消息，而是明确标出新鲜度和能力限制。
+如果本地存在乐观覆盖，收到的远端事实应更新正确基线，再按操作状态决定如何显示。不能让旧通知覆盖已确认新标题，也不能一直用乐观值遮住服务端拒绝。相关状态见 [DATA-02](../chinese-guides/data-02-optimistic-updates-conflicts-offline-mutations.md#四没有收到成功不等于操作已经失败)。
 
-### 十三、协议版本与演进
+降级为轮询时，说明数据更新方式改变；回到长连接时，用同一水位或恢复协议接续。重新亮起“实时”标签，不应掩盖切换期间遗漏的消息。
 
-长连接可能跨越前后端发布窗口，旧客户端在数小时后仍发送旧消息。握手交换支持的协议版本、能力和心跳参数；消息以稳定 type/version 解码。新增可选字段保持旧消费者可忽略，删除或改义必须有兼容期。未知关键版本明确关闭并给可诊断原因，不能按相近结构猜测。
+### 十一、多实例与长期连接扩大版本责任
 
-服务器滚动时多个版本并存，广播层不能只让新节点理解。兼容矩阵覆盖旧客户端到新服务、新客户端到旧服务和恢复日志中的旧事件。持久化事件的 schema 迁移比瞬时消息更严格，因为历史重放会在未来触发解码。
+粘性会话不能代替持久日志与共享事件身份。连接迁移到另一节点以后，仍要知道可恢复的游标、日志保留窗口及最新快照。presence 可以短期丢失后重建，必须保存的业务事实则先可靠提交，再广播。
 
-连接级能力协商不能替代每条消息校验。移动端长时间后台后恢复，可能跨多个服务版本；若协议已不支持，引导刷新或升级并保留未确认操作状态。
+旧连接可能跨过多次部署。握手能力、事件类型、Schema 版本、历史消息解码与旧消费者支持期都要维护。未知关键版本应明确恢复或升级，不要按相似字段猜测。
 
-### 十四、测试需要可控网络与确定性时钟
+容量关注连接数、订阅量、心跳、广播扇出和慢端缓冲，也关注重连时的尖峰。心跳只证明特定层有活动，不等于每条业务事件都被应用；应把连接、数据新鲜度和未确认操作分开观测。
 
-单元测试状态机：重复、乱序、缺口、过期游标、确认晚到、身份撤销。集成测试真实代理、心跳和认证刷新；浏览器测试前后台、网络切换与多标签页。用可控时钟推进退避，避免测试真正等待并产生偶发失败。
+### 十二、验证恢复后的事实，而不只看收到消息
 
-负载测试不能只计算稳定消息吞吐。模拟连接建立与关闭、节点滚动、广播延迟、慢消费者和大量客户端同时恢复；观察队列字节、GC、事件循环、出站带宽和恢复时间。容量上限前应主动拒绝或降级，而不是让全体连接雪崩。
+少量关键场景就能发现很多问题：重复 102、缺少 103 却收到 104、游标过期、处理中断、身份切换、慢消费者。分别记录连接状态、已应用水位、当前副本与恢复结果。
 
-一致性验证为事件生成模型：应用一遍和重复应用得到相同业务状态，按允许的乱序合并后收敛，游标越界时快照加增量等于权威查询。只断言“收到消息”无法证明可靠性。
+SSE 本机实验不能替代真实代理空闲超时、WebSocket ACK 或 WebTransport 的网络能力验证。协议选择确定以后，再对目标部署链做必要观察；不要为了一篇概念讲义安装三套生产基础设施。
 
-对每种降级方案还要验证恢复切换：从长连接转轮询不能重复应用事件，从轮询恢复长连接不能留时间缺口；切换点用同一游标或版本连接。用户看到的状态和指标应能区分正常协议、降级协议与完全离线。
+日志保留安全的事件和连接关联号，指标按消息类别控制基数，不把每个 ID 当指标标签。观察最终业务事实与权威查询是否一致，比统计“重连成功多少次”更接近用户真正关心的可靠性。
 
-移动网络还会在连接看似存在时发生半开：客户端发不出或收不到数据，却尚未收到 close。应用心跳同时记录最后收到业务消息和最后成功往返，超时后进入恢复状态；不能用 TCP/WebSocket 对象仍为 open 证明链路健康。后台节流会延迟心跳，因此阈值结合页面可见性和平台能力，恢复时仍以游标校正而非只重置计时器。
+### 动手想一想
 
-### 十五、完整设计清单
+浏览器已经解析事件 104，但应用只持久化到 102 就崩溃。重连应从哪个位置恢复？再说明在一个并不连续编号的订阅流中，为什么不能直接把 104 减 102 当成丢了两条消息。
 
-先完成消息目录和可靠性合同，再完成协议选择表、客户端/服务端状态机、消息 schema、认证授权、保留与恢复、背压策略、容量预算、指标和故障演练。评审时逐项回答：断线前最后一条是否可知；重复是否安全；乱序如何识别；慢端会发生什么；撤权多久生效；节点重启后从哪里恢复。
+### 参考与延伸阅读
 
-高级工程能力不体现在把所有场景换成长连接，而在于把传输层的不确定性收敛为用户能理解、系统能验证的业务语义。能用简单轮询达成合同就使用轮询；选择持续连接时，也必须准备断线、补偿、降级和审计路径。
+- [MDN：Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)：查阅 EventSource、事件格式与连接处理。
+- [HTML 标准：Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)：核对事件 ID、重连和解析规则。
+- [MDN：WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)：核对浏览器 API 与背压限制。
+- [MDN：WebTransport](https://developer.mozilla.org/en-US/docs/Web/API/WebTransport)：查看流、数据报及当前能力边界。

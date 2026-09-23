@@ -1,203 +1,313 @@
 # TypeScript 知识点讲义
 
-## TS-06 函数、重载、协变逆变与组件 API
+## TS-06 函数接口、重载与回调关系
 
-函数类型不仅描述参数和返回值，还决定一个实现能否安全替换另一个。组件把回调交给消费者时，参数过窄可能在运行时崩溃；重载过多又可能让实现与声明分叉。本讲从调用签名、可选参数和重载出发，建立协变、逆变与双变的替换模型，最终落到框架无关的组件 API 设计。
+函数类型是调用双方的约定：调用者交出哪些值，实现者承诺如何使用它们、返回什么。一个签名即使通过编译，也可能让调用者误解：回调参数为什么突然可能缺失？传入 async 函数以后，谁会处理失败？组件收到 value，却仍然偷偷维护另一份值，该听谁的？
+
+本讲用资料列表、标题格式化和保存按钮解释这些问题。所有 TypeScript 代码块都能独立运行，预期非法写法放在不调用的函数中。示例以 TypeScript 5.7.2 的严格模式检查，包含 strictFunctionTypes、noUncheckedIndexedAccess 与 exactOptionalPropertyTypes。
 
 ### 学习前先确认
 
-- 直接前置：[TS-03 泛型、约束、`keyof` 与索引访问](../chinese-guides/ts-03-generics-constraints-keyof-indexed-access.md#ts-03)。函数与联合基础由它递归链接；条件类型不是本讲硬前置。
+- 直接前置：[TS-03 泛型、约束、keyof 与索引访问](../chinese-guides/ts-03-generics-constraints-keyof-indexed-access.md#ts-03)。理解一个类型参数怎样连接输入和输出，便可以继续读本讲。
 
-### 一、函数类型描述调用合同
+阅读时反复问一句：“这个位置是谁来调用，调用时能拿出什么？”这比孤立背诵协变、逆变更容易理解。
 
-```ts
-type Formatter = (value: number, locale?: string) => string;
+### 一、先写清谁调用谁，再决定函数签名
+
+**调用签名（Call Signature）**描述参数顺序、可选性与返回值。参数名帮助阅读，但兼容关系主要由类型和位置决定。
+
+一个回调可以不使用调用方提供的所有参数。列表遍历会传入 item 和 index，使用者只需要 item 时，可以只声明一个参数。这和“调用方可以不传 index”是不同约定。
+
+```ts example=ts06-callback-optional
+function visit(items: readonly string[], onItem: (item: string, index: number) => void) {
+  items.forEach((item, index) => onItem(item, index));
+}
+const seen: string[] = [];
+visit(['闭包', '泛型'], item => { seen.push(item); });
+
+function acceptsPossiblyMissing(callback: (index?: number) => void) {
+  callback();
+}
+function rejected() {
+  // @ts-expect-error 调用方允许省略 index，接收方却要求它一定存在
+  acceptsPossiblyMissing((index: number) => { console.log(index.toFixed()); });
+}
+console.log(seen.join('、')); // => 闭包、泛型
 ```
 
-参数是调用方可提供的输入，返回值是实现承诺的输出。函数实现必须能处理合同允许的每次调用，调用者只能依赖公开签名，不能依赖内部更宽实现。
+只有当实现确实可能不提供参数时，才应把回调参数标成可选。为了允许调用者少写一个变量而加问号，会迫使所有真正使用 index 的人处理 undefined，也可能掩盖接口设计错误。
 
-TypeScript 按结构比较函数。参数名称不影响兼容，参数类型、个数、可选性、this 与返回值才影响。
+### 二、rest 元组能保留参数之间的关系
 
-### 二、可选参数表示调用者可以省略
+把参数全部写成 string | number 的数组，会丢掉位置：第一个是什么、第二个能否省略、不同命令需要什么信息。**rest tuple** 可以把一整组合法参数保存下来。
 
-`locale?: string` 意味着调用者可以不传，函数体必须处理 undefined。它不等于“实现总会收到一个字符串但我暂时不关心”。
+```ts example=ts06-rest-tuples
+type ActionArgs =
+  | ['open', id: number]
+  | ['search', keyword: string, limit?: number];
 
-回调参数尤其容易误写可选：
-
-```ts
-function visit(callback: (value: string, index?: number) => void) {}
+function describeAction(...args: ActionArgs): string {
+  if (args[0] === 'open') return '打开 ' + args[1].toFixed(0);
+  return '搜索 ' + args[1].trim() + '，最多 ' + (args[2] ?? 20) + ' 条';
+}
+function rejected() {
+  // @ts-expect-error open 后面必须是数字 ID
+  describeAction('open', '7');
+  // @ts-expect-error search 的第二个参数不能缺少
+  describeAction('search');
+}
+console.log(describeAction('open', 7)); // => 打开 7
+console.log(describeAction('search', ' 类型 ', 5)); // => 搜索 类型，最多 5 条
 ```
 
-这承诺 visit 可能只传 value，callback 必须处理 index 缺失。若实现总传 index，应写必需参数；消费者仍可用只声明 value 的函数，因为忽略额外参数通常安全。
+args[0] 是判别位置。确认它是 open 后，第二个位置随之收窄到 number。不要先把参数分别保存为失去关联的宽类型，再期待它们自动恢复关系。
 
-### 三、剩余参数与元组保存调用形状
+如果每个分支有大量字段，命名对象通常更容易读，例如 `{ kind: 'search', keyword, limit }`。元组适合位置少、调用习惯明确的 API。
 
-rest parameter 可用 tuple 表达有限变体：
+### 三、重载应该表达调用关系，而不是堆叠形式
 
-```ts
-type LogArgs =
-  | [message: string]
-  | [message: string, context: Record<string, unknown>];
+**函数重载（Function Overload）**适合“不同输入对应不同输出”。如果所有输入都返回同一个类型，普通联合参数往往更简单。
 
-function log(...args: LogArgs) {}
+```ts example=ts06-overloads
+function formatTitle(value: string): string;
+function formatTitle(value: readonly string[]): string[];
+function formatTitle(value: string | readonly string[]): string | string[];
+function formatTitle(value: string | readonly string[]): string | string[] {
+  return typeof value === 'string'
+    ? value.trim()
+    : value.map(title => title.trim());
+}
+const single = formatTitle(' 闭包 ');
+const many = formatTitle([' 闭包 ', ' 泛型 ']);
+
+function acceptsUnion(value: string | readonly string[]) {
+  return formatTitle(value); // 总括重载允许已是联合类型的调用者
+}
+console.log(single.toUpperCase()); // => 闭包
+console.log(many.join('、')); // => 闭包、泛型
+console.log(acceptsUnion([' 推断 ']).toString()); // => 推断
 ```
 
-标记元组提高提示。可变长 tuple 适合装饰器和函数组合，但多层拼接会让错误复杂。公开 API 若只有两三种清晰调用，重载可能更友好。
+前两个公开签名保留具体调用结果；第三个总括签名允许联合输入。没有第三个时，一个已经声明为联合的变量，可能无法匹配任一具体重载。最后带函数体的实现签名用于承接实现，不会自动对调用者公开。
 
-### 四、重载把多个调用表面连接到一个实现
+重载顺序也会影响选中结果：具体签名通常放在宽签名前。重叠规则很多时，分成 formatOneTitle 和 formatTitles，反而能减少阅读成本。重载还不是实现语义证明：即使声明兼容，实现把两个分支的返回行为写反，也可能通过宽实现签名的检查；仍要核对实际输出。
 
-```ts
-function load(id: string): User;
-function load(ids: readonly string[]): User[];
-function load(input: string | readonly string[]): User | User[] {
-  return Array.isArray(input) ? input.map(readUser) : readUser(input);
+### 四、this 参数说明接收者，不会自动绑定对象
+
+普通函数的 this 由调用方式决定。TypeScript 的 this 参数只声明“调用时需要怎样的接收者”，编译后会被擦除，不占真实参数位置。
+
+```ts example=ts06-this
+type Viewer = { prefix: string };
+function title(this: Viewer, value: string) {
+  return this.prefix + value;
+}
+const viewer = { prefix: '资料：' };
+const bound = title.bind(viewer);
+
+function rejected() {
+  // @ts-expect-error 普通调用没有提供要求的 this
+  title('闭包');
+}
+console.log(title.call(viewer, '闭包')); // => 资料：闭包
+console.log(bound('泛型')); // => 资料：泛型
+```
+
+把对象方法直接作为回调传出时，接收者可能丢失。可以在交出前 bind，也可以用箭头函数明确调用对象方法。若回调不应依赖 this，可声明 `this: void`，把需要的上下文作为普通参数传入。
+
+这仍是类型检查，不会替运行时绑定接收者。JavaScript 调用方或错误断言能够绕过它；函数必须遵循真实调用方式。
+
+### 五、返回值看提供什么，参数看能接住什么
+
+**协变（Covariance）**和**逆变（Contravariance）**先用一句中文理解：
+
+- 返回值：调用者只需要资料，实现返回字段更丰富的精选资料，通常没问题。
+- 参数：调用者可能交来任意资料，处理器却只能处理精选资料，就可能访问不存在的字段。
+
+```ts example=ts06-variance
+type Note = { title: string };
+type FeaturedNote = Note & { badge: string };
+
+const produceFeatured = (): FeaturedNote => ({ title: '闭包', badge: '精选' });
+const produceNote: () => Note = produceFeatured;
+
+const readAnyNote = (note: Note) => note.title;
+const readFeatured: (note: FeaturedNote) => string = readAnyNote;
+
+function rejected() {
+  const onlyFeatured = (note: FeaturedNote) => note.badge.toUpperCase();
+  // @ts-expect-error 接口可能提供普通 Note，而处理器承受不了
+  const unsafe: (note: Note) => string = onlyFeatured;
+}
+console.log(produceNote().title); // => 闭包
+console.log(readFeatured({ title: '泛型', badge: '精选' })); // => 泛型
+```
+
+从能力看，能读任何资料的函数当然能读精选资料；反过来不成立。在函数替换问题里，参数方向与返回值方向相反。这不是运行时隐式转换，而是检查替换后会不会破坏调用者的预期。
+
+### 六、方法的双变例外不能当成安全证明
+
+开启 strictFunctionTypes 后，函数属性的参数一般按更严格的方向检查；方法声明存在兼容性例外，参数允许**双变（Bivariance）**。两个看似只差语法的接口，可能给出不同结果。
+
+```ts example=ts06-method-bivariance
+type Note = { title: string };
+type Featured = Note & { badge: string };
+type MethodReader<T> = { read(value: T): string };
+type PropertyReader<T> = { read: (value: T) => string };
+
+const specificMethod: MethodReader<Featured> = {
+  read: value => value.badge.toUpperCase(),
+};
+const accepted: MethodReader<Note> = specificMethod;
+
+const specificProperty: PropertyReader<Featured> = {
+  read: value => value.badge.toUpperCase(),
+};
+function rejected() {
+  // @ts-expect-error 函数属性会拒绝不安全的参数缩窄
+  const safer: PropertyReader<Note> = specificProperty;
+}
+try {
+  accepted.read({ title: '普通资料' });
+} catch (error: unknown) {
+  console.log(error instanceof TypeError); // => true
 }
 ```
 
-前面是 overload signatures，最后是 implementation signature。调用者只看到重载，implementation 必须足够宽并在运行时正确分支。实现签名不是给用户的额外调用入口。
+例子故意让一个“编译接受”的调用在运行时失败，展示兼容规则的边界。为公共回调接口选择函数属性，可以让编译器更早拒绝这种替换，但还不能验证外部数据，也不能消除所有结构类型的不健全情况。
 
-测试每个重载的静态结果与运行时结果，防止声明承诺数组、实现却返回单对象。
+看到某个框架事件类型使用双变技巧时，不应照搬到整个业务层。先确认库需要兼容什么调用，再决定自己的接口是否需要相同取舍。
 
-### 五、重载顺序从具体到一般
+### 七、void 表示调用者忽略结果，async 失败仍要有人接住
 
-编译器按重载集合解析，过宽签名放前可能吞掉更精确情况。先列字面量/具体，再列一般。最后一个 catch-all 会让错误更少但可能丢推断。
+`() => void` 通常表示“调用者不会使用返回值”，并非所有兼容函数都只能返回 undefined。因此数组 push 这样返回数字的函数，可以作为通知回调。
 
-不要用几十条重载枚举参数组合。可变 tuple、泛型映射或 options object 可能更清楚。重载也不适合用 boolean 标志决定完全不同返回，判别 options 或不同函数名可读性更好。
+```ts example=ts06-void-async
+const values: string[] = [];
+const notify: (value: string) => void = value => values.push(value);
+notify('已选择');
 
-### 六、联合参数与重载解决不同问题
-
-联合参数表示函数体和调用者都面对同一个联合结果：
-
-```ts
-function normalize(value: string | number): string;
+// command 要明确返回 Promise，让调用方负责等待和失败处理。
+async function runCommand(command: () => Promise<void>): Promise<string> {
+  try {
+    await command();
+    return '完成';
+  } catch (error: unknown) {
+    return error instanceof Error ? '失败：' + error.message : '失败：未知原因';
+  }
+}
+console.log(values.join(',')); // => 已选择
+console.log(await runCommand(async () => { throw new Error('保存冲突'); })); // => 失败：保存冲突
 ```
 
-若输入输出存在精确关联，重载或泛型能保留。若两种输入最后都返回 string，联合足够。选择标准是调用合同，不是语法偏好。
+async 函数也可能被赋给返回 void 的回调，但调用方不会因此自动 await。外层同步 try/catch 抓不到稍后发生的 Promise rejection；只写 `void save()` 也只是忽略值，不会处理拒绝。
 
-实现内部常用联合，即使外部是重载。分支必须穷尽并对非法运行时输入失败，类型声明不能防 JavaScript 消费者。
+按钮事件需要发起异步命令时，可以调用一个内部自带 try/await/catch 的适配函数，再更新忙碌和错误状态。保存是否允许并发、取消之后是否可能已经提交，应继续对照[网络取消与结果](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。
 
-### 七、this 参数只参与类型检查
+### 八、通知、命令与取消各有不同承诺
 
-函数可声明伪参数 `this: HTMLElement`，要求调用上下文：
+不要把所有函数都命名成 onChange，再靠调用者猜意思。
 
-```ts
-function handle(this: HTMLButtonElement, event: MouseEvent) {}
+| 接口用途 | 一种合适的约定 | 调用者需要知道 |
+| --- | --- | --- |
+| 告知选择变化 | `onSelect(id): void` | 返回值被忽略 |
+| 请求执行保存 | `save(input): Promise<Result>` | 等待何时结束，哪些错误可恢复 |
+| 可取消的加载 | 输入包含 AbortSignal | 取消等待还是撤销业务操作 |
+| 本地值转换 | `format(value): string` | 不执行隐藏网络请求 |
+| 订阅事件 | 返回清理函数 | 何时取消订阅，能否重复清理 |
+
+“抛异常”和“返回失败分支”都可以成立，但要统一边界。例如协议校验失败返回带字段路径的 Result，程序内部意外则交给日志与兜底处理。不能只把返回类型写成 Promise<Success>，却让使用者从字符串消息猜授权失败、冲突和临时网络故障。
+
+**AbortSignal** 是调用协议的一部分。发起者创建控制器、执行者订阅信号、资源结束后清理监听；业务写入是否已经发生，需要服务器给出结果，类型无法替你撤销。Result 的完整例子见[TS-07 的输入与错误模型](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)。
+
+### 九、受控与非受控要在接口里写出唯一来源
+
+**受控组件（Controlled Component）**从外部 value 读取当前值，并通过回调请求改变；非受控组件从 defaultValue 初始化，再自行维护。把三个字段都设为可选，会放进很多难解释的组合。
+
+```ts example=ts06-controlled-props
+type Controlled = {
+  mode: 'controlled';
+  value: string;
+  onChange: (next: string) => void;
+  defaultValue?: never;
+};
+type Uncontrolled = {
+  mode: 'uncontrolled';
+  defaultValue?: string;
+  value?: never;
+  onChange?: (next: string) => void;
+};
+type InputProps = Controlled | Uncontrolled;
+
+function initialValue(props: InputProps): string {
+  return props.mode === 'controlled' ? props.value : props.defaultValue ?? '';
+}
+function rejected() {
+  // @ts-expect-error controlled 必须有 onChange
+  const missing: InputProps = { mode: 'controlled', value: '标题' };
+  // @ts-expect-error 两种值来源不能同时出现
+  const mixed: InputProps = { mode: 'uncontrolled', value: 'A', defaultValue: 'B' };
+}
+console.log(initialValue({ mode: 'uncontrolled', defaultValue: '草稿' })); // => 草稿
 ```
 
-this parameter 不生成 JS，也不计入参数长度。箭头函数没有动态 this，不适合需要宿主 this 的回调。DOM API、事件与 legacy 库绑定规则要与运行时一致。
+这里用显式 mode 帮助分支收窄；精确可选属性检查也阻止给 `value?: never` 填入 undefined 来混淆“没传”和“传了一个缺失值”。
 
-更现代的组件 API 通常显式传对象，减少 this 依赖。若公开 this 合同，测试脱离调用与 bind 行为。
+类型描述的是配置，组件实现仍要兑现它：受控分支不把内部副本当最终值；defaultValue 通常只影响初始化；运行中切换模式要明确支持还是拒绝。对调用者暴露的命令句柄也应保持很小，例如 focus 和 reset，不直接暴露内部 DOM、请求控制器及整个状态对象。
 
-### 八、协变描述输出可更具体
+### 十、让数据提供泛型线索，让回调消费推断结果
 
-**协变（Covariance）**可用返回值理解：要求 `() => Animal` 的位置，可以接受 `() => Dog`，因为调用者只会得到至少是 Animal 的值。反过来不安全，承诺 Dog 却可能返回普通 Animal。
+表格先收到资料行，才能知道 onSelect 的参数有哪些字段。把行写成 object，再让回调自行断言，会丢掉泛型本来应保留的关系。
 
-容器只读位置常协变；可写容器同时消费与产生值，单纯协变会不安全。TypeScript 的结构系统和历史兼容会影响具体结果，不能把数学术语机械套到所有泛型。
-
-### 九、逆变描述输入必须更宽
-
-**逆变（Contravariance）**可用回调参数理解：组件承诺会给回调任意 Animal，安全处理器必须接受 Animal 或更宽 unknown；只接受 Dog 的函数不能替换，因为组件可能传 Cat。
-
-```ts
-type Consumer = (value: Animal) => void;
-const animalConsumer: Consumer = value => console.log(value.name);
-// 只接受 Dog 的函数不能安全放这里
+```ts example=ts06-generic-table
+type ListProps<Row> = {
+  rows: readonly Row[];
+  keyOf: (row: Row) => string;
+  onSelect: (row: Row) => void;
+};
+function selectFirst<Row>(props: ListProps<Row>) {
+  const first = props.rows[0];
+  if (first === undefined) return;
+  props.onSelect(first);
+}
+const rows = [{ id: 3, title: '条件类型' }];
+let selected = '';
+selectFirst({
+  rows,
+  keyOf: row => String(row.id),
+  onSelect: row => { selected = row.title; },
+});
+console.log(selected); // => 条件类型
 ```
 
-在 `strictFunctionTypes` 下，函数属性参数通常按更安全规则检查。开启 strict 是理解组件回调的基础。
+keyOf 和 onSelect 中的 row 都来自同一个 Row。空数组的读取需要处理 undefined，这不应被非空断言藏起来。此函数只是选择行为的最小实现，keyOf 留作列表渲染时取得稳定标识的接口说明。
 
-### 十、方法语法可能保留双变性
+回调也可能成为推断来源。如果产品希望类型范围完全由 rows 确定，可以在适当参数位置使用[TS-05 的 NoInfer](../chinese-guides/ts-05-conditional-infer-distribution.md#十一noinfer-让一个位置只接受结果不参与猜测)，或把“创建列表”和“注册回调”分成两步。先看具体错误，再加约束，避免把每个泛型都机械包上 NoInfer。
 
-为兼容常见类与 DOM 模式，method syntax 的参数在一些位置表现为 bivariance，既允许更宽也允许更窄。`onSelect(user: User): void` 可能比 `onSelect: (user: User)=>void` 宽松。
+### 十一、公开类型也需要考虑真实调用者
 
-面向消费者的 props 回调优先函数属性，避免过窄处理器悄悄通过。框架类型有时使用 bivariant hack 改善人体工程学，阅读定义时要知道安全与兼容的权衡。
+包内部调用顺利，不代表别人消费声明文件时也顺利。常见遗漏包括：声明引用了未导出的内部类型；源码路径别名没有变成可解析入口；事件类型依赖调用者不存在的全局 DOM；旧编译器不认识新语法。
 
-双变性不是“TypeScript 坏了”，而是历史实用选择；高风险业务可用更严格包装和运行时验证。
+为公共接口保留几个代表性消费场景即可：正常调用、应拒绝的参数、联合调用、async 回调、声明导入。不需要为每个别名写一套重复测试。升级后让这些真实调用继续通过，比只比较类型打印文本更有价值。
 
-### 十一、strictFunctionTypes 仍有边界
+JavaScript 消费者没有同等静态保障。重要的外部选项、消息和业务权限仍要运行时检查。类型文件里的“只有管理员能批准”不会执行授权；这个边界会在[TS-08 状态与权限](../chinese-guides/ts-08-domain-state-permission-modeling.md#ts-08)进一步说明。
 
-它主要影响函数参数可赋值，method/constructor、any、断言和泛型相关位置仍可能宽松。启用后也不能证明回调永不抛错或不产生副作用。
+### 十二、沿一次调用检查接口是否清楚
 
-类型测试要用真实 props 赋值与调用，而不只比较两个别名。不要用 `as SelectProps` 绕过过窄错误。
+用“用户选择一条资料并点击保存”走一遍接口：
 
-### 十二、返回 void 有特殊兼容语义
+1. rows 决定行类型，选择回调收到完整行；列表为空时不触发。
+2. onSelect 通知选择变化，不偷偷执行保存。
+3. save 返回 Promise<Result>，调用者显示等待和可恢复失败。
+4. 受控 value 由父层更新，组件没有另一份相互竞争的权威值。
+5. 请求失败、取消、冲突分别有清楚的处理者；结束后移除不再需要的监听。
 
-期望返回 void 的回调可以接收实际返回某值的函数，调用方会忽略结果。这使 `array.forEach(x => list.push(x))` 合法。它不表示函数运行时真的返回 undefined。
+如果签名必须写很多重载，先检查是否把几种不同职责塞进同一个函数。若回调需要反复断言，先检查类型信息从哪里丢失。若编译接受却运行崩溃，检查方法双变、外部输入和 this 绑定。
 
-async 函数返回 Promise，传给期望 void 的事件回调时，未处理 rejection 可能丢失。使用明确 wrapper 捕获错误：
+最好的函数类型能让调用方很自然地写对代码；错误发生时，也能告诉他哪项约定没有满足。
 
-```ts
-button.onclick = () => { void save().catch(reportError); };
-```
+### 参考与延伸阅读
 
-lint 规则可检测 misused promises。组件应说明是否等待回调、如何处理失败和取消。
-
-### 十三、回调的错误与取消属于合同
-
-`onSubmit: () => Promise<void>` 意味着组件是否 await、重复点击如何处理、拒绝如何呈现必须明确。更稳健可返回判别结果或接收 AbortSignal。
-
-```ts
-type SaveResult = { ok: true } | { ok: false; code: 'CONFLICT'|'OFFLINE' };
-type OnSave = (draft: Draft, options: { signal: AbortSignal }) => Promise<SaveResult>;
-```
-
-异常用于意外失败，业务拒绝用稳定结果，组件不解析 error.message。卸载/取代时 signal 取消，迟到结果仍检查 operation ID。
-
-### 十四、事件回调与命令返回的所有权不同
-
-`onChange` 通常是通知：状态已发生，消费者不能通过返回 false 取消。`beforeChange`/`onRequestChange` 表示意图，可返回决定。把两者混在一个 callback 会让所有权模糊。
-
-组件 API 写清 controlled/uncontrolled、当前值、默认值、事件时机和重复。回调 detail 使用领域类型，不暴露内部 DOM event 除非消费者确实需要平台信息。
-
-### 十五、组件泛型应从数据推断
-
-表格 `Table<Row>` 的 columns 与 onSelect 应共享 Row。让 rows 推断 Row，列 key 与 formatter 保持 `K -> Row[K]` 关系。若消费者每次都要手填四个类型参数，API 过度抽象。
-
-React JSX、Vue 模板和 TSX 的泛型推断限制随工具版本变化。核心模型可在普通 TypeScript 函数/对象中验证，框架包装保留尽量少的类型层。
-
-### 十六、判别 props 表达互斥模式
-
-受控与非受控组件不应允许 `value`、`defaultValue`、`onChange` 任意组合：
-
-```ts
-type Controlled = { mode: 'controlled'; value: string; onChange: (v:string)=>void };
-type Uncontrolled = { mode: 'uncontrolled'; defaultValue?: string; onChange?: (v:string)=>void };
-type Props = Controlled | Uncontrolled;
-```
-
-判别联合让非法组合在调用处失败，也让实现收窄。XOR 工具类型可能更短，但显式模式通常错误更清楚。
-
-### 十七、Ref 与 imperative handle 要最小化
-
-组件公开 ref 方法时，只暴露稳定命令如 focus、reset，不暴露整个内部实例或 DOM 树。方法的同步/异步、前置状态和失败要定义。
-
-能通过 props/state 完成的行为不要额外加 imperative API。跨框架 Web Component 则把 method 作为 DOM 合同，仍需版本与类型声明。
-
-### 十八、函数重载与声明输出是公共 ABI
-
-库的 `.d.ts` 保存 overload order、泛型默认和回调方差。一次“只重构类型”可能改变消费者推断或允许集合，属于潜在破坏性变更。
-
-发布前对旧/新 TypeScript 版本运行类型测试，检查 declaration diff。不要让实现用 any 后自动生成过宽声明；显式公共签名和最小导出。
-
-### 十九、运行时边界仍接收 JavaScript
-
-TypeScript 消费者也可能通过 any、旧声明或运行时 JSON 传错。组件对数值范围、对象存在和外部消息做运行时校验，给出稳定错误或回退。
-
-类型保证的是已检查代码关系，不是权限或数据真实性。回调调用前仍处理卸载、异常、并发和用户输入。
-
-### 二十、验证替换安全和推断
-
-类型测试证明：具体重载得到具体返回；非法组合失败；过窄回调失败；更宽回调通过；async rejection 被处理；泛型从 rows 推断。运行时测试每个 overload branch、取消、重复操作和错误 UI。
-
-用 `@ts-expect-error` 保存反例，不用注释掉。编译器升级后读每个差异，避免宽松变化悄悄扩大公共 API。
-
-### 二十一、何时拆成不同函数名
-
-如果不同输入有不同权限、副作用、错误和返回生命周期，两个明确函数通常比重载更好，例如 `loadUser` 与 `loadUsers`。重载适合同一概念的自然调用形状，不应用来隐藏完全不同业务。
-
-API 评审关注用户能否从名称与提示理解调用，而不是声明是否“高级”。
-
-### 学完后应能说明
-
-你应能解释函数参数与返回合同、可选参数、rest tuple、重载和联合的取舍；能用协变、逆变和双变判断回调替换安全，理解 strictFunctionTypes 与 void/async 边界；还能设计所有权明确、可取消、可推断、声明稳定的组件 API，并以静态反例和运行时测试共同验证。
-
+- [TypeScript：函数](https://www.typescriptlang.org/docs/handbook/2/functions.html)：回调参数、重载、this 与 void。
+- [TypeScript：strictFunctionTypes](https://www.typescriptlang.org/tsconfig/strictFunctionTypes.html)：方法语法例外。
+- [TypeScript：类型兼容](https://www.typescriptlang.org/docs/handbook/type-compatibility.html)：函数替换与结构兼容。
+- [继续阅读 TS-07](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)：让真实输入满足函数以为自己拿到的类型。

@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "batch": "B14",
+  "title": "从组件接口到请求与安全边界",
+  "reviewedOn": "2026-09-14",
+  "chapters": [
+    {
+      "id": "WEB-05",
+      "title": "定义清楚的组件接口",
+      "question": "组件怎样与不同宿主协作，同时保留状态、事件和表单行为？",
+      "summary": "用完整评分控件解释注册升级、属性反射、Shadow DOM、事件与原生表单。",
+      "outcomes": [
+        "区分公开 DOM 接口与内部实现",
+        "处理提前赋值、重连与事件穿界",
+        "保留表单与无增强的基础路径"
+      ],
+      "guide": "web-05-web-components-shadow-dom-interoperability.md",
+      "anchor": "web-05",
+      "prerequisites": [
+        "browser-01-render-events-storage.md#browser-01"
+      ],
+      "concepts": [
+        {
+          "id": "component-platform",
+          "heading": "一、平台组件提供了哪些零件"
+        },
+        {
+          "id": "component-public-interface",
+          "heading": "二、先写调用方能依赖什么"
+        },
+        {
+          "id": "component-score-lab",
+          "heading": "三、运行一个会升级的评分表单"
+        },
+        {
+          "id": "component-reflection",
+          "heading": "四、Attribute 与 property 不会自动同步"
+        },
+        {
+          "id": "component-lifecycle",
+          "heading": "五、连接回调可以发生很多次"
+        },
+        {
+          "id": "component-shadow",
+          "heading": "六、Shadow DOM 隔离了什么"
+        },
+        {
+          "id": "component-slot",
+          "heading": "七、Slot 接收内容，不接管内容所有权"
+        },
+        {
+          "id": "component-events-focus",
+          "heading": "八、事件穿界与焦点定位要看两层"
+        },
+        {
+          "id": "component-form",
+          "heading": "九、表单关联不只是提交时拼一个对象"
+        },
+        {
+          "id": "component-adapters",
+          "heading": "十、React 与 Vue 消费同一份约定"
+        },
+        {
+          "id": "component-ssr-registry",
+          "heading": "十一、SSR、注册表与版本由谁负责"
+        },
+        {
+          "id": "component-evidence",
+          "heading": "十二、用公开行为判断组件是否可靠"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "runtime-delegation",
+          "reason": "把事件重定向接回 target、currentTarget 与委托。"
+        },
+        {
+          "concept": "lifecycle-resources",
+          "reason": "为重复连接建立明确的资源清理责任。"
+        },
+        {
+          "concept": "a11y-focus",
+          "reason": "用原生控件与焦点位置核对组件是否可操作。"
+        },
+        {
+          "concept": "security-source-sink",
+          "reason": "区分组件封装与真正的安全边界。"
+        }
+      ]
+    },
+    {
+      "id": "NET-01",
+      "title": "确认请求的真实结果",
+      "question": "请求失败或取消后，怎样判断数据和界面应该处于什么状态？",
+      "summary": "用本地服务区分 HTTP、正文、过期结果与写入未知，再解释缓存、重试和幂等。",
+      "outcomes": [
+        "分层判断 Response、数据和提交资格",
+        "区分取消、单飞、缓存与重试",
+        "通过操作标识确认未知写入"
+      ],
+      "guide": "net-01-browser-network-fetch-reliability.md",
+      "anchor": "net-01",
+      "prerequisites": [
+        "browser-01-render-events-storage.md#browser-01"
+      ],
+      "concepts": [
+        {
+          "id": "network-result-layers",
+          "heading": "一、一次请求有四层结果"
+        },
+        {
+          "id": "network-transport",
+          "heading": "二、DNS、连接和 HTTP 版本解释哪一段时间"
+        },
+        {
+          "id": "network-cache",
+          "heading": "三、缓存新鲜度与重新验证分开看"
+        },
+        {
+          "id": "network-lab",
+          "heading": "四、启动一个只在本机运行的请求实验"
+        },
+        {
+          "id": "network-decode",
+          "heading": "五、解码要遵守接口约定"
+        },
+        {
+          "id": "network-abort-outcome",
+          "heading": "六、取消的是等待，写入结果还要确认"
+        },
+        {
+          "id": "network-singleflight",
+          "heading": "七、过期结果、单飞和数据缓存各管一件事"
+        },
+        {
+          "id": "network-retry",
+          "heading": "八、重试要有资格，也要有预算"
+        },
+        {
+          "id": "network-account-outbox",
+          "heading": "九、401 刷新与离线队列不能偷偷串账号"
+        },
+        {
+          "id": "network-stream",
+          "heading": "十、流的 chunk 不等于一条消息"
+        },
+        {
+          "id": "network-cors-cookie",
+          "heading": "十一、CORS 与 Cookie 解释不同边界"
+        },
+        {
+          "id": "network-evidence",
+          "heading": "十二、把网络证据接回用户结果"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "security-write-gates",
+          "reason": "说明传输成功之后仍需要来源检查与资源授权。"
+        },
+        {
+          "concept": "policy-cache-nonce",
+          "reason": "把缓存中的 HTML 版本与浏览器策略对应起来。"
+        },
+        {
+          "concept": "review-result-guard",
+          "reason": "用提交资格避免旧读取覆盖当前意图。"
+        },
+        {
+          "concept": "runtime-transaction-lab",
+          "reason": "将单次请求成功与本地事务提交的区别并列理解。"
+        }
+      ]
+    },
+    {
+      "id": "SEC-01",
+      "title": "守住数据与权限边界",
+      "question": "不可信内容从哪里进入，在哪一步变成了更高权限的动作？",
+      "summary": "沿评论展示、返回地址与资料修改，区分净化、校验、CSRF 和资源授权。",
+      "outcomes": [
+        "沿 source、transform、sink 定位控制点",
+        "为文本、富文本、URL 和对象选择不同约束",
+        "分开验证身份、请求来源与资源权限"
+      ],
+      "guide": "sec-01-xss-csrf-trust-boundaries.md",
+      "anchor": "sec-01",
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01"
+      ],
+      "concepts": [
+        {
+          "id": "security-threat-model",
+          "heading": "一、先画出谁提供数据，谁执行动作"
+        },
+        {
+          "id": "security-source-sink",
+          "heading": "二、沿 source、transform、sink 追踪数据"
+        },
+        {
+          "id": "security-xss",
+          "heading": "三、XSS 是数据进入了可执行语境"
+        },
+        {
+          "id": "security-preview-lab",
+          "heading": "四、运行一个只允许少量富文本的预览页"
+        },
+        {
+          "id": "security-sanitization",
+          "heading": "五、净化之后不要再引入新的解析边界"
+        },
+        {
+          "id": "security-url",
+          "heading": "六、URL 要解析后按业务允许集合判断"
+        },
+        {
+          "id": "security-clobbering",
+          "heading": "七、DOM 命名访问不能承担安全配置"
+        },
+        {
+          "id": "security-prototype",
+          "heading": "八、原型污染要看写入发生在哪里"
+        },
+        {
+          "id": "security-csrf",
+          "heading": "九、CSRF 为什么不需要读取响应"
+        },
+        {
+          "id": "security-write-gates",
+          "heading": "十、身份、请求来源与资源授权逐道判断"
+        },
+        {
+          "id": "security-site-script",
+          "heading": "十一、site、origin 与脚本权限要分清"
+        },
+        {
+          "id": "security-evidence",
+          "heading": "十二、修复要同时保护正常内容和失败路径"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "policy-trusted-types",
+          "reason": "把净化结果接入浏览器强制的命名入口。"
+        },
+        {
+          "concept": "network-cors-cookie",
+          "reason": "解释读响应、携带身份与产生副作用的差别。"
+        },
+        {
+          "concept": "component-shadow",
+          "reason": "明确 Shadow DOM 不提供安全沙箱。"
+        },
+        {
+          "concept": "incident-preserve",
+          "reason": "按数据流和受影响版本保留诊断证据。"
+        }
+      ]
+    },
+    {
+      "id": "SEC-02",
+      "title": "让浏览器补上防线",
+      "question": "怎样限制意外脚本与 DOM 注入，又让合法内容继续可用？",
+      "summary": "用独立本地服务对照只报告与强制策略，观察 nonce、Trusted Types 和报告处理。",
+      "outcomes": [
+        "区分策略、净化与服务端授权",
+        "用真实响应验证 nonce 和 DOM sink",
+        "按范围、版本与脱敏报告推进策略迁移"
+      ],
+      "guide": "sec-02-csp-trusted-types-reporting.md",
+      "anchor": "sec-02",
+      "prerequisites": [
+        "sec-01-xss-csrf-trust-boundaries.md#sec-01"
+      ],
+      "concepts": [
+        {
+          "id": "policy-defense-layers",
+          "heading": "一、策略和净化各自负责什么"
+        },
+        {
+          "id": "policy-directions",
+          "heading": "二、从指令的控制方向读策略"
+        },
+        {
+          "id": "policy-nonce-hash",
+          "heading": "三、Nonce 与 Hash 授予什么信任"
+        },
+        {
+          "id": "policy-lab",
+          "heading": "四、启动策略对照实验"
+        },
+        {
+          "id": "policy-strict-dynamic",
+          "heading": "五、strict-dynamic 信任的是加载链"
+        },
+        {
+          "id": "policy-trusted-types",
+          "heading": "六、Trusted Types 要求值经过命名入口"
+        },
+        {
+          "id": "policy-default-fallback",
+          "heading": "七、默认 policy 与不支持环境的边界"
+        },
+        {
+          "id": "policy-enforcement",
+          "heading": "八、从报告迁移到强制执行"
+        },
+        {
+          "id": "policy-cache-nonce",
+          "heading": "九、HTML 缓存与策略必须属于同一版本"
+        },
+        {
+          "id": "policy-reporting",
+          "heading": "十、报告是输入，不能直接当作事故结论"
+        },
+        {
+          "id": "policy-document-controls",
+          "heading": "十一、其他文档限制不要混成一条规则"
+        },
+        {
+          "id": "policy-evidence",
+          "heading": "十二、把验证结果写成可解释的证据"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "security-sanitization",
+          "reason": "让命名 policy 执行具体净化规则，而非原样放行。"
+        },
+        {
+          "concept": "network-cache",
+          "reason": "追踪文档头与正文是否来自一致的缓存版本。"
+        },
+        {
+          "concept": "component-public-interface",
+          "reason": "将第三方组件的危险调用限制在明确公开接口内。"
+        },
+        {
+          "concept": "review-evidence",
+          "reason": "为策略收紧提供与风险对应的实际检查。"
+        }
+      ]
+    }
+  ]
+}

@@ -12,17 +12,41 @@
     "privacy-02-cross-region-classification-engineering-controls.md"
   ],
   "terms": {
+    "anonymization": {
+      "file": "7617a991ab532f1c.wav",
+      "text": "Anonymization"
+    },
+    "audience": {
+      "file": "adf0e0999386dae7.wav",
+      "text": "audience"
+    },
+    "authentication": {
+      "file": "b9d90628453938c5.wav",
+      "text": "Authentication"
+    },
+    "authorization": {
+      "file": "cbb82ebec6051b78.wav",
+      "text": "Authorization"
+    },
     "authorization code": {
       "file": "85c1d3b4619c0bfc.wav",
       "text": "Authorization Code"
+    },
+    "backend for frontend": {
+      "file": "385f35c9f82f8ea6.wav",
+      "text": "Backend for Frontend"
     },
     "bearer token": {
       "file": "0063f0d1147604f6.wav",
       "text": "Bearer Token"
     },
-    "cross-border data transfer": {
-      "file": "5dc144be69c6d33f.wav",
-      "text": "Cross-border Data Transfer"
+    "chips": {
+      "file": "d9705d8ee25f3f78.wav",
+      "text": "CHIPS"
+    },
+    "cookie": {
+      "file": "d7e83e28a04b537e.wav",
+      "text": "Cookie"
     },
     "data classification": {
       "file": "2ed7f5ec3bbd2d7a.wav",
@@ -40,25 +64,57 @@
       "file": "632636d3c0f7945f.wav",
       "text": "Deletion Tombstone"
     },
-    "federated credential management": {
-      "file": "e101053de699a2bd.wav",
-      "text": "Federated Credential Management"
+    "discovery": {
+      "file": "fa44132b238e6795.wav",
+      "text": "Discovery"
     },
-    "id token": {
-      "file": "8b5382cf6fb16690.wav",
-      "text": "ID Token"
+    "dpop": {
+      "file": "1f1db39707f5f494.wav",
+      "text": "DPoP"
     },
-    "partitioned cookie": {
-      "file": "ffd9431fa447cf98.wav",
-      "text": "Partitioned Cookie"
+    "fedcm": {
+      "file": "65fa1f1f30316ed8.wav",
+      "text": "FedCM"
     },
-    "privacy engineering control": {
-      "file": "26300d96eac4bb7a.wav",
-      "text": "Privacy Engineering Control"
+    "issuer": {
+      "file": "535c6f8eb511f5d9.wav",
+      "text": "issuer"
     },
-    "proof key for code exchange": {
-      "file": "1f47fa648c50a243.wav",
-      "text": "Proof Key for Code Exchange"
+    "jwks": {
+      "file": "78236fd539cded31.wav",
+      "text": "JWKS"
+    },
+    "jwt": {
+      "file": "fc93cb07e1ad9289.wav",
+      "text": "JWT"
+    },
+    "oauth": {
+      "file": "6e306c515177ca5a.wav",
+      "text": "OAuth"
+    },
+    "oauth 2.1": {
+      "file": "5a61db88d56a1ee8.wav",
+      "text": "OAuth 2.1"
+    },
+    "openid connect": {
+      "file": "b3be8fce0d1e1f5d.wav",
+      "text": "OpenID Connect"
+    },
+    "pkce": {
+      "file": "ca74bea00c269f05.wav",
+      "text": "PKCE"
+    },
+    "policy version": {
+      "file": "08dd617c9c10f832.wav",
+      "text": "Policy Version"
+    },
+    "processing activity": {
+      "file": "b97dfd535970942e.wav",
+      "text": "Processing Activity"
+    },
+    "pseudonymization": {
+      "file": "bd293af36ae8f313.wav",
+      "text": "Pseudonymization"
     },
     "purpose limitation": {
       "file": "f1136c941208bffc.wav",
@@ -67,6 +123,10 @@
     "refresh token rotation": {
       "file": "de189a2ecfd92fa6.wav",
       "text": "Refresh Token Rotation"
+    },
+    "session": {
+      "file": "3f3af1ecebbd1410.wav",
+      "text": "Session"
     },
     "session fixation": {
       "file": "4988a0fe5be87163.wav",

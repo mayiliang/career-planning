@@ -15,17 +15,17 @@ export async function readMaterialExamples(batch = 'b01') {
   const examples = new Map();
   for (const chapter of catalog.chapters) {
     const markdown = await readFile(new URL(chapter.guide, guideRoot), 'utf8');
-    for (const match of markdown.matchAll(/^```(js|javascript|jsx|ts|typescript|tsx|vue|html|powershell|json|css|yaml)(?=[\s])([^\n]*)\n([\s\S]*?)^```\s*$/gm)) {
+    for (const match of markdown.matchAll(/^```(js|javascript|jsx|ts|typescript|tsx|vue|html|powershell|bash|json|css|yaml|dockerfile|nginx)(?=[\s])([^\n]*)\n([\s\S]*?)^```\s*$/gm)) {
       // 配置与页面中的说明片段可不登记；带标识的内容从正文统一提取。
-      if (['jsx', 'tsx', 'vue', 'html', 'json', 'css', 'yaml'].includes(match[1]) && !match[2].includes('example=')) continue;
+      if (['jsx', 'tsx', 'vue', 'html', 'bash', 'json', 'css', 'yaml', 'dockerfile', 'nginx'].includes(match[1]) && !match[2].includes('example=')) continue;
       const metadata = match[2].trim().match(/^example=([a-z0-9-]+)(?: runtime=(browser|project))?(?: file=([a-zA-Z0-9][a-zA-Z0-9_./-]*))?$/);
       if (!metadata) throw new Error(`${chapter.id} 的代码示例缺少有效 example 标识`);
       const [, id, declaredRuntime, file] = metadata;
       const language = ({ javascript: 'js', typescript: 'ts' })[match[1]] ?? match[1];
       const runtime = declaredRuntime ?? (['jsx', 'tsx', 'vue', 'html'].includes(language) ? 'project' : 'universal');
       // Shell 片段只登记来源；不得作为通用 JavaScript 执行或自动在读者仓库运行。
-      if (language === 'powershell' && runtime !== 'project') throw new Error(`${id} 的 PowerShell 示例须声明 project`);
-      if (['json', 'css', 'yaml'].includes(language) && runtime !== 'project') throw new Error(`${id} 的配置或样式示例须声明 project`);
+      if (['powershell', 'bash'].includes(language) && runtime !== 'project') throw new Error(`${id} 的 Shell 示例须声明 project`);
+      if (['json', 'css', 'yaml', 'dockerfile', 'nginx'].includes(language) && runtime !== 'project') throw new Error(`${id} 的配置或样式示例须声明 project`);
       const expected = [...match[3].matchAll(/\/\/ => (.*)$/gm)].map((item) => item[1].trim());
       if (file && (file.split('/').some((part) => !part || part === '.' || part === '..'))) throw new Error(`${id} 的文件路径无效`);
       if (runtime === 'project') {

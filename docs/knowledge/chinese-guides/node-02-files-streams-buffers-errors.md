@@ -2,150 +2,291 @@
 
 ## NODE-02 文件、Stream、Buffer 与错误处理
 
-文件与网络数据经常大于内存，也经常在读到一半时失败。可靠的 Node.js 管线不能把“读取、转换、写入”理解成三个彼此独立的函数调用，而要同时管理数据表示、流量速度、资源所有权、取消、错误传播和最终提交。本讲从字节到持久化结果逐层建立这套模型。
+导入一份笔记文件时，读取成功并不是终点。一个汉字可能被拆在两块数据里，最后一行可能只传来一半，磁盘也可能在写到中途时失败。用户关心的是“原文件还在吗，新内容完整吗，失败后能否重来”。
+
+本讲用一条 NDJSON 导入链把字节、记录、背压和提交连起来。代码基线为 Node.js 22；带文件名的例子分别保存运行，不依赖额外包。演示写入只发生在自行创建的临时目录，正式文件应有另外确认的权限和持久性要求。
 
 ### 学习前先确认
 
-- 直接前置：[NODE-01 Node 运行时、事件循环与非阻塞 I/O](../chinese-guides/node-01-runtime-event-loop-nonblocking-io.md#node-01)。本讲会判断文件操作、回调和计算分别占用主线程、libuv 线程池或外部设备。
-- 直接前置：[JS-05 Promise 错误、取消与异步控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)。本讲直接使用 Promise 错误传播、`AbortSignal`、资源清理和错误原因链。
+- 直接前置：[NODE-01 Node 运行时、事件循环与非阻塞 I/O](../chinese-guides/node-01-runtime-event-loop-nonblocking-io.md#node-01)。用于区分等待、解析和线程池成本。
+- 直接前置：[JS-05 Promise 错误、取消与异步控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)。用于理解错误原因、取消与资源清理。
 
-### 一、文件 API 操作的是资源，不只是路径字符串
+### 一、路径是名字，句柄是已经打开的资源
 
-路径用于定位名字，文件描述符或 `FileHandle` 表示一个已经打开的资源。打开后，名字可能被重命名或替换，句柄仍指向原先打开的文件对象；同一路径也可能在不同时间指向不同内容。可靠代码要明确谁打开、谁关闭、异常时谁负责清理。
+路径回答“现在去哪里找”，FileHandle 或文件描述符表示“已经打开了哪份资源”。文件重命名后，原有句柄不一定跟着改指向新文件；同一路径下一次打开，也可能指向不同内容。
 
-`readFile`/`writeFile` 适合尺寸有严格上限的小内容。它们会把整个输入或输出聚合起来，方便但会让峰值内存随数据增长。服务端接收用户文件时，必须先限制字节数，再决定整块或流式处理；“磁盘上只有 200 MB”不代表转成字符串、对象和新输出时只占 200 MB。
+每段代码应明确谁打开、谁关闭。自己打开的句柄通常由自己在 finally 中关闭；传进来的共享资源则先看所有权合同，不能顺手把别人的流关闭。
 
-### 二、Buffer 是有边界的字节区域
+readFile 和 writeFile 适合尺寸有上限的小文件，不因为 Stream 存在就必须淘汰它们。但上传大小不受控时，先读完整文件再检查大小已经太晚。异步读取只改变等待方式，无法限制聚合后的内存，这与[NODE-01 的同步解析成本](../chinese-guides/node-01-runtime-event-loop-nonblocking-io.md#二异步等待结束后回调仍可能阻塞)相连。
 
-**缓冲区（Buffer）**是 Node.js 对字节序列的表示。文本编码决定字符怎样变成字节；一个 UTF-8 汉字可能跨越多个 chunk，不能把任意块都直接 `toString()` 后假设字符完整。二进制协议还需要关注字节序、偏移和长度。
+### 二、Buffer 表示字节，字符边界需要解码器保存
 
-Buffer 可以引用共享的底层内存。切片、复制和所有权要明确：为了长期保存小片段而持有一个巨大底层区域，可能让整块内存无法释放；来自池的 Buffer 也不能在未初始化区域被错误读取。处理密钥或令牌时，应避免不必要复制，并按威胁模型清除临时数据，但不要宣称 JavaScript 能保证所有副本立即从内存消失。
+**缓冲区（Buffer）**保存字节，不保证一个 chunk 就包含完整字符。下面把“中文”的 UTF-8 编码故意切在一个汉字中间：
 
-### 三、Stream 把时间与数据量纳入接口
+```js example=node02-buffer runtime=project file=buffer.mjs
+import { StringDecoder } from 'node:string_decoder';
+const bytes = Buffer.from('中文');
+const left = bytes.subarray(0, 2), right = bytes.subarray(2);
+console.log(left.toString('utf8') + right.toString('utf8') === '中文'); // => false
+const decoder = new StringDecoder('utf8');
+console.log(decoder.write(left) + decoder.end(right)); // => 中文
 
-Readable 产生数据，Writable 消费数据，Transform 一边消费一边产生。Stream 的价值不是语法更“高级”，而是允许有限内存处理持续或巨大数据，并让生产者与消费者协商速度。
+const original = Buffer.from([1, 2, 3]);
+const shared = original.subarray(0, 2);
+const copied = Buffer.from(shared);
+shared[0] = 9;
+console.log(original[0], copied[0]); // => 9 1
+```
 
-chunk 大小不是业务记录边界。NDJSON 的一行可能跨两个 chunk，也可能一个 chunk 含多行；压缩、加密和网络分段更不会尊重对象边界。解析器要保存未完成片段，并对单条记录最大长度设限。对象模式以对象计量水位，字节模式以字节计量，不能混用同一个数值解释容量。
+StringDecoder 会保留尚未凑齐的多字节字符；逐块直接 toString 则可能已经产生替换字符。若合同要求拒绝非法 UTF-8，而不是替换，可用 fatal 模式的 TextDecoder，并正确处理最后一块。
 
-### 四、背压是速度反馈，不是一个错误事件
+后半段说明 subarray 共享存储，Buffer.from 可以复制数据。长期保存一个很小的视图，可能把巨大的原缓冲区一并留住。涉及密钥时还要减少副本，不能承诺 JavaScript 能把所有历史副本立即清零。
 
-当 Writable 的内部缓冲达到水位，`write()` 返回 `false`。这不是“写失败”，而是要求生产者暂停，等待 `drain` 后再继续。**背压（Backpressure）**让快生产者服从慢消费者，避免内存和排队时间无界增长。
+### 三、chunk、字符、记录是三个不同的边界
 
-忽略返回值仍可能暂时得到正确文件，因为 Node.js 继续缓存；问题会在大输入或慢设备时表现为 RSS 上升、GC 抖动、延迟放大甚至进程被终止。水位不是内存硬上限，只是开始施加反馈的阈值；转换流、解析器和应用队列还可能保留额外数据。
+NDJSON 约定每行一个 JSON 值。一次 chunk 可能包含三行，也可能只含一行的前半段；网络分包和磁盘读取不会替业务守住行边界。
 
-```js
-async function writeAll(writable, chunks) {
-  for await (const chunk of chunks) {
-    if (!writable.write(chunk)) {
-      await new Promise((resolve, reject) => {
-        writable.once('drain', resolve);
-        writable.once('error', reject);
-      });
+| 边界 | 负责什么 | 例子 |
+| --- | --- | --- |
+| chunk | 一次交付多少字节 | 读取到 4096 字节 |
+| 编码 | 字节怎样还原字符 | 一个汉字跨两个 chunk |
+| 记录 | 一条业务输入在哪里结束 | 换行符前是一条笔记 |
+| 批次 | 什么时候允许发布结果 | 全部记录成功后替换目标 |
+
+本讲导入合同是：UTF-8，每行一个对象，允许 CRLF；每行最多 1024 字节，总输入最多 1 MiB；每条笔记只有 id 和 title 两个输出字段；最后一条也必须有换行。这个小上限方便本地观察，不是通用生产默认值。
+
+最后一个“必须换行”是本例的明确选择。有的 NDJSON 消费者允许末行无换行，但不能遇到半行时临时改变规则。允许坏记录跳过，还是要求整批失败，也应在开始前约定。
+
+### 四、write 返回 false 时，数据已经被接受
+
+**背压（Backpressure）**表示慢消费者要求上游先停一下。write 返回 false 通常表示内部缓冲达到阈值，不是写入被拒绝，更不能立即重写同一个 chunk。
+
+```js example=node02-pressure runtime=project file=pressure.mjs
+import { Writable } from 'node:stream';
+import { once } from 'node:events';
+import { finished } from 'node:stream/promises';
+let consumed = 0;
+const sink = new Writable({
+  highWaterMark: 4,
+  write(chunk, encoding, done) {
+    setTimeout(() => { consumed += chunk.length; done(); }, 5);
+  },
+});
+const completion = finished(sink, { cleanup: true });
+completion.catch(() => {}); // 从创建起就有拒绝处理；最终仍 await 它。
+try {
+  const accepted = sink.write(Buffer.alloc(4));
+  console.log(accepted); // => false
+  if (!accepted) await once(sink, 'drain');
+  sink.end();
+  await completion;
+  console.log(consumed); // => 4
+} catch (error) {
+  sink.destroy();
+  await completion.catch(() => {});
+  throw error;
+}
+```
+
+本例消费者行为完全受控，用来看到“返回 false，但四个字节仍消费一次”。复杂来源还会有提前 close、取消和多个错误事件，组合标准流时优先使用 pipeline，避免反复手写监听器协议。
+
+highWaterMark 是反馈阈值，不是整个进程的内存硬上限。还要算进当前 chunk、解析器剩余片段、转换缓冲、输出缓冲和应用队列。对象模式按对象计量，一个对象仍可能很大。
+
+### 五、先做有上限的记录解析，再把它接进管线
+
+保存为 import.mjs。以下代码包含解析与提交两个部分。解析按换行字节组装一条记录，再严格解码和校验，避免对每个任意 chunk 单独解释 JSON。
+
+```js example=node02-import runtime=project file=import.mjs
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdtemp, rename, unlink, rmdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
+
+function parseLine(bytes, lineNumber) {
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  let value;
+  try { value = JSON.parse(text); }
+  catch (cause) { throw new Error('第 ' + lineNumber + ' 行不是完整 JSON', { cause }); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+      || typeof value.id !== 'string' || !/^[a-z0-9-]{1,40}$/.test(value.id)
+      || typeof value.title !== 'string'
+      || value.title.trim().length < 1 || value.title.length > 100) {
+    throw new Error('第 ' + lineNumber + ' 行字段不符合要求');
+  }
+  return JSON.stringify({ id: value.id, title: value.title.trim() }) + '\n';
+}
+export async function* records(source, { signal } = {}) {
+  let pending = Buffer.alloc(0), total = 0, lineNumber = 0;
+  for await (const chunk of source) {
+    signal?.throwIfAborted();
+    total += chunk.length;
+    if (total > 1024 * 1024) throw new Error('输入超过 1 MiB');
+    let start = 0;
+    while (start < chunk.length) {
+      const newline = chunk.indexOf(10, start);
+      const end = newline < 0 ? chunk.length : newline;
+      const part = chunk.subarray(start, end);
+      if (pending.length + part.length > 1024) throw new Error('单行超过 1024 字节');
+      pending = Buffer.concat([pending, part]);
+      if (newline < 0) break;
+      lineNumber += 1;
+      if (pending.at(-1) === 13) pending = pending.subarray(0, -1);
+      const output = parseLine(pending, lineNumber);
+      pending = Buffer.alloc(0);
+      yield output;
+      start = newline + 1;
     }
   }
-  writable.end();
+  signal?.throwIfAborted();
+  if (pending.length) throw new Error('末行缺少换行，整批不提交');
+}
+
+export async function importNotes(sourcePath, targetPath, { signal } = {}) {
+  signal?.throwIfAborted();
+  // 调用方提供可信、受控的目标目录；本函数不是不可信路径的安全解析器。
+  const staging = await mkdtemp(join(dirname(targetPath), '.import-'));
+  const temporary = join(staging, 'output.tmp');
+  let failure, committed = false, cleanupFailure;
+  try {
+    await pipeline(
+      createReadStream(sourcePath, { highWaterMark: 64 }),
+      records,
+      createWriteStream(temporary, { flags: 'wx', mode: 0o600, flush: true }),
+      { signal },
+    );
+    signal?.throwIfAborted(); // 提交前的最后一个取消检查点。
+    await rename(temporary, targetPath);
+    committed = true;
+  } catch (error) { failure = error; }
+  try {
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    await rmdir(staging);
+  } catch (error) { cleanupFailure = error; }
+  if (failure) {
+    const cause = cleanupFailure
+      ? new AggregateError([failure, cleanupFailure], '执行与清理都失败')
+      : failure;
+    throw new Error('导入未提交', { cause });
+  }
+  return { committed, cleanup: cleanupFailure ? 'pending' : 'done' };
 }
 ```
 
-手写时还要处理监听器清理、提前 close 和取消，所以组合多个标准流通常应使用 `pipeline`。
+records 是 async generator，pipeline 按消费速度向它要结果。本例保留的 pending 有上限，输出只包含批准字段，不会把输入对象的其他属性顺便写出去。字段校验与类型声明的区别可回看[TS-07](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)。
 
-### 五、pipeline 统一成功、失败、关闭与取消
+为了让长行和截断更容易观察，读取块刻意设为 64 字节。调大块大小不会改变记录规则；调小也不会自动提高安全性，可能只增加复制和调用成本。
 
-**流管线（Stream Pipeline）**把源、若干 Transform 和目标当成一个生命周期。`node:stream/promises` 的 `pipeline()` 返回 Promise；任一阶段失败时，它会销毁相关流并传播错误。传入 `signal` 后，中止会以 AbortError 终止底层管线。
+### 六、亲手观察失败后旧目标是否仍在
 
-```js
-import { pipeline } from 'node:stream/promises';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { createGzip } from 'node:zlib';
+把 demo.mjs 放在 import.mjs 旁边，运行 node demo.mjs。它创建自己的临时目录并打印路径，方便查看结果；不接收已有用户文件作为目标。
 
-await pipeline(
-  createReadStream('source.ndjson'),
-  createGzip(),
-  createWriteStream('source.ndjson.gz'),
-  { signal },
-);
+```js example=node02-import-demo runtime=project file=demo.mjs
+import { mkdtemp, writeFile, readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { importNotes } from './import.mjs';
+
+const root = await mkdtemp(join(fileURLToPath(new URL('.', import.meta.url)), 'b18-files-'));
+const source = join(root, 'input.ndjson'), target = join(root, 'notes.ndjson');
+await writeFile(target, '旧内容\n');
+await writeFile(source, '{"id":"n-1","title":" 新笔记 "}\n');
+console.log((await importNotes(source, target)).committed); // => true
+const saved = await readFile(target, 'utf8');
+console.log(saved.trim()); // => {"id":"n-1","title":"新笔记"}
+
+await writeFile(source, '{"id":"n-2","title":"半行');
+try { await importNotes(source, target); }
+catch (error) { console.log(error.message, error.cause.message); }
+// => 导入未提交 末行缺少换行，整批不提交
+console.log(await readFile(target, 'utf8') === saved); // => true
+
+const controller = new AbortController();
+controller.abort();
+try { await importNotes(source, target, { signal: controller.signal }); }
+catch (error) { console.log(error.name); } // => AbortError
+console.log((await readdir(root)).some(name => name.startsWith('.import-'))); // => false
+console.log('实验目录：' + root);
 ```
 
-管线结束不等于业务结果已经安全发布。目标若是临时文件，还要刷新、关闭并提交；目标若是 HTTP 响应，要区分响应头是否已发送；外部系统若已经接收一部分数据，取消不能自动撤销它。
+观察的是三件不同的事：成功后读取新目标确实完整；解析失败后旧目标内容不变；被取消的任务没有变成一次成功提交。示例保留输入与结果供你检查，实际应用还需要按保留规则清理自己的临时数据。
 
-### 六、结束、完成、关闭与销毁不是同一个信号
+这并不证明磁盘满、权限失败、断电或所有操作系统的行为都已验证。针对目标平台，还要注入源读取失败、ENOSPC、EACCES、消费者提前关闭和 rename 失败，检查 cause、句柄与残留。不要在真实生产盘上制造磁盘满来学习。
 
-Readable 的 `end` 表示不再产生数据；Writable 的 `finish` 表示所有写入已经交给底层实现；`close` 表示资源关闭；`destroy(error)` 主动终止流。只监听一个事件很容易把提前关闭误认为成功，或在错误后重复 resolve。
+### 七、pipeline 完成与业务提交是两条边界
 
-使用 `pipeline`/`finished` 让标准库协调这些状态；自定义流则必须保证回调至多一次、错误后不再推送数据、销毁能释放句柄。不要混合 `data` 事件、`pipe` 和 async iterator 多种消费方式来读取同一个流，除非清楚流动模式与所有权。
+**流管线（Pipeline）**把读取、转换和写入的生命周期连接起来。失败或 Abort 会让管线终止；传给生成器的 signal 也应被检查，不能在自定义 await 中永远忽略取消。
 
-### 七、错误要保留操作上下文和原始原因
+| 信号或状态 | 表示什么 | 不表示什么 |
+| --- | --- | --- |
+| Readable end | 没有更多可读数据 | 目标已完整发布 |
+| Writable finish | 写入已交给底层实现 | 所有介质都已持久化 |
+| close | 资源已关闭 | 之前没有发生错误 |
+| destroy | 主动终止流 | 已有外部副作用自动撤销 |
+| pipeline resolve | 这条管线成功完成 | 后续 rename、数据库提交也已完成 |
 
-文件失败可能来自路径不存在、权限拒绝、磁盘空间不足、文件过多、设备断开或输入损坏。系统错误的 `code` 适合程序分支，面向用户的消息则要按操作和恢复方式翻译。包装错误时用 `cause` 保留原始原因，同时加入脱敏后的操作、资源类别和阶段。
-
-```js
-try {
-  await pipeline(source, transform, target, { signal });
-} catch (cause) {
-  throw new Error('导入管线在写入临时文件时失败', { cause });
-}
+```mermaid
+flowchart TB
+  A["读取与有界解析"] --> B["写入专属临时文件"]
+  B --> C["flush 并关闭文件"]
+  C --> D["提交前检查取消"]
+  D --> E["同文件系统 rename"]
+  E --> F["新版本可见"]
+  A -. "失败" .-> G["终止管线并清理自己的临时资源"]
+  B -. "失败" .-> G
+  D -. "取消" .-> G
 ```
 
-不要用字符串包含判断代替 `code`，也不要把完整本地路径、请求正文或密钥写进用户响应。取消、解析失败、资源耗尽和程序缺陷需要不同的可重试/告警策略。
+解析器里为每一行直接启动数据库 Promise，会绕过流自身的速度反馈。需要异步写数据库时，让下游真正等待消费，或使用有界并发队列；同时定义乱序、失败与整批结果的关系。
 
-### 八、临时文件隔离“生成中”与“已提交”
+### 八、原子可见、持久性与并发正确是三件事
 
-直接覆盖目标文件时，进程崩溃或磁盘满可能留下半个新文件。更稳妥的模式是在目标同目录创建不可预测的临时文件，完整写入并验证，然后把它提交为目标。成功前，读者始终看到旧版本；失败时清理临时文件。
+**原子替换（Atomic Replacement）**解决读者不应看到“半个新文件”。同一文件系统内 rename 是常见提交基础，但具体支持与失败条件仍应在目标系统验证，尤其是 Windows 上目标占用、权限和安全软件介入的情况。
 
-**原子替换（Atomic Replacement）**通常依赖同一文件系统内的 rename，但“原子可见”不自动等于“断电后持久”。如果业务要求断电一致性，需要按目标操作系统和文件系统验证：刷新文件数据，关闭句柄，rename，再按平台语义考虑目录元数据刷新。跨文件系统 rename 可能失败，Windows 对已存在目标或打开句柄的行为也与 POSIX 环境不同。
+示例在目标的同一受控父目录下创建暂存目录，避免无意跨文件系统。flush: true 请求在关闭前刷新文件描述符；这不等于完成所有平台的断电持久协议。关键状态可能还要处理目录元数据持久化、设备缓存和恢复，需按文件系统要求设计。
 
-提交协议应写成状态机：CREATING → WRITING → SYNCING → RENAMING → COMMITTED；任一提交前失败都进入 CLEANING，原目标保持不变；rename 后再发生日志或清理失败时，不能把已提交结果谎称为回滚。
+两个调用者同时“读旧文件 → 修改 → rename”，即使每次替换都完整，也可能丢掉其中一次更新。单写者队列、条件版本或数据库事务解决的是另一层问题。不要把一个原子 rename 扩大解释成完整事务。
 
-### 九、fsync 是持久性请求，不是跨平台魔法
+### 九、取消有提交点，结果未知时不能随口说回滚
 
-`FileHandle.sync()` 请求把文件数据与元数据刷新到存储设备，具体保证受操作系统、文件系统、设备缓存和挂载策略影响。只调用 `finish` 表示数据已经交给流，不代表已经安全落盘。反过来，并非每个缓存文件都需要昂贵的同步；持久性等级应由业务损失决定。
+示例在 rename 前检查 signal。一旦 rename 已经提交，之后才到来的取消不能把新文件说成“从未发生”。即使清理空暂存目录失败，结果仍返回 committed: true，同时标记 cleanup: pending。
 
-可以为文件定义三档合同：临时缓存允许丢失；可重建制品要求完整但可重新生成；关键状态要求在确认成功前执行并验证更强持久协议。不要让所有写入默认最强，也不要把关键数据当普通缓存。
+检查与 rename 之间也有竞争窗口。对“取消必须阻止提交”有严格要求的系统，需要在同一个协调机制内决定提交资格，或返回可查询的任务状态。AbortController 只是通知机制，不是文件系统事务锁。
 
-### 十、并发写入需要显式序列化或冲突检测
+恢复时先检查目标版本、内容散列、任务记录与临时资源，再选择清理或重试。网络写入超时更可能已经在远端生效，可衔接[NODE-04 的幂等与结果查询](../chinese-guides/node-04-http-bff-production-engineering.md#node-04)。
 
-两个请求同时从旧文件读取、修改、替换时，每次 rename 都可能原子，但整体仍会丢失更新。原子替换只保护“读者看不到半文件”，不解决并发业务一致性。可以用单写者队列、版本号与条件提交、数据库事务或操作系统锁（需验证语义）协调。
+### 十、错误分类决定下一步，cause 保留证据
 
-若文件是跨进程共享状态，还要处理进程崩溃后的锁恢复和网络文件系统行为。很多情况下，数据库比自造锁文件协议更适合；文件模式适用于配置、制品、缓存或低并发的单机状态。
+不要用 error.message 里有没有“permission”来判断权限问题。Node 系统错误通常用 code 表示类别；业务层再把它映射成适合用户的说明。
 
-### 十一、资源上限比事后清理更重要
+| 失败 | 常见动作 | 避免 |
+| --- | --- | --- |
+| 输入 JSON 或字段无效 | 返回记录位置与修正提示 | 无限重试同一内容 |
+| ENOSPC | 停止写入，通知容量负责人 | 一边失败一边继续制造临时文件 |
+| EACCES | 检查目标与实际权限 | 自动扩大到管理员权限 |
+| AbortError | 报告取消及已知提交状态 | 当作成功，或当成用户内容错误 |
+| 清理失败 | 保留任务与残留位置的受限记录 | 覆盖掉原始执行错误 |
 
-同时打开太多文件会耗尽描述符；同时创建太多流会占用内存和线程池；Transform 若为每条记录启动无界 Promise，也会绕过流自身背压。为打开句柄、在途记录、每条记录大小、总字节、处理时间和错误数量分别设上限。
+cause 让外层说明“导入失败”时仍能追到具体原因。日志只记录必要的逻辑资源标识，不把真实本机路径、用户正文和凭证直接返回浏览器。原始错误与清理错误都发生时，应把两者保留，不让最后一次错误抹掉第一条线索。
 
-取消后停止创建新工作，并等待已有工作到达安全点；迟到结果通过提交令牌或版本检查丢弃。`finally` 中关闭由当前函数拥有的句柄，但不要关闭调用者传入且仍归调用者所有的共享流。
+### 十一、路径验证与流转换都要说清所有权
 
-### 十二、故障注入要覆盖管线每个边界
+不要把用户上传的文件名直接拼到保存目录。使用服务器生成的文件名或批准映射，检查绝对路径、目录逃逸、设备名、链接与检查后替换的竞争。字符串 startsWith(root) 不能可靠证明归属，相似目录前缀就能误导它。
 
-准备足以触发多次背压的输入，记录峰值 RSS、吞吐、`drain` 次数、句柄数与目标散列。分别注入：源读取失败、半条记录、Transform 抛错、Writable 很慢、ENOSPC、EACCES、Abort、消费者提前关闭、rename 冲突和清理失败。
+access 成功不保证下一刻 open 仍有权限。直接执行预期操作并处理错误；创建临时文件采用排他创建，清理只作用于本任务实际拥有的资源。示例的受控目录前提不能省略后拿去当公共上传服务。
 
-每次只改变一个故障，检查错误 `code/cause`、所有流是否终止、句柄是否归零、临时文件是否按合同保留或清除、旧目标是否完全不变。成功路径再从头读取新文件并校验内容，而不是只看 rename 没报错。对跨平台程序，至少在真实支持平台执行文件替换和权限用例。
+Node Stream、Web Stream 与 async iterable 可以互转，但要选一处明确转换。Fetch Response.body 通常是 Web Stream，转换后谁负责读取、取消和关闭必须唯一。别同时用 data 事件、async iterator 与 pipe 消费同一来源，也不要用 text() 先聚合全文来“简化”一个本应流式的大输入。
 
-### 十三、路径、链接与权限也是输入边界
+### 十二、完整导入需要记录级结果和批次结果
 
-用户提供的文件名不能直接拼到目标目录。先解析允许根目录，拒绝绝对路径、`..` 逃逸、保留设备名和不允许的扩展；再处理符号链接、目录连接与检查后替换的竞态。仅用字符串前缀判断路径归属会被大小写、分隔符和相似前缀绕过，应基于平台规范化后的路径和安全打开策略验证。
+本例选择任一记录错误就整批不提交。若产品允许部分成功，需要另外记录稳定行号、记录标识、拒绝原因和重复导入的语义，不能只是 catch 后继续，把失败的行悄悄吞掉。
 
-权限检查与真正打开之间可能发生变化。不要先 `access()` 再假设后续写一定安全；直接执行目标操作，处理准确错误。需要创建新文件时使用排他创建避免意外覆盖；临时文件权限从最小值开始，提交后再按合同调整。服务端日志只记录脱敏逻辑路径或资源 ID。
+恢复检查点要关联输入内容散列、处理器版本和已经确认的提交位置。只有“日志最后显示第 500 行”不足以证明前 500 行已经可靠保存。并发解析、写库与输出都应有界，恢复后也不能重复产生副作用。
 
-### 十四、Node Stream 与 Web Stream 互操作要核对所有权
+验证时先用小输入观察跨块字符、跨块行、慢消费、错误和取消，再按容量目标扩大负载。内存曲线、drain 次数、目标散列和句柄状态各回答一个问题；最终要从用户入口确认拿到的是完整且属于本次任务的结果。
 
-现代 Node 同时支持经典 Node Stream、WHATWG Web Stream 和 async iterable。转换接口便于复用浏览器/Fetch 生态，但背压单位、关闭、锁定和取消语义不完全相同。转换后明确哪一侧拥有 reader/writer，发生 Abort 时谁传播，错误是否保留原 cause。
+### 参考与延伸阅读
 
-不要为了“统一接口”在每层来回转换；边界转换一次并用集成测试覆盖慢消费者、提前取消和错误。对象模式 Node Stream 无法无损映射到只处理字节/对象策略不同的接口时，应写显式适配器，而不是依赖隐式序列化。
-
-### 十五、批量导入需要记录级与文件级两套结果
-
-一份大文件可能要求“任何记录错误则整批不提交”，也可能允许合法记录写入并生成拒绝清单。前者适合先写临时数据库/文件并整体提交；后者要为每条记录提供稳定位置、错误 code 和幂等身份。策略必须在处理前确定，不能遇到错误时临时决定继续。
-
-解析、校验和持久化的并发分别限流。为每条记录启动数据库 Promise 会让文件背压失效；使用有界工作队列，并按业务要求保持顺序或记录重排。崩溃恢复依赖文件 hash、处理版本、最后安全检查点和幂等写，不依赖“日志看到处理到第几行”的猜测。
-
-### 常见误解
-
-- Stream 不保证每个 chunk 对应一条业务记录。
-- `write()` 返回 `false` 不是失败，而是速度反馈。
-- `pipeline` 能协调流生命周期，但不能替你完成业务提交或外部补偿。
-- rename 的原子可见性不等于断电持久，也不解决并发丢失更新。
-- Buffer 让二进制可操作，不意味着把大文件完整读入内存是安全的。
-
-### 学完后应能说明
-
-你应能画出字节从源、解析器、Transform、Writable 到已提交目标的状态变化，说明背压怎样限制内存，区分 finish/close/destroy，设计带取消和错误原因链的 pipeline，并根据数据价值选择临时文件、同步、rename、并发协调和故障验证策略。
+- [Node.js：Stream API](https://nodejs.org/docs/latest-v22.x/api/stream.html)：pipeline、finished、背压与终止语义。
+- [Node.js：File system API](https://nodejs.org/docs/latest-v22.x/api/fs.html)：文件句柄、flush、rename 与错误边界。
+- [Node.js：Buffer](https://nodejs.org/api/buffer.html)、[StringDecoder](https://nodejs.org/api/string_decoder.html)：字节视图、复制与跨块解码。
+- [Node.js：流中的背压](https://nodejs.org/en/learn/modules/backpressuring-in-streams)：慢消费者与内存的关系。

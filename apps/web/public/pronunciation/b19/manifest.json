@@ -16,53 +16,89 @@
       "file": "ee3c65b5c7f4dd0e.wav",
       "text": "Aggregate"
     },
+    "anti-corruption layer": {
+      "file": "9ead436f3ebe5fb1.wav",
+      "text": "Anti-corruption Layer"
+    },
+    "bounded context": {
+      "file": "a00b696c16b3b7c9.wav",
+      "text": "Bounded Context"
+    },
     "business invariant": {
       "file": "ff64a9f172a36441.wav",
       "text": "Business Invariant"
+    },
+    "cache invalidation": {
+      "file": "d3d1b3f8d3576615.wav",
+      "text": "Cache Invalidation"
     },
     "compensation": {
       "file": "b66ecab57861b722.wav",
       "text": "Compensation"
     },
-    "context budget": {
-      "file": "727916cb6a25896a.wav",
-      "text": "Context Budget"
-    },
     "context engineering": {
       "file": "a2f7c635002aa981.wav",
       "text": "Context Engineering"
+    },
+    "differential testing": {
+      "file": "444c1708b271d2ea.wav",
+      "text": "Differential Testing"
+    },
+    "domain model": {
+      "file": "79a8f92fa2db0709.wav",
+      "text": "Domain Model"
+    },
+    "dto": {
+      "file": "9477dda6f1a441d0.wav",
+      "text": "DTO"
     },
     "entity": {
       "file": "bca3685fea8acd4e.wav",
       "text": "Entity"
     },
+    "fuzzing": {
+      "file": "df99079e59e0c69c.wav",
+      "text": "Fuzzing"
+    },
     "guard": {
       "file": "a9d4034da07d8ef3.wav",
       "text": "Guard"
     },
-    "instruction scope": {
-      "file": "a5f97d0bc45091a2.wav",
-      "text": "Instruction Scope"
+    "idempotency": {
+      "file": "f5d39a07e87f63da.wav",
+      "text": "Idempotency"
     },
     "metamorphic testing": {
       "file": "2ce9470821a01a87.wav",
       "text": "Metamorphic Testing"
     },
-    "minimal counterexample": {
-      "file": "08343e80a4b49483.wav",
-      "text": "Minimal Counterexample"
-    },
     "mutation testing": {
       "file": "638d2d923b3d2160.wav",
       "text": "Mutation Testing"
+    },
+    "outbox": {
+      "file": "7772189a259534b2.wav",
+      "text": "Outbox"
+    },
+    "property-based testing": {
+      "file": "510953c105ea0e48.wav",
+      "text": "Property-based Testing"
     },
     "provenance": {
       "file": "96d815328a42cb4e.wav",
       "text": "Provenance"
     },
+    "repository instructions": {
+      "file": "61b89ff54d3a9834.wav",
+      "text": "Repository Instructions"
+    },
     "state machine": {
       "file": "84495362da680d61.wav",
       "text": "State Machine"
+    },
+    "statechart": {
+      "file": "7c8571b07f156180.wav",
+      "text": "Statechart"
     },
     "test oracle": {
       "file": "bd4d06160a515212.wav",

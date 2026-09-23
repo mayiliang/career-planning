@@ -12,17 +12,17 @@
     "linux-01-filesystem-permissions-safe-commands.md"
   ],
   "terms": {
-    "artifact attestation": {
-      "file": "9a149304bb22ee19.wav",
-      "text": "Artifact Attestation"
+    "artifact digest": {
+      "file": "bacbeb4017275940.wav",
+      "text": "Artifact Digest"
+    },
+    "attestation": {
+      "file": "813a89a296973e35.wav",
+      "text": "Attestation"
     },
     "controlled component": {
       "file": "40257da5fcb476ec.wav",
       "text": "Controlled Component"
-    },
-    "filesystem hierarchy": {
-      "file": "0ea08bcbd0b93aa6.wav",
-      "text": "Filesystem Hierarchy"
     },
     "imperative handle": {
       "file": "661a79381f5449e8.wav",
@@ -32,9 +32,17 @@
       "file": "a53708a8a9ae121e.wav",
       "text": "Information Architecture"
     },
+    "inode": {
+      "file": "b3d863c184dafa0e.wav",
+      "text": "inode"
+    },
     "interaction design": {
       "file": "3c61f99530dc2ecf.wav",
       "text": "Interaction Design"
+    },
+    "mount point": {
+      "file": "00824c35dba2b00a.wav",
+      "text": "Mount Point"
     },
     "permission bits": {
       "file": "fdb338d480c48efb.wav",
@@ -66,7 +74,7 @@
     },
     "umask": {
       "file": "7417f3919c25b2d9.wav",
-      "text": "Umask"
+      "text": "umask"
     },
     "uncontrolled component": {
       "file": "addb6470bbd0412c.wav",

@@ -16,25 +16,53 @@
       "file": "714db89df42bdb7c.wav",
       "text": "Accessibility"
     },
+    "accessibility governance": {
+      "file": "1ea1ea332537f654.wav",
+      "text": "Accessibility Governance"
+    },
     "accessibility tree": {
       "file": "c003f76881dfe9e6.wav",
       "text": "Accessibility Tree"
     },
-    "composite": {
-      "file": "ad1e26066637d18f.wav",
-      "text": "Composite"
+    "back-forward cache": {
+      "file": "22e8c35fede89f8f.wav",
+      "text": "Back-Forward Cache"
+    },
+    "broadcastchannel": {
+      "file": "f29e8a393e039f55.wav",
+      "text": "BroadcastChannel"
+    },
+    "critical rendering path": {
+      "file": "3b2f7fdc390d08e6.wav",
+      "text": "Critical Rendering Path"
+    },
+    "dialog": {
+      "file": "6940189433657105.wav",
+      "text": "Dialog"
     },
     "event delegation": {
       "file": "9011f464eae8e788.wav",
       "text": "Event Delegation"
     },
-    "layout": {
-      "file": "1dc5ae5b68174891.wav",
-      "text": "Layout"
+    "focus management": {
+      "file": "b5d69c42c4e9efd1.wav",
+      "text": "Focus Management"
+    },
+    "forced synchronous layout": {
+      "file": "2db2262b2c1f4340.wav",
+      "text": "Forced Synchronous Layout"
+    },
+    "intersectionobserver": {
+      "file": "28451156d9d1d14b.wav",
+      "text": "IntersectionObserver"
     },
     "live region": {
       "file": "5e17a9573ab71867.wav",
       "text": "Live Region"
+    },
+    "mutationobserver": {
+      "file": "d2bbaba11023e44a.wav",
+      "text": "MutationObserver"
     },
     "navigation api": {
       "file": "2decc6ebf07758dd.wav",
@@ -48,25 +76,49 @@
       "file": "029ac7f689c6e54b.wav",
       "text": "Page Lifecycle"
     },
-    "paint": {
-      "file": "297e619db5ee855a.wav",
-      "text": "Paint"
+    "performanceobserver": {
+      "file": "653cbe5ad90ef043.wav",
+      "text": "PerformanceObserver"
     },
-    "style calculation": {
-      "file": "153e3254d3dabbb3.wav",
-      "text": "Style Calculation"
+    "popover": {
+      "file": "7a2f851a404680fe.wav",
+      "text": "Popover"
+    },
+    "reduced motion": {
+      "file": "61c1c8302e82f255.wav",
+      "text": "Reduced Motion"
+    },
+    "resizeobserver": {
+      "file": "07721b29714746e9.wav",
+      "text": "ResizeObserver"
+    },
+    "schema migration": {
+      "file": "f2e0d80592878de1.wav",
+      "text": "Schema Migration"
     },
     "top layer": {
       "file": "092c11ac60a6a9cb.wav",
       "text": "Top Layer"
     },
+    "transaction": {
+      "file": "ce922519a3c3ecaf.wav",
+      "text": "Transaction"
+    },
     "view transition": {
       "file": "43ef4d160eff9c0c.wav",
       "text": "View Transition"
     },
-    "web locks api": {
-      "file": "f1b14612c89ceade.wav",
-      "text": "Web Locks API"
+    "wcag": {
+      "file": "f784caf3aed01b6d.wav",
+      "text": "WCAG"
+    },
+    "web locks": {
+      "file": "e3fa2c477f54b150.wav",
+      "text": "Web Locks"
+    },
+    "worker": {
+      "file": "87eba76e7f316453.wav",
+      "text": "Worker"
     },
     "yield": {
       "file": "8bbcba42d48dcffe.wav",

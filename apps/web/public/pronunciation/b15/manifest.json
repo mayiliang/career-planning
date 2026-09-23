@@ -12,13 +12,57 @@
     "ts-04-mapped-utility-template-literal-types.md"
   ],
   "terms": {
+    "additional authenticated data": {
+      "file": "fae8aadfd2607e71.wav",
+      "text": "Additional Authenticated Data"
+    },
     "aes-gcm": {
       "file": "836a17b0446f9c5e.wav",
       "text": "AES-GCM"
     },
+    "assertion": {
+      "file": "7c5b1d49e6875fd8.wav",
+      "text": "Assertion"
+    },
+    "atomics": {
+      "file": "2171422488843c21.wav",
+      "text": "Atomics"
+    },
+    "attestation": {
+      "file": "813a89a296973e35.wav",
+      "text": "Attestation"
+    },
+    "authenticated encryption": {
+      "file": "090ad3c657f8733c.wav",
+      "text": "Authenticated Encryption"
+    },
+    "authenticator": {
+      "file": "21c9fca2dceaa545.wav",
+      "text": "Authenticator"
+    },
+    "browsing context group": {
+      "file": "0213bba1a8ab0ad9.wav",
+      "text": "Browsing context group"
+    },
     "challenge": {
       "file": "2dd00bd77e0222ce.wav",
       "text": "Challenge"
+    },
+    "conditional mediation": {
+      "file": "19f54aac7514af0b.wav",
+      "text": "Conditional mediation"
+    },
+    "cross-origin embedder policy": {
+      "file": "5ca7a1a91c0de9e5.wav",
+      "text": "Cross-Origin Embedder Policy"
+    },
+    "cross-origin opener policy": {
+      "file": "9964d617e6c3be2b.wav",
+      "text": "Cross-Origin Opener Policy"
+    },
+    "cross-origin resource policy": {
+      "file": "c10b1c4ca4c79a8d.wav",
+      "text": "Cross-Origin Resource Policy"
     },
     "cryptographic envelope": {
       "file": "cd35ba48d8ffebfb.wav",
@@ -28,9 +72,57 @@
       "file": "2b41e07e61d5915f.wav",
       "text": "CryptoKey"
     },
+    "deep readonly": {
+      "file": "aa0619338b95f2b3.wav",
+      "text": "Deep Readonly"
+    },
+    "hardware security module": {
+      "file": "a0a7bd355020ab19.wav",
+      "text": "Hardware Security Module"
+    },
+    "initialization vector": {
+      "file": "0fa64ba60d2f84be.wav",
+      "text": "Initialization Vector"
+    },
+    "isolation-server.mjs": {
+      "file": "b6685c2c9ceedeab.wav",
+      "text": "isolation-server.mjs"
+    },
+    "isolation.html": {
+      "file": "9a97602871d51e2a.wav",
+      "text": "isolation.html"
+    },
+    "key derivation function": {
+      "file": "559ce80a8f8fea51.wav",
+      "text": "Key Derivation Function"
+    },
+    "key management service": {
+      "file": "31745f0cf7b2a206.wav",
+      "text": "Key Management Service"
+    },
+    "key wrapping": {
+      "file": "1c38e1cd6f49f491.wav",
+      "text": "Key wrapping"
+    },
     "mapped type": {
       "file": "b1a780be7767e7df.wav",
       "text": "Mapped Type"
+    },
+    "omit": {
+      "file": "c266ada2b324936a.wav",
+      "text": "Omit"
+    },
+    "origin": {
+      "file": "181fdd46fc4a7246.wav",
+      "text": "Origin"
+    },
+    "partial": {
+      "file": "9834a14ab9bcaa0f.wav",
+      "text": "Partial"
+    },
+    "partner.html": {
+      "file": "6eab96cd9016c056.wav",
+      "text": "partner.html"
     },
     "passkey": {
       "file": "4b949c1309045061.wav",
@@ -40,17 +132,73 @@
       "file": "7040aacf787da8bf.wav",
       "text": "Permissions Policy"
     },
+    "pick": {
+      "file": "8ce33c6c86e991f7.wav",
+      "text": "Pick"
+    },
+    "postmessage": {
+      "file": "f7468c2c84aede07.wav",
+      "text": "postMessage"
+    },
+    "readonly": {
+      "file": "8171bacf32668a8f.wav",
+      "text": "Readonly"
+    },
+    "record": {
+      "file": "70ce871f8a3d3fb4.wav",
+      "text": "Record"
+    },
     "relying party": {
       "file": "aeb0388497c8c3d3.wav",
       "text": "Relying Party"
+    },
+    "required": {
+      "file": "d0a3630555bbec7f.wav",
+      "text": "Required"
+    },
+    "rp id": {
+      "file": "ae87896cf4432d2b.wav",
+      "text": "RP ID"
+    },
+    "satisfies": {
+      "file": "990f250413537091.wav",
+      "text": "satisfies"
+    },
+    "sharedarraybuffer": {
+      "file": "147a5477837f7626.wav",
+      "text": "SharedArrayBuffer"
+    },
+    "site": {
+      "file": "fbae041b02c41ed0.wav",
+      "text": "Site"
+    },
+    "subtlecrypto": {
+      "file": "d5d9d195582a5c71.wav",
+      "text": "SubtleCrypto"
     },
     "template literal type": {
       "file": "dd0a17059e83147e.wav",
       "text": "Template Literal Type"
     },
-    "web authentication": {
-      "file": "08228665281c65bf.wav",
-      "text": "Web Authentication"
+    "user presence": {
+      "file": "a50c4b03b811c708.wav",
+      "text": "User Presence"
+    },
+    "user verification": {
+      "file": "931826d37e884757.wav",
+      "text": "User Verification"
+    },
+    "web crypto": {
+      "file": "a9bd7da5c5f179be.wav",
+      "text": "Web Crypto"
+    },
+    "webauthn": {
+      "file": "503df91e2900a94c.wav",
+      "text": "WebAuthn"
+    },
+    "xs-leaks": {
+      "file": "77cf5ffdef122c1a.wav",
+      "text": "XS-Leaks"
     }
   }
 }

@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 1,
+  "batch": "B16",
+  "title": "从类型推导到可靠业务边界",
+  "reviewedOn": "2026-09-15",
+  "chapters": [
+    {
+      "id": "TS-05",
+      "guide": "ts-05-conditional-infer-distribution.md",
+      "title": "逐步读懂条件类型",
+      "question": "一个联合进入条件类型后，究竟经过了哪些判断？",
+      "summary": "用代入表、合法赋值和实际输出理解 infer、分布、特殊类型与递归边界。",
+      "outcomes": [
+        "逐步展开匹配与失败分支",
+        "区分逐项判断和整体判断",
+        "解释重载、NoInfer 与递归的适用边界"
+      ],
+      "prerequisites": [
+        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03"
+      ],
+      "connections": [
+        {
+          "concept": "indexed-value",
+          "reason": "从输入与输出的关系接回泛型基础。"
+        },
+        {
+          "concept": "mapped-recursion",
+          "reason": "对照不同递归工具的叶子与终止规则。"
+        },
+        {
+          "concept": "functions-overloads",
+          "reason": "理解实际重载调用为何不同于条件推断。"
+        },
+        {
+          "concept": "contract-boundary",
+          "reason": "区分类型推导与真实数据校验。"
+        }
+      ],
+      "anchor": "ts-05",
+      "concepts": [
+        {
+          "id": "conditional-direction",
+          "heading": "一、extends 问的是能否赋值，方向不能倒过来"
+        },
+        {
+          "id": "conditional-constraint",
+          "heading": "二、约束决定能否传入，条件决定传入后的结果"
+        },
+        {
+          "id": "conditional-infer",
+          "heading": "三、infer 在匹配成功的位置给内部类型起名字"
+        },
+        {
+          "id": "conditional-distribution",
+          "heading": "四、裸类型参数会让联合逐个经过分支"
+        },
+        {
+          "id": "conditional-whole",
+          "heading": "五、方括号让判断面对整个联合"
+        },
+        {
+          "id": "conditional-special",
+          "heading": "六、never、unknown 和 any 要分别代入"
+        },
+        {
+          "id": "conditional-filter",
+          "heading": "七、过滤联合靠的是失败分支返回 never"
+        },
+        {
+          "id": "conditional-recursion",
+          "heading": "八、递归解包要说明何时停止"
+        },
+        {
+          "id": "conditional-overload",
+          "heading": "九、从重载推断不会替你逐个模拟调用"
+        },
+        {
+          "id": "conditional-template",
+          "heading": "十、模板解析需要先约定输入语法"
+        },
+        {
+          "id": "conditional-noinfer",
+          "heading": "十一、NoInfer 让一个位置只接受结果，不参与猜测"
+        },
+        {
+          "id": "conditional-evidence",
+          "heading": "十二、用一张推导表决定工具是否值得保留"
+        }
+      ]
+    },
+    {
+      "id": "TS-06",
+      "guide": "ts-06-functions-overloads-variance-component-apis.md",
+      "title": "把函数调用约定写清楚",
+      "question": "调用方会提供什么，回调与组件又必须兑现什么？",
+      "summary": "从资料列表和保存操作理解可选参数、重载、函数替换、异步失败与值的来源。",
+      "outcomes": [
+        "保留参数位置和重载输入输出关系",
+        "解释方差、方法例外与 void 的边界",
+        "设计清楚的组件值来源与泛型回调"
+      ],
+      "prerequisites": [
+        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03"
+      ],
+      "connections": [
+        {
+          "concept": "conditional-overload",
+          "reason": "比较按参数选择调用与读取最后签名的区别。"
+        },
+        {
+          "concept": "component-public-interface",
+          "reason": "把类型约定连接到组件实际公开能力。"
+        },
+        {
+          "concept": "contract-errors",
+          "reason": "让异步命令的失败可以被调用者处理。"
+        },
+        {
+          "concept": "domain-permissions",
+          "reason": "避免把组件可见动作当成服务器授权。"
+        }
+      ],
+      "anchor": "ts-06",
+      "concepts": [
+        {
+          "id": "functions-callback",
+          "heading": "一、先写清谁调用谁，再决定函数签名"
+        },
+        {
+          "id": "functions-rest",
+          "heading": "二、rest 元组能保留参数之间的关系"
+        },
+        {
+          "id": "functions-overloads",
+          "heading": "三、重载应该表达调用关系，而不是堆叠形式"
+        },
+        {
+          "id": "functions-this",
+          "heading": "四、this 参数说明接收者，不会自动绑定对象"
+        },
+        {
+          "id": "functions-variance",
+          "heading": "五、返回值看提供什么，参数看能接住什么"
+        },
+        {
+          "id": "functions-bivariance",
+          "heading": "六、方法的双变例外不能当成安全证明"
+        },
+        {
+          "id": "functions-void",
+          "heading": "七、void 表示调用者忽略结果，async 失败仍要有人接住"
+        },
+        {
+          "id": "functions-command",
+          "heading": "八、通知、命令与取消各有不同承诺"
+        },
+        {
+          "id": "functions-controlled",
+          "heading": "九、受控与非受控要在接口里写出唯一来源"
+        },
+        {
+          "id": "functions-inference",
+          "heading": "十、让数据提供泛型线索，让回调消费推断结果"
+        },
+        {
+          "id": "functions-public",
+          "heading": "十一、公开类型也需要考虑真实调用者"
+        },
+        {
+          "id": "functions-evidence",
+          "heading": "十二、沿一次调用检查接口是否清楚"
+        }
+      ]
+    },
+    {
+      "id": "TS-07",
+      "guide": "ts-07-runtime-contracts-validation-error-models.md",
+      "title": "让真实数据满足接口约定",
+      "question": "收到 JSON 以后，怎样确认能用，并让失败仍可继续？",
+      "summary": "用完整订单解析器和有限字节读取器，分清字段错误、未知状态、版本与页面模型。",
+      "outcomes": [
+        "从 unknown 解析并投影内部模型",
+        "为未知枚举和错误码设计明确结果",
+        "在昂贵解析之前限制资源并管理协议版本"
+      ],
+      "prerequisites": [
+        "ts-02-unions-narrowing-never-exhaustiveness.md#ts-02"
+      ],
+      "connections": [
+        {
+          "concept": "mapped-runtime-projection",
+          "reason": "理解类型删字段和真实对象投影的差别。"
+        },
+        {
+          "concept": "network-decode",
+          "reason": "把响应读取接回请求结果的分层处理。"
+        },
+        {
+          "concept": "domain-state",
+          "reason": "将已解析的数据交给状态和动作模型。"
+        },
+        {
+          "concept": "conditional-filter",
+          "reason": "对照类型层筛选与运行时兼容策略。"
+        }
+      ],
+      "anchor": "ts-07",
+      "concepts": [
+        {
+          "id": "contract-boundary",
+          "heading": "一、类型描述预期，解析器检查实际输入"
+        },
+        {
+          "id": "contract-layers",
+          "heading": "二、先画出每层失败应该去哪里"
+        },
+        {
+          "id": "contract-parser",
+          "heading": "三、用完整解析器把 unknown 变成可用结果"
+        },
+        {
+          "id": "contract-normalization",
+          "heading": "四、解析、归一化与业务校验分开决定"
+        },
+        {
+          "id": "contract-values",
+          "heading": "五、数字、日期和数组不能只检查 typeof"
+        },
+        {
+          "id": "contract-enums",
+          "heading": "六、未知字段和未知枚举需要各自的策略"
+        },
+        {
+          "id": "contract-errors",
+          "heading": "七、稳定错误码连接日志与用户的下一步"
+        },
+        {
+          "id": "contract-resources",
+          "heading": "八、资源限制必须发生在昂贵操作之前"
+        },
+        {
+          "id": "contract-versions",
+          "heading": "九、版本字段让变化有明确入口"
+        },
+        {
+          "id": "contract-models",
+          "heading": "十、输入、记录、响应与页面模型不必长得一样"
+        },
+        {
+          "id": "contract-codegen",
+          "heading": "十一、生成代码能减少重复，不能代替执行校验"
+        },
+        {
+          "id": "contract-recovery",
+          "heading": "十二、把失败做成用户能继续的状态"
+        }
+      ]
+    },
+    {
+      "id": "TS-08",
+      "guide": "ts-08-domain-state-permission-modeling.md",
+      "title": "判断谁能改变哪一版资料",
+      "question": "状态、身份和版本分别在什么时候阻止一次操作？",
+      "summary": "用共享纯函数的桌面审核观察页，看见合法转换、越权拒绝、旧版本与终态。",
+      "outcomes": [
+        "分开建模实体、业务阶段与请求状态",
+        "让动作表连接类型、按钮与运行时 guard",
+        "解释并发、幂等、事件与持久提交的边界"
+      ],
+      "prerequisites": [
+        "ts-07-runtime-contracts-validation-error-models.md#ts-07"
+      ],
+      "connections": [
+        {
+          "concept": "contract-enums",
+          "reason": "为新增或未知状态保留只读兼容入口。"
+        },
+        {
+          "concept": "security-write-gates",
+          "reason": "理解每次写请求都需要可信授权。"
+        },
+        {
+          "concept": "runtime-transaction-lab",
+          "reason": "将纯决定连接到真实事务提交。"
+        },
+        {
+          "concept": "functions-controlled",
+          "reason": "避免将业务状态与组件值来源混在一起。"
+        }
+      ],
+      "anchor": "ts-08",
+      "concepts": [
+        {
+          "id": "domain-identity",
+          "heading": "一、实体靠身份延续，值对象靠内容表达意义"
+        },
+        {
+          "id": "domain-state",
+          "heading": "二、用判别状态保存每个阶段真正需要的数据"
+        },
+        {
+          "id": "domain-actions",
+          "heading": "三、先用状态动作表回答能发生什么"
+        },
+        {
+          "id": "domain-transition",
+          "heading": "四、纯转换函数把决定与副作用分开"
+        },
+        {
+          "id": "domain-permissions",
+          "heading": "五、角色、资源关系与环境条件共同决定授权"
+        },
+        {
+          "id": "domain-lab",
+          "heading": "六、运行观察页，比较可见按钮与手工请求"
+        },
+        {
+          "id": "domain-concurrency",
+          "heading": "七、期望版本把陈旧请求变成明确冲突"
+        },
+        {
+          "id": "domain-idempotency",
+          "heading": "八、幂等解决重复提交，不解决谁有权限"
+        },
+        {
+          "id": "domain-events",
+          "heading": "九、命令表达请求，事件记录已经发生"
+        },
+        {
+          "id": "domain-audit",
+          "heading": "十、时间、审计与能力快照都要有来源"
+        },
+        {
+          "id": "domain-evolution",
+          "heading": "十一、新增状态应让遗漏显露出来"
+        },
+        {
+          "id": "domain-evidence",
+          "heading": "十二、用少量关键路径检查模型有没有说到做到"
+        }
+      ]
+    },
+    {
+      "id": "TS-09",
+      "guide": "ts-09-version-migration-module-governance.md",
+      "title": "沿真实产物完成版本迁移",
+      "question": "类型检查通过以后，还要核对哪些工具与加载结果？",
+      "summary": "构建并消费一个 ESM 小包，用失败对照理解模块配置，再组织逐包升级和退出条件。",
+      "outcomes": [
+        "分清模块输出、解析、库声明与全局类型",
+        "通过独立产物和消费方定位加载及声明问题",
+        "按官方版本快照管理工具双轨、弃用与回滚"
+      ],
+      "prerequisites": [
+        "ts-01-type-system-structural-strict-mode.md#ts-01",
+        "eng-03-dependencies-lockfile-workspaces-peer.md#eng-03"
+      ],
+      "connections": [
+        {
+          "concept": "conditional-evidence",
+          "reason": "将类型边界例子用作升级后的代表调用。"
+        },
+        {
+          "concept": "functions-public",
+          "reason": "核对外部消费者实际看到的公开声明。"
+        },
+        {
+          "concept": "mapped-recursion",
+          "reason": "诊断复杂类型的计算成本而不盲目归因于版本。"
+        },
+        {
+          "concept": "contract-versions",
+          "reason": "对照工具升级与业务协议迁移的不同责任。"
+        }
+      ],
+      "anchor": "ts-09",
+      "concepts": [
+        {
+          "id": "migration-compiler",
+          "heading": "一、先找出是谁在检查这份代码"
+        },
+        {
+          "id": "migration-options",
+          "heading": "二、把 target、module、解析、lib 和 types 分开看"
+        },
+        {
+          "id": "migration-package",
+          "heading": "三、运行一个真的生成 JavaScript 与声明的小包"
+        },
+        {
+          "id": "migration-failure",
+          "heading": "四、故意改错一次，看问题发生在哪一层"
+        },
+        {
+          "id": "migration-consumer",
+          "heading": "五、从包外消费产物，才能检查公开入口"
+        },
+        {
+          "id": "migration-types",
+          "heading": "六、类型发现与副作用导入也会改变结果"
+        },
+        {
+          "id": "migration-six",
+          "heading": "七、6.0 的默认值变化要改成可审阅的配置差异"
+        },
+        {
+          "id": "migration-seven",
+          "heading": "八、7.0 的 CLI 与程序化 API 要分轨核验"
+        },
+        {
+          "id": "migration-packages",
+          "heading": "九、逐包迁移，基础配置只共享真正相同的规则"
+        },
+        {
+          "id": "migration-diagnostics",
+          "heading": "十、诊断先归类，再比较性能"
+        },
+        {
+          "id": "migration-deprecation",
+          "heading": "十一、弃用登记要写替代方式和退出条件"
+        },
+        {
+          "id": "migration-recovery",
+          "heading": "十二、用可恢复的产物完成迁移"
+        }
+      ]
+    }
+  ]
+}

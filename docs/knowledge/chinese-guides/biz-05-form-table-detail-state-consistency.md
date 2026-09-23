@@ -1,129 +1,259 @@
-# 多视图业务状态一致性知识点讲义
+# 保存过程中，怎样保住用户正在输入的内容
 
 ## BIZ-05 表单、表格、详情的状态一致性
 
-同一客户、订单或申请会同时出现在列表、详情、编辑表单、创建向导、抽屉和本地草稿中。它们的展示形状可以不同，但不应各自发明业务事实。真正困难的不是把字段渲染出来，而是在刷新、保存失败、并发编辑、局部响应和权限变化后，仍能回答“哪个值由服务器确认、哪个只是用户未提交输入、哪个响应已经过时”。本讲用明确状态层次和提交协议解决这种一致性问题。
+你把标题从“摄影入门”改成“摄影基础”，点击保存，又继续输入“摄影基础·新版”。几秒后，第一次保存的响应回来了，页面把标题改回了“摄影基础”，还提示“全部已保存”。用户刚写的内容就这样被一个成功响应覆盖了。
+
+多视图一致性要回答的，不只是数据放在哪个 store，而是每个值属于哪一层、哪个版本、哪次提交。本讲沿一次资料编辑，分清已确认事实、编辑基线、当前草稿和发送快照，再处理后台刷新、冲突、自动保存和跨页缓存。
 
 ### 学习前先确认
 
-- 直接前置：[BIZ-02 状态机与业务不变量](../chinese-guides/biz-02-state-machines-business-invariants.md#biz-02)。本讲用显式状态、允许事件和不变量描述编辑与保存生命周期。
-- 直接前置：[BIZ-04 API 契约、DTO 与前端模型](../chinese-guides/biz-04-api-contract-dto-frontend-model.md#biz-04)。本讲假定你已经能区分传输对象、领域解释与界面投影。
+- 直接前置：[BIZ-02 状态机与业务不变量](../chinese-guides/biz-02-state-machines-business-invariants.md#biz-02)。保存、冲突与未知结果有不同的恢复路径。
+- 直接前置：[BIZ-04 API 契约、DTO 与前端模型](../chinese-guides/biz-04-api-contract-dto-frontend-model.md#biz-04)。先理解服务端字段、内部事实和展示投影的边界。
 
-### 一、先区分服务端事实、客户端投影与临时输入
+### 一、同一份资料，至少有四种不同的值
 
-服务端实体是跨用户共享的权威事实，通常带稳定 ID 和版本。客户端查询缓存保存某次已确认快照；列表行、详情和表单初值是从快照派生的投影；用户正在输入的值则是尚未提交的本地状态。把四者放进同一个可变对象，会让后台刷新覆盖输入，或让未保存内容提前出现在其他页面。
+服务端记录是已提交事实；客户端查询保存某次读取的快照；表单基线是本轮编辑的起点；草稿是用户还在修改的内容。保存发出后，还会多出一份被冻结的发送快照。
 
-页面应能指出每个值的来源：来自哪个对象版本、何时读取、是否被用户修改、是否正在提交、服务端是否确认。一个简单只读页面不必引入复杂编辑框架，但一旦允许跨页编辑、自动保存或离线恢复，来源就必须显式化。
+| 名称 | 保存等待期间的示例 | 谁可以改变它 |
+| --- | --- | --- |
+| 服务端事实 | v7：摄影入门 | 有权提交的业务操作 |
+| 编辑基线 Baseline | v7：摄影入门 | 读取、接受新版本或保存确认 |
+| 发送快照 Submitted | 请求 s1：摄影基础 | 发出后保持不变 |
+| 当前草稿 Draft | 摄影基础·新版 | 用户继续输入 |
+| 列表投影 | 仍显示已确认的摄影入门 | 已确认结果或明确的乐观覆盖层 |
 
-### 二、基线快照是比较与恢复的锚点
+直接把表单绑定到查询缓存对象，会让“未保存”内容先出现在列表里。让基线与草稿持有独立值，才能说明哪部分已经确认、哪部分仍需提交。对象身份使用稳定业务 ID，不使用排序位置或显示名称。
 
-**基线快照（Baseline）**是开始编辑或最近一次保存成功时的已确认对象。表单初始化从基线映射，不直接绑定查询缓存引用。保存成功后，用服务端返回的新版本更新基线；撤销则恢复到当前基线，而不是页面首次加载值。
+### 二、草稿允许不完整，提交时再形成合法业务值
 
-基线必须保留稳定身份和版本。若只保留格式化后的文本，无法生成最小补丁、判断冲突或恢复数值精度。日期、金额和枚举在基线中使用领域表示，展示格式留给界面模型。
+用户删除数字准备重新输入时，输入框暂时是空字符串；这不代表服务端时长已经变成 0。草稿需要保存输入过程，不能每按一次键就强行转换成完整领域对象。
 
-后台刷新到来时，未编辑页面可以替换基线；存在本地修改时，应保存新远端快照并提示差异，不能静默覆盖。若新快照表明权限已撤回，立即禁止继续保存，但仍可按安全策略保留或导出用户输入。
+本例约定标题提交时去除首尾空格，时长是 0 至 600 的整数分钟；0 是允许值。规范化只针对这份合同，不是对所有文本和数字的通用规则。
 
-### 三、草稿是独立状态，不是服务端实体的临时变形
+```ts example=biz05-draft-normalization
+type Draft = { title: string; minutes: string };
+type Value = { title: string; minutes: number };
+function normalize(draft: Draft): Value | null {
+  const title = draft.title.trim();
+  if (!title || !/^\d+$/.test(draft.minutes)) return null;
+  const minutes = Number(draft.minutes);
+  if (!Number.isSafeInteger(minutes) || minutes > 600) return null;
+  return { title, minutes };
+}
+console.log(JSON.stringify(normalize({ title: ' 摄影入门 ', minutes: '0' })));
+console.log(normalize({ title: '摄影入门', minutes: '' }));
+console.log(JSON.stringify(normalize({ title: '摄影入门', minutes: '090' })));
+// => {"title":"摄影入门","minutes":0}
+// => null
+// => {"title":"摄影入门","minutes":90}
+```
 
-**草稿（Draft）**包含用户当前输入、字段级校验、触碰状态和可能的本地临时 ID。它允许出现领域对象尚不接受的中间值，例如金额输入到一半的 `-`、尚未选择地区的地址或多步向导未完成阶段。领域验证发生在提交边界，界面校验帮助用户逐步修正。
+不要把所有值都先 `Number()`：空字符串会得到 0，恰好抹掉用户尚未填写的事实。显示格式也不应进入业务比较；换语言后数字的显示可能变化，业务值和未保存状态不该因此变化。
 
-草稿映射应显式处理 0、false、空字符串、null 和缺失。`value || fallback` 会破坏合法零值；JSON 序列化还可能丢失 undefined。提交 DTO 根据操作合同生成，不应把整个表单对象原样发送，避免隐藏字段、只读字段或旧版本属性被意外覆盖。
+### 三、Dirty 比较业务差异，Touched 记录交互历史
 
-创建流程的本地临时 ID 不能冒充服务端实体 ID。服务端创建成功后建立映射、更新列表与详情路由；失败或结果未知时保留意图 ID，先查询再决定是否重试，防止重复创建。
+**Dirty State** 表示当前可提交字段与基线有差异；Touched 表示用户曾操作过这个字段，两者不同。用户把标题改了又改回，仍然 touched，但可能已经不 dirty。
 
-### 四、脏状态要按语义比较
+比较需要遵守字段语义。本例 `090` 与 `90` 可表示同一时长；标签若按集合比较，顺序可能不重要；正文里的空格是否有意义，则不能照搬标题的 trim 规则。对象引用相同不证明内容没变，任意 JSON 序列化也不是普遍适用的等价判断。
 
-**脏状态（Dirty State）**表示草稿与基线在可提交业务字段上存在差异。不能仅用对象引用或 `JSON.stringify` 粗略比较：字段顺序、格式化、默认值和临时 UI 状态会产生误报，文件、日期等也不适合直接 JSON 比较。
+草稿尚不能规范化时，应把它视为需要处理的未完成输入，不显示“已与服务器同步”。离开保护只在确有丢失风险时出现；若有本地草稿恢复能力，还应说清“已保存到本机”和“服务端已确认”的区别。
 
-为每个可编辑字段定义规范化与等价规则。例如手机号去除展示空格后比较，标签集合可能忽略顺序，金额按最小货币单位比较，富文本则按业务认可的规范化结果比较。明确用户把值改回原值时脏状态应清除。
+### 四、发送快照冻结以后，新输入属于下一次提交
 
-字段级脏状态支持局部保存与冲突定位；整体脏状态用于离开保护。离开确认只在输入确有不可恢复风险时出现，本地持久草稿可减少打断。提交过程中用户继续编辑时，已发送快照与当前草稿要分开，否则旧成功响应会错误清除新输入。
+保存开始时记录对象 ID、会话归属、基线版本、本次发送值和字段修订号。响应成功后，基线更新为服务端确认值；草稿只有在某字段自发送以来没有再编辑时，才能采用对应的确认值。
 
-### 五、列表、详情和表单共享事实转换，不共享展示对象
+```js example=biz05-preserve-new-input
+const sent = { title: '摄影基础', minutes: '090' };
+const sentRevision = { title: 1, minutes: 1 };
+const draft = { title: '摄影基础·新版', minutes: '090' };
+const revision = { title: 2, minutes: 1 };
+const confirmed = { title: '摄影基础', minutes: '90' };
+const next = Object.fromEntries(Object.keys(sent).map(field => [field,
+  revision[field] === sentRevision[field] ? confirmed[field] : draft[field],
+]));
+console.log(next.title, next.minutes);
+console.log(next.title !== confirmed.title);
+// => 摄影基础·新版 90
+// => true
+```
 
-同一领域对象可有不同投影，但空值、状态和权限解释应来自共享 mapper。列表把金额格式化为短文本，详情显示完整信息，编辑器生成可输入值；三者都应把 `status=BLOCKED` 理解为同一业务状态，而不是各自 switch。
+标题在发送后又改过，所以保留新版；时长没有再改，采用服务端确认的规范格式。当前草稿仍有未提交修改，不能显示“全部已保存”。
 
-列表摘要通常不含详情所有字段，因此不能用列表响应整体覆盖详情缓存。可以分别缓存 list item 与 detail，或按明确字段合并。局部 PATCH 响应也一样：若服务端只返回变更字段，客户端要么按协议应用补丁，要么使完整查询失效后重取。
+字段修订号用于判断编辑归属，服务端版本用于并发控制，请求 ID 用于关联响应，三者各有用途。只记录一个 `loading` 布尔值，无法表达这些区别。
 
-排序和筛选也是投影合同。对象状态变更后可能不再属于当前列表；客户端更新缓存时要根据当前过滤条件移除或插入，不能只改一行文本。总数、分页边界和预取页也可能需要失效。
+### 五、后台刷新与冲突都要保留比较起点
 
-### 六、保存是一条有版本的状态迁移
+未编辑时，后台新快照可以直接更新页面；存在草稿时，应保留旧基线、当前草稿和新远端值，判断变化是否冲突。这就是三方比较。
 
-保存流程可以写成 `idle → validating → submitting → confirmed | rejected | conflict | unknown`。进入 submitting 时冻结一份发送快照和基线版本；按钮可防止误触，但服务端仍需版本与幂等保护。响应回到时先确认它对应当前对象、当前请求和仍有效的会话。
+```ts example=biz05-three-way-merge
+function mergeField<T>(base: T, local: T, remote: T):
+  { kind: 'merged'; value: T } | { kind: 'conflict'; local: T; remote: T } {
+  if (Object.is(local, base)) return { kind: 'merged', value: remote };
+  if (Object.is(remote, base) || Object.is(local, remote)) return { kind: 'merged', value: local };
+  return { kind: 'conflict', local, remote };
+}
+console.log(JSON.stringify(mergeField('原题', '我的题', '原题')));
+console.log(JSON.stringify(mergeField(90, 90, 120)));
+console.log(JSON.stringify(mergeField('原题', '我的题', '远端题')));
+// => {"kind":"merged","value":"我的题"}
+// => {"kind":"merged","value":120}
+// => {"kind":"conflict","local":"我的题","remote":"远端题"}
+```
 
-成功响应应包含服务端确认后的对象或足够版本信息。更新查询缓存与基线，再只清除本次快照覆盖的脏字段；用户在等待期间的新输入仍保留。422 返回字段错误时保留草稿并把焦点移到错误摘要或首个无效字段。
+这段比较适用于已经规范化、可以按值比较的单字段。复杂集合或富文本需要自己的合并规则，不能直接用 Object.is 替代业务语义。
 
-网络超时属于未知结果。若写操作可能已经成功，不能直接恢复为“未保存”并让用户无限重试；使用意图 ID 查询结果，或以同一幂等键安全重放。界面明确显示“结果确认中”，而不是虚假成功或失败。
+自动合并字段也不一定代表整体合法。例如开始时间只在本地改变、结束时间只在远端改变，两字段分别不冲突，组合后却可能结束早于开始。因此合并后还要重新检查跨字段约束，并在最新版本上提交。
 
-### 七、乐观并发控制防止最后写入吞掉他人修改
+### 六、保存状态说明当前知道什么，以及用户能做什么
 
-**乐观并发控制（Optimistic Concurrency Control）**让客户端提交自己读取的版本，服务端只在当前版本匹配时写入。HTTP 可使用 ETag/If-Match 或显式 version；不匹配返回 409/412 和最新状态，拒绝静默覆盖。
+```mermaid
+flowchart TB
+  A[编辑草稿] --> B[校验并冻结发送快照]
+  B --> C[等待确认<br/>允许继续编辑]
+  C -->|明确成功| D[更新基线<br/>保留新输入]
+  C -->|字段拒绝| E[保留草稿<br/>定位错误]
+  C -->|版本冲突| F[三方比较<br/>解决冲突]
+  C -->|响应丢失| G[查询原意图<br/>确认结果]
+```
 
-冲突界面保存三份数据：旧基线、用户草稿、最新服务端对象。逐字段标出“仅本地改变、仅远端改变、双方改变”，自动合并无冲突字段，双方修改的字段让用户选择或重新确认。业务操作而非字段编辑时，通常重新加载状态并重新执行命令判断，不应机械合并。
+错误不要只表现成一个 toast。字段拒绝应保留草稿，把焦点引导到错误摘要或字段；版本冲突需要显示远端事实及选择；未知结果则进入确认中，不能把它当作明确失败而新建意图。
 
-版本检查必须在服务端原子提交中完成。前端先查询“版本没变”再单独写入存在竞态。即使后端数据库提供行版本，跨聚合规则仍要由拥有不变量的业务边界协调。
+HTTP 写入可以使用强 ETag 与 If-Match，或者明确的版本字段。前提不成立时，实际条件请求通常返回 412，业务合同也可能用 409 表达自身冲突。版本判断与写入必须由服务端原子执行，不能用前端“先查一下还没变”代替。[MDN If-Match](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/If-Match)
 
-### 八、乐观界面更新需要可逆补丁和顺序
+### 七、用观察页亲手交付慢响应和冲突
 
-对可安全预测、失败成本低的操作，界面可以先更新缓存，再提交服务器。开始前保存受影响查询的快照或可逆补丁；失败时只撤销本次操作仍拥有的变化，不能把随后成功的操作一起回滚。
+将完整代码保存为 `editing-lab.html`，用桌面浏览器直接打开。右侧的服务端记录、网络等待和远端修改都在本页内存模拟；它没有真实请求，不会修改学习系统的数据。
 
-同一对象连续提交 A、B 时，A 的晚响应不能覆盖 B。使用客户端操作 ID、服务端版本和响应序列判断；更稳妥的是提交后失效并从服务端重读。高风险操作、不可逆副作用、库存或资金扣减更适合悲观确认。
+先把标题改为“摄影基础”，点发送保存，再继续输入“摄影基础·新版”，最后交付成功响应。已确认记录应为“摄影基础”，草稿仍保留“摄影基础·新版”。再尝试发送后修改远端标题，观察冲突与显式选择。
 
-乐观 UI 不是把服务端当作一定成功。界面要显示待确认状态，刷新后能从查询或 outbox 恢复；失败文案保留用户输入和下一步。具体离线突变与 outbox 会在 DATA-02 深入。
+```html example=biz05-editing-lab runtime=project file=editing-lab.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>编辑状态观察室</title>
+<style>
+:root{font:16px/1.65 system-ui,"Microsoft YaHei",sans-serif;color:#183b36;background:#eef3ef}*{box-sizing:border-box}
+body{margin:0;padding:34px}main{max-width:1200px;margin:auto}h1{font-size:32px;margin:4px 0}h2{font-size:20px;margin:0 0 14px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.tag{font-size:13px;letter-spacing:.1em;color:#526f64}
+.panel{background:white;border:1px solid #ceded4;border-radius:16px;padding:24px;margin-bottom:20px}.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:20px}.grid>*{min-width:0}
+label{display:block;font-weight:650;margin:12px 0 5px}input{font:inherit;border:1px solid #9bb5a9;border-radius:8px;padding:10px;width:100%;color:inherit;background:white}
+button{font:inherit;color:inherit;background:#f4f8f5;border:1px solid #9bb5a9;border-radius:8px;padding:9px 13px;cursor:pointer;margin:5px 6px 5px 0}button.primary{background:#1b6858;color:white}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid #ba791f;outline-offset:3px}.muted{font-size:14px;color:#526f64}p{margin:8px 0}
+#message{min-height:30px;font-weight:650;color:#775019}#dirty{font-weight:650}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.8 ui-monospace,Consolas,monospace;margin:8px 0}
+#conflict{background:#fff6e8;border-color:#dbb780}[hidden]{display:none!important}
+</style>
+<main>
+<header><div><div class="tag">B20 · 基线 / 草稿 / 发送快照</div><h1>编辑状态观察室</h1><p class="muted">手动控制响应顺序，观察成功以后还剩哪些输入。</p></div><button id="reset">重置实验</button></header>
+<section class="panel"><p id="identity"></p><p id="message" role="status" tabindex="-1"></p><button id="switch">打开另一份资料</button></section>
+<div class="grid">
+<section class="panel"><h2>当前草稿</h2><label for="title">标题</label><input id="title"><label for="minutes">时长（分钟，0 至 600）</label><input id="minutes" inputmode="numeric"><p id="dirty"></p><button class="primary" id="send">发送保存</button><button id="undo">恢复当前基线</button><p class="muted">发送后仍可输入。恢复基线只改变当前草稿，不会取消已发出的保存。</p></section>
+<section class="panel"><h2>已确认事实</h2><p class="muted">本页模拟的服务端记录</p><pre id="server"></pre><p class="muted">表单当前基线</p><pre id="baseline"></pre><button id="remote">远端修改标题</button><p class="muted">远端变化不会静默覆盖草稿；下一次提交必须面对版本变化。</p></section>
+</div>
+<section class="panel"><h2>等待交付的请求</h2><pre id="pending"></pre><button id="success">交付保存响应</button><button id="reject">交付业务拒绝</button></section>
+<section class="panel" id="conflict" hidden><h2>当前版本已变化</h2><p>右上方显示最新远端内容。保留整份草稿表示下一次保存要提交当前两项输入；此刻不会直接覆盖远端。</p><button id="keep">保留整份草稿，使用新基线</button><button id="adopt">采用远端内容</button></section>
+</main>
+<script>
+const el=id=>document.getElementById(id),fields=['title','minutes'];
+let records,id,epoch,base,draft,revisions,pending,conflict;
+const editable=value=>({title:value.title,minutes:String(value.minutes)});
+function valueOf(input){
+ const title=input.title.trim(),minutes=Number(input.minutes);
+ return title&&/^\d+$/.test(input.minutes)&&Number.isSafeInteger(minutes)&&minutes<=600?{title,minutes}:null;
+}
+function message(text){el('message').textContent=text;}
+function render(sync=false){
+ const current=records.get(id),value=valueOf(draft);
+ el('identity').textContent='当前资料 '+id+' · 页面归属 '+epoch;
+ el('server').textContent=JSON.stringify(current,null,2);el('baseline').textContent=JSON.stringify(base,null,2);
+ el('pending').textContent=pending?JSON.stringify({id:pending.id,version:pending.version,sent:pending.value},null,2):'没有等待中的请求';
+ el('dirty').textContent=!value?'有未完成或无效输入':value.title===base.title&&value.minutes===base.minutes?'草稿与基线一致':'仍有未提交修改';
+ el('send').disabled=Boolean(pending)||conflict;el('success').disabled=!pending;el('reject').disabled=!pending;
+ el('conflict').hidden=!conflict;
+ if(sync)for(const field of fields)el(field).value=draft[field];
+}
+function open(nextId){id=nextId;epoch+=1;base={...records.get(id)};draft=editable(base);revisions={title:0,minutes:0};conflict=false;render(true);}
+function reset(){records=new Map([['photo',{title:'摄影入门',minutes:90,version:1}],['design',{title:'设计入门',minutes:60,version:1}]]);epoch=0;pending=null;open('photo');message('可以开始编辑，服务端和草稿都来自 v1。');}
+for(const field of fields)el(field).oninput=()=>{draft[field]=el(field).value;revisions[field]+=1;render();};
+el('send').onclick=()=>{
+ const value=valueOf(draft);if(!value){message('请填写标题和 0 至 600 的整数分钟。');el('message').focus();return;}
+ pending={id,epoch,version:base.version,value,revision:{...revisions}};message('已冻结发送快照；你可以继续输入。');render();
+};
+el('success').onclick=()=>{
+ if(!pending)return;const request=pending;pending=null;const current=records.get(request.id);
+ const ok=current.version===request.version;
+ if(ok)records.set(request.id,{...request.value,version:current.version+1});
+ if(request.id!==id||request.epoch!==epoch){message('旧响应已忽略；原资料的提交结果独立存在。');render();return;}
+ if(!ok){conflict=true;message('版本冲突：本次没有写入，草稿已保留。');render();return;}
+ base={...records.get(id)};const confirmed=editable(base);
+ for(const field of fields)if(revisions[field]===request.revision[field])draft[field]=confirmed[field];
+ message('本次快照已确认；发送以后改过的字段继续保留。');render(true);
+};
+el('reject').onclick=()=>{
+ if(!pending)return;const request=pending;pending=null;
+ if(request.id!==id||request.epoch!==epoch){message('旧页面的拒绝响应已忽略。');render();return;}
+ message('模拟业务拒绝：未写入，当前草稿已保留。');render();el('message').focus();
+};
+el('remote').onclick=()=>{const current=records.get(id);records.set(id,{...current,title:current.title+'·远端',version:current.version+1});message('远端已修改；当前草稿与基线未被替换。');render();};
+el('keep').onclick=()=>{base={...records.get(id)};conflict=false;message('已选择保留整份草稿；可基于新版本再次保存。');render();};
+el('adopt').onclick=()=>{base={...records.get(id)};draft=editable(base);for(const field of fields)revisions[field]+=1;conflict=false;message('已采用远端内容。');render(true);};
+el('undo').onclick=()=>{draft=editable(base);for(const field of fields)revisions[field]+=1;message('草稿恢复为当前基线；在途请求仍可能完成。');render(true);};
+el('switch').onclick=()=>{open(id==='photo'?'design':'photo');message('已打开另一份资料；旧请求仍可能完成，但不能改写当前草稿。');};
+el('reset').onclick=reset;reset();
+</script>
+</html>
+```
 
-### 九、自动保存要解决重叠请求与退出语义
+观察页为便于看清决定，冲突时让用户选择整份草稿或远端内容；它没有自动实现前一节的多字段合并。保留草稿只更新比较基线，必须再发起保存，服务端还会再次核对版本。
 
-自动保存通常采用 debounce 降低频率，但 debounce 不解决在途竞态。每次发送带草稿修订号和基线版本；新输入出现时可取消尚未开始的请求，对已经到达服务端的请求则靠版本与响应归属判断。
+也可试试：发送后打开另一份资料，再交付旧响应。原资料可能已提交，但新页面不应被旧内容污染。这个区别说明取消观察与取消业务执行不是同一件事。
 
-状态至少区分“本地已保存”“正在同步”“服务器已确认”“同步失败”“存在冲突”。写“已保存”却只落在浏览器存储会误导用户。页面关闭时 `beforeunload` 不保证异步请求完成，关键草稿先本地持久化并在重开后恢复。
+### 八、列表、详情和统计更新同一事实，各自维护投影
 
-自动保存失败不能用成功 toast 淹没，也不能每次输入都弹窗。集中状态提示、可重试队列和明确的最后确认时间更可靠。涉及多人协同的实时编辑还需要专门一致性模型，本讲只处理普通实体编辑。
+保存确认后，详情可以采用返回的完整对象；列表行根据当前筛选与排序调整；统计和关联列表可能需要失效重查。并非每次保存都要清空整个应用缓存，也不能只改当前表单就结束。
 
-### 十、局部保存、批量编辑与跨页选择有额外边界
+如果资料从草稿变成已发布，它可能不再属于“待发布”列表。只把行里的状态文字改掉，却继续把它留在筛选结果里，同样是不一致。分页总数和后续页位置也要根据合同处理。
 
-局部保存要明确事务范围。若三个字段中两个成功一个失败，服务端返回每项结果与新版本，界面不能整体显示成功；如果业务不允许部分成功，则服务端应原子拒绝。两种合同的恢复方式完全不同。
+摘要响应不能覆盖完整详情，局部 PATCH 结果不能冒充完整对象。共享的是状态、单位和空值的解释，不是强迫所有页面持有同一个可变展示对象。打印与导出通常读取已确认事实；若支持草稿预览，应明确标注。
 
-批量编辑以对象级结果表示成功、冲突、无权和失败。单个错误不一定回滚所有对象，但用户必须知道哪些已生效。重试仅包含未确认项，并沿用相应操作 ID，避免重复处理成功项。
+### 九、乐观更新需要明确谁拥有这次临时变化
 
-跨分页“全选”不能只保存当前页 ID。应记录选择语义：显式 ID 集合，或某查询条件下全选加排除集合；提交时带查询版本/筛选，并由服务端重新授权。对象在选择后变更或失权时安全拒绝。
+收藏、标签等可逆操作可以先显示预期结果，再等待服务端确认。但应保留临时覆盖层或属于本次操作的可逆补丁，失败时只撤销它拥有的变化。
 
-### 十一、缓存一致性与导航生命周期
+假设 A 把标题改成 X，B 随后改成 Y 并成功；A 最后失败。如果 A 直接恢复整份旧对象，就会连 B 的成功一起抹掉。可以序列化同一对象的写入，或按操作顺序重建覆盖层，并用新服务端版本收敛。
 
-保存成功后列出受影响查询图：对象详情、所属列表、统计、关联对象和当前表单基线。选择精确补丁或目标失效，不要全局清空造成抖动，也不要只更新当前组件留下其他页面陈旧。
+高风险发布、名额和权限修改通常更适合等待确认。无论是否乐观，都要让用户知道哪些只是待确认效果；新请求成功不能赋予旧响应再次覆盖的权利。
 
-路由切换、租户切换和登出需要取消请求并清理私有缓存/草稿。迟到响应提交前验证查询键与会话身份。浏览器后退恢复页面时，也要检查基线版本是否仍有效，而不是盲目信任内存快照。
+### 十、自动保存控制请求数量，也控制提交顺序
 
-多标签页可用 BroadcastChannel 通知失效，但它只是一种提示，不是权威同步。最终仍从服务端读取并通过版本控制写入。离线标签恢复时先重验证权限与版本。
+debounce 只减少短时间输入产生的发送次数，不能解决已经在途的请求。一个可理解的起点是同一对象最多一笔保存执行：发送期间继续积累新草稿，成功更新基线后，再决定是否发送下一份快照。
 
-### 十二、验证矩阵必须复现真实故障
+失败分支与 finally 也要校验当前请求归属，否则旧请求的 finally 可能把新请求的“保存中”关掉。服务端版本仍不可省，序列化一个标签页的请求不会阻止另一个标签页或其他用户修改。
 
-用同一对象测试列表、详情、编辑和草稿的 0、false、空串、null、缺失与未知枚举。注入慢响应、响应乱序、双标签编辑、422、409/412、网络超时、局部成功、权限撤回和登出。每条用例记录基线版本、发送快照、当前草稿、响应与最终缓存。
+离线时，本地草稿与服务器确认是两种状态。关键草稿要按适当信息范围保存和恢复；页面关闭时不能依赖一个异步请求必然完成。重开先核对身份、权限与版本，再继续同步，不能把昨天的草稿无条件写回今天的对象。
 
-关键不变量包括：未提交输入不会进入确认缓存；旧响应不能覆盖新版本；保存失败不丢草稿；冲突不静默覆盖；不同身份不共享私有状态；所有页面对同一已确认值解释一致。单元测试 mapper 与 reducer，集成测试接口版本，端到端验证焦点、导航和恢复。
+### 十一、批量保存和导航恢复也要保留结果归属
 
-生产观测记录保存耗时、冲突率、未知结果恢复、草稿恢复和版本错误，不记录敏感字段内容。若冲突持续集中在某字段，可能说明对象边界或协作流程需要重构，而非只增加提示框。
+批量编辑如果允许部分成功，应逐项说明成功、冲突、无权和未处理，重试只包含仍未确认的意图。若合同是整批原子提交，则任何失败都不应呈现部分已保存。两种语义不能混在同一个“保存失败”提示中。
 
-### 十三、常见反例与边界
+跨页选择使用稳定 ID，或明确的筛选全选合同；排序、翻页和同名对象都不能改变选择归属。后台任务还要重新授权，不能仅依赖用户曾在某一页看见这些条目。
 
-- 各页面复制 formatter 和枚举 switch，产生不同语义。
-- 表单直接修改查询缓存对象，未保存内容污染列表。
-- 后台刷新、旧成功响应或失败回滚覆盖用户新输入。
-- 用 truthy 判断吞掉 0、false 与空字符串。
-- 保存不带版本，409 后自动以本地值覆盖远端。
-- 请求超时就显示失败并新建操作，造成重复副作用。
+账号切换、机构切换和路由离开时，取消观察只是第一步。晚到的成功、失败和清理回调都要检查归属，私有缓存与草稿按安全规则清理。BroadcastChannel 可以通知另一个标签页失效，但最终事实仍来自服务端。
 
-只有单一只读视图时，保持直接映射即可；不要把所有页面都变成重型状态机。但当事实被多处消费、允许编辑或存在并发时，明确基线、草稿、版本和响应归属是最低成本的长期方案。
+### 十二、挑能发现丢输入的路径来核对
 
-状态提示也要可访问：保存中、失败和冲突不能只靠颜色；重要变化通过可感知文本与适度 live region 通知，焦点在错误后进入摘要或首个字段，关闭冲突对话框后回到触发位置。读屏和键盘测试使用同一保存/恢复状态机，不能为辅助技术另做一套容易漂移的隐藏流程。
+最有价值的观察通常很具体：发送后继续输入、成功前远端修改、明确拒绝后草稿仍在、切换对象后旧响应到达、把值改回基线、时长为 0、后台刷新与本地编辑同时存在。
 
-国际化格式不能进入业务比较。日期、数字和金额在领域层保持稳定值，展示层按 locale 格式化，输入层解析为明确结果或错误。切换语言后，草稿的业务值和脏状态不应变化；只改变展示文本不应触发保存。
+每次记录基线、发送快照、当前草稿、响应版本及最后页面，而不只看成功提示是否出现。草稿内容未必适合进入日志，可以保存安全的修订号、操作类型和版本，必要时用合成数据重放。
 
-打印、导出和分享视图也从同一确认模型派生；它们不得偷偷读取仍未提交的表单值，除非产品明确把输出标记为草稿预览。
+运行示例证明的是本地模型。真实 API 的条件写入、会话边界与持久化仍要在对应层验证；未知结果的处理继续读 [BIZ-07](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#三结果未知时查询原意图不要先换一个新键)。
 
-表单、表格与详情还要共享身份规范：同一实体始终使用稳定业务 ID，不用数组下标、显示名称或某次请求生成的临时位置互相定位。身份规范一旦分叉，即使三处数据内容相同，也会发生选择错行、详情复用旧实例或编辑结果写到另一对象。把 ID 的来源、类型和跨页持久化写进领域模型，并用重排、翻页、同名对象和删除后重建验证。
+### 动手想一想
 
-### 十四、学完后应能说明
+保存发出后用户点击“恢复当前基线”，原请求随后成功。能否直接把成功值重新填满草稿？先想清楚“恢复”本身也是新的本地编辑，以及它有没有取消服务器上的旧请求。
 
-你应能为同一实体区分服务端事实、查询快照、界面投影与草稿；设计语义脏检查、带版本保存、冲突合并和未知结果恢复；列出保存后受影响的缓存；并通过乱序、并发、局部失败、登出和权限变化证明列表、详情与表单不会互相污染。
+### 参考与延伸阅读
 
-继续查证可参考 [RFC 9110 条件请求与验证器](https://www.rfc-editor.org/rfc/rfc9110.html#name-conditional-requests) 和 [MDN ETag](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Headers/ETag)。
+- [MDN：If-Match](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/If-Match)：核对强验证器与写入前提。
+- [RFC 9110：条件请求](https://www.rfc-editor.org/rfc/rfc9110.html#name-conditional-requests)：进一步查询前提失败的 HTTP 语义。
+- [BIZ-04：接口模型](../chinese-guides/biz-04-api-contract-dto-frontend-model.md#biz-04)：复习局部响应、缺失字段和版本的合同。

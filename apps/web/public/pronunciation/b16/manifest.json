@@ -13,57 +13,161 @@
     "ts-09-version-migration-module-governance.md"
   ],
   "terms": {
-    "api contract": {
-      "file": "7bf80414eb7648ce.wav",
-      "text": "API Contract"
+    "abac": {
+      "file": "039f5155a363616b.wav",
+      "text": "ABAC"
     },
-    "authorization": {
-      "file": "cbb82ebec6051b78.wav",
-      "text": "Authorization"
+    "abortsignal": {
+      "file": "1f840e7d0ca40bdb.wav",
+      "text": "AbortSignal"
+    },
+    "awaited": {
+      "file": "54f93ded12d9e3de.wav",
+      "text": "Awaited"
+    },
+    "bivariance": {
+      "file": "d0f330cd6c6b866a.wav",
+      "text": "Bivariance"
+    },
+    "call signature": {
+      "file": "edece961e1637c9b.wav",
+      "text": "Call Signature"
+    },
+    "cli": {
+      "file": "99bb88401742848e.wav",
+      "text": "CLI"
+    },
+    "command": {
+      "file": "5d347fd948b66308.wav",
+      "text": "Command"
+    },
+    "compiler": {
+      "file": "e996bb0ea465fae7.wav",
+      "text": "Compiler"
+    },
+    "compiler api": {
+      "file": "360c5c8704457380.wav",
+      "text": "Compiler API"
     },
     "conditional type": {
       "file": "902f7276101558d3.wav",
       "text": "Conditional Type"
     },
+    "contract": {
+      "file": "cc8321d6375c494d.wav",
+      "text": "Contract"
+    },
     "contravariance": {
       "file": "0c0eb80b92ec9c51.wav",
       "text": "Contravariance"
+    },
+    "controlled component": {
+      "file": "40257da5fcb476ec.wav",
+      "text": "Controlled Component"
     },
     "covariance": {
       "file": "285ae0043925796c.wav",
       "text": "Covariance"
     },
+    "deprecation": {
+      "file": "ced1863729551faa.wav",
+      "text": "Deprecation"
+    },
     "distributive conditional type": {
       "file": "cefd91e2799619dc.wav",
       "text": "Distributive Conditional Type"
+    },
+    "domain event": {
+      "file": "92c2e5b873cbe66c.wav",
+      "text": "Domain Event"
+    },
+    "entity": {
+      "file": "bca3685fea8acd4e.wav",
+      "text": "Entity"
+    },
+    "error model": {
+      "file": "97bc4ececdb066d6.wav",
+      "text": "Error Model"
+    },
+    "exclude": {
+      "file": "35443277fe297662.wav",
+      "text": "Exclude"
+    },
+    "extract": {
+      "file": "f1cf2fd5c8689512.wav",
+      "text": "Extract"
+    },
+    "function overload": {
+      "file": "a7742ef23a1a7173.wav",
+      "text": "Function Overload"
+    },
+    "idempotency": {
+      "file": "f5d39a07e87f63da.wav",
+      "text": "Idempotency"
+    },
+    "if-match": {
+      "file": "2b1a882e05266547.wav",
+      "text": "If-Match"
     },
     "infer": {
       "file": "92bc2e4121158762.wav",
       "text": "infer"
     },
-    "language server protocol": {
-      "file": "a2ae557528a3a777.wav",
-      "text": "Language Server Protocol"
+    "lsp": {
+      "file": "cb44fdc6e9842df4.wav",
+      "text": "LSP"
     },
     "module resolution": {
       "file": "d54f19372a647173.wav",
       "text": "Module Resolution"
     },
-    "optimistic concurrency control": {
-      "file": "db5df9c03b8526eb.wav",
-      "text": "Optimistic Concurrency Control"
+    "noinfer": {
+      "file": "56a98f30ee19ceca.wav",
+      "text": "NoInfer"
     },
-    "programmatic compiler api": {
-      "file": "2934c81059e79519.wav",
-      "text": "Programmatic Compiler API"
+    "normalization": {
+      "file": "ba4ae54580817dff.wav",
+      "text": "Normalization"
     },
-    "runtime schema": {
-      "file": "ec565d4f3241eb46.wav",
-      "text": "Runtime Schema"
+    "optimistic concurrency": {
+      "file": "07f8e26add7c0774.wav",
+      "text": "Optimistic Concurrency"
     },
-    "state machine": {
-      "file": "84495362da680d61.wav",
-      "text": "State Machine"
+    "outbox": {
+      "file": "7772189a259534b2.wav",
+      "text": "Outbox"
+    },
+    "paths": {
+      "file": "504dbd7ea99e812f.wav",
+      "text": "paths"
+    },
+    "rbac": {
+      "file": "2552b1c0272ab701.wav",
+      "text": "RBAC"
+    },
+    "rest tuple": {
+      "file": "bf3686120339775a.wav",
+      "text": "rest tuple"
+    },
+    "result": {
+      "file": "f6a214f7a5fcda0c.wav",
+      "text": "Result"
+    },
+    "schema": {
+      "file": "df0ad6e43880f09c.wav",
+      "text": "Schema"
+    },
+    "state transition": {
+      "file": "924c2079254c1338.wav",
+      "text": "State Transition"
+    },
+    "value object": {
+      "file": "e8ea2100b49b1160.wav",
+      "text": "Value Object"
+    },
+    "verbatimmodulesyntax": {
+      "file": "48873ca8d1e4cb1f.wav",
+      "text": "verbatimModuleSyntax"
     }
   }
 }

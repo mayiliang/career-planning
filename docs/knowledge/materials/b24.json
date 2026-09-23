@@ -1,0 +1,431 @@
+{
+  "schemaVersion": 1,
+  "batch": "B24",
+  "title": "从服务排障到容器交付",
+  "reviewedOn": "2026-09-22",
+  "chapters": [
+    {
+      "id": "LINUX-02",
+      "title": "沿请求路径定位服务故障",
+      "question": "同一个 502，怎样判断是连接失败、应用失败，还是查错了观察位置？",
+      "summary": "从浏览器到代理和上游逐段取证，连接进程、监听、DNS、TLS、日志、资源与退出，并用本地 HTTP 实验对照结果。",
+      "outcomes": [
+        "按产生层区分网络错误与 HTTP 状态",
+        "把地址、进程、服务和日志对到同一次请求",
+        "说明证据的适用范围并用原路径复验"
+      ],
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01",
+        "linux-01-filesystem-permissions-safe-commands.md#linux-01"
+      ],
+      "guide": "linux-02-process-port-log-network-diagnostics.md",
+      "anchor": "linux-02",
+      "concepts": [
+        {
+          "id": "linux-diagnosis-observation",
+          "heading": "一、把报错写成能够复现的观察"
+        },
+        {
+          "id": "linux-diagnosis-path",
+          "heading": "二、一次网页请求可能包含两次连接"
+        },
+        {
+          "id": "linux-diagnosis-process",
+          "heading": "三、进程存在、服务运行和业务健康是三件事"
+        },
+        {
+          "id": "linux-diagnosis-socket",
+          "heading": "四、监听地址比端口号多回答一个问题"
+        },
+        {
+          "id": "linux-diagnosis-local",
+          "heading": "五、先比较同一主机上的两条请求"
+        },
+        {
+          "id": "linux-diagnosis-dns",
+          "heading": "六、DNS、地址族和路由分别查"
+        },
+        {
+          "id": "linux-diagnosis-tls",
+          "heading": "七、保留域名，才能正确验证 TLS"
+        },
+        {
+          "id": "linux-diagnosis-timing",
+          "heading": "八、把耗时拆到阶段，但不要凭一个数字定罪"
+        },
+        {
+          "id": "linux-diagnosis-logs",
+          "heading": "九、日志要接成时间线，资源要看实际限制"
+        },
+        {
+          "id": "linux-diagnosis-lab",
+          "heading": "十、用一个本地实验看懂 500 与 502"
+        },
+        {
+          "id": "linux-diagnosis-signal",
+          "heading": "十一、停止服务是一段有期限的协作"
+        },
+        {
+          "id": "linux-diagnosis-repair",
+          "heading": "十二、用最小修复回答完整问题"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "filesystem-basic-evidence",
+          "reason": "进程能否读取配置还受实际身份、路径和系统策略限制。"
+        },
+        {
+          "concept": "compose-runtime-localhost",
+          "reason": "容器与宿主的回环地址不同，观察位置必须随证据记录。"
+        },
+        {
+          "concept": "image-build-entry",
+          "reason": "入口与 PID 1 关系会改变信号能否到达应用。"
+        },
+        {
+          "concept": "linux-security-network",
+          "reason": "连接结果需要与监听、来源和各层网络规则一起解释。"
+        }
+      ]
+    },
+    {
+      "id": "LINUX-03",
+      "title": "让脚本在失败与重复执行后仍可解释",
+      "question": "手动命令为什么到定时任务里会出错，预览、锁和提交又分别保护什么？",
+      "summary": "以参数边界和退出状态为起点，解释严格模式、环境、暂存、原子切换、幂等、信号与定时触发，提供完整实验发布脚本。",
+      "outcomes": [
+        "保持参数边界并显式处理关键失败",
+        "区分预览、准备、提交、清理与回滚",
+        "为重复执行和调度环境写出明确合同"
+      ],
+      "prerequisites": [
+        "linux-01-filesystem-permissions-safe-commands.md#linux-01"
+      ],
+      "guide": "linux-03-shell-environment-automation.md",
+      "anchor": "linux-03",
+      "concepts": [
+        {
+          "id": "shell-task-contract",
+          "heading": "一、先说明脚本接受什么，再写第一条命令"
+        },
+        {
+          "id": "shell-task-arguments",
+          "heading": "二、命令收到的是参数数组，不是一句自然语言"
+        },
+        {
+          "id": "shell-task-pipeline",
+          "heading": "三、管道传送数据，也隐藏了一串退出状态"
+        },
+        {
+          "id": "shell-task-failure",
+          "heading": "四、严格模式不能替你定义失败后的动作"
+        },
+        {
+          "id": "shell-task-environment",
+          "heading": "五、环境是输入，秘密不是调试材料"
+        },
+        {
+          "id": "shell-task-plan",
+          "heading": "六、计划、准备和提交分别承担什么责任"
+        },
+        {
+          "id": "shell-task-lab",
+          "heading": "七、一个只切换实验链接的完整脚本"
+        },
+        {
+          "id": "shell-task-observe",
+          "heading": "八、从空目录观察预览、提交和重复执行"
+        },
+        {
+          "id": "shell-task-idempotency",
+          "heading": "九、幂等、锁和远端重试解决不同问题"
+        },
+        {
+          "id": "shell-task-cleanup",
+          "heading": "十、trap 是清理钩子，不是永不失败的恢复系统"
+        },
+        {
+          "id": "shell-task-schedule",
+          "heading": "十一、定时触发只决定何时开始"
+        },
+        {
+          "id": "shell-task-maintenance",
+          "heading": "十二、让后来的人能理解、暂停和恢复"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "filesystem-basic-atomic",
+          "reason": "提交入口的原子可见性不自动保证持久性和业务回滚。"
+        },
+        {
+          "concept": "business-recovery-unknown",
+          "reason": "远端写入超时之后要先确认原操作，不能无限重放。"
+        },
+        {
+          "concept": "compose-runtime-environment",
+          "reason": "配置插值与子进程环境发生在不同阶段。"
+        },
+        {
+          "concept": "linux-diagnosis-signal",
+          "reason": "脚本退出要与子进程、信号和管理器的生命周期配合。"
+        }
+      ]
+    },
+    {
+      "id": "LINUX-04",
+      "title": "把服务器的允许与拒绝逐条说清",
+      "question": "密钥登录成功以后，怎样确认账号、sudo、端口和恢复通道仍在预期边界内？",
+      "summary": "从主体和入口建立权限关系，解释 SSH 双向身份、有效配置、密钥生命周期、sudo、网络暴露、服务硬化与防自锁变更。",
+      "outcomes": [
+        "沿可写文件和执行身份检查间接提权能力",
+        "核对有效 SSH 策略及允许与拒绝的结果",
+        "分步应用变更并保留可验证的恢复路径"
+      ],
+      "prerequisites": [
+        "linux-01-filesystem-permissions-safe-commands.md#linux-01",
+        "sec-01-xss-csrf-trust-boundaries.md#sec-01"
+      ],
+      "guide": "linux-04-server-security-ssh-users-firewall.md",
+      "anchor": "linux-04",
+      "concepts": [
+        {
+          "id": "linux-security-matrix",
+          "heading": "一、先画允许关系，再选择配置选项"
+        },
+        {
+          "id": "linux-security-privilege",
+          "heading": "二、最小权限要沿着可写关系检查"
+        },
+        {
+          "id": "linux-security-identity",
+          "heading": "三、SSH 同时验证两种不同身份"
+        },
+        {
+          "id": "linux-security-config",
+          "heading": "四、读有效配置，不能只读你刚改的文件"
+        },
+        {
+          "id": "linux-security-keys",
+          "heading": "五、公钥登记、轮换与撤销是一段生命周期"
+        },
+        {
+          "id": "linux-security-sudo",
+          "heading": "六、sudo 的允许命令必须追到执行内容"
+        },
+        {
+          "id": "linux-security-network",
+          "heading": "七、端口规则要同时说明来源与观察方向"
+        },
+        {
+          "id": "linux-security-recovery",
+          "heading": "八、先证明新路径可用，再撤旧路径"
+        },
+        {
+          "id": "linux-security-service",
+          "heading": "九、服务硬化要保留必要写入能力"
+        },
+        {
+          "id": "linux-security-operations",
+          "heading": "十、更新、日志和备份需要持续有人负责"
+        },
+        {
+          "id": "linux-security-drift",
+          "heading": "十一、用允许与拒绝的对照识别配置漂移"
+        },
+        {
+          "id": "linux-security-incident",
+          "heading": "十二、可疑登录之后先限制影响，再重新建立信任"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "filesystem-basic-identity",
+          "reason": "账号名称不是完整权限，需要看运行身份与可写对象。"
+        },
+        {
+          "concept": "linux-diagnosis-socket",
+          "reason": "监听地址和实际连接证据共同解释端口暴露。"
+        },
+        {
+          "concept": "image-build-permissions",
+          "reason": "镜像中的用户与部署时的能力、挂载要共同审查。"
+        },
+        {
+          "concept": "supply-trust-response",
+          "reason": "恢复服务时仍要核对制品来源与已撤销的身份。"
+        }
+      ]
+    },
+    {
+      "id": "DOCKER-01",
+      "title": "从构建输入走到可解释的容器运行",
+      "question": "镜像构建成功后，还要检查哪些内容才能理解缓存、权限和停止行为？",
+      "summary": "分清镜像与容器，用完整资料页构建示例讲清上下文、多阶段、缓存、制品身份、非 root、健康、信号和秘密。",
+      "outcomes": [
+        "区分镜像内容和一次容器运行条件",
+        "解释输入变化如何影响构建与缓存",
+        "核对产物范围、用户、端口、健康和退出"
+      ],
+      "prerequisites": [
+        "linux-01-filesystem-permissions-safe-commands.md#linux-01"
+      ],
+      "guide": "docker-01-images-containers-dockerfile-cache.md",
+      "anchor": "docker-01",
+      "concepts": [
+        {
+          "id": "image-build-objects",
+          "heading": "一、镜像定义内容，容器带上一次运行条件"
+        },
+        {
+          "id": "image-build-identity",
+          "heading": "二、tag 是名字，digest 才对准具体内容"
+        },
+        {
+          "id": "image-build-context",
+          "heading": "三、构建上下文是可供构建器读取的输入范围"
+        },
+        {
+          "id": "image-build-cache",
+          "heading": "四、缓存复用的是已有结果，不是重新判断业务正确"
+        },
+        {
+          "id": "image-build-stages",
+          "heading": "五、多阶段让构建工具不必跟着应用一起交付"
+        },
+        {
+          "id": "image-build-lab",
+          "heading": "六、一个能从五个文件读懂的镜像实验"
+        },
+        {
+          "id": "image-build-observe",
+          "heading": "七、按现象核对构建与运行"
+        },
+        {
+          "id": "image-build-permissions",
+          "heading": "八、非 root 与只读文件系统解决不同问题"
+        },
+        {
+          "id": "image-build-entry",
+          "heading": "九、入口必须让信号到达真正的应用"
+        },
+        {
+          "id": "image-build-health",
+          "heading": "十、端口、健康状态和重启不是一个开关"
+        },
+        {
+          "id": "image-build-secrets",
+          "heading": "十一、构建参数与秘密要分开传递"
+        },
+        {
+          "id": "image-build-release",
+          "heading": "十二、发布的是镜像和运行合同的组合"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "supply-trust-subject",
+          "reason": "扫描、签名与部署必须对准同一份镜像对象。"
+        },
+        {
+          "concept": "shell-task-environment",
+          "reason": "构建参数、运行环境和秘密需要明确传递阶段。"
+        },
+        {
+          "concept": "linux-security-privilege",
+          "reason": "非 root 之外，还要看哪些内容可写以及谁会执行它。"
+        },
+        {
+          "concept": "compose-runtime-topology",
+          "reason": "同一镜像进入多服务系统后还需要明确网络与数据归属。"
+        }
+      ]
+    },
+    {
+      "id": "DOCKER-02",
+      "title": "把服务通信和数据生命周期一起配置",
+      "question": "服务都运行了却连不上，或者重建后数据丢失，应该分别检查什么？",
+      "summary": "通过网关与单写入者计数服务连接项目名、服务 DNS、变量、就绪、卷和合并配置，说明恢复与生产数据库的不同条件。",
+      "outcomes": [
+        "按观察位置选对服务名与端口",
+        "读取合并后的配置并解释启动条件",
+        "区分容器重建、卷保留、备份恢复和版本回滚"
+      ],
+      "prerequisites": [
+        "docker-01-images-containers-dockerfile-cache.md#docker-01",
+        "linux-02-process-port-log-network-diagnostics.md#linux-02"
+      ],
+      "guide": "docker-02-compose-network-volumes-environments.md",
+      "anchor": "docker-02",
+      "concepts": [
+        {
+          "id": "compose-runtime-topology",
+          "heading": "一、先画出服务和数据各自属于谁"
+        },
+        {
+          "id": "compose-runtime-project",
+          "heading": "二、项目名决定哪些资源属于同一套环境"
+        },
+        {
+          "id": "compose-runtime-localhost",
+          "heading": "三、localhost 要连同观察位置一起读"
+        },
+        {
+          "id": "compose-runtime-environment",
+          "heading": "四、同一个变量名可能在两个阶段生效"
+        },
+        {
+          "id": "compose-runtime-startup",
+          "heading": "五、启动依赖只约束一次启动过程"
+        },
+        {
+          "id": "compose-runtime-app",
+          "heading": "六、完整实验先给服务一个明确的数据合同"
+        },
+        {
+          "id": "compose-runtime-config",
+          "heading": "七、再用 Compose 连接网络、用户与存储"
+        },
+        {
+          "id": "compose-runtime-observe",
+          "heading": "八、从浏览器入口验证重建后的数据"
+        },
+        {
+          "id": "compose-runtime-storage",
+          "heading": "九、卷保留数据，备份提供另一条恢复路径"
+        },
+        {
+          "id": "compose-runtime-merge",
+          "heading": "十、挂载与覆盖文件会改变你以为的镜像"
+        },
+        {
+          "id": "compose-runtime-recovery",
+          "heading": "十一、服务失效以后，由应用决定怎样继续"
+        },
+        {
+          "id": "compose-runtime-release",
+          "heading": "十二、升级与回滚要带着数据版本一起考虑"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "linux-diagnosis-path",
+          "reason": "服务间一次请求仍需要沿真实的连接路径定位故障。"
+        },
+        {
+          "concept": "image-build-health",
+          "reason": "健康状态、进程退出与流量就绪分别表达不同事实。"
+        },
+        {
+          "concept": "business-recovery-unknown",
+          "reason": "网关未收到写入响应不能证明 API 没有执行。"
+        },
+        {
+          "concept": "shell-task-idempotency",
+          "reason": "一次性初始化、重试与重复发布仍需各自的幂等合同。"
+        }
+      ]
+    }
+  ]
+}

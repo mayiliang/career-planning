@@ -12,41 +12,65 @@
     "perf-01-core-web-vitals-performance-budgets.md"
   ],
   "terms": {
-    "cache invalidation": {
-      "file": "d3d1b3f8d3576615.wav",
-      "text": "Cache Invalidation"
+    "artifact": {
+      "file": "c7c5c1d70c5dec44.wav",
+      "text": "Artifact"
+    },
+    "blue-green deployment": {
+      "file": "920e9f7ca6afb3de.wav",
+      "text": "Blue-green Deployment"
+    },
+    "burn rate": {
+      "file": "7f766a3ff128ad73.wav",
+      "text": "Burn Rate"
+    },
+    "cache key": {
+      "file": "d44a753e71377fa7.wav",
+      "text": "Cache Key"
     },
     "canary release": {
       "file": "43b1915610d31922.wav",
       "text": "Canary Release"
     },
-    "content delivery network": {
-      "file": "330d240a9e29541a.wav",
-      "text": "Content Delivery Network"
+    "cdn": {
+      "file": "db9831b53a8574d3.wav",
+      "text": "CDN"
     },
     "continuous delivery": {
       "file": "238333780152727d.wav",
       "text": "Continuous Delivery"
     },
-    "continuous integration": {
-      "file": "02f53fd47961035f.wav",
-      "text": "Continuous Integration"
+    "continuous deployment": {
+      "file": "a63dec0967f0196f.wav",
+      "text": "Continuous Deployment"
+    },
+    "core web vitals": {
+      "file": "82a16e2c0c4f6dee.wav",
+      "text": "Core Web Vitals"
     },
     "cumulative layout shift": {
       "file": "20c4469afae0133a.wav",
       "text": "Cumulative Layout Shift"
     },
-    "distributed tracing": {
-      "file": "8a94356e01d66703.wav",
-      "text": "Distributed Tracing"
-    },
     "error budget": {
       "file": "32064cd18225ac06.wav",
       "text": "Error Budget"
     },
-    "immutable artifact": {
-      "file": "eca6f2c7063ef1bf.wav",
-      "text": "Immutable Artifact"
+    "expand-contract": {
+      "file": "187b739d9374bced.wav",
+      "text": "Expand-contract"
+    },
+    "feature flag": {
+      "file": "fe888396877cfcad.wav",
+      "text": "Feature Flag"
+    },
+    "gate": {
+      "file": "c974e17b8e7321ce.wav",
+      "text": "Gate"
+    },
+    "hsts": {
+      "file": "6e6876b3a9522864.wav",
+      "text": "HSTS"
     },
     "interaction to next paint": {
       "file": "d78435887098e0f0.wav",
@@ -55,6 +79,22 @@
     "largest contentful paint": {
       "file": "5511078a06d7f618.wav",
       "text": "Largest Contentful Paint"
+    },
+    "logs": {
+      "file": "98f38f12db221a8c.wav",
+      "text": "Logs"
+    },
+    "metrics": {
+      "file": "177a7ea3611fe6b1.wav",
+      "text": "Metrics"
+    },
+    "nearest-rank": {
+      "file": "9ffc6992ec571226.wav",
+      "text": "nearest-rank"
+    },
+    "observability": {
+      "file": "58ee00072efbff71.wav",
+      "text": "Observability"
     },
     "performance budget": {
       "file": "39605983e6c911ef.wav",
@@ -68,13 +108,45 @@
       "file": "471a643a0a7df7a2.wav",
       "text": "Reverse Proxy"
     },
+    "rollback": {
+      "file": "da25480fb483e6ce.wav",
+      "text": "Rollback"
+    },
+    "sampling": {
+      "file": "52630e4131f9862e.wav",
+      "text": "Sampling"
+    },
+    "service level indicator": {
+      "file": "ba41a1d4475c8535.wav",
+      "text": "Service Level Indicator"
+    },
     "service level objective": {
       "file": "1dcd4d3fe0e6276c.wav",
       "text": "Service Level Objective"
     },
-    "transport layer security": {
-      "file": "bffbc220d2aec591.wav",
-      "text": "Transport Layer Security"
+    "short-lived credentials": {
+      "file": "bb159776298b88e5.wav",
+      "text": "Short-lived Credentials"
+    },
+    "spa fallback": {
+      "file": "629aa3b32e5034c5.wav",
+      "text": "SPA fallback"
+    },
+    "sse": {
+      "file": "fe3811fe21af748f.wav",
+      "text": "SSE"
+    },
+    "tls": {
+      "file": "b7e651cbb43ba0ca.wav",
+      "text": "TLS"
+    },
+    "total blocking time": {
+      "file": "5abfbcc34793b392.wav",
+      "text": "Total Blocking Time"
+    },
+    "traces": {
+      "file": "b5ac69fc467c01f3.wav",
+      "text": "Traces"
     }
   }
 }

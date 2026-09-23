@@ -13,6 +13,10 @@
     "docker-02-compose-network-volumes-environments.md"
   ],
   "terms": {
+    "bind mount": {
+      "file": "e7331682d092ceb2.wav",
+      "text": "Bind Mount"
+    },
     "build context": {
       "file": "7e47285113262edb.wav",
       "text": "Build Context"
@@ -29,9 +33,13 @@
       "file": "75ddf920195c71e2.wav",
       "text": "Docker Compose"
     },
-    "health check": {
-      "file": "753ed007e6df33c2.wav",
-      "text": "Health Check"
+    "exit status": {
+      "file": "bb23b176737e771e.wav",
+      "text": "Exit Status"
+    },
+    "host key": {
+      "file": "fb1b291ae5bf3c41.wav",
+      "text": "Host Key"
     },
     "idempotency": {
       "file": "f5d39a07e87f63da.wav",
@@ -53,6 +61,10 @@
       "file": "5b9cc3a4da689a7c.wav",
       "text": "Least Privilege"
     },
+    "multi-stage build": {
+      "file": "178708f57f763d80.wav",
+      "text": "Multi-stage Build"
+    },
     "named volume": {
       "file": "4e161dee366ec1a8.wav",
       "text": "Named Volume"
@@ -60,6 +72,10 @@
     "pipefail": {
       "file": "8e3c081d66fbfdb7.wav",
       "text": "Pipefail"
+    },
+    "port publishing": {
+      "file": "e71364a7b456a607.wav",
+      "text": "Port Publishing"
     },
     "process": {
       "file": "19ed40bf62c399b8.wav",
@@ -69,17 +85,9 @@
       "file": "878decf4e545b404.wav",
       "text": "Quoting"
     },
-    "secure shell": {
-      "file": "1e8bae6c0cb550bf.wav",
-      "text": "Secure Shell"
-    },
     "service discovery": {
       "file": "07eda4f8c0e8b199.wav",
       "text": "Service Discovery"
-    },
-    "shell expansion": {
-      "file": "67df56cf8ddff59c.wav",
-      "text": "Shell Expansion"
     },
     "signal": {
       "file": "d041924c15885af6.wav",
@@ -89,9 +97,17 @@
       "file": "47dd56c2c7a7f7aa.wav",
       "text": "Socket"
     },
+    "ssh": {
+      "file": "7f5a55cf3f88be93.wav",
+      "text": "SSH"
+    },
     "sudoers": {
       "file": "f5ba91605c1884f0.wav",
       "text": "Sudoers"
+    },
+    "systemd": {
+      "file": "e0031c189e34e10d.wav",
+      "text": "systemd"
     }
   }
 }

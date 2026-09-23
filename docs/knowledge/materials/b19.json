@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "batch": "B19",
+  "title": "从 AI 证据到业务规则",
+  "reviewedOn": "2026-09-19",
+  "chapters": [
+    {
+      "id": "AIDEV-02",
+      "title": "把准确的项目事实交给 AI",
+      "question": "怎样让 AI 找到当前任务真正需要的事实，而不被旧资料带偏？",
+      "summary": "从名单导出出发，整理任务事实、仓库指令、版本、检索预算、缓存和恢复记录。",
+      "outcomes": [
+        "区分目标、现状、未知项与适用指令",
+        "用来源、版本和权限筛选上下文",
+        "让缓存、摘要和长任务记录及时更新"
+      ],
+      "prerequisites": [
+        "aidev-01-specification-controlled-agent-loop.md#aidev-01"
+      ],
+      "guide": "aidev-02-context-engineering-repository-instructions.md",
+      "anchor": "aidev-02",
+      "concepts": [
+        {
+          "id": "aidev-context-facts",
+          "heading": "一、先区分要做什么、现在怎样和仍不知道什么"
+        },
+        {
+          "id": "aidev-context-map",
+          "heading": "二、仓库地图负责带路，正文按需要读取"
+        },
+        {
+          "id": "aidev-context-instructions",
+          "heading": "三、仓库指令写稳定约定，适用范围由工具确认"
+        },
+        {
+          "id": "aidev-context-conflicts",
+          "heading": "四、遇到冲突时，先确定冲突回答的是哪个问题"
+        },
+        {
+          "id": "aidev-context-provenance",
+          "heading": "五、引用要带来源与版本，别只留下一个结论"
+        },
+        {
+          "id": "aidev-context-budget",
+          "heading": "六、预算不足时，保住必要事实，再挑选补充材料"
+        },
+        {
+          "id": "aidev-context-cache",
+          "heading": "七、缓存命中还要问，这份内容现在是否适用"
+        },
+        {
+          "id": "aidev-context-untrusted",
+          "heading": "八、不可信内容可以提供事实，不能自行扩大权限"
+        },
+        {
+          "id": "aidev-context-recovery",
+          "heading": "九、长任务恢复，要保存能重新核对的状态"
+        },
+        {
+          "id": "aidev-context-retrieval",
+          "heading": "十、检索方式跟着问题走，不只追求相似度"
+        },
+        {
+          "id": "aidev-context-evaluation",
+          "heading": "十一、用同一组真实任务比较上下文策略"
+        },
+        {
+          "id": "aidev-context-maintenance",
+          "heading": "十二、维护体系要让过期事实容易被发现"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "aidev-loop-context",
+          "reason": "把本轮上下文放回规格、行动与观察组成的循环。"
+        },
+        {
+          "concept": "aidev-proof-oracle",
+          "reason": "准确的上下文还需要独立判断依据来验证结果。"
+        },
+        {
+          "concept": "business-model-language",
+          "reason": "用统一语言确定已录取和候补的真实含义。"
+        },
+        {
+          "concept": "privacy-minimization",
+          "reason": "检索与缓存也要在读取前限定必要信息。"
+        }
+      ]
+    },
+    {
+      "id": "AIDEV-03",
+      "title": "让检查有能力发现错误",
+      "question": "代码和测试都由 AI 生成时，怎样避免它们一起验证错误的目标？",
+      "summary": "用名单反例、输入变换、种子与收缩、故意改错的对照，按风险组织真实证据。",
+      "outcomes": [
+        "给预期结果找到独立业务依据",
+        "用反例、属性和变异识别无效检查",
+        "说明局部检查与真实接口各能证明什么"
+      ],
+      "prerequisites": [
+        "aidev-01-specification-controlled-agent-loop.md#aidev-01",
+        "test-03-e2e-visual-regression-isolation-flakiness.md#test-03"
+      ],
+      "guide": "aidev-03-ai-generated-code-verification.md",
+      "anchor": "aidev-03",
+      "concepts": [
+        {
+          "id": "aidev-proof-oracle",
+          "heading": "一、预期结果必须有独立于生成代码的依据"
+        },
+        {
+          "id": "aidev-proof-counterexample",
+          "heading": "二、先留下能暴露错误的最小例子，再修实现"
+        },
+        {
+          "id": "aidev-proof-properties",
+          "heading": "三、属性描述一类输入，但要防止空洞的真命题"
+        },
+        {
+          "id": "aidev-proof-metamorphic",
+          "heading": "四、变换输入后，某些结果关系应该保持"
+        },
+        {
+          "id": "aidev-proof-differential",
+          "heading": "五、参考实现适合对照，但旧版本不是天然正确答案"
+        },
+        {
+          "id": "aidev-proof-generation",
+          "heading": "六、生成更多输入之后，把失败缩到看得懂"
+        },
+        {
+          "id": "aidev-proof-mutation",
+          "heading": "七、故意改错一次，观察断言有没有反应"
+        },
+        {
+          "id": "aidev-proof-risk",
+          "heading": "八、验证金字塔按风险分工，每层都回答具体问题"
+        },
+        {
+          "id": "aidev-proof-nondeterminism",
+          "heading": "九、把时间、随机和网络变成可控输入"
+        },
+        {
+          "id": "aidev-proof-review",
+          "heading": "十、审查测试本身，尤其留意悄悄削弱的断言"
+        },
+        {
+          "id": "aidev-proof-evidence",
+          "heading": "十一、交付证据要对应当前代码，也说明还没证明什么"
+        },
+        {
+          "id": "aidev-proof-budget",
+          "heading": "十二、把验证投入留给会改变结论的地方"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "aidev-context-provenance",
+          "reason": "旧规格与旧运行结果会让严格检查验证错误目标。"
+        },
+        {
+          "concept": "test-oracle",
+          "reason": "回到测试基础，理解预期结果为何不能来自待测实现。"
+        },
+        {
+          "concept": "test-mutation",
+          "reason": "故意破坏关键条件，观察断言是否真的敏感。"
+        },
+        {
+          "concept": "business-flow-version",
+          "reason": "并发正确性需要观察真正的提交与版本边界。"
+        }
+      ]
+    },
+    {
+      "id": "BIZ-01",
+      "title": "让业务语言成为清晰模型",
+      "question": "同一条报名，为什么页面、接口和报表会给出不同结论？",
+      "summary": "围绕夜间摄影课梳理身份、值、关系、聚合与语言，让业务规则找到明确的维护位置。",
+      "outcomes": [
+        "从业务决定识别对象和关系",
+        "围绕不变量划定聚合与上下文",
+        "分清传输、领域、展示和指标的含义"
+      ],
+      "prerequisites": [],
+      "guide": "biz-01-domain-objects-relations-ubiquitous-language.md",
+      "anchor": "biz-01",
+      "concepts": [
+        {
+          "id": "business-model-decisions",
+          "heading": "一、先问业务要做什么决定，再找需要哪些对象"
+        },
+        {
+          "id": "business-model-identity",
+          "heading": "二、实体靠身份延续，属性可以随时间变化"
+        },
+        {
+          "id": "business-model-values",
+          "heading": "三、值对象让几个值共同表达一个完整概念"
+        },
+        {
+          "id": "business-model-relations",
+          "heading": "四、关系本身有生命周期，就值得单独建模"
+        },
+        {
+          "id": "business-model-aggregate",
+          "heading": "五、聚合围绕必须一起成立的规则划边界"
+        },
+        {
+          "id": "business-model-language",
+          "heading": "六、让候补在对话、接口和页面里表示同一件事"
+        },
+        {
+          "id": "business-model-contexts",
+          "heading": "七、限界上下文让同一个词拥有适用范围"
+        },
+        {
+          "id": "business-model-mapping",
+          "heading": "八、传输模型、领域事实和展示模型各有任务"
+        },
+        {
+          "id": "business-model-services",
+          "heading": "九、规则归领域，协调工作归应用层"
+        },
+        {
+          "id": "business-model-events",
+          "heading": "十、命令提出意图，事件记录已经发生的事实"
+        },
+        {
+          "id": "business-model-evolution",
+          "heading": "十一、模型变化会影响接口、历史数据和指标"
+        },
+        {
+          "id": "business-model-examples",
+          "heading": "十二、用正例、反例和未决问题一起验证模型"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "domain-identity",
+          "reason": "把业务身份与值的区分连接到 TypeScript 表达。"
+        },
+        {
+          "concept": "contract-models",
+          "reason": "同一事实在输入、领域和页面中可以有不同结构。"
+        },
+        {
+          "concept": "business-flow-invariant",
+          "reason": "继续观察状态路径与跨对象不变量的区别。"
+        },
+        {
+          "concept": "aidev-proof-counterexample",
+          "reason": "把业务争议化为有明确输入和预期的最小例子。"
+        }
+      ]
+    },
+    {
+      "id": "BIZ-02",
+      "title": "让状态沿着允许的路径变化",
+      "question": "旧页面、重复请求和迟到回调同时出现时，哪些事实仍然必须成立？",
+      "summary": "从邀请转移表走到桌面观察室，亲手比较时间守卫、版本冲突、幂等与通知恢复。",
+      "outcomes": [
+        "用转移表、类型和守卫表达合法路径",
+        "区分版本冲突、重复意图与过期拒绝",
+        "把状态提交、外部副作用和恢复分开处理"
+      ],
+      "prerequisites": [
+        "biz-01-domain-objects-relations-ubiquitous-language.md#biz-01",
+        "ts-02-unions-narrowing-never-exhaustiveness.md#ts-02"
+      ],
+      "guide": "biz-02-state-machines-business-invariants.md",
+      "anchor": "biz-02",
+      "concepts": [
+        {
+          "id": "business-flow-state",
+          "heading": "一、状态保留会影响下一步的历史"
+        },
+        {
+          "id": "business-flow-table",
+          "heading": "二、转移表先写允许的路，再写拒绝后的结果"
+        },
+        {
+          "id": "business-flow-types",
+          "heading": "三、状态专属数据跟着状态走"
+        },
+        {
+          "id": "business-flow-guard",
+          "heading": "四、守卫判断条件，不顺手执行动作"
+        },
+        {
+          "id": "business-flow-invariant",
+          "heading": "五、不变量约束整体事实，副作用另有执行边界"
+        },
+        {
+          "id": "business-flow-version",
+          "heading": "六、两个合法决定可能争抢同一个旧版本"
+        },
+        {
+          "id": "business-flow-idempotency",
+          "heading": "七、幂等识别同一意图，状态机判断新意图是否合法"
+        },
+        {
+          "id": "business-flow-time",
+          "heading": "八、截止时间是一条规则，计时器只是提醒"
+        },
+        {
+          "id": "business-flow-lab",
+          "heading": "九、亲手安排确认、过期与旧版本冲突"
+        },
+        {
+          "id": "business-flow-compensation",
+          "heading": "十、结果未知时先查询，补偿也要成为新事实"
+        },
+        {
+          "id": "business-flow-parallel",
+          "heading": "十一、分清并行维度，避免状态名称无限增长"
+        },
+        {
+          "id": "business-flow-evolution",
+          "heading": "十二、状态演进和验证都从可重放路径开始"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-model-aggregate",
+          "reason": "整体容量规则需要掌握多份事实的提交边界。"
+        },
+        {
+          "concept": "domain-idempotency",
+          "reason": "对照 TypeScript 模型理解同一意图与新意图。"
+        },
+        {
+          "concept": "bff-idempotency",
+          "reason": "把网络重试和结果未知接回 HTTP 的实际边界。"
+        },
+        {
+          "concept": "aidev-proof-risk",
+          "reason": "按风险选择纯逻辑、存储与外部执行的证据。"
+        }
+      ]
+    }
+  ]
+}

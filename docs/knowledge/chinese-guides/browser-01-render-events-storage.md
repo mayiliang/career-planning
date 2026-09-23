@@ -1,138 +1,297 @@
-# 浏览器运行时知识点讲义
+# 浏览器运行时学习资料
 
-## BROWSER-01 渲染流水线、DOM 事件与存储
+## BROWSER-01 从一次点击看懂渲染、事件与存储
 
-浏览器把网络得到的文档变成可交互画面，同时维护事件传播、任务调度与持久化数据。理解这些机制的价值不是背诵引擎内部名词，而是建立可验证的因果模型：一次 DOM 修改为什么影响布局，一次点击为什么被多个祖先观察，一次数据库请求成功为什么仍可能随事务回滚。模型必须服务真实测量，并承认不同引擎会优化或合并阶段。
+点击“展开资料”后，卡片变高了，列表监听器收到了事件，草稿又写入了数据库。这三件事发生在同一个页面，却由不同机制负责。把它们都叫“页面更新”，排错时很容易找错方向。
+
+本篇沿着“画面如何改变—点击如何到达代码—数据何时真正提交”展开。你会运行一个事件观察页和一个事务回滚例子，用输出区分看起来相似、实际含义不同的结果。
 
 ### 学习前先确认
 
-- 直接前置：[WEB-01 HTML 语义、表单与可访问性基础](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)。本讲把语义 HTML 当作 DOM 和事件目标，不重复讲元素选择与表单合同。
-- 直接前置：[JS-04 异步、Promise 与浏览器事件循环](../chinese-guides/js-04-async-promise-browser-event-loop.md#js-04)。异步回调、任务、微任务与渲染机会由该文解释。
+- 直接前置：[WEB-01 HTML 语义、表单与可访问性基础](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)。需要认识 DOM 元素、按钮和表单的默认行为。
+- 直接前置：[JS-04 异步、Promise 与浏览器事件循环](../chinese-guides/js-04-async-promise-browser-event-loop.md#js-04)。任务、微任务和 Promise 的基本顺序在该篇解释。
 
-### 一、浏览器是多条流水线协作的宿主
+### 一、先区分画面、行为和数据
 
-HTML 解析形成 DOM，CSS 解析形成 CSSOM。浏览器结合元素与计算样式，决定哪些内容参与布局与绘制。脚本、字体、图片、样式表和用户输入会在不同时间改变这些输入，因此页面不是“解析一次就结束”的静态图片。
+同一次操作可以留下三种互不替代的证据：Performance 录制说明主线程做了什么；事件日志说明哪个监听器处理了什么；事务结果说明哪些记录一起提交或回滚。
 
-常用简化模型是 style calculation、layout、paint、composite。它们代表可观察的工作类型，不保证每次更新都完整执行，也不保证所有引擎以同名阶段实现。高级调试应说“这次录制出现 18ms Layout”，而不是凭 CSS 属性表断言“某属性永远只走合成”。
+例如按钮文字变成“已保存”，只证明 DOM 被更新。它不能证明数据库事务已经完成，更不能证明远端服务收到了数据。反过来，存储已经成功而按钮迟迟不变，可能是长任务挡住了下一次绘制。
 
-浏览器还要同时处理网络、事件循环、可访问性树、动画、媒体和存储。主线程长期执行 JavaScript 时，即使合成线程能继续某些动画，新的 DOM、输入处理与许多绘制仍会延迟。
+```mermaid
+flowchart LR
+  A[用户点击按钮] --> B[事件监听器执行]
+  B --> C[修改状态与 DOM]
+  C --> D[样式与几何需要更新]
+  D --> E[绘制和合成新的画面]
+  B --> F[发起存储事务]
+  F --> G{事务结果}
+  G --> H[complete 后确认提交]
+  G --> I[abort 后保留旧数据]
+```
 
-### 二、样式计算决定声明如何落到元素
+图中的两条支路强调职责，不承诺每次绘制与存储回调的精确先后。具体时序取决于任务、资源和浏览器调度。
 
-**样式计算（Style Calculation）**处理选择器匹配、层叠、继承、自定义属性和计算值。修改 class 可能让一批后代重新匹配规则；复杂度与受影响范围有关，不只与“改了一行”有关。
+### 二、渲染阶段各自在算什么
 
-样式失效会尽量局部化，但通用选择器、依赖祖先状态的规则和大范围自定义属性会扩大影响。先在开发者工具检查 Recalculate Style 的耗时和受影响节点，再决定是否需要缩小 DOM 或选择器范围。把所有选择器改成短类名并不必然更快，却可能损害语义和维护性。
+HTML 解析形成 DOM，CSS 解析形成 CSSOM。浏览器结合元素和样式，计算当前需要显示的内容。页面出现后，字体加载、窗口调整、图片尺寸、脚本修改仍会让这些输入变化。
 
-读取 `getComputedStyle()` 有时需要确保样式最新，结合某些几何读取还可能迫使浏览器提前完成后续工作。性能结论要基于同一输入、同一设备和多次录制。
+| 阶段 | 回答的问题 | 资料卡片中的例子 |
+| --- | --- | --- |
+| 样式计算（Style Calculation） | 哪些声明最终生效 | 加上 expanded 类后匹配哪些规则 |
+| 布局（Layout） | 大小和位置是多少 | 摘要展开后，后面的卡片下移多少 |
+| 绘制（Paint） | 文字、背景和边框如何画 | 高亮边框和新出现的文字 |
+| 合成（Composite） | 如何组合各绘制结果 | 把可独立处理的图层组合到屏幕上 |
 
-### 三、布局计算几何，内在尺寸会向外传播
+这是便于推理的模型，不是“每改一次 DOM 必须完整跑四遍”的规定。浏览器会延迟、合并、跳过不必要工作；不同引擎的实现细节也不同。讨论一次性能问题时，优先说“录制里出现了 Layout”，再追查触发源。
 
-**布局（Layout）**计算元素的大小和位置，也常被称为 reflow。文字、字体、图片固有尺寸、容器可用空间、Grid/Flex 约束和滚动条都会参与。改变一个上游宽度可能让大量文本重新换行，影响整段页面。
+把颜色改成蓝色，通常不改变几何；把宽度改窄则可能让文字重新换行，影响后面整段布局。`transform` 和 `opacity` 常适合动画，但是否能只走合成取决于实际条件。不能给所有节点加 `will-change` 就宣布优化完成，图层也有内存和栅格化成本。
 
-典型问题是读写交错：代码先写样式，再读取 `offsetWidth` 或 `getBoundingClientRect()`，浏览器必须给出当前几何，于是同步完成尚未执行的布局；循环中反复“写—读”会形成 layout thrashing。把读取集中在前、计算放在内存、写入集中在后，并通过 Performance trace 证明布局次数下降。
+### 三、为什么读一个宽度会让页面停一下
 
-布局成本与 DOM 数量不是简单线性关系。containment、虚拟列表和 `content-visibility` 可以缩小工作，但会引入尺寸估计、焦点、查找和可访问性边界。优化前先保存慢操作的可重复步骤和基线。
+**强制同步布局（Forced Synchronous Layout）**常发生在浏览器尚未处理样式变化时，脚本又要求立即得到最新几何。读取本身不是错误；问题在于让浏览器反复提前结算。
 
-### 四、绘制与合成都有成本
+下面是说明片段，需要把 `cards` 和 `container` 换成当前页面的真实元素。第一种写法每改一张卡片，就重新读可能受影响的容器宽度；第二种先读取一次，再统一写入。
 
-**绘制（Paint）**生成文字、背景、边框、阴影等绘制指令；**合成（Composite）**把图层组合为最终画面。`transform` 与 `opacity` 在合适条件下可避免布局或主要绘制，但图层提升消耗显存、栅格化和管理资源，不能给所有元素加 `will-change`。
+```js example=browser-layout-order runtime=project
+// 已有 const cards = [...document.querySelectorAll('.card')];
+// 已有 const container = document.querySelector('.cards');
+function interleaved(cards, container) {
+  for (const card of cards) {
+    card.style.width = `${container.clientWidth / 2}px`;
+  }
+}
+function batched(cards, container) {
+  const width = container.clientWidth / 2;
+  for (const card of cards) card.style.width = `${width}px`;
+}
+```
 
-判断动画是否平滑，要看帧时间、主线程工作、Paint、图层数量与实际掉帧。大面积模糊、滤镜和半透明仍可能昂贵。开发者工具的 Layers、Rendering 与 Performance 面板提供互补证据，单看 FPS 颜色条不足以解释根因。
+这个对照成立的前提是：业务允许整批使用同一个测量值。如果容器宽度本来就应随每一步变化重新计算，两段代码的语义并不相同，不能为减少读取而改变结果。
 
-视觉正确也不等于交互正确：动画快照不会自动管理焦点或点击区域。渲染优化必须保持 DOM 语义、可访问树和事件合同。
+“读一次”也不保证零次 Layout：第一次读取仍可能需要更新布局。改动前后要用相同 DOM、相同数据和相同操作录制，观察同步布局次数与耗时。尺寸为什么向外传播，可接回 [WEB-02 的布局与最小尺寸](../chinese-guides/web-02-layout-cascade-responsive-logical-properties.md#web-02)。
 
-### 五、关键渲染路径影响首次可用
+### 四、首次出现与下一次响应是不同问题
 
-首屏需解析 HTML、发现资源、构建样式与布局。普通同步脚本可能阻塞解析，样式表可能影响首次渲染，字体和图片又会改变布局。`defer`、module、preload 和资源优先级应根据依赖关系使用，不能把所有资源都标成高优先级。
+首屏依赖资源发现、HTML 解析、样式和脚本等环节。普通同步脚本可能暂停解析；defer 脚本与模块脚本通常在文档解析后执行，但 async、动态导入和依赖图会改变具体顺序。preload 是提前发现资源的提示，不是越多越快。
 
-性能指标回答不同问题：FCP 关注首次内容，LCP 关注最大内容候选，CLS 关注意外布局变化，INP 关注交互到下一次绘制。某个指标改善可能牺牲另一个环节，因此要把指标连接到用户任务和资源瀑布。
+**关键渲染路径（Critical Rendering Path）**帮助我们追踪首次可见内容的依赖。一个页面 HTML 很小，若必须等大包运行后才创建主要内容，仍可能晚出现；已有服务端 HTML，若主线程持续忙于脚本，按钮也可能晚响应。
 
-服务器渲染的 HTML 更早出现，并不保证水合前可操作；客户端渲染也不能用“框架慢”概括所有资源、脚本与数据问题。使用可重复的冷/热缓存场景、网络与 CPU 条件进行对比。
+FCP、LCP、CLS、INP 分别关注不同现象，不能用包体积下降直接代替实际体验改善。先写具体问题：“打开资料后，标题出现晚”还是“点击折叠后迟迟不动”。前者查看资源与首屏，后者查看输入附近的任务和绘制。录制方法可回看 [DEBUG-01](../chinese-guides/debug-01-systematic-debugging-evidence-causality.md#debug-01)。
 
-### 六、DOM 事件沿计算出的路径传播
+### 五、运行一个能看见事件路径的页面
 
-事件通常经历 capture、target、bubble 三个阶段。`event.target` 是最初目标，`event.currentTarget` 是当前运行监听器所在节点。Shadow DOM 还会发生重定向，诊断真实路径时使用 `composedPath()`。
+把以下完整内容保存为 `event-path.html` 打开。点击按钮里的文字，日志会同时显示触发位置和监听位置。再点“重新绑定”两次，重复点击：处理次数仍应每次只增加一。最后点“停止监听”，卡片按钮不再追加日志。
 
-默认行为与传播是两件事：`preventDefault()` 请求取消可取消的浏览器默认行为，`stopPropagation()` 阻止事件继续传播。阻止传播不能修复监听器重复挂载，也可能破坏分析、快捷键或祖先组件。先明确组件合同，再决定是否隔离。
+```html example=browser-event-path runtime=project file=event-path.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>一次点击经过哪里</title>
+<style>
+  body { max-width: 56rem; margin: 3rem auto; padding: 0 2rem;
+    color: #172d3c; background: #f6f8fa; font: 18px/1.7 system-ui; }
+  button { font: inherit; padding: .6rem 1rem; margin: .4rem;
+    border: 1px solid #6e8190; border-radius: .4rem; background: white; }
+  :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+  #cards { border: 2px solid #73899b; border-radius: .8rem; padding: 1rem; }
+  pre { background: #172d3c; color: #eaf4ff; padding: 1rem; overflow: auto; }
+</style>
+<main>
+  <h1>一次点击经过哪里</h1>
+  <button id="bind">重新绑定</button><button id="stop">停止监听</button>
+  <p id="binding" role="status">监听已开启</p>
+  <section id="cards" aria-label="资料列表">
+    <button id="open" data-action="open"><span id="label">展开资料</span></button>
+  </section>
+  <pre id="log" aria-label="事件日志"></pre>
+</main>
+<script>
+  const cards = document.getElementById('cards');
+  const action = document.getElementById('open');
+  const log = document.getElementById('log');
+  const binding = document.getElementById('binding');
+  let controller;
+  let handled = 0;
+  const write = (line) => { log.textContent += line + '\n'; };
+  const describe = (e) => `target=${e.target.id}, current=${e.currentTarget.id}`;
+  function mount() {
+    controller?.abort();
+    controller = new AbortController();
+    const signal = controller.signal;
+    cards.addEventListener('click', (e) => write('capture: ' + describe(e)),
+      { capture: true, signal });
+    action.addEventListener('click', (e) => write('button: ' + describe(e)), { signal });
+    cards.addEventListener('click', (e) => {
+      if (!(e.target instanceof Element)) return;
+      const button = e.target.closest('button[data-action]');
+      if (!button || !cards.contains(button)) return;
+      write('delegate: ' + describe(e));
+      write(`handled=${++handled}`);
+    }, { signal });
+    binding.textContent = '监听已开启';
+  }
+  document.getElementById('bind').addEventListener('click', mount);
+  document.getElementById('stop').addEventListener('click', () => {
+    controller?.abort();
+    binding.textContent = '监听已停止';
+  });
+  mount();
+</script>
+</html>
+```
 
-事件监听器回调在主线程执行。passive listener 表示回调不会取消某些默认行为，使浏览器能更安全地滚动；它不会让昂贵回调自动变快。捕获指针、组合输入和 Pointer Events 还需处理取消、丢失捕获和辅助操作路径。
+第一次点 span 文字，应按顺序得到 `capture: target=label, current=cards`、`button: target=label, current=open`、`delegate: target=label, current=cards` 和 `handled=1`。点按钮边缘时 target 可能是 open；用键盘激活按钮时也不应要求 target 一定是内部 span。
 
-### 七、事件委托依赖稳定祖先与可识别动作
+日志区没有设置成实时播报。逐条事件适合开发者阅读，没必要让每次点击给读屏用户连续念四条技术日志。状态区只表达监听是否开启。
 
-**事件委托（Event Delegation）**在稳定祖先监听可冒泡事件，再从实际目标找到动作节点。它适合动态列表，减少逐项监听和清理工作。回调通常用 `closest('[data-action]')`，随后确认结果仍属于当前容器，避免嵌套组件越界。
+### 六、传播、默认行为和委托不是一回事
 
-委托不是越高越好。把整个 document 当总线会让所有功能共享隐式协议，也难处理 stopPropagation、Shadow DOM 和嵌套动作。选择拥有该列表或区域的最近稳定祖先，让数据属性只表达动作 ID，不承载未经校验的权限。
+捕获阶段从外向内，随后到达目标，可冒泡的事件再向外传播。`target` 表示这次派发中暴露给监听器的目标，`currentTarget` 是当前运行监听器所注册的节点。示例点击 span 时，按钮的监听器运行在冒泡路径上，并非因为监听器写在按钮上就自动变成“目标阶段”。
 
-挂载函数要返回清理函数，或通过 AbortController 的 signal 绑定监听器。组件重新连接、热更新、路由缓存都可能再次挂载；一次点击触发两次时，先记录 mount/unmount 数量、监听位置和传播路径，不要先加节流掩盖泄漏。
+**事件委托（Event Delegation）**是在合适的稳定祖先监听，再从目标向上找到动作节点。`closest()` 解决“点中文字而不是按钮壳”的问题，容器检查避免匹配越界。若允许嵌套资料列表，还要确认按钮属于最近的那个列表，不能仅凭一个共享的 data-action 就处理子组件的动作。
 
-### 八、事件对象有生命周期与信任边界
+`preventDefault()` 请求取消可取消的默认行为，例如表单导航；`stopPropagation()` 阻止继续传播，但不等于取消链接跳转。`stopImmediatePropagation()` 还影响同一节点上后续监听器。不要用阻止传播修复重复绑定：被重复注册的处理函数仍然可能执行，祖先的合理操作却先被破坏了。
 
-浏览器产生的 `isTrusted` 可区分用户代理派发与脚本 `dispatchEvent`，但它不能替代授权或防机器人。事件中的 dataset、input value、拖放内容和 postMessage 数据都可能被用户或其他脚本控制，进入高影响操作前仍需验证。
+不是所有事件都冒泡。普通 focus/blur 不冒泡，委托焦点时可以选择捕获，或适用的 focusin/focusout。Shadow DOM 还可能重定向 target，需要用 `composedPath()` 理解暴露的路径；封闭树内部也不会被任意外部监听器完整看见。
 
-异步使用事件数据时，应尽早复制真正需要的稳定字段，不长期保存整个事件与 DOM 子树。框架可能包装事件，但现代实现差异应按当前版本核对，不把历史“事件池”知识套用到所有框架。
+### 七、监听器也需要清理和数据边界
 
-事件顺序也受浏览器默认行为、焦点移动、Pointer/Mouse/Click 合成影响。需要精确协议时记录时间戳、类型、target/currentTarget 和 activeElement，构造最小页面验证，而不是只读业务日志。
+示例的 `mount()` 先 abort 上一组监听器，再安装新的一组，因此可以重复调用。相同类型、回调引用、capture 组合的重复注册有去重行为；每次重新创建的箭头函数却是新引用，不应依赖这个规则解决生命周期问题。
 
-### 九、浏览器存储先按语义选型
+事件回调里的 `currentTarget` 只在处理期间有意义。需要异步使用当前节点或字段时，先复制所需值，再等待请求；不要在 await 之后假设整个事件对象仍提供同样的上下文。
 
-Cookie、Web Storage 与 IndexedDB 的边界不同：
+passive listener 表达“不会在此取消默认行为”，有助于浏览器安排某些滚动路径，但不会把昂贵回调移到其他线程。`isTrusted` 也不是业务授权。dataset、输入值和拖入的内容仍需校验，浏览器派发过一次点击不能证明用户有权执行某项操作。
 
-| 能力 | Cookie | Web Storage | IndexedDB |
-| --- | --- | --- | --- |
-| 典型目的 | 小型会话标识和请求状态 | 小型字符串偏好、标签会话状态 | 结构化离线数据、索引查询与事务 |
-| 访问方式 | 匹配时随请求；HttpOnly 可阻止脚本读取 | 同步字符串 API | 异步请求与事务、结构化克隆 |
-| 一致性 | 由服务端与请求协议管理 | 单键操作，无多键事务 | 对象仓库范围内的事务 |
-| 安全性 | 属性可缩小暴露面 | 同源脚本可读 | 同源脚本可读 |
+组件卸载、路由离开、热更新都可能触发重新挂载。监听器、观察器和频道可以由同一资源所有者统一清理，相关例子接到 [BROWSER-02](../chinese-guides/browser-02-observers-scheduling-lifecycle-coordination.md#browser-02)。
 
-容量、驱逐和隐私模式因浏览器与设备而异，不能以“固定 5MB”做唯一标准。所有客户端存储都处于页面脚本信任域；XSS 可读取 Web Storage、访问 IndexedDB，甚至借会话 Cookie 发请求。高价值授权和根密钥不能只靠前端存储保护。
+### 八、存储先看语义，再看容量
 
-sessionStorage 与标签页会话关联，localStorage 持久但同步阻塞。频繁序列化大对象既占主线程又容易覆盖并发更改。需要大量结构化记录、索引和原子更新时使用 IndexedDB；简单用户偏好不要为了“高级”引入数据库迁移成本。
+| 机制 | 适合保存什么 | 最重要的边界 |
+| --- | --- | --- |
+| Cookie | 小型会话或请求相关状态 | 符合条件时随请求发送，属性决定暴露与发送范围 |
+| localStorage | 少量字符串偏好 | 同步 API，没有跨多个键的事务 |
+| sessionStorage | 页面会话内的小状态 | 按源与顶层浏览上下文划分，刷新通常保留 |
+| IndexedDB | 结构化记录、索引、原子更新 | 异步请求，提交要看事务 |
+| Cache API | 请求与响应副本 | 应用管理响应缓存，不是结构化记录数据库 |
+| 内存对象 | 当前页面临时结果 | 刷新或进程结束后不能当作持久状态 |
 
-### 十、IndexedDB 是异步事务数据库
+localStorage 的读改写并不是一个原子事务：A、B 都读到 4，各自写回 5，结果少了一次递增。单次 setItem 成功不能补上整个操作的并发语义。
 
-IndexedDB 以 database、object store、index、key 和 transaction 组织数据。一次 request 的 `success` 只表示该操作得到结果，不代表整个事务已经 `complete`；后续请求失败或显式 abort 仍会回滚事务内写入。
+sessionStorage 并不意味着每个新窗口一律空白：带 opener 打开的页面在特定条件下会得到初始副本，此后各自独立。存储的来源、分区和隐私策略也会影响可用范围。不要把“同源”理解成不受顶层站点分区影响的全球共享空间。
 
-事务在事件循环之间可能自动变为 inactive。不要 `await` 与事务无关的任意网络操作后再继续使用旧事务；先准备外部数据，再开启短事务，或使用明确适配 IndexedDB 事务生命周期的封装。对读改写并发，确认所有相关对象仓库在同一 readwrite scope 内。
+容量、驱逐和隐私模式因环境而异。配额耗尽或禁用存储时，应保留草稿、提示失败或提供导出，而不是弹一句错误后丢掉输入。HttpOnly Cookie 可阻止脚本直接读取该 Cookie，却不意味着页面遭到 XSS 后就无法借用户身份发请求；本篇只讨论机制，不在这里给出认证存储方案。
 
-错误会沿请求与事务冒泡。若局部错误被 `preventDefault()` 吞掉，事务可能继续，必须有非常明确的恢复语义。默认让不可恢复错误使事务失败更安全。
+### 九、亲眼看一次请求成功后的回滚
 
-### 十一、模式升级必须原子、幂等且可恢复
+**事务（Transaction）**把一组操作组合为一起提交或一起回滚的单位。IndexedDB 的 request success 与 transaction complete 是两个信号。下面故意在写入请求成功后 abort，让区别变得可见。
 
-`indexedDB.open(name, version)` 触发 versionchange transaction，只有 `upgradeneeded` 中可以创建或删除 store/index。升级脚本按 `oldVersion` 分阶段执行；事务失败后不应留下半个新 schema。
+在允许 IndexedDB 的普通网页开发者控制台中运行整段代码，或在同源页面的 module script 中运行。浏览器内部页不适合这个例子。它创建随机命名的教学数据库，结束后只删除自己创建的这一份，不读取已有业务库。
 
-旧标签保持连接会使升级 `blocked`。旧连接应监听 `versionchange` 并关闭或提示用户刷新，新页面显示阻塞状态而不是永久旋转。升级步骤要能处理数据库从多个历史版本直接跳到当前版本，不能只假设恰好从前一版进入。
+```js example=browser-idb-rollback runtime=browser
+const databaseName = `b13-transaction-${crypto.randomUUID()}`;
+const db = await new Promise((resolve, reject) => {
+  const request = indexedDB.open(databaseName, 1);
+  request.onupgradeneeded = () => request.result.createObjectStore('drafts', { keyPath: 'id' });
+  request.onerror = () => reject(request.error);
+  request.onsuccess = () => resolve(request.result);
+});
+db.onversionchange = () => db.close();
+try {
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('drafts', 'readwrite');
+    tx.oncomplete = resolve;
+    tx.onabort = () => reject(tx.error ?? new Error('初始化被中止'));
+    tx.objectStore('drafts').put({ id: 'note', step: 1 });
+  });
+  console.log('初始事务已提交');
+  // => 初始事务已提交
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('drafts', 'readwrite');
+    tx.onabort = resolve;
+    tx.oncomplete = () => reject(new Error('本例应当回滚'));
+    const request = tx.objectStore('drafts').put({ id: 'note', step: 2 });
+    request.onsuccess = () => {
+      console.log('写入请求成功，随后中止事务');
+      tx.abort();
+    };
+  });
+  // => 写入请求成功，随后中止事务
+  const record = await new Promise((resolve, reject) => {
+    const tx = db.transaction('drafts', 'readonly');
+    let value;
+    tx.oncomplete = () => resolve(value);
+    tx.onabort = () => reject(tx.error ?? new Error('读取被中止'));
+    tx.objectStore('drafts').get('note').onsuccess = (e) => { value = e.target.result; };
+  });
+  console.log(`重新读取 step=${record.step}`);
+  // => 重新读取 step=1
+} finally {
+  db.close();
+  await new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(databaseName);
+    request.onsuccess = resolve;
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error('教学数据库清理被其他连接阻塞'));
+  });
+}
+```
 
-数据迁移要区分 schema 创建与大量记录转换。一次升级事务处理海量数据可能长时间阻塞；可先增加兼容字段与迁移状态，再在正常运行中分批迁移，保持旧读路径，达到覆盖率后才删除旧结构。每一步有版本、断言、回滚或重新执行策略。
+预期最后仍读到 step=1。第二条日志证明请求已执行成功，但后来的事务中止撤销了这次修改。界面若在 request success 时就宣布“草稿已保存”，会比真正的提交结论走得更早。
 
-### 十二、多标签一致性不能只靠 storage 事件
+这也不表示 `complete` 能承诺面对所有硬件故障绝不丢失；落盘耐久性还有实现与 durability 选项的边界。这里证明的是事务提交与回滚的区别，不是断电恢复测试。
 
-localStorage 的 storage 事件和 BroadcastChannel 可通知其他上下文，但都不是数据库锁。两个标签页仍可能同时读取旧值再覆盖。对需要唯一领导者或互斥写入的任务，应使用 Web Locks、服务端版本/租约或数据库自身的事务与冲突协议。
+### 十、事务范围与时间都要短而明确
 
-数据模型包含 schema version、记录 version、更新时间与拥有账号。账号切换时隔离旧数据，离线写入携带幂等和冲突信息。不要用“最后写入者获胜”处理支付、权限或不可逆业务。
+需要一起修改草稿和索引记录，就把相关 object store 放入同一个 readwrite transaction 的 scope；分别开两个事务，即使都使用 Promise.all，也不会自动变成共同回滚的一组。
 
-存储变化的跨标签 UI应能接受消息丢失：通知只用于促使重新读取真源，而不是把每条消息当完整持久状态。新打开标签不会收到过去的广播。
+事务可接受新请求的时机受事件循环约束。一个典型反例是先打开事务，再 await 一个网络请求，回来后继续 put：原事务可能已经 inactive 或自动提交。正确方向通常是先准备网络数据，再开启短事务完成本地读改写。不要把所有 await 一概视为错误，也不要假设任意异步封装都能维持事务活跃。
 
-### 十三、缓存、存储与内存对象不是一回事
+读取当前版本、核对预期版本、写入新版本，应在同一适当范围的读写事务中衔接。请求回调是理解原生 API 的直接方式；采用封装库时仍需知道它如何管理提交时机与异常。
 
-HTTP Cache 保存响应，Cache API 由 Service Worker 或页面脚本管理响应副本，IndexedDB 保存结构化数据，内存 Map 只活在当前 JavaScript realm。它们有不同键、生命周期、淘汰和一致性；“清缓存修好”往往只是删除症状证据。
+某个请求失败通常会导致事务中止。主动取消错误的默认处理可能让事务继续，这只有在你明确能恢复该局部错误时才合理；不能为“消除红色日志”吞掉真正的数据失败。
 
-设计离线能力时写清真源、派生副本、版本和失效方式。升级制品与升级数据也是两条链：旧页面可能仍运行新数据库，或新页面遇到旧 Service Worker。协议需要向前/向后兼容窗口和安全恢复页。
+### 十一、升级数据库时要想到另一张标签页
 
-### 十四、用工具建立从操作到阶段的证据
+**模式升级（Schema Migration）**改变数据库的 store 或 index。创建和删除这些结构应在 `upgradeneeded` 对应的版本变更事务中完成，按 oldVersion 顺序补齐缺失步骤，允许用户从多个旧版本直接升级。
 
-Performance 录制前清空无关噪声，标记用户操作，重复多次并保留硬件、浏览器、数据规模和缓存条件。查看主线程 task、样式、布局、绘制、事件回调与截图；必要时结合 Layers、Memory 和 Event Listener 面板。
+假设 A 打开版本 1，B 请求版本 2。A 的旧连接会收到 versionchange；若仍不关闭，B 的升级会被阻塞。A 应停止继续使用旧连接并关闭，B 应显示“等待其他页面释放连接”的状态，而不是无限加载。关闭后，原来想继续写入的操作也要有刷新或重新打开的路径。
 
-数据库验证保存升级前后版本、store/index 列表、事务 complete/abort、关键记录与 blocked/versionchange 日志。事件验证记录 target、currentTarget、composedPath、处理次数和卸载后行为。每类证据只支持相应结论。
+升级事务失败会回滚本次升级。大规模数据转换则不宜全部塞进一次漫长升级：可以先新增兼容结构，再用记录版本分批迁移。需要考虑旧程序遇到新结构、新程序遇到未迁移记录，以及账号切换后的隔离。
 
-建立反例：读写交错应产生更多同步布局，重复挂载应让一次操作处理多次，升级中 abort 应保留旧模式。修复后同一场景反转，才能建立因果，而不是凭一次“变快了”宣布完成。
+清空数据库不应成为默认升级策略。用户的离线草稿可能正是唯一副本；可读恢复、导出和迁移日志比“删库重来”更能保护真实任务。
 
-### 十五、浏览器差异与版本演进需要兼容策略
+### 十二、多标签通知与持久真源分开
 
-标准 API 的存在不保证所有子行为、限制与性能一致。能力检测只能证明入口存在，还要测试实际行为和失败分支。隐私模式、第三方上下文、存储分区、配额和生命周期策略会改变存储可用性。
+storage 事件会通知符合条件的其他文档，本次执行 setItem 的页面不会因为自己的这次写入收到同一个 storage 事件。localStorage 的通知范围与 sessionStorage 不同，后者不会把独立标签页变成一个共同会话。
 
-对关键任务提供基础路径：存储不可用时允许在线保存或导出，数据库升级失败时保留只读恢复，渲染优化禁用时内容仍可见，委托跨 Shadow DOM 时使用公开事件合同。兼容不是把所有旧浏览器做成像素相同，而是核心数据和操作不丢失。
+BroadcastChannel 同样没有历史存档，也不提供互斥。把广播设计成“资料可能变化，请重新读取”更容易恢复：接收者重新查数据库，刚打开的标签也先主动读取，不依赖过去一定收齐了多少消息。
 
-### 学完后应能说明
+对同一记录的竞争可以由数据库事务与版本协议处理；需要让多个页面轮流执行一段更长任务时，再考虑 Web Locks。锁不应代替数据库提交，也不覆盖其他设备。具体的持锁与释放例子见 [BROWSER-02](../chinese-guides/browser-02-observers-scheduling-lifecycle-coordination.md#browser-02)。
 
-你应能从 DOM/CSSOM 解释样式、布局、绘制与合成的可观察关系，识别同步布局与图层误用；能解释事件传播、委托、默认行为和清理；能按语义选择 Cookie、Web Storage 与 IndexedDB，设计事务、升级和多标签恢复；最重要的是用 trace、事件日志和事务快照把推测变成可复核证据。
+HTTP 缓存、Cache API、IndexedDB 与内存还可能存着不同版本的副本。记录哪份是真源、谁负责失效、刷新后从哪里读，才能解释“看见旧资料”究竟发生在哪一层。涉及发布版本时可继续看 [ENG-05](../chinese-guides/eng-05-quality-gates-lint-types-tests-ci.md#eng-05)。
 
+### 十三、把现象转成可证伪的问题
+
+遇到“点击后卡住”，先记录操作与时间，再区分：监听器没收到事件、处理函数太长、同步布局太多、还是存储等待没有结束。每个候选都应有能反驳它的观察。
+
+| 现象 | 先核对 | 修复后应该看到 |
+| --- | --- | --- |
+| 一次点击更新两次 | 挂载次数、回调引用与传播日志 | 重复挂载后每次仍只处理一次 |
+| 改宽度时明显卡顿 | 录制中的读写位置与 Layout | 同输入下减少不必要的同步计算 |
+| 显示保存成功却读到旧数据 | request 与 transaction 结束事件 | 仅提交后确认成功，中止后保留旧记录 |
+| 新标签停在数据库加载中 | blocked 与旧连接 versionchange | 旧连接释放，或显示明确恢复入口 |
+
+不要用一次肉眼“更快了”得出稳定性能结论，也不必为讲清机制先建立庞大平台矩阵。本篇两段完整例子先提供最小可观察事实；需要做产品优化时，再针对具体设备和真实数据规模补测。
+
+最后尝试解释：为什么三个监听器都执行，不一定是重复绑定；为什么 Promise.all 不能合并两个事务；为什么广播“保存完成”仍不能充当持久记录。能分清每个信号负责什么，就能沿着一次点击准确排查。
+
+### 参考与延伸阅读
+
+审校日期：2026-09-14。渲染模型用于帮助观察，不把属性性能表当作跨引擎保证。
+
+- [MDN：Critical rendering path](https://developer.mozilla.org/en-US/docs/Web/Performance/Guides/Critical_rendering_path)：资源发现到首次渲染的依赖。
+- [MDN：Event bubbling](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling)：传播、目标与委托。
+- [MDN：IDBTransaction](https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction)：活跃期、提交、回滚和耐久性。
+- [MDN：versionchange 事件](https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/versionchange_event)：多连接升级时的协作。
+- [MDN：Web Storage API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API)：同步访问与两种存储范围。
+- [MDN：sessionStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage)：页面会话、刷新与 opener 初始副本。

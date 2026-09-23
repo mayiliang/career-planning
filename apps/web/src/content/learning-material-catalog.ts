@@ -10,9 +10,22 @@ import b09 from '../../../../docs/knowledge/materials/b09.json';
 import b10 from '../../../../docs/knowledge/materials/b10.json';
 import b11 from '../../../../docs/knowledge/materials/b11.json';
 import b12 from '../../../../docs/knowledge/materials/b12.json';
+import b13 from '../../../../docs/knowledge/materials/b13.json';
+import b14 from '../../../../docs/knowledge/materials/b14.json';
+import b15 from '../../../../docs/knowledge/materials/b15.json';
+import b16 from '../../../../docs/knowledge/materials/b16.json';
+import b17 from '../../../../docs/knowledge/materials/b17.json';
+import b18 from '../../../../docs/knowledge/materials/b18.json';
+import b19 from '../../../../docs/knowledge/materials/b19.json';
+import b20 from '../../../../docs/knowledge/materials/b20.json';
+import b21 from '../../../../docs/knowledge/materials/b21.json';
+import b22 from '../../../../docs/knowledge/materials/b22.json';
+import b23 from '../../../../docs/knowledge/materials/b23.json';
+import b24 from '../../../../docs/knowledge/materials/b24.json';
+import b25 from '../../../../docs/knowledge/materials/b25.json';
 
 export const learningMaterialCatalog = catalog;
-export const learningMaterialCatalogs = [catalog, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12];
+export const learningMaterialCatalogs = [catalog, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25];
 export type LearningChapter = (typeof catalog.chapters)[number];
 const chapters = learningMaterialCatalogs.flatMap((batch) => batch.chapters);
 

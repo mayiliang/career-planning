@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "batch": "B25",
+  "title": "从版本交付到用户体验",
+  "reviewedOn": "2026-09-23",
+  "chapters": [
+    {
+      "id": "ENG-06",
+      "title": "把候选版本交付到用户手中",
+      "question": "流水线全绿以后，怎样确认上线的是同一份内容，出现问题又能恢复用户任务？",
+      "summary": "沿候选制品、门禁、权限、并发、灰度和兼容窗口理解发布，用摘要、未知状态和过期计划解释容易误判的边界。",
+      "outcomes": [
+        "区分提交、运行、制品及它们对应的证据",
+        "说明放量、取消、迁移与旧页面的兼容条件",
+        "按用户任务判断恢复，保留可追踪的发布记录"
+      ],
+      "prerequisites": [
+        "git-03-commits-remotes-pr-worktrees-collaboration.md#git-03",
+        "test-03-e2e-visual-regression-isolation-flakiness.md#test-03",
+        "test-04-api-contract-consumer-driven-testing.md#test-04"
+      ],
+      "guide": "eng-06-ci-cd-artifact-promotion-release-rollback.md",
+      "anchor": "eng-06",
+      "concepts": [
+        {
+          "id": "release-delivery-stages",
+          "heading": "一、CI、持续交付和持续部署各管哪一段"
+        },
+        {
+          "id": "release-delivery-identity",
+          "heading": "二、提交、构建运行和制品不是同一个身份"
+        },
+        {
+          "id": "release-delivery-artifact",
+          "heading": "三、用一个小实验看懂“构建一次，逐级晋级”"
+        },
+        {
+          "id": "release-delivery-gates",
+          "heading": "四、门禁要区分通过、失败和没有证据"
+        },
+        {
+          "id": "release-delivery-trust",
+          "heading": "五、构建权限与部署权限要分开"
+        },
+        {
+          "id": "release-delivery-concurrency",
+          "heading": "六、并发取消和生产互斥解决不同问题"
+        },
+        {
+          "id": "release-delivery-rollout",
+          "heading": "七、灰度发布要定义“谁看到哪个版本”"
+        },
+        {
+          "id": "release-delivery-observation",
+          "heading": "八、先写停止条件，再等待曲线变好"
+        },
+        {
+          "id": "release-delivery-migration",
+          "heading": "九、数据迁移决定旧版本能否回来"
+        },
+        {
+          "id": "release-delivery-frontend",
+          "heading": "十、前端发布必须照顾已经打开的旧页面"
+        },
+        {
+          "id": "release-delivery-recovery",
+          "heading": "十一、回滚是恢复方案中的一种动作"
+        },
+        {
+          "id": "release-delivery-history",
+          "heading": "十二、把一次发布留下的信息变成下一次的帮助"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "supply-trust-subject",
+          "reason": "制品摘要需要与可信来源、报告主体和构建身份共同解释。"
+        },
+        {
+          "concept": "edge-request-assets",
+          "reason": "新旧页面共存时，公开资源路径与保留窗口必须匹配。"
+        },
+        {
+          "concept": "user-observation-slo",
+          "reason": "灰度放量依赖明确的任务分母、样本与观察信号。"
+        },
+        {
+          "concept": "compose-runtime-release",
+          "reason": "切换代码版本之前，要确认当前数据仍能被恢复版本理解。"
+        }
+      ]
+    },
+    {
+      "id": "DEPLOY-01",
+      "title": "让页面、资源与 API 各走正确的路径",
+      "question": "为什么首页正常，刷新页面、加载旧资源或访问 API 时仍会出错？",
+      "summary": "沿浏览器、边缘与上游逐段解释请求分类、Nginx 路径、代理、TLS、缓存键和发布顺序，提供隔离配置与真实 JSON 上游。",
+      "outcomes": [
+        "推导 URI 如何变成文件路径或上游请求",
+        "区分缓存存储、重新验证、共享键和清理效果",
+        "用响应矩阵验证新旧页面与 API 的约定"
+      ],
+      "prerequisites": [
+        "linux-02-process-port-log-network-diagnostics.md#linux-02"
+      ],
+      "guide": "deploy-01-nginx-static-assets-reverse-proxy-https-cdn.md",
+      "anchor": "deploy-01",
+      "concepts": [
+        {
+          "id": "edge-request-path",
+          "heading": "一、先画清谁向谁请求"
+        },
+        {
+          "id": "edge-request-contract",
+          "heading": "二、页面、资源和 API 需要三份不同的约定"
+        },
+        {
+          "id": "edge-request-location",
+          "heading": "三、读懂 location、root 和 try_files 的组合"
+        },
+        {
+          "id": "edge-request-config",
+          "heading": "四、一个完整的本地 HTTP 配置"
+        },
+        {
+          "id": "edge-request-proxy",
+          "heading": "五、用一个上游看清 proxy_pass 的路径语义"
+        },
+        {
+          "id": "edge-request-timeouts",
+          "heading": "六、超时、缓冲和重试各自影响什么"
+        },
+        {
+          "id": "edge-request-tls",
+          "heading": "七、HTTPS 验证的是连接到谁，以及内容如何传输"
+        },
+        {
+          "id": "edge-request-cache",
+          "heading": "八、缓存指令分别回答能不能存与何时能复用"
+        },
+        {
+          "id": "edge-request-key",
+          "heading": "九、CDN 缓存键决定谁会拿到同一份响应"
+        },
+        {
+          "id": "edge-request-purge",
+          "heading": "十、清理缓存不等于所有用户立即看到新版本"
+        },
+        {
+          "id": "edge-request-assets",
+          "heading": "十一、让新旧页面都能找到自己的资源"
+        },
+        {
+          "id": "edge-request-verification",
+          "heading": "十二、检查实际响应，而不是只检查配置文本"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "linux-diagnosis-path",
+          "reason": "沿真实连接与观察位置，才能区分源站、代理和浏览器故障。"
+        },
+        {
+          "concept": "release-delivery-frontend",
+          "reason": "资源策略是发布兼容窗口的一部分，要照顾已经打开的页面。"
+        },
+        {
+          "concept": "experience-performance-budget",
+          "reason": "压缩与缓存减少传输成本，还要结合执行成本和用户路径判断。"
+        },
+        {
+          "concept": "business-recovery-unknown",
+          "reason": "代理写入超时不代表业务没有执行，重试仍需操作身份。"
+        }
+      ]
+    },
+    {
+      "id": "OBS-01",
+      "title": "把用户任务变成可解释的观察",
+      "question": "错误率归零或接口全是 200，为什么仍不能说明用户一切正常？",
+      "summary": "从保存任务连接事件归属、错误渠道、日志指标链路、采样、SLO、告警与隐私，提供晚到结果与撤回记录的本地观察页。",
+      "outcomes": [
+        "为文档、页面和任务固定正确上下文",
+        "区分采样偏差、未知分母与真实退化",
+        "在进入队列前最小化数据，并验证观测链路"
+      ],
+      "prerequisites": [
+        "debug-01-systematic-debugging-evidence-causality.md#debug-01",
+        "eng-06-ci-cd-artifact-promotion-release-rollback.md#eng-06"
+      ],
+      "guide": "obs-01-frontend-observability-slo-alerting-privacy.md",
+      "anchor": "obs-01",
+      "concepts": [
+        {
+          "id": "user-observation-task",
+          "heading": "一、先定义用户完成了什么"
+        },
+        {
+          "id": "user-observation-sources",
+          "heading": "二、真实访问数据与实验室数据回答不同问题"
+        },
+        {
+          "id": "user-observation-context",
+          "heading": "三、文档访问、页面切换和业务任务分别编号"
+        },
+        {
+          "id": "user-observation-errors",
+          "heading": "四、错误需要按产生渠道与业务语义分类"
+        },
+        {
+          "id": "user-observation-signals",
+          "heading": "五、日志、指标和链路各自适合看什么"
+        },
+        {
+          "id": "user-observation-lab",
+          "heading": "六、用一页实验观察晚到结果与撤回选择"
+        },
+        {
+          "id": "user-observation-sampling",
+          "heading": "七、采样改变了你能怎样解释数据"
+        },
+        {
+          "id": "user-observation-slo",
+          "heading": "八、先写清分母，再计算 SLO 与错误预算"
+        },
+        {
+          "id": "user-observation-alerts",
+          "heading": "九、告警要让接收者知道为什么现在行动"
+        },
+        {
+          "id": "user-observation-lifecycle",
+          "heading": "十、指标回调的时间不等于指标所属的时间"
+        },
+        {
+          "id": "user-observation-privacy",
+          "heading": "十一、数据最小化应发生在进入队列之前"
+        },
+        {
+          "id": "user-observation-verification",
+          "heading": "十二、先验证观测链路，再相信安静的面板"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "release-delivery-observation",
+          "reason": "采集新鲜度与有效样本决定是否有依据继续放量。"
+        },
+        {
+          "concept": "experience-performance-metrics",
+          "reason": "性能指标需要正确生命周期，缺失值不能填成零。"
+        },
+        {
+          "concept": "experience-performance-percentile",
+          "reason": "采样与分组改变分布，分位数不能按均值合并。"
+        },
+        {
+          "concept": "business-recovery-unknown",
+          "reason": "请求状态与持久业务结果需要分开观察，避免将未知当失败重放。"
+        }
+      ]
+    },
+    {
+      "id": "PERF-01",
+      "title": "从体验指标定位真正的性能原因",
+      "question": "正文出现晚、点击没反馈和内容突然移动，应该分别观察什么、修改什么？",
+      "summary": "围绕桌面阅读讲清 LCP、INP、CLS、p75 与性能预算，用时间分解、位移窗口和主线程交互实验连接指标与真实体验。",
+      "outcomes": [
+        "区分三个核心指标与其生命周期和缺失条件",
+        "按阶段与交互定位瓶颈，理解预算对应的成本",
+        "用同条件对照与真实访问验证效果，保留用户任务完整性"
+      ],
+      "prerequisites": [
+        "obs-01-frontend-observability-slo-alerting-privacy.md#obs-01"
+      ],
+      "guide": "perf-01-core-web-vitals-performance-budgets.md",
+      "anchor": "perf-01",
+      "concepts": [
+        {
+          "id": "experience-performance-metrics",
+          "heading": "一、三个指标对应三种不同的等待与不适"
+        },
+        {
+          "id": "experience-performance-attribution",
+          "heading": "二、先找到指标指向的具体元素和交互"
+        },
+        {
+          "id": "experience-performance-percentile",
+          "heading": "三、p75 不能用平均值代替，也不能直接求平均"
+        },
+        {
+          "id": "experience-performance-evidence",
+          "heading": "四、实验室数据用于解释原因，真实访问用于确认影响"
+        },
+        {
+          "id": "experience-performance-budget",
+          "heading": "五、性能预算要对应用户路径与实际成本"
+        },
+        {
+          "id": "experience-performance-lcp",
+          "heading": "六、把图片 LCP 拆成四段时间"
+        },
+        {
+          "id": "experience-performance-critical",
+          "heading": "七、LCP 优化要围绕真正的关键路径"
+        },
+        {
+          "id": "experience-performance-inp",
+          "heading": "八、INP 包含输入等待、回调执行和呈现等待"
+        },
+        {
+          "id": "experience-performance-lab",
+          "heading": "九、亲眼观察一次长任务与分段任务"
+        },
+        {
+          "id": "experience-performance-cls",
+          "heading": "十、CLS 看最严重的位移窗口，不看全程简单总和"
+        },
+        {
+          "id": "experience-performance-task",
+          "heading": "十一、指标更好时，仍要确认任务更好"
+        },
+        {
+          "id": "experience-performance-improvement",
+          "heading": "十二、用一次小闭环决定是否保留优化"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "user-observation-sources",
+          "reason": "实验室数据解释原因，真实访问数据确认目标人群的影响。"
+        },
+        {
+          "concept": "user-observation-context",
+          "reason": "分段任务期间页面可能变化，结果必须仍归原任务。"
+        },
+        {
+          "concept": "edge-request-key",
+          "reason": "资源传输受缓存键和压缩影响，不能用下载大小代替执行成本。"
+        },
+        {
+          "concept": "release-delivery-observation",
+          "reason": "优化上线后仍需按版本与路由观察，异常时停止扩大影响。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,158 +1,242 @@
-# Linux 服务链路诊断知识点讲义
+# 浏览器报错时，先找出请求停在了哪里
 
 ## LINUX-02 进程、端口、日志与网络诊断
 
-“网页打不开”可以来自进程未启动、端口监听错误、DNS、路由、防火墙、TLS、反向代理、应用超时或下游依赖。不断重启服务会抹掉现场并制造暂时恢复，却无法解释根因。可靠诊断从用户可观察错误和时间点开始，沿解析、连接、协议、进程与依赖逐层证伪，最后用同一路径复验。
+资料站首页能打开，点击“课程列表”却得到 502。有人建议重启 Node，有人建议清 DNS，还有人觉得证书过期了。这些猜测听起来都可能，但解决的是不同位置的问题。第一件事应是把这次请求画出来：浏览器找到了谁，谁接受了连接，又是谁向上游发起了下一次连接。
 
-适用场景例如本机可访问但公网超时、代理返回 502、部分实例异常、服务反复重启或容器健康失败；不同场景都从实际观察位置建立证据链。
+本讲围绕同一条 Web 请求建立排障方法。Linux 命令用于读取实际状态，示意输出用于练习推理；最后的小实验可以在 Node.js 22 中观察正常响应、应用失败和代理连接失败。示意输出不代表你的机器必然长得一样。
 
 ### 学习前先确认
 
-- 直接前置：[NET-01 浏览器网络协议、Fetch 与请求可靠性](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。本讲直接使用 DNS、TCP/TLS、HTTP、超时、代理和状态码。
-- 直接前置：[LINUX-01 文件系统、权限与安全命令](../chinese-guides/linux-01-filesystem-permissions-safe-commands.md#linux-01)。本讲直接读取配置、日志、socket 与进程身份。
+- 直接前置：[NET-01 浏览器网络协议、Fetch 与请求可靠性](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。需要能区分 DNS、连接、TLS 和 HTTP。
+- 直接前置：[LINUX-01 文件系统、权限与安全命令](../chinese-guides/linux-01-filesystem-permissions-safe-commands.md#linux-01)。需要理解运行身份、路径和文件读取权限。
 
-### 一、先保存现象和时间边界
+### 一、把报错写成能够复现的观察
 
-记录谁、从哪里、在什么时间访问哪个 URL/地址，得到浏览器错误、状态码、超时阶段还是连接拒绝。注明是否所有用户、区域、协议和实例都受影响。不要把“502”写成根因，它只是某一代理没有得到合格上游响应。
+“打不开”还不足以选择命令。把它改写成：“09:10 UTC，办公网络中的浏览器访问 `https://demo.example.test/api/lessons`，在约 0.2 秒后收到 502；同一浏览器访问首页返回 200。”这句话已经限定了时间、观察位置、协议、路径、结果和对照。
 
-保存客户端 DNS 结果、目标 IP、请求 ID、响应头和时间分解。时间同步错误会让多机日志无法关联，先检查系统时钟/NTP。对敏感 URL、token、Cookie 和个人数据脱敏。
+进一步确认影响范围：另一位用户是否相同、只影响一个接口还是全站、IPv4 和 IPv6 是否不同、是否每次都失败。对多实例系统记录请求 ID 和命中的后端实例；一次成功只能证明那一次经过的路径正常。
 
-建立假设表，每项写支持证据、反证命令和结果。检查顺序从低成本、低侵入、最能分层的观察开始，避免一上来抓全量包或重启。
+先保存小范围证据，再变更状态。重启可能清掉短暂连接、内存队列和上一进程的信息。若业务必须立即止血，记录重启发生的时间和对象，承认哪些原始现场已经丢失。恢复与解释根因是两个需要分别完成的目标。
 
-### 二、进程是资源与身份的运行实例
+下面的地址和 unit 名均为示例。执行时替换成自己有权诊断的目标，不要把含 Cookie、Authorization 或私人查询参数的完整请求贴进共享记录。
 
-**进程（Process）**有 PID/PPID、用户/组、环境、工作目录、打开文件、资源限制和生命周期。程序文件存在不代表服务进程在运行；PID 存在也不代表健康或监听正确地址。
+### 二、一次网页请求可能包含两次连接
 
-用 `ps` 看父子树、状态、启动时间与命令；`top`/`pidstat` 观察 CPU、内存和调度；`/proc/<pid>` 或 `lsof` 查打开文件、cwd 与 socket。命令行和环境可能含秘密，收集时最小化。
+```mermaid
+flowchart TB
+  Browser["浏览器：访问域名"] --> DNS["解析地址与选择路由"]
+  DNS --> Edge["443：TLS 与反向代理"]
+  Edge --> Upstream["上游地址：127.0.0.1:41730"]
+  Upstream --> Process["监听 socket 与应用进程"]
+  Process --> Data["应用路由、依赖与资源"]
+```
 
-僵尸表示子进程已退出但父未回收；D 状态常在不可中断 I/O；高 load 不只等于 CPU 高。结合 CPU、内存、I/O wait、上下文切换和 cgroup 限额判断。
+浏览器到代理是一条连接，代理到 API 是另一条连接。浏览器能收到代理生成的 502，通常说明前一条路径至少已完成了本次 HTTP 交换；这不能证明代理访问上游成功，也不能证明上游使用的 DNS 正常。
 
-### 三、信号是协作式生命周期协议
+因此不要把所有 502 都归结为“服务器没启动”。上游端口错误、连接被拒绝、协议不符、响应中途断开，都可能由代理转换成错误响应；具体映射取决于代理实现。需要先找到**产生这个响应的那一层**，再查它的上游记录。
 
-**信号（Signal）**通知进程发生事件。SIGTERM 通常请求优雅退出，应用应停止接新流量、完成/取消在途、刷新必要状态并在期限内退出；SIGKILL 无法捕获，只作为最后手段。
+如果请求根本没有建立 TCP 连接，就还没走到 HTTP 状态码。浏览器显示 DNS 错误、连接超时、证书错误、HTTP 500，代表的是不同观察，不能套同一条“清缓存”处理。
 
-SIGHUP 常用于重载但由应用定义；SIGINT 与终端中断相关。不要假定所有程序含义相同，查服务文档和 unit。发送前确认 PID 没复用、进程身份和影响范围。
+### 三、进程存在、服务运行和业务健康是三件事
 
-服务停止超时后被强杀说明 shutdown 路径有问题。测试滚动部署中的信号转发，尤其 shell 作为 PID 1、容器入口和子进程；记录退出码与是否完成连接排空。
+**进程（Process）**是正在运行的程序实例，包含 PID、父进程、身份、工作目录、打开的文件和资源。磁盘上有 `server.mjs` 不表示它已运行；看到 Node 的 PID，也不表示它是这一套服务。
 
-### 四、systemd 管理期望状态
+```bash
+ps -eo pid,ppid,user,stat,lstart,args
+systemctl status demo-api.service --no-pager
+systemctl show demo-api.service -p MainPID -p ActiveState -p SubState -p ExecMainStatus -p NRestarts
+systemctl cat demo-api.service
+```
 
-systemd unit 定义启动命令、用户、工作目录、环境、依赖、重启和资源边界。`systemctl status` 给摘要，不足以替代完整日志与 unit 展开。用 `systemctl cat/show` 查实际配置和 drop-in。
+假设 `MainPID=0`、`ActiveState=failed`，应用已不在正常运行。接着查启动日志，而不是继续猜浏览器缓存。若 `MainPID=2184`，还要把这个 PID 与监听关联起来。进程的命令行也可能包含秘密，保存时只保留必要字段。
 
-反复 restarting 可能因启动失败叠加重启策略。先看最早错误、退出状态和频率，再决定是否停重启保现场。`daemon-reload` 只让管理器重读 unit，不重启服务；配置重载与服务重启不同。
+`STAT` 中 `Z` 表示进程已经结束、父进程尚未回收退出信息；继续给它发 KILL 不能让父进程完成回收。`D` 通常表示不可中断等待，要结合具体 I/O 调查。load average 包含可运行任务和不可中断等待任务，不是 CPU 使用率的另一种写法。
 
-依赖排序不证明对方业务就绪。应用要有就绪检查和有限重试。unit 的环境与交互 shell 不同，路径、umask、限制和权限必须按实际服务身份验证。
+**systemd** 的 unit 说明服务如何启动；drop-in、运行用户、目录与环境都可能改变结果。修改 unit 后的 `daemon-reload` 是让管理器重新读取定义；服务自己的 `reload` 是否支持、会重读什么，由应用和 unit 决定；`restart` 则会更换进程。三者不能互相代替。
 
-### 五、socket 把进程与地址关联
+### 四、监听地址比端口号多回答一个问题
 
-**套接字（Socket）**是进程通信端点。监听 `127.0.0.1:8080` 只接受本机 IPv4，`0.0.0.0:8080` 接受所有 IPv4 地址；IPv6 `::` 的双栈行为受系统设置影响。监听存在仍不代表防火墙允许或应用能响应。
+**套接字（Socket）**是通信端点。读 `ss -ltnp` 时，先看协议和本地地址，再看端口和进程。以下是简化示意：
 
-用 `ss -ltnp` 查监听地址、端口、协议和进程，`ss -tan` 看连接状态与队列，`lsof -i` 辅助关联文件描述符。需要权限才能看其他进程信息，不能因看不到 PID 就判定无人监听。
+```text
+LISTEN 0 511 127.0.0.1:41730 0.0.0.0:* users:(("node",pid=2184,fd=18))
+LISTEN 0 511   0.0.0.0:443   0.0.0.0:* users:(("proxy",pid=902,fd=6))
+```
 
-连接拒绝通常目标可达但无人监听/被主动拒绝；超时可能是丢包、防火墙、路由或服务不响应。大量 SYN-RECV、TIME-WAIT、CLOSE-WAIT 分别提示不同方向的问题，需结合请求量和应用行为。
+第一行只在**当前网络命名空间**的 IPv4 回环地址监听，适合由同一主机网络空间中的代理访问；另一台机器不能把这个 `127.0.0.1` 当成服务器地址。`0.0.0.0` 表示所有本地 IPv4 地址，不是客户端应填写的目标地址，也不直接证明公网可达。
 
-### 六、从本机向外逐段验证
+`[::]:443` 的 IPv4 接受行为还取决于 socket 设置和系统配置。不要看到这一行就断言双栈均正常。查不到进程名也未必没有进程，普通用户可能无权查看其他用户的 socket 信息。
 
-在服务主机先请求监听地址，再请求主机网卡地址，再从同网络和外部入口请求。每一步保持 Host、协议和路径可比，明确哪里首次失败。若本机 `localhost` 成功而容器/外部失败，优先检查绑定地址、网络命名空间和入口规则。
+端口已占用时，先确认占用者、启动时间和所属服务。一个“看起来多余”的进程可能仍在承接流量。PID 会复用，几分钟前抄下的数字不能无限期当成同一个实例。容器中的 `localhost` 变化见 [DOCKER-02 的通信方向](../chinese-guides/docker-02-compose-network-volumes-environments.md#三localhost-要连同观察位置一起读)。
 
-不要用 ping 成功/失败代替端口判断，ICMP 可能被策略禁止。用带连接与总超时的 `curl -v`、`openssl s_client` 或协议客户端观察 DNS、connect、TLS、首字节和响应。
+### 五、先比较同一主机上的两条请求
 
-多实例/负载均衡要记录命中节点、请求 ID和区域。一次成功不能代表全部节点；连续采样并按 backend 分组。
+若代理与 API 都在同一主机网络空间，先在该主机读取：
 
-### 七、DNS 是带缓存的分布式映射
+```bash
+ss -ltnp
+curl --noproxy '*' --connect-timeout 2 --max-time 5 -sS -i http://127.0.0.1:41730/healthz
+curl --noproxy '*' --connect-timeout 2 --max-time 5 -sS -i http://127.0.0.1:41730/api/lessons
+```
 
-分别查询客户端实际 resolver、权威记录与特定记录类型。检查 A/AAAA、CNAME 链、TTL、split DNS 和搜索域。浏览器、操作系统、代理和应用可能各自缓存。
+`--noproxy '*'` 明确绕过环境代理，让这个实验确实访问本机目标。第一条 HTTP 请求成功、第二条返回 500，说明“端口不可达”已经不足以解释问题；应该查路由和依赖。两条都连接拒绝，则优先看监听地址和服务状态。
 
-修改 DNS 后旧记录会按 TTL 存续，负缓存也有期限。不要看到权威已新就断言全球生效。双栈中 AAAA 错误可能只影响部分网络，需分别强制 IPv4/IPv6 测试。
+curl 默认可以在收到 HTTP 500 后仍以退出码 0 结束，因为传输本身完成了。需要把 HTTP 错误作为命令失败时，可选 `--fail-with-body`，并核对本机 curl 是否支持；不要把进程退出码和响应状态码混成一个值。
 
-服务发现名称在容器/集群内部可能只在特定网络有效。宿主机解析失败不等于容器内失败，反之亦然；在真实网络命名空间查询。
+直接访问上游可能绕过 Host 路由、TLS、鉴权和路径重写。这是为了隔离一段路径，不是最终验收。若应用按 Host 区分站点，测试请求也要提供匹配的 Host；最后必须回到原域名和原客户端复验。
 
-### 八、路由与防火墙决定可达路径
+### 六、DNS、地址族和路由分别查
 
-`ip addr`, `ip route get <target>` 查看源地址、接口和下一跳；策略路由、VPN 和多网卡会改变结果。NAT 后日志可能看见代理地址，需要可信转发头与网络配置共同解释。
+```bash
+getent ahosts demo.example.test
+dig A demo.example.test
+dig AAAA demo.example.test
+ip route get 192.0.2.20
+```
 
-防火墙可能在云安全组、主机 nftables/iptables、容器规则和上游网络多层存在。逐层比较允许方向、协议、端口、源范围和 IPv4/IPv6。不要临时全开放来“验证”，可用精确短期规则并记录恢复。
+`getent` 走系统的名称服务配置，可能包含 `/etc/hosts`；`dig` 查询 DNS。二者不一致时，不要立即断定某个工具出错。浏览器启用的加密 DNS、VPN、分流解析和代理又可能使用另一条路径。记录“由谁向哪个解析器查到了什么”。
 
-traceroute 仅提供部分路径线索，节点不回应不等于转发失败。以目标协议的连通和边界日志为主。
+A 指向 IPv4，AAAA 指向 IPv6。A 正确不证明 AAAA 正确。用 `curl -4` 与 `curl -6` 分别访问同一域名，可以收窄问题，但某个结果仍只适用于当前网络。权威记录更新后，递归缓存、负缓存和应用缓存可能继续影响实际查询。
 
-### 九、TLS 诊断身份、时间和链
+`ip route get` 给出本机选用的接口、源地址和下一跳线索，不是端到端连通证明。ping 使用的 ICMP 与目标 TCP 端口不同；ping 不通而 HTTPS 正常完全可能。云安全组、主机防火墙、容器规则及上游网络要按方向、地址族和协议分别看。
 
-TLS 失败检查握手到哪一步、SNI、证书域名、有效期、链、信任根和协议/密码兼容。系统时间错误会产生未生效/过期。反向代理到上游也可能有独立 TLS。
+### 七、保留域名，才能正确验证 TLS
 
-用 `openssl s_client -servername` 或 curl 保持正确主机名，不能只请求 IP 后误判证书。保存证书摘要和链信息，不泄露私钥。
+为了区分 DNS 和目标服务器，可以让 curl 固定连接某个 IP，同时保留 URL 中的主机身份：
 
-客户端证书、企业代理和证书钉扎会造成环境差异。分清浏览器信任、系统信任和应用自带 trust store。
+```bash
+curl --noproxy '*' --resolve demo.example.test:443:192.0.2.20 \
+  --connect-timeout 3 --max-time 8 -v https://demo.example.test/api/lessons
+```
+
+这里的文档保留地址 `192.0.2.20` 不提供真实服务。`--resolve` 匹配域名与端口，将连接导向指定地址，同时让 HTTPS 仍按域名进行 SNI 和证书校验。仅请求 `https://192.0.2.20` 再加 Host 头，并不等价：HTTP 头在 TLS 握手之后才发送。
+
+检查证书的域名、有效期、链和信任库，也检查客户端时间。浏览器、系统 curl 和应用运行时可能使用不同的信任来源。企业代理或双向 TLS 会增加身份条件，需记录实际路径。
+
+`-k` 会跳过证书校验，因此“加了 -k 能通”只是定位线索，不能成为 HTTPS 恢复的验收。修好后移除绕过，再用正常信任路径验证。详细日志可能带请求头和响应信息，使用专门的无敏感数据请求。
+
+### 八、把耗时拆到阶段，但不要凭一个数字定罪
+
+curl 的时间变量是从请求开始累计的。对一次简单、未重定向、未复用的 HTTPS 请求，假设观察到以下数据：
+
+```js example=linux02-timing-deltas
+const time = { dns: 0.010, connect: 0.040, tls: 0.100, firstByte: 0.250, total: 0.300 };
+console.log(Math.round((time.connect - time.dns) * 1000)); // => 30
+console.log(Math.round((time.tls - time.connect) * 1000)); // => 60
+console.log(Math.round((time.firstByte - time.tls) * 1000)); // => 150
+```
+
+150 ms 是从 TLS 完成到首字节的这段观察时间，里面还可能有请求发送、网络往返、代理等待和服务端处理，不能直接命名为“数据库耗时”。重定向、连接复用、代理及不同 HTTP 版本又会改变解释前提。
+
+```bash
+curl --noproxy '*' --connect-timeout 3 --max-time 8 -sS -o /dev/null \
+  -w 'ip=%{remote_ip} code=%{http_code} dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} first=%{time_starttransfer} total=%{time_total}\n' \
+  https://demo.example.test/api/lessons
+```
+
+连接拒绝常表示连接尝试被主动拒绝，例如没有监听或规则 reject；超时可能发生在连接前、握手中或等待响应时。先结合错误信息区分阶段，再收集下一条证据。不要因为总耗时恰好 5 秒就断言应用执行了 5 秒。
 
-### 十、HTTP 状态沿代理链解释
-
-404 可能来自 CDN、代理或应用；502/504 是中间层对上游失败的表达；503 可能是主动过载或无健康实例。查看 `Server`, `Via`, trace ID 和各层访问日志确定产生者。
-
-核对 Host、路径重写、方法、body 上限、超时和 keep-alive。代理能连上端口不等于路由到正确应用。静态健康端点成功也不代表关键依赖可用；区分存活与就绪。
-
-重试会放大压力，尤其非幂等请求。诊断时记录客户端、代理和应用各自重试/超时，确保内层期限小于外层预算，避免上层已放弃而下层继续耗资源。
-
-### 十一、日志必须形成时间线
-
-**系统日志（Journal）**由 systemd-journald 汇集带时间、unit、PID 等字段的记录。用 `journalctl -u <unit> --since ... --until ...` 限定窗口，用启动批次和字段过滤关联。保存单调时间/时区信息。
-
-应用日志使用结构化事件、级别、request/correlation ID、操作/实体标识和耗时。错误堆栈需有上下文，但不记录 token、密码或完整个人数据。日志缺失本身是信号：进程可能没启动、写错目标或权限失败。
-
-日志轮转、保留与磁盘上限要测试。大量 debug 可能填满磁盘并使故障加剧；临时提升级别需有自动恢复时间。
-
-### 十二、资源耗尽常伪装成网络故障
-
-CPU 饱和会增加延迟，内存压力/OOM 会杀进程，文件描述符耗尽导致无法 accept/open，磁盘满导致日志、数据库或临时文件失败。检查系统和 cgroup 双层限制。
-
-服务看似运行但线程池、连接池或事件循环阻塞。比较队列、活跃/等待连接、下游耗时和采样剖析。不要因 CPU 不高就排除阻塞。
-
-OOM 日志、内核消息和 unit 退出原因可以证明是否被杀。修复不仅是加资源，还要找泄漏、无界队列、错误超时和容量预算。
-
-### 十三、端口占用与错误进程
-
-启动失败 `address already in use` 时查占用者身份、启动时间和 unit，不立即 kill。可能是旧版本未退出、双实例部署或错误配置。确认业务流量后受控停止。
-
-端口存在但响应错误版本时，从 PID 的 executable、cwd、环境和部署摘要追溯。不要只信进程命令行显示的名称。
-
-临时开发进程不应与系统服务共享生产端口。使用 unit 管理唯一所有者，并对启动冲突告警。
-
-### 十四、容器与命名空间改变观察位置
-
-容器有独立 PID/network/mount 视图。宿主 `localhost` 与容器 `localhost` 不同；端口发布只是 NAT/代理规则，服务仍需在容器正确地址监听。分别在客户端、宿主、容器和服务网络观察。
-
-容器重启会丢临时文件和短期日志，先抓状态、inspect 和前一实例日志。镜像内缺少诊断工具时用受控调试容器或宿主观察，不把全套工具永久塞进生产镜像。
-
-资源限制由 cgroup 实施，宿主空闲不代表容器未达限额。保存容器摘要、网络、限制和重启原因。
-
-### 十五、建立明确诊断树
-
-推荐顺序：复现并定时→DNS→路由/连接→TLS→HTTP 产生层→目标监听→进程/unit→应用日志→依赖与资源。顺序可按现象调整，但每次跳层要说明证据。
-
-若连接拒绝，先查监听与地址；若握手超时，查网络路径；若 502，查代理上游和应用进程；若 500，关联请求 ID 查应用与依赖。不要把前端控制台错误自动归为前端 bug。
-
-每个候选根因有一条能证伪的观察。修复后用原客户端、原域名、原路径和相同权限复测，再补不同节点与监控。
-
-### 十六、变更前保留现场与回滚
-
-重启、清缓存、改 DNS 或开放防火墙会改变现场。先保存关键状态、日志窗口、连接和配置摘要；若必须止血，记录何时、谁、改变什么，以及哪些根因证据因此丢失。
-
-变更一次只改一个有因果依据的项，设置回滚和观察窗口。多个同时修改即使恢复，也无法知道有效因素。紧急场景可以并行止血与取证，但责任明确。
-
-恢复不等于根因解决。短期重启后建立持续指标和复现计划，追踪到资源、代码或配置机制。
-
-### 十七、故障演练
-
-在练习环境分别注入：服务未启动、监听 127.0.0.1、端口被占、DNS 指向旧 IP、证书过期、代理 upstream 错误、应用 500、下游超时、磁盘满和 OOM。每次只注入一项，按树收集证据。
-
-再组合两个故障，训练不要在找到第一个问题后停止。修复监听后可能仍有 TLS 错误；DNS 正确也可能部分实例失败。提交时间线、假设表、最小修复与同路径复验。
-
-演练重连/重试风暴，观察服务恢复时负载，验证退避与过载保护。日志和抓包严格脱敏、设保留期。
-
-抓包属于高敏感诊断：先限定接口、主机、端口、时长和抓取长度，确认授权并保护文件。HTTPS 仍会暴露地址和时序，解密材料更需严格控制；完成后按保留政策安全处理。
-
-所有诊断证据都要标明观察位置，否则相同命令在客户端、代理、宿主和容器中可能表达完全不同的网络事实。
-
-### 十八、最终复核
-
-诊断报告回答：用户看到什么；首次失败在哪一层；哪些假设被何证据排除；根因如何产生现象；修复为何足够且范围最小；原路径是否恢复；监控如何更早发现；是否存在未解释差异。
-
-高级 Linux 排障不是会运行更多命令，而是能把一次请求的身份、地址、进程、socket、日志和依赖串成可复核因果链。任何“重启后好了”都只是现象更新，直到证据解释为何失败、为何恢复、如何防止再次发生。
+### 九、日志要接成时间线，资源要看实际限制
+
+```bash
+journalctl -u demo-api.service --since '2026-09-22 09:05:00 UTC' \
+  --until '2026-09-22 09:15:00 UTC' --no-pager -o short-iso
+journalctl -k --since '2026-09-22 09:05:00 UTC' --no-pager
+```
+
+**Journal** 汇集带时间、unit 和进程等字段的日志。先限制时间范围，寻找最早的相关错误。十条“连接失败”可能都来自同一次启动失败，而最后一条不一定最接近根因。跨机器先对齐时间与时区；有权限和保留期限制时，“没读到日志”不等于“没发生错误”。
+
+将请求 ID、实例身份和发布时间串起来，避免把昨天进程的错误套在今天。若服务在重启，查上一个实例的退出原因。内存不足、文件描述符耗尽、磁盘容量或 inode 用完，都可能表现为网络失败。
+
+宿主还有空闲内存，不表示 cgroup 内的服务没有触及限额。退出码 137 只提示常见的 SIGKILL 编码，不单独证明 OOM；需要内核记录、cgroup 事件或容器状态等证据。CPU 不高也不能排除锁等待、连接池排队或 I/O 阻塞。
+
+### 十、用一个本地实验看懂 500 与 502
+
+保存为 `diagnostic-lab.mjs`，用 Node.js 22 执行。两个服务都绑定本机回环和系统分配的空闲端口，不调用外部服务。代理的错误映射是本实验自行定义的合同。
+
+```js example=linux02-diagnostic-lab runtime=project file=diagnostic-lab.mjs
+import http from 'node:http';
+import { once } from 'node:events';
+const listen = async server => {
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  return `http://127.0.0.1:${server.address().port}`;
+};
+const close = server => new Promise((resolve, reject) => {
+  server.close(error => error ? reject(error) : resolve());
+  server.closeAllConnections();
+});
+let failApplication = false;
+const api = http.createServer((request, response) => {
+  response.writeHead(failApplication ? 500 : 200, { 'content-type': 'text/plain; charset=utf-8' });
+  response.end(failApplication ? '应用内部失败' : '课程列表正常');
+});
+let apiOpen = false;
+let proxyOpen = false;
+const proxy = http.createServer();
+try {
+  const upstream = await listen(api);
+  apiOpen = true;
+  proxy.on('request', async (request, response) => {
+    try {
+      const result = await fetch(upstream, { signal: AbortSignal.timeout(1500) });
+      const body = await result.text();
+      response.writeHead(result.status, { 'content-type': 'text/plain; charset=utf-8' });
+      response.end(body);
+    } catch {
+      response.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+      response.end('代理未取得上游响应');
+    }
+  });
+  const entry = await listen(proxy);
+  proxyOpen = true;
+  const observe = async () => {
+    const response = await fetch(entry, { signal: AbortSignal.timeout(3000) });
+    console.log(response.status, await response.text());
+  };
+  await observe();
+  failApplication = true;
+  await observe();
+  await close(api);
+  apiOpen = false;
+  await observe();
+} finally {
+  if (proxyOpen) await close(proxy);
+  if (apiOpen) await close(api);
+}
+```
+
+预期依次输出 `200 课程列表正常`、`500 应用内部失败`、`502 代理未取得上游响应`。第二次仍能连到 API，只是应用明确失败；第三次 API 已关闭，而代理仍活着并生成响应。这解释了为什么一个状态码必须结合产生者阅读。
+
+实验没有 DNS、TLS、systemd、网络丢包或实际资源耗尽，不能据此宣称这些 Linux 场景已经验证。真实代理也可能把不同失败转换成其他状态，应查看它自己的日志与文档。
+
+### 十一、停止服务是一段有期限的协作
+
+**信号（Signal）**通知进程处理事件。SIGTERM 常用于请求退出，但是否排空请求由应用实现；SIGHUP 是否重载也由程序约定。SIGKILL 无法捕获，不能执行应用清理。
+
+先确认服务归属，再通过管理它的 unit 或容器进行受控停止。随意 kill 子进程可能马上被重启，甚至杀到已经复用的 PID。停止期限要覆盖应用关闭过程；同时要有上限，防止一个永远不返回的请求阻止发布。
+
+优雅退出通常先停止接新请求，再处理在途工作与资源，超过期限再强制结束。容器的 PID 1、入口脚本和信号转发会影响效果，见 [DOCKER-01 的入口与退出](../chinese-guides/docker-01-images-containers-dockerfile-cache.md#九入口必须让信号到达真正的应用)。Node 的关闭实现可继续查阅 [NODE-04](../chinese-guides/node-04-http-bff-production-engineering.md#十一停止接新任务再有上限地排空)。
+
+### 十二、用最小修复回答完整问题
+
+假设证据为：代理返回 502、上游连接被拒绝、41730 无监听、unit 日志出现工作目录不存在。最小修复应先纠正服务实际需要的目录或配置。修改 DNS 无法解释这个已经确定的上游启动错误；开放公网 41730 还会扩大无关暴露。
+
+修复后依次确认服务启动、正确地址监听、上游关键路径响应，再回原客户端验证域名、TLS 和业务请求。只测 `/healthz` 不足以证明课程接口恢复。若原故障只影响 IPv6，复验也必须包含那条路径。
+
+排障记录保留“观察 → 假设 → 反证 → 修改 → 同路径复验”。仍有差异就明确留下，例如另一区域未验证，不把一台机器的成功推广到所有用户。网络入口的权限设计见 [LINUX-04](../chinese-guides/linux-04-server-security-ssh-users-firewall.md#七端口规则要同时说明来源与观察方向)。
+
+### 动手想一想
+
+代理返回 502，API 的 `/healthz` 在宿主成功，但代理在容器里运行并配置了 `127.0.0.1:41730`。这两个 127.0.0.1 指的是谁？应先增加重试，还是先核对代理实际连接的地址？
+
+再把现象改成“只有 AAAA 路径失败”。这次你会保存哪两组地址、监听和请求结果？尝试解释每条结果能证明什么，以及还不能证明什么。
+
+### 参考与延伸阅读
+
+- [curl 手册](https://curl.se/docs/manpage.html)：resolve、超时、代理、证书验证与时间变量。
+- [systemctl 手册](https://man7.org/linux/man-pages/man1/systemctl.1.html)：服务状态、reload 与 daemon-reload。
+- [journalctl 手册](https://man7.org/linux/man-pages/man1/journalctl.1.html)：时间窗口、启动批次和字段查询。
+- [Linux ss 手册](https://man7.org/linux/man-pages/man8/ss.8.html)：监听、连接与进程信息。
+- [Node.js HTTP](https://nodejs.org/docs/latest-v22.x/api/http.html)：实验服务器的监听和关闭能力。

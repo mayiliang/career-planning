@@ -2,160 +2,364 @@
 
 ## IDENTITY-01 Cookie、Session、Token 与浏览器身份边界
 
-登录不是“前端保存一个 token”这么简单。它是一条跨越浏览器、网络、应用服务器、会话存储和账号系统的状态链：浏览器携带某个会话凭证，服务端据此找到受控状态，再对本次请求重新做授权判断。任何一环把“可携带的标识”误当成“永久可信的身份”，都会留下劫持、重放、越权或无法退出的问题。
+林在一个资料站登录，刷新页面后还能看到自己的收藏；在另一个标签页退出，原页面却仍显示头像。哪个画面才代表登录状态？答案要沿请求找到服务器，不能只看页面保存了什么。
+
+本讲把浏览器凭证、服务器会话和页面显示拆开，再通过本地实验观察 Cookie 自动携带、登录轮换与退出撤销。所有账号和资料均为教学数据。浏览器能力资料核验于 2026-09-19；实现是否支持仍以目标环境和能力检测为准。
 
 ### 学习前先确认
 
-- 直接前置：[SEC-01 XSS、CSRF 与前端信任边界](../chinese-guides/sec-01-xss-csrf-trust-boundaries.md#sec-01)。本讲直接使用同源、Cookie 自动携带、危险脚本、CSRF 防护和服务端最终授权这些边界。
-
-### 一、先分清认证、会话与授权
-
-认证回答“这次登录流程证明了谁在操作”，会话回答“随后多次请求如何连续关联到同一个登录上下文”，授权回答“这个上下文现在能否执行某个动作”。三者相连，却不能合并成一个布尔值。
-
-用户成功输入密码或使用 Passkey，只完成了一次认证。服务端随后创建会话，浏览器以后携带会话凭证。每个业务接口仍要根据用户、租户、角色、资源归属、对象状态和风险重新授权。前端隐藏按钮既不是认证，也不是授权。
-
-一个高级工程师会追问：凭证由谁签发、存在哪里、何时过期、如何轮换、怎样吊销、哪些请求会自动携带、脚本能否读取、跨站场景如何处理、服务端失败后 UI 如何收敛。身份系统的质量来自这些不变量，而不是 token 字符串的形状。
-
-### 二、Cookie 是传输机制，不等于会话本身
-
-Cookie 是浏览器按域、路径、安全属性和站点上下文保存并附加到 HTTP 请求的状态。它可以承载不透明 session ID，也可以承载签名数据，但 Cookie 本身不解释用户是谁，更不决定能做什么。
-
-服务端 Session 通常把随机、不透明的 session ID 放入 Cookie，把用户 ID、认证时间、权限快照、设备风险、过期时间和吊销状态放在服务端存储。这样可以集中失效、限制并发、更新权限，并避免把业务状态暴露给浏览器。
-
-Cookie 值即使经过签名也可能被复制和重放。签名只能证明内容未被篡改，不证明发起请求的人就是原用户。因此仍要使用 HTTPS、短生命周期、轮换、风险控制和服务端授权。
-
-### 三、服务端会话是一条可控制的记录
-
-会话记录至少包含随机标识、主体、创建时间、绝对过期时间、空闲过期时间、最近活动、认证强度和状态。高风险系统还会记录凭证版本、设备或客户端绑定信号、租户、撤销原因与最近再认证时间。
-
-浏览器只持有不透明 ID。服务端收到请求后查询会话，拒绝不存在、过期、撤销、主体已禁用或认证强度不足的记录。权限变化不能永远等待 Cookie 过期；可以在会话中保存权限版本，并在关键请求上与当前账号状态比较。
-
-会话存储不是普通缓存。如果缓存淘汰会让所有用户突然退出，就要定义容量、持久性、故障转移和降级；如果多区域复制存在延迟，就要说明“退出后旧会话最迟多久失效”，并让高风险操作走更强的一致性路径。
-
-### 四、登录成功后必须轮换会话标识
-
-**会话固定攻击（Session Fixation）**利用用户登录前已经持有、且攻击者能够预知或植入的 session ID。若认证后服务端沿用同一 ID，攻击者可能拿着旧 ID 进入已认证会话。
-
-正确做法是在匿名状态升级为已认证状态、权限显著提升、账号切换或高风险再认证后生成新的随机 session ID，迁移必要状态并使旧 ID 失效。轮换不是只重新发送同一个 Cookie，也不是把用户 ID 拼进标识。
-
-轮换应尽量原子化：新会话建立成功后旧会话立即不可继续认证。并发请求要么使用旧的低权限上下文，要么使用新的上下文，不能短暂出现两个都拥有提升后权限的会话。
-
-### 五、Cookie 属性共同缩小暴露面
-
-`Secure` 要求 Cookie 只经 HTTPS 发送；`HttpOnly` 阻止普通页面脚本通过 `document.cookie` 读取；`SameSite` 控制跨站请求是否自动携带；`Domain` 和 `Path` 决定发送范围；`Max-Age` 或 `Expires` 控制浏览器持久时间。
-
-身份 Cookie 通常优先使用 host-only、`Secure`、`HttpOnly`、适合业务的 `SameSite=Lax` 或 `Strict`，并缩短生命周期。确需跨站嵌入时才考虑 `SameSite=None; Secure`，同时强化 CSRF、来源验证和嵌入边界。
-
-`__Host-` 前缀要求 `Secure`、`Path=/` 且不得设置 `Domain`，可减少子域覆盖和作用域误配。前缀是浏览器约束，不会代替服务端会话轮换、授权或吊销。
-
-### 六、HttpOnly 降低窃取，不阻止被脚本代用
-
-HttpOnly 让注入页面的脚本看不到 Cookie 值，因此降低凭证直接外泄。但恶意脚本仍运行在合法页面 origin 下，可以调用接口，让浏览器自动携带 Cookie。它可能读取响应、修改资料或发起交易。
-
-所以 XSS 防护、CSP、Trusted Types、输出编码和敏感操作再认证仍不可省略。把 token 从 localStorage 改到 HttpOnly Cookie 是重要改善，却不是“从此免疫 XSS”。
-
-安全讨论必须区分“读取凭证”“借用当前会话发送请求”“把结果外传”三条攻击路径，不应只用一个是否可读的表格结束分析。
-
-### 七、SameSite 不是完整 CSRF 防线
-
-SameSite 可以减少一部分跨站自动携带，但仍存在顶层导航、同站不同源、旧浏览器、业务必须跨站和实现误配等边界。状态改变接口还要验证 CSRF token、Origin/Referer、请求方法和内容类型，并拒绝简单表单能够偷偷构造的危险操作。
-
-双提交 Cookie 只有在 token 的完整性、Cookie 作用域和比较方式都正确时才可靠；服务端 session 绑定 token 更容易推理。任何方案都要覆盖登录 CSRF、退出 CSRF、跨子域和 CORS 配置，而不只是转账接口。
-
-服务端不能因为请求含 Cookie 就认为来自自己的页面。Cookie 的设计目标之一就是自动携带，这正是便利与 CSRF 风险同时存在的原因。
-
-### 八、Token 描述的是凭证形态与用途
-
-Token 是广义凭证。OAuth access token 用于访问资源服务器，ID token 向客户端表达一次身份认证的声明，refresh token 用于换取新 access token；它们用途不同，不能互换。
-
-**持有者令牌（Bearer Token）**遵循“谁拿到谁能用”的模型。无论它是 JWT 还是不透明字符串，只要未绑定发送方，被窃后就可能重放。传输、存储、日志、错误上报、URL、浏览器扩展和第三方脚本都是泄露面。
-
-前端应用不应把长期 refresh token 随意放进可被页面脚本读取的存储。浏览器场景常用后端代理或 BFF 让敏感 token 留在服务端，以 HttpOnly 会话连接浏览器；是否采用取决于架构和威胁模型，而不是流行口号。
-
-### 九、JWT 只是可验证的数据格式
-
-JWT 可以携带 issuer、subject、audience、expiry 和自定义声明，并用签名让接收方离线验证完整性。它不会天然加密内容，不会自动吊销，也不会自动限制复制、重放、权限漂移或错误 audience。
-
-验证方必须固定允许的算法，验证签名、issuer、audience、时间和用途，正确处理密钥轮换。把 token 解码后看到 JSON 不等于验证成功；把 access token 当 ID token 使用会产生令牌混淆。
-
-自包含 token 适合分布式读路径，但立即吊销较难；不透明 token 配合 introspection 或服务端会话更便于集中控制，但增加在线依赖。真实系统常组合短期 access token、可控 refresh token、会话和撤销状态。
-
-### 十、过期、空闲超时与绝对超时各自解决不同问题
-
-短期过期限制被窃凭证的可用窗口；空闲超时减少无人使用的会话；绝对超时防止持续活动让会话永久存在。高风险操作还可要求“最近几分钟内完成过强认证”。
-
-续期要在服务端判断，不能由客户端随意延长。滑动过期需要上限，且应避免每个请求都写存储导致放大。并发标签页续期要去重，旧响应不能覆盖更新后的凭证状态。
-
-浏览器计时只能改善体验，例如提前提示即将退出；服务端时钟才是权威。客户端时间被修改、页面休眠或网络离线时，接口仍必须正确拒绝。
-
-### 十一、刷新令牌需要轮换与重放检测
-
-刷新令牌生命周期长、权限高，泄露后影响通常大于 access token。公共客户端应采用发送方约束或 refresh token rotation；每次刷新签发新令牌并使旧令牌失效，同时保存令牌家族关系。
-
-若旧令牌再次出现，可能是攻击者与合法客户端同时持有副本。服务端应撤销相关家族、要求重新认证并记录安全事件，而不是简单给旧令牌再签一个新令牌。
-
-多个标签页会带来正常并发。客户端需要单飞锁或由 BFF 串行刷新，服务端设置很短且受控的竞态处理策略，不能无限接受旧令牌，否则重放检测失去意义。
-
-### 十二、退出是服务端状态改变
-
-删除浏览器 Cookie 只清除了当前副本，不能保证服务端会话、refresh token、其他设备、第三方 IdP 会话或已签发 access token 全部失效。产品要区分“退出此设备”“退出所有设备”“撤销某个应用授权”和“退出身份提供方”。
-
-服务端退出应撤销当前会话和关联刷新能力，再让浏览器删除 Cookie。高风险账号操作可以增加全局凭证版本，使旧会话在下一次请求时被拒绝。短期 access token 可能在自然过期前仍有效，需要权衡撤销表、introspection 或缩短寿命。
-
-退出接口应幂等：重复调用仍得到安全的已退出状态。网络失败时 UI 不应只清本地并宣称完成，可以进入“本地已退出，服务器确认失败”的可恢复状态。
-
-### 十三、多标签页和离线状态需要明确协调
-
-同一 origin 的标签页可能共享 Cookie，却各自保存 UI 状态。一个标签页退出后，其他标签页必须在下一请求失败时清理身份界面；可用 BroadcastChannel 辅助即时同步，但服务端拒绝才是最终保证。
-
-Service Worker、离线缓存和应用状态管理不得缓存受保护响应后跨账号展示。账号切换时要清除或按主体分区缓存，并避免迟到请求把前一个用户的数据写回当前界面。
-
-网络从离线恢复时先重新确认会话，不要把“页面还显示用户名”当有效认证。401 表示未认证或会话失效，403 表示已认证但无权执行；错误语义应稳定，便于客户端收敛。
-
-### 十四、第三方 Cookie 正在退出，嵌入身份要分场景
-
-浏览器限制第三方 Cookie，是为了减少跨站跟踪，也会影响 iframe 单点登录、嵌入客服和支付组件。不能通过浏览器指纹、重定向跟踪或偷偷复制标识绕过用户隐私选择。
-
-**分区 Cookie（Partitioned Cookie）**为同一个第三方 origin 按顶层站点建立不同存储分区。CHIPS 的 Cookie 需要 `Secure`，通常结合 `SameSite=None`，并建议使用 `__Host-`。它适合“同一个嵌入服务在每个顶层站点维护相互隔离状态”，不适合跨站识别同一用户。
-
-分区键包含顶层站点上下文，因此在 site-a 下建立的分区状态不能直接拿到 site-b 使用。错误地把 CHIPS 当共享登录会造成兼容故障，也会破坏其隐私目标。
-
-### 十五、Storage Access 与 FedCM 解决的问题不同
-
-Storage Access API 允许符合条件的嵌入内容在用户参与和浏览器策略下请求访问未分区 Cookie。它是受控恢复访问，不保证获批；拒绝、无用户手势、沙箱限制和浏览器不支持都必须回退。
-
-FedCM 让浏览器介入身份提供方和依赖方之间的联合登录，减少依赖任意第三方 Cookie 与隐蔽跟踪。它不替代服务端校验、账号绑定、会话创建或退出。支持范围和交互规则会演进，必须能力检测并保留普通重定向或显式登录入口。
-
-**联合凭证管理（Federated Credential Management）**只应作为渐进增强。不要让页面加载即弹身份选择器，不要把 `NotAllowedError` 翻译成“账号不存在”，也不要在 API 不可用时隐藏所有登录方式。
-
-浏览器身份 UI 的参数与成熟度仍在快速变化。WebAuthn immediate mediation 的早期试验使用 `mediation: 'immediate'`，没有本地凭证、用户关闭或浏览器为保护隐私时都可能给出 `NotAllowedError`；Chrome 后续公布的 Immediate UI Mode 又使用 `uiMode: 'immediate'`，行为和版本门槛不同。生产代码必须查目标浏览器当前文档、做真实能力检测、记录所依据的版本，并把任何失败收敛到可发现的密码、Passkey 或联合登录入口，而不能依靠错误名猜测账号状态。
-
-Digital Credentials API 面向从数字钱包请求经过验证的年龄、证件持有等声明，不是给普通网站发放登录 session 的通用替代品。它涉及选择性披露、钱包交互、地区规则、设备支持和用户同意，必须按试验/平台能力隔离；即使拿到有效数字凭证，站点仍要完成主体绑定、会话建立和业务授权。新身份 API 的共同原则是：浏览器返回 credential 只是一段待服务端验证的协议结果，绝不是直接把页面切成“已登录”。
-
-### 十六、BFF 把浏览器与 OAuth token 隔开
-
-Backend for Frontend 可以把 OAuth 授权码交换、access token、refresh token 和资源调用留在服务端，浏览器只持有受保护的会话 Cookie。这样缩小页面脚本直接接触高价值 token 的范围，也便于集中刷新和吊销。
-
-BFF 仍要处理 CSRF、XSS 代用、会话存储、横向越权和服务器端请求边界。它还增加后端扩展、连接和故障域成本。纯静态 SPA 若必须直接持 token，应使用授权码+PKCE、短期 token、严格重定向 URI 和最小 scope，并诚实记录残余风险。
-
-架构选择应由威胁模型、部署能力、API 所有权和用户体验决定。不要把“JWT in localStorage”或“所有东西都放 Cookie”当成跨场景固定答案。
-
-### 十七、日志与遥测不能成为凭证泄漏通道
-
-请求 URL、Referer、分析事件、崩溃上报、代理日志、截图和客服工具都可能收集 token 或 session ID。凭证不要放 URL；服务端和网关按字段脱敏，客户端错误上报过滤 Authorization、Cookie、Set-Cookie 和认证响应。
-
-审计日志记录主体、会话的不可逆摘要、动作、资源、结果、原因类别和时间，而非原始凭证。访问审计日志本身要授权、留存和监控，不能用“排错需要”为由永久保存敏感数据。
-
-检测指标可包括异常刷新重放、会话固定信号、退出后访问、跨地区跃迁和认证失败率。指标触发调查，不应单独取代业务授权或自动永久封禁。
-
-### 十八、用状态转换和负向路径验证系统
-
-把会话建模为 anonymous → authenticating → authenticated → refreshing/revalidating → revoked/expired。为每条转换写出发起方、服务端条件、凭证变化和失败后状态，能发现“UI 已登录但服务端未确认”等竞态。
-
-验证至少覆盖：认证后 session ID 改变；旧 ID 立即失效；Cookie 属性正确；跨站危险请求被拒绝；access token 不进 URL/日志；refresh token 重放触发家族撤销；退出后旧请求失败；权限降低对已有会话生效；第三方存储不可用仍能找到标准登录入口。
-
-浏览器测试要包含顶层、iframe、多标签页、离线恢复、第三方 Cookie 禁用和不支持新 API 的环境。服务端测试要控制时间、并发、撤销和权限版本。只有成功登录截图不能证明身份系统安全。
-
-### 学完后应能说明
-
-你应能从浏览器到服务端画出认证、会话和授权链，解释 Cookie、服务端 Session、JWT、access token 与 refresh token 的职责；能设计轮换、超时、重放检测、退出和多标签页收敛；也能判断 CHIPS、Storage Access、FedCM 与 BFF 各自解决什么问题、不能解决什么问题，并用负向证据证明旧凭证和受限浏览器环境不会突破边界。
+- 直接前置：[SEC-01 XSS、CSRF 与前端信任边界](../chinese-guides/sec-01-xss-csrf-trust-boundaries.md#sec-01)。需要知道脚本注入、自动携带 Cookie 和服务端授权各自涉及什么边界。
+
+读完应能解释一次请求凭什么被接受，指出登录、续期、退出各自改变了哪份状态，并为嵌入页面保留清楚的登录退路。
+
+### 一、认证、会话与授权回答三个问题
+
+**认证（Authentication）**确认本次登录是谁完成的。**会话（Session）**把后续请求关联到一个登录上下文。**授权（Authorization）**判断这个上下文能否操作当前资源。
+
+例如林通过 Passkey 认证，服务器创建会话；浏览器随后带着会话标识请求资料 7，服务器还要确认资料是否属于林。通过认证不会自动获得所有资料的访问权。
+
+```mermaid
+sequenceDiagram
+  participant B as 浏览器
+  participant S as 应用服务器
+  participant D as 会话与权限记录
+  B->>S: 提交认证流程的结果
+  S->>S: 验证认证结果
+  S->>D: 创建新会话并撤销旧标识
+  S-->>B: Set-Cookie
+  B->>S: 请求资料，浏览器附带 Cookie
+  S->>D: 检查会话与本次资源权限
+  D-->>S: 有效且允许
+  S-->>B: 返回资料
+```
+
+浏览器返回 credential 还不是登录完成；服务器验证成功并建立会话，才可显示已登录。[Passkey 的完整阶段](../chinese-guides/sec-03-webauthn-passkeys-authentication.md#五运行一个逐步推进的认证状态页)解释了为什么要把认证器返回与会话建立分开。
+
+### 二、Cookie 负责携带，服务器负责解释
+
+**Cookie** 是浏览器保存并按规则附带的小段状态。它可以装偏好，也可以装随机 session ID；名字叫 sid 并不会让它自动拥有安全属性。
+
+典型生产响应可以这样表达：
+
+```http
+Set-Cookie: __Host-sid=<随机不透明值>; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=1800
+Cache-Control: no-store
+```
+
+| 属性 | 它限制什么 | 它不保证什么 |
+| --- | --- | --- |
+| Secure | 通常只经 HTTPS 发送；本地开发有浏览器特殊处理 | 不让已取得凭证的人重放 |
+| HttpOnly | 普通页面脚本不能通过 document.cookie 读取 | 恶意脚本不能借会话发请求 |
+| SameSite | 在不同站点上下文下是否自动携带 | 所有 CSRF 都已阻止 |
+| 不写 Domain | 默认限制在设置它的主机 | 同主机不同端口隔离 |
+| Path | 哪些路径接收 Cookie | 页面之间的安全隔离 |
+| Max-Age / Expires | 浏览器保留期限 | 服务器会话一定同时失效 |
+
+支持前缀约束的浏览器要求 **__Host-** Cookie 带 Secure、Path=/ 且不带 Domain。身份 Cookie 仍要配 HttpOnly。Cookie 不按端口隔离，实验因此使用专用名字，避免与正在运行的应用混用。
+
+同源比较 scheme、host、port；SameSite 使用的是站点关系，不能把两个概念换着说。子域可能同站而不同源，不能因为 SameSite 请求被放行就省掉来源和权限检查。
+
+### 三、会话应有轮换、两种期限和撤销入口
+
+会话记录通常保存主体、创建时间、最近活动、绝对到期时间和撤销状态。浏览器只拿随机标识，不能自行改过期时间续命。
+
+**会话固定（Session Fixation）**发生在认证后仍沿用登录前标识：若别人提前掌握这个标识，就可能共享认证后的身份。应在匿名升级、账号切换或关键权限提升时生成新标识，并让旧标识失效。
+
+```ts example=identity01-session-lifecycle
+type Session = { user: string; createdAt: number; lastSeen: number };
+const sessions = new Map<string, Session>();
+function rotate(oldId: string | null, user: string, now: number): string {
+  const nextId = crypto.randomUUID();
+  if (oldId) sessions.delete(oldId);
+  sessions.set(nextId, { user, createdAt: now, lastSeen: now });
+  return nextId;
+}
+function read(id: string, now: number): string | null {
+  const value = sessions.get(id);
+  if (!value) return null;
+  if (now - value.lastSeen >= 30 || now - value.createdAt >= 120) {
+    sessions.delete(id);
+    return null;
+  }
+  value.lastSeen = now;
+  return value.user;
+}
+const old = rotate(null, '匿名教学用户', 0);
+const current = rotate(old, '林', 1);
+console.log(old !== current, read(old, 2), read(current, 2)); // => true null 林
+console.log(read(current, 33)); // => null
+const another = rotate(null, '林', 40);
+sessions.delete(another);
+console.log(read(another, 41)); // => null
+```
+
+例子把时间当作秒数传入，便于观察空闲 30 秒和绝对 120 秒；这些是实验参数，不是通用推荐值。生产用服务端时钟和可靠会话存储，跨进程轮换需要原子操作。会话记录被缓存淘汰、存储不可用或跨区复制延迟，也都要有明确结果。
+
+### 四、运行一个能看见 HttpOnly 效果的本地实验
+
+下面两个文件放在同一个独立目录，使用 Node 22 启动 server.mjs，再打开 http://127.0.0.1:43917。按 Ctrl+C 关闭后，内存会话全部消失。
+
+“模拟认证成功”按钮替代真实密码或 Passkey 验证，只用于观察认证之后的会话动作，不能直接用作实际登录接口。实验限定回环地址和 HTTP，故意使用普通 b17_demo_sid，未加生产必需的 Secure；它不能证明 HTTPS 或跨站 Cookie 策略已经验证。
+
+```js example=identity01-server runtime=project file=server.mjs
+import { createServer } from 'node:http';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+
+const port = Number(process.env.B17_DEMO_PORT ?? 43917);
+const sessions = new Map();
+const fresh = () => randomBytes(32).toString('base64url');
+const cookie = value => 'b17_demo_sid=' + value + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=300';
+const equal = (left, right) => {
+  if (typeof left !== 'string' || typeof right !== 'string') return false;
+  const a = Buffer.from(left), b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
+const server = createServer(async (req, res) => {
+  const origin = 'http://127.0.0.1:' + server.address().port;
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  const send = (status, data) => {
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify(data));
+  };
+  if (req.headers.host !== new URL(origin).host) return send(403, { code: 'HOST' });
+  if (req.method === 'GET' && req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(await readFile(new URL('./index.html', import.meta.url)));
+    return;
+  }
+  const parts = (req.headers.cookie ?? '').split(';').map(part => part.trim());
+  const id = parts.find(part => part.startsWith('b17_demo_sid='))?.slice(13);
+  let session = sessions.get(id);
+  if (session && Date.now() >= session.expiresAt) {
+    sessions.delete(id);
+    session = undefined;
+  }
+  if (req.method === 'GET' && req.url === '/session') {
+    if (!session) {
+      const next = fresh();
+      session = { user: null, csrf: fresh(), expiresAt: Date.now() + 300000 };
+      sessions.set(next, session);
+      res.setHeader('Set-Cookie', cookie(next));
+    }
+    return send(200, { user: session.user, csrf: session.csrf });
+  }
+  if (req.method === 'GET' && req.url === '/private') {
+    return session?.user
+      ? send(200, { title: '林的教学收藏' })
+      : send(401, { code: 'NO_SESSION' });
+  }
+  if (req.method !== 'POST' || !['/login', '/logout'].includes(req.url)) {
+    return send(404, { code: 'NOT_FOUND' });
+  }
+  req.resume(); // 本实验 POST 不读取业务载荷。
+  if (req.headers.origin !== origin
+      || req.headers['content-type'] !== 'application/json'
+      || !session || !equal(req.headers['x-csrf-token'], session.csrf)) {
+    return send(403, { code: 'REQUEST_REJECTED' });
+  }
+  if (req.url === '/login') {
+    // 仅教学：假设上游认证已成功，轮换会话与 CSRF token。
+    const next = fresh();
+    sessions.delete(id);
+    sessions.set(next, { user: '林', csrf: fresh(), expiresAt: Date.now() + 300000 });
+    res.setHeader('Set-Cookie', cookie(next));
+    return send(200, { status: 'session-created' });
+  }
+  sessions.delete(id);
+  res.setHeader('Set-Cookie', 'b17_demo_sid=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
+  send(200, { status: 'revoked' });
+});
+server.listen(port, '127.0.0.1', () => {
+  console.log('教学会话页：http://127.0.0.1:' + server.address().port);
+});
+```
+
+```html example=identity01-page runtime=project file=index.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>会话与页面不是同一份状态</title>
+<style>
+  body { margin: 48px auto; max-width: 960px; padding: 0 28px; background: #f4f7fa; color: #203647; font: 16px/1.8 "Segoe UI","Microsoft YaHei",sans-serif; }
+  main { background: white; padding: 30px; border-radius: 18px; }
+  h1 { margin-top: 0; } .controls { display: flex; gap: 12px; flex-wrap: wrap; }
+  button { padding: 10px 16px; font: inherit; border: 1px solid #b7c8cd; border-radius: 8px; background: #eff7f4; cursor: pointer; }
+  button:focus-visible { outline: 3px solid #29756d; outline-offset: 3px; }
+  #state { font-size: 20px; font-weight: 600; } #result { min-height: 36px; }
+  .note { color: #526575; } #log { max-height: 240px; overflow: auto; }
+</style>
+<main>
+  <p class="note">IDENTITY-01 · 本地 HTTP 教学实验</p>
+  <h1>脚本读不到 Cookie，请求仍会带上它</h1>
+  <p id="state">正在读取会话</p>
+  <p id="visible"></p>
+  <div class="controls">
+    <button id="login">模拟认证成功</button>
+    <button id="read">请求教学收藏</button>
+    <button id="logout">退出并撤销</button>
+    <button id="refresh">重新读取会话</button>
+  </div>
+  <p id="result" role="status" aria-live="polite"></p>
+  <ol id="log"></ol>
+  <p class="note">仅使用虚构账号。请在开发者工具中观察请求与 Cookie，勿把该登录接口用于真实认证。</p>
+</main>
+<script type="module">
+const $ = id => document.getElementById(id);
+let csrf = '';
+const log = message => {
+  $('result').textContent = message;
+  const item = document.createElement('li'); item.textContent = message; $('log').prepend(item);
+};
+async function session() {
+  const response = await fetch('/session', { cache: 'no-store' });
+  if (!response.ok) throw new Error('会话读取失败');
+  const value = await response.json();
+  csrf = value.csrf;
+  $('state').textContent = value.user ? '服务器确认：' + value.user + ' 已登录' : '服务器确认：匿名';
+  $('visible').textContent = '页面脚本能读到会话 Cookie：' + document.cookie.split(';').some(v => v.trim().startsWith('b17_demo_sid='));
+}
+async function post(path) {
+  const response = await fetch(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: '{}',
+  });
+  if (!response.ok) throw new Error('服务器未确认操作，请重新读取会话');
+  log(path === '/login' ? '认证后已换发会话' : '服务器已撤销本次会话');
+  await session();
+}
+for (const [id, action] of [
+  ['login', () => post('/login')],
+  ['logout', () => post('/logout')],
+  ['refresh', session],
+  ['read', async () => {
+    const response = await fetch('/private', { cache: 'no-store' });
+    log(response.ok ? (await response.json()).title
+      : response.status === 401 ? '401：当前会话不能读取收藏' : '读取失败，请稍后重试');
+  }],
+]) {
+  $(id).addEventListener('click', async () => {
+    for (const button of document.querySelectorAll('button')) button.disabled = true;
+    try { await action(); } catch (error) { log(error.message); }
+    finally { for (const button of document.querySelectorAll('button')) button.disabled = false; }
+  });
+}
+for (const button of document.querySelectorAll('button')) button.disabled = true;
+session().catch(() => log('读取失败，请重试')).finally(() => {
+  for (const button of document.querySelectorAll('button')) button.disabled = false;
+});
+</script>
+</html>
+```
+
+观察顺序：匿名时读取得到 401；模拟登录后读取成功，但脚本可见性仍是 false；退出后重新读取又是 401。Network 中登录响应的 Set-Cookie 应改变标识；仅在本地测试中保存旧标识并重发，也应被拒绝。不要把真实会话值贴到日志或截图中分享。
+
+实验把 CSRF token 返回给同源页面，这是有意设计：它供页面证明请求与本次会话关联。它不是会话凭证，也不能阻止已经在同源运行的恶意脚本。
+
+### 五、HttpOnly、SameSite 与 CSRF 要一起理解
+
+HttpOnly 降低脚本直接窃取会话值的机会，但注入脚本仍可调用 fetch，让浏览器代带 Cookie。上节“脚本看不到、请求成功”的现象，恰好说明为什么防 XSS 仍然必要。
+
+SameSite=Lax 对部分顶层安全方法导航允许携带 Cookie；Strict 更严，可能影响从外站返回后的体验；None 适合确需跨站的场景，并要求 Secure。不能为了“登录偶尔失效”就无条件切换为 None。
+
+写请求应按架构核对来源、会话绑定的 CSRF token、方法和载荷格式。GET 不承担修改状态的业务动作。本地实验的 Origin、JSON 和随机 token 是组合规则；真实应用的代理、多个合法来源、登录与退出都要采用一致策略。完整防护关系见[SEC-01 的写入边界](../chinese-guides/sec-01-xss-csrf-trust-boundaries.md#sec-01)。
+
+### 六、Token 的用途比字符串外形重要
+
+| 名称 | 谁使用它 | 主要用途 |
+| --- | --- | --- |
+| session ID | 应用服务器 | 找到自己的会话记录 |
+| access token | 指定资源服务器 | 访问被授予范围内的 API |
+| ID token | OIDC 客户端 | 验证一次身份认证声明 |
+| refresh token | 授权服务器 | 换取新的访问令牌 |
+
+**Bearer Token** 的关键是持有者能使用它。字符串长、带签名、像 JWT，都不会自动阻止复制重放。
+
+**JWT** 是一种令牌表示；常见签名 JWT 的载荷可读，签名保证的是受约束的完整性验证，不是内容保密。只做 Base64 解码既没验证签名，也没核对 issuer、audience、期限和用途。验证规则交给合适库，并固定可信发行方与算法，避免“读出了头像，所以登录成功”。令牌角色在[IDENTITY-02](../chinese-guides/identity-02-oauth-oidc-pkce-security.md#identity-02)继续展开。
+
+### 七、续期需要上限，刷新需要处理重复使用
+
+空闲超时限制长时间无人使用的会话，绝对超时限制持续活动的最长周期。页面计时只用于提前提醒，服务器时钟才决定请求是否有效。敏感操作还可以要求近期重新认证。
+
+**刷新令牌轮换（Refresh Token Rotation）**在成功刷新后废弃旧令牌、签发新令牌，并维护所属家族。再次出现旧令牌可能意味着泄漏，不能再无条件换发。公共客户端的刷新保护应遵循 RFC 9700 的发送方约束或轮换要求。
+
+两个标签页同时刷新也可能使用同一旧值。浏览器协调或 BFF 串行处理可以减少正常竞态；授权服务器的容错窗口必须受限，不能让旧值长期可用。本节不把内存标记当作已经实现跨进程原子消费。
+
+### 八、退出之后，迟到响应不能让页面重新登录
+
+退出包括撤销服务端会话及相关刷新能力，再删除浏览器 Cookie。只清 localStorage 或隐藏头像，不能让被复制的旧凭证失效。
+
+页面还要拒绝旧请求的迟到结果。下面把“当前身份版本”作为一次加载的有效条件：
+
+```js example=identity01-late-response
+let identityVersion = 1;
+let screen = '已登录';
+let finish;
+const reply = new Promise(resolve => { finish = resolve; });
+const startedAt = identityVersion;
+const pending = reply.then(value => {
+  if (startedAt === identityVersion) screen = value;
+});
+identityVersion += 1;
+screen = '已退出';
+finish('旧请求返回的用户资料');
+await pending;
+console.log(screen); // => 已退出
+```
+
+这个版本号只防止旧响应污染 UI，不能代替服务器撤销。BroadcastChannel 可通知同源标签页更新显示；账号缓存、Service Worker 与离线资料要按主体隔离或清理。401/403 在接口契约中区分会话问题与权限问题，不应全部触发无限刷新。
+
+退出确认失败时可以清理本地敏感显示，但应说明服务器未确认，提供重试。重复退出的业务结果应稳定；防 CSRF 失败的请求仍可以拒绝，不能把幂等理解为任何来源都能无条件调用。
+
+### 九、BFF 把令牌留在服务端，也保留服务端责任
+
+**BFF（Backend for Frontend）**让浏览器只持会话 Cookie，由后端交换授权码、保存 access/refresh token，再调用资源 API。它减少了页面脚本直接接触高价值令牌的机会。
+
+代价是增加服务端请求、会话存储、刷新协调和故障处理。BFF 仍要防 CSRF、XSS 代用、越权和任意代理请求；浏览器提交一个 URL，后端不能不加限制地带令牌访问它。
+
+纯 SPA 无法保守 client_secret。若必须直接访问 API，应采用授权码与 PKCE，并根据威胁模型决定令牌存放、期限与刷新方式。内存可减少长期落盘，但同源恶意脚本仍可能读取或代用；不存在只改存储位置就解决全部问题的答案。
+
+### 十、分区 Cookie 不提供跨站共享登录
+
+**CHIPS** 让第三方 Cookie 按顶层站点分区。假设同一个 widget.test 被嵌入 publisher-a.test 和 publisher-b.test：
+
+| 顶层站点 | 嵌入来源 | 嵌入会话 |
+| --- | --- | --- |
+| publisher-a.test | widget.test | 分区 A 中的状态 |
+| publisher-b.test | widget.test | 分区 B 中的状态 |
+
+在 A 建立状态，不代表 B 能读取同一个分区。Cookie 使用 Partitioned 时需要 Secure；要在跨站嵌入请求中携带，通常还配 SameSite=None。具体分区规则按浏览器实现核验。
+
+第三方 Cookie 的限制随浏览器和用户设置不同，不宜宣称已经在所有浏览器统一消失。不能用指纹、隐蔽重定向或复制标识绕过用户选择。若嵌入身份无法工作，应提供顶层登录或独立打开的入口。
+
+### 十一、Storage Access、FedCM 与新身份 UI 各做一件事
+
+| 能力 | 它解决的问题 | 失败后的用户路径 |
+| --- | --- | --- |
+| Storage Access API | 嵌入页按浏览器规则申请访问未分区存储 | 在顶层打开或重新登录 |
+| FedCM | 浏览器介入联合身份交互 | 显式联合登录或其他登录方式 |
+| Immediate UI | 在登录动作时提供本地可用凭证 | 保留普通登录入口 |
+| Digital Credentials | 从钱包取得所需的数字声明 | 使用业务已批准的替代证明流程 |
+
+**FedCM** 不替站点验证身份响应、建立本地会话或授权。Storage Access 的函数存在也不代表用户一定批准；沙箱、Permissions Policy、用户激活和浏览器策略都可能影响结果。
+
+2026-09-19 核验的 Chrome 文档将 Immediate UI 描述为 Chrome 149 引入的能力，使用 uiMode: 'immediate'；旧试验的 mediation: 'immediate' 不能继续照抄。能力检查使用 getClientCapabilities 返回的 immediateGet，并要求用户手势；可在点击前预先探测支持情况，点击后在激活仍有效时调用。无凭证、用户关闭或限制可能表现为 NotAllowedError，不能据此显示“账号不存在”。
+
+Digital Credentials 面向钱包声明，例如业务只需年龄资格时尽量请求必要声明，而不是整份证件。协议、钱包信任、选择性披露与服务端验证都需要单独接入。本讲不创建真实凭证，也不把试验性能力作为会话基础。截至 2026-09-19，W3C 对应文档为 9 月 4 日的 Working Draft，不能当作已完成的 Recommendation。其数据选择可接着读[PRIVACY-01](../chinese-guides/privacy-01-data-minimization-consent-retention-rights.md#privacy-01)。
+
+### 十二、沿旧凭证和失败路径检查边界
+
+可用少量关键观察判断系统是否符合自己的承诺：认证前后标识是否不同；旧标识是否立即失效；脚本是否读不到 HttpOnly 值；缺 CSRF token 的写入是否拒绝；退出后旧请求和迟到响应是否都停止生效。
+
+这些结果分别证明一部分。上节本地实验验证了 Cookie、轮换和撤销，不验证真实认证、TLS、跨站分区或生产多节点一致性。跨站嵌入与新 API 必须在目标浏览器中另行验证，不用本地不同端口冒充不同站点。
+
+会话标识、Cookie、Authorization 和认证回调不要进入 URL 分析、错误采集或客服录屏。记录事件类别、追踪号与必要审计信息，避免为了证明退出而保存原始凭证。读取日志本身也需要授权和留存期限。
+
+### 参考与延伸阅读
+
+- [MDN：HTTP Cookie](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Cookies)、[CHIPS](https://developer.mozilla.org/zh-CN/docs/Web/Privacy/Guides/Third-party_cookies/Partitioned_cookies)：浏览器携带与分区规则。
+- [OWASP：会话管理](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)：生命周期与会话固定。
+- [MDN：Storage Access](https://developer.mozilla.org/en-US/docs/Web/API/Storage_Access_API)、[FedCM](https://developer.mozilla.org/en-US/docs/Web/API/FedCM_API)：嵌入与联合身份。
+- [W3C：Digital Credentials](https://www.w3.org/TR/digital-credentials/)：钱包声明 API 的草案状态与完整边界。
+- [Chrome：Immediate UI](https://developer.chrome.com/docs/identity/immediate-ui-mode)：当前参数、能力检测与用户手势要求。
+- [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html)：刷新令牌与浏览器客户端的安全边界。

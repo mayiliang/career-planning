@@ -12,6 +12,14 @@
     "aidev-01-specification-controlled-agent-loop.md"
   ],
   "terms": {
+    "agent loop": {
+      "file": "a0431480a985bde0.wav",
+      "text": "Agent Loop"
+    },
+    "async context": {
+      "file": "81c5f6f85212dd59.wav",
+      "text": "Async Context"
+    },
     "atomic replacement": {
       "file": "1ba9081b821669a7.wav",
       "text": "Atomic Replacement"
@@ -52,17 +60,17 @@
       "file": "8a3f6aee00f005cd.wav",
       "text": "Idempotency Key"
     },
-    "nonblocking input output": {
-      "file": "5af6add6fdd00efe.wav",
-      "text": "Nonblocking Input Output"
+    "pipeline": {
+      "file": "23bf0d244a4cb62c.wav",
+      "text": "Pipeline"
     },
-    "stop condition": {
-      "file": "b4b9244601930745.wav",
-      "text": "Stop Condition"
+    "runtime": {
+      "file": "d92c6a81b2ff5009.wav",
+      "text": "Runtime"
     },
-    "stream pipeline": {
-      "file": "5ee73f4c45d4dfaa.wav",
-      "text": "Stream Pipeline"
+    "starvation": {
+      "file": "bdcd69991500ee75.wav",
+      "text": "Starvation"
     },
     "task packet": {
       "file": "f7e486340749f477.wav",

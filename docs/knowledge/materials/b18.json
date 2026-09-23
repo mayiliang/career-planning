@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "batch": "B18",
+  "title": "从 Node 执行到可靠交付",
+  "reviewedOn": "2026-09-19",
+  "chapters": [
+    {
+      "id": "NODE-01",
+      "title": "看清 Node 的执行路径",
+      "question": "已经用了异步 API，为什么其他请求还会被拖慢？",
+      "summary": "沿调用位置、执行线程和观察窗口解释调度，用分片、worker 与测量找出真正的成本。",
+      "outcomes": [
+        "分清主线程、内核等待与工作池",
+        "解释 CJS、ESM 和 I/O 回调的顺序边界",
+        "用分片、worker 和指标判断取舍"
+      ],
+      "prerequisites": [
+        "js-04-async-promise-browser-event-loop.md#js-04"
+      ],
+      "guide": "node-01-runtime-event-loop-nonblocking-io.md",
+      "anchor": "node-01",
+      "concepts": [
+        {
+          "id": "node-runtime-paths",
+          "heading": "一、一个 Node 进程不止一种执行路径"
+        },
+        {
+          "id": "node-runtime-cost",
+          "heading": "二、异步等待结束后，回调仍可能阻塞"
+        },
+        {
+          "id": "node-runtime-modules",
+          "heading": "三、先比较模块入口，再讨论微任务顺序"
+        },
+        {
+          "id": "node-runtime-io-order",
+          "heading": "四、在 I/O 回调里看 poll、check 与计时器"
+        },
+        {
+          "id": "node-runtime-yield",
+          "heading": "五、让出微任务不等于让出 I/O 机会"
+        },
+        {
+          "id": "node-runtime-worker",
+          "heading": "六、worker 的价值是隔开 CPU 执行位置"
+        },
+        {
+          "id": "node-runtime-ownership",
+          "heading": "七、通信要同时考虑复制、所有权与迟到结果"
+        },
+        {
+          "id": "node-runtime-measure",
+          "heading": "八、测量要包含真实的观察窗口"
+        },
+        {
+          "id": "node-runtime-pool",
+          "heading": "九、工作池拥堵与主线程拥堵需要分别处理"
+        },
+        {
+          "id": "node-runtime-context",
+          "heading": "十、让请求上下文沿异步链走，别把它当权限证明"
+        },
+        {
+          "id": "node-runtime-resources",
+          "heading": "十一、进程能否退出取决于还活着的资源"
+        },
+        {
+          "id": "node-runtime-capacity",
+          "heading": "十二、容量与版本都是结论的一部分"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "task-microtask",
+          "reason": "从浏览器基础出发，辨别宿主和调用位置的差别。"
+        },
+        {
+          "concept": "transfer-ownership",
+          "reason": "把复制、转移与共享的所有权模型接到 Node 线程。"
+        },
+        {
+          "concept": "node-files-records",
+          "reason": "将输入体积与解析成本接到真实数据边界。"
+        },
+        {
+          "concept": "bff-shutdown",
+          "reason": "观察运行时资源怎样影响服务排空与退出。"
+        }
+      ]
+    },
+    {
+      "id": "NODE-02",
+      "title": "从字节走到完整文件",
+      "question": "读取、解析或写入中途失败，怎样保住已有结果？",
+      "summary": "通过跨块字符、背压与 NDJSON 导入，区分流完成、文件提交和可恢复的业务结果。",
+      "outcomes": [
+        "区分 chunk、字符与记录边界",
+        "让慢消费者和取消约束整条管线",
+        "说明原子替换、持久性与并发的不同责任"
+      ],
+      "prerequisites": [
+        "node-01-runtime-event-loop-nonblocking-io.md#node-01",
+        "js-05-promise-errors-async-control-flow.md#js-05"
+      ],
+      "guide": "node-02-files-streams-buffers-errors.md",
+      "anchor": "node-02",
+      "concepts": [
+        {
+          "id": "node-files-handles",
+          "heading": "一、路径是名字，句柄是已经打开的资源"
+        },
+        {
+          "id": "node-files-buffer",
+          "heading": "二、Buffer 表示字节，字符边界需要解码器保存"
+        },
+        {
+          "id": "node-files-records",
+          "heading": "三、chunk、字符、记录是三个不同的边界"
+        },
+        {
+          "id": "node-files-pressure",
+          "heading": "四、write 返回 false 时，数据已经被接受"
+        },
+        {
+          "id": "node-files-parser",
+          "heading": "五、先做有上限的记录解析，再把它接进管线"
+        },
+        {
+          "id": "node-files-lab",
+          "heading": "六、亲手观察失败后旧目标是否仍在"
+        },
+        {
+          "id": "node-files-lifecycle",
+          "heading": "七、pipeline 完成与业务提交是两条边界"
+        },
+        {
+          "id": "node-files-atomic",
+          "heading": "八、原子可见、持久性与并发正确是三件事"
+        },
+        {
+          "id": "node-files-cancel",
+          "heading": "九、取消有提交点，结果未知时不能随口说回滚"
+        },
+        {
+          "id": "node-files-errors",
+          "heading": "十、错误分类决定下一步，cause 保留证据"
+        },
+        {
+          "id": "node-files-paths",
+          "heading": "十一、路径验证与流转换都要说清所有权"
+        },
+        {
+          "id": "node-files-batch",
+          "heading": "十二、完整导入需要记录级结果和批次结果"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "node-runtime-cost",
+          "reason": "异步文件读取之后，解码与解析仍消耗当前线程。"
+        },
+        {
+          "concept": "contract-parser",
+          "reason": "理解记录校验如何产生可信内部字段。"
+        },
+        {
+          "concept": "bff-stream",
+          "reason": "将文件流背压接到已经发送响应头的 HTTP 流。"
+        },
+        {
+          "concept": "network-abort-outcome",
+          "reason": "区分取消等待与实际提交是否已经发生。"
+        }
+      ]
+    },
+    {
+      "id": "NODE-04",
+      "title": "给一次 BFF 请求划清边界",
+      "question": "下游变慢、用户离开或服务停机时，这次请求怎样结束？",
+      "summary": "运行本地桌面观察页，理解总预算、容量、降级、取消、幂等与停止接流量。",
+      "outcomes": [
+        "在可信边界内聚合必需与可选结果",
+        "正确传播截止时间和客户端取消",
+        "区分缓存、幂等、流式错误与停机结果"
+      ],
+      "prerequisites": [
+        "node-02-files-streams-buffers-errors.md#node-02",
+        "net-01-browser-network-fetch-reliability.md#net-01",
+        "ts-07-runtime-contracts-validation-error-models.md#ts-07"
+      ],
+      "guide": "node-04-http-bff-production-engineering.md",
+      "anchor": "node-04",
+      "concepts": [
+        {
+          "id": "bff-contract",
+          "heading": "一、BFF 聚合的是页面需要的合同"
+        },
+        {
+          "id": "bff-input",
+          "heading": "二、在做昂贵工作前建立可信边界"
+        },
+        {
+          "id": "bff-deadline",
+          "heading": "三、一个请求共享一份剩余时间"
+        },
+        {
+          "id": "bff-disconnect",
+          "heading": "四、取消要观察响应是否提前关闭"
+        },
+        {
+          "id": "bff-server",
+          "heading": "五、运行一个有总预算和容量上限的服务"
+        },
+        {
+          "id": "bff-lab",
+          "heading": "六、在桌面观察成功、降级、超时和取消"
+        },
+        {
+          "id": "bff-idempotency",
+          "heading": "七、重试资格与幂等结果分开设计"
+        },
+        {
+          "id": "bff-cache",
+          "heading": "八、缓存和降级也有身份边界"
+        },
+        {
+          "id": "bff-stream",
+          "heading": "九、流式响应一旦开始，错误表达就变了"
+        },
+        {
+          "id": "bff-observability",
+          "heading": "十、日志要能解释结果，同时保持克制"
+        },
+        {
+          "id": "bff-shutdown",
+          "heading": "十一、停止接新任务，再有上限地排空"
+        },
+        {
+          "id": "bff-release",
+          "heading": "十二、部署与恢复都围绕同一份运行合同"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "node-runtime-measure",
+          "reason": "解释计时器设置与实际响应延迟为什么会不同。"
+        },
+        {
+          "concept": "node-files-pressure",
+          "reason": "把速度反馈用于响应流和慢客户端。"
+        },
+        {
+          "concept": "session-roles",
+          "reason": "区分服务聚合与真实身份、资源授权。"
+        },
+        {
+          "concept": "domain-idempotency",
+          "reason": "把重试意图与业务状态、版本和可靠结果连接起来。"
+        }
+      ]
+    },
+    {
+      "id": "AIDEV-01",
+      "title": "让 AI 协作形成可验收的交付",
+      "question": "代码和检查都有了，怎样判断它完成的是当前任务？",
+      "summary": "用资料筛选任务与证据观察页串起规格、范围、有限行动、版本变化和恢复。",
+      "outcomes": [
+        "把模糊请求拆成可观察的行为",
+        "区分文字约定与真实工具限制",
+        "让完成证据对应当前规格与内容"
+      ],
+      "prerequisites": [
+        "eng-05-quality-gates-lint-types-tests-ci.md#eng-05"
+      ],
+      "guide": "aidev-01-specification-controlled-agent-loop.md",
+      "anchor": "aidev-01",
+      "concepts": [
+        {
+          "id": "aidev-loop-spec",
+          "heading": "一、先把需求写成能观察的行为"
+        },
+        {
+          "id": "aidev-loop-packet",
+          "heading": "二、任务包给最少但足够的事实"
+        },
+        {
+          "id": "aidev-loop-context",
+          "heading": "三、上下文先给定位，再按需要读正文"
+        },
+        {
+          "id": "aidev-loop-tools",
+          "heading": "四、文字边界要由工具环境执行"
+        },
+        {
+          "id": "aidev-loop-cycle",
+          "heading": "五、每轮行动之后，用观察决定下一步"
+        },
+        {
+          "id": "aidev-loop-evidence",
+          "heading": "六、检查点保存可恢复状态，完成证据绑定当前内容"
+        },
+        {
+          "id": "aidev-loop-lab",
+          "heading": "七、在观察页里让旧绿灯失效"
+        },
+        {
+          "id": "aidev-loop-failure",
+          "heading": "八、失败先分类，避免为了变绿改变目标"
+        },
+        {
+          "id": "aidev-loop-change",
+          "heading": "九、规格变化后，明确哪些证据还能用"
+        },
+        {
+          "id": "aidev-loop-untrusted",
+          "heading": "十、读到的内容不自动获得指挥工具的权限"
+        },
+        {
+          "id": "aidev-loop-recovery",
+          "heading": "十一、恢复和委派都要重新确认真实状态"
+        },
+        {
+          "id": "aidev-loop-risk",
+          "heading": "十二、按风险选证据，把注意力留给主要任务"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "eng-quality-scope",
+          "reason": "按变更风险选择足够且必要的验证。"
+        },
+        {
+          "concept": "eng-check-commit",
+          "reason": "绿色结果必须对应真正交付的内容版本。"
+        },
+        {
+          "concept": "region-gate",
+          "reason": "区分判断模型与执行环境中真正的限制。"
+        },
+        {
+          "concept": "privacy-minimization",
+          "reason": "上下文和审计记录也应遵守最小必要原则。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "batch": "B15",
+  "title": "把协作、身份、密钥与类型边界讲清楚",
+  "reviewedOn": "2026-09-14",
+  "chapters": [
+    {
+      "id": "SEC-04",
+      "title": "让跨源页面有序协作",
+      "question": "跨源资源、窗口和消息分别应该获得哪些能力？",
+      "summary": "通过三个本地来源观察隔离、资源加载与消息拒绝，分清各项浏览器策略的方向。",
+      "outcomes": [
+        "解释 COOP、COEP、CORP 与 CORS 的作用方向",
+        "逐条验证消息来源、窗口和内容",
+        "为隔离、嵌入与弹窗设计基础路径"
+      ],
+      "guide": "sec-04-cross-origin-isolation-embedding-permissions.md",
+      "anchor": "sec-04",
+      "prerequisites": [
+        "sec-02-csp-trusted-types-reporting.md#sec-02"
+      ],
+      "concepts": [
+        {
+          "id": "isolation-origins",
+          "heading": "一、先把 origin、site 和窗口关系画清楚"
+        },
+        {
+          "id": "isolation-directions",
+          "heading": "二、把六种策略按控制方向摆在一起"
+        },
+        {
+          "id": "isolation-lab",
+          "heading": "三、运行一个三来源的嵌入实验"
+        },
+        {
+          "id": "isolation-coep",
+          "heading": "四、COEP 管资源准入，失败不等于隔离消失"
+        },
+        {
+          "id": "isolation-coop-shared",
+          "heading": "五、COOP 影响弹窗，SharedArrayBuffer 要做能力分支"
+        },
+        {
+          "id": "isolation-sandbox",
+          "heading": "六、sandbox 给的是能力，不是可信身份"
+        },
+        {
+          "id": "isolation-permissions",
+          "heading": "七、嵌入、被嵌入和功能授权分开配置"
+        },
+        {
+          "id": "isolation-message",
+          "heading": "八、postMessage 同时核对三件事"
+        },
+        {
+          "id": "isolation-schema",
+          "heading": "九、消息的类型说明要落到运行时"
+        },
+        {
+          "id": "isolation-leaks",
+          "heading": "十、XS-Leaks 与进程隔离还有各自边界"
+        },
+        {
+          "id": "isolation-migration",
+          "heading": "十一、迁移时记录每个资源怎样进入页面"
+        },
+        {
+          "id": "isolation-evidence",
+          "heading": "十二、用观察结果回答边界问题"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "policy-document-controls",
+          "reason": "把父子页面的控制方向接回 CSP 文档指令。"
+        },
+        {
+          "concept": "network-cors-cookie",
+          "reason": "区分跨源读取与 Cookie 的跨站判断。"
+        },
+        {
+          "concept": "mapped-runtime-projection",
+          "reason": "理解类型声明不能验证另一窗口发来的真实消息。"
+        },
+        {
+          "concept": "passkey-rp-origin",
+          "reason": "查看嵌入与来源边界怎样影响认证接入。"
+        }
+      ]
+    },
+    {
+      "id": "SEC-03",
+      "title": "确认通行密钥登录结果",
+      "question": "认证器返回后，什么时候才可以告诉用户登录成功？",
+      "summary": "用认证时序与可操作状态页，讲清 challenge、站点绑定、服务器验证和恢复。",
+      "outcomes": [
+        "区分注册、认证器返回与会话建立",
+        "说明 challenge、RP ID、origin 与签名的职责",
+        "处理取消、条件式入口和账号恢复"
+      ],
+      "guide": "sec-03-webauthn-passkeys-authentication.md",
+      "anchor": "sec-03",
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01"
+      ],
+      "concepts": [
+        {
+          "id": "passkey-roles",
+          "heading": "一、Passkey 把可重复输入的秘密换成站点凭证"
+        },
+        {
+          "id": "passkey-ceremonies",
+          "heading": "二、注册保存公钥，登录验证一次新回答"
+        },
+        {
+          "id": "passkey-challenge",
+          "heading": "三、challenge 是一次过程的凭据，不是固定验证码"
+        },
+        {
+          "id": "passkey-rp-origin",
+          "heading": "四、RP ID 和 origin 为什么都要检查"
+        },
+        {
+          "id": "passkey-stages",
+          "heading": "五、运行一个逐步推进的认证状态页"
+        },
+        {
+          "id": "passkey-api",
+          "heading": "六、真实 API 接入时，二进制与业务结果要分开"
+        },
+        {
+          "id": "passkey-verification",
+          "heading": "七、服务端的每个检查都在回答不同问题"
+        },
+        {
+          "id": "passkey-signals",
+          "heading": "八、UP、UV、attestation 与计数不要混为一谈"
+        },
+        {
+          "id": "passkey-errors",
+          "heading": "九、取消、超时和没有凭证要给用户可继续的路"
+        },
+        {
+          "id": "passkey-conditional",
+          "heading": "十、条件式 UI 是增强，不是可用凭证证明"
+        },
+        {
+          "id": "passkey-recovery",
+          "heading": "十一、同步、恢复与撤销决定长期体验"
+        },
+        {
+          "id": "passkey-evidence",
+          "heading": "十二、怎样判断实现完成了哪一层"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "network-abort-outcome",
+          "reason": "取消当前等待后，仍要区分服务器已有的结果。"
+        },
+        {
+          "concept": "security-write-gates",
+          "reason": "通过认证之后，每个资源操作仍需要授权。"
+        },
+        {
+          "concept": "isolation-permissions",
+          "reason": "核对跨源嵌入中的功能策略与调用条件。"
+        },
+        {
+          "concept": "mapped-record",
+          "reason": "用有限状态配置表维护阶段文案。"
+        }
+      ]
+    },
+    {
+      "id": "SEC-05",
+      "title": "管理加密数据与密钥",
+      "question": "加密成功以后，怎样处理篡改、密钥权限和换钥失败？",
+      "summary": "从一条临时笔记观察 AES-GCM、上下文绑定、导出限制与保留旧值的迁移。",
+      "outcomes": [
+        "解释密文、IV、AAD 与 CryptoKey 的边界",
+        "识别篡改、复用和重放的不同问题",
+        "用双读单写组织密钥轮换与恢复"
+      ],
+      "guide": "sec-05-web-crypto-key-lifecycle.md",
+      "anchor": "sec-05",
+      "prerequisites": [
+        "sec-01-xss-csrf-trust-boundaries.md#sec-01"
+      ],
+      "concepts": [
+        {
+          "id": "crypto-primitives",
+          "heading": "一、先问要保护什么，再选择原语"
+        },
+        {
+          "id": "crypto-key-handle",
+          "heading": "二、CryptoKey 是句柄，不是权限凭空消失"
+        },
+        {
+          "id": "crypto-gcm",
+          "heading": "三、AES-GCM 的 IV、AAD 和 tag 各有什么用"
+        },
+        {
+          "id": "crypto-note-lab",
+          "heading": "四、运行加密、篡改和换钥观察页"
+        },
+        {
+          "id": "crypto-envelope",
+          "heading": "五、信封保存的是约定，不是任意算法菜单"
+        },
+        {
+          "id": "crypto-nonce-replay",
+          "heading": "六、随机 IV、全局唯一和重放是不同问题"
+        },
+        {
+          "id": "crypto-wrap-trust",
+          "heading": "七、导出、包装、签名公钥都要追问来源"
+        },
+        {
+          "id": "crypto-storage",
+          "heading": "八、保存 CryptoKey 不等于使用硬件保险箱"
+        },
+        {
+          "id": "crypto-rotation",
+          "heading": "九、轮换的核心是双读单写和安全提交"
+        },
+        {
+          "id": "crypto-kdf-kms",
+          "heading": "十、密码派生、KMS 和 HSM 有不同职责"
+        },
+        {
+          "id": "crypto-revocation",
+          "heading": "十一、登出、撤销和泄漏响应不要只做清缓存"
+        },
+        {
+          "id": "crypto-evidence",
+          "heading": "十二、用攻击者能力衡量你实际保护了什么"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "policy-trusted-types",
+          "reason": "密钥不可导出与脚本入口控制解决不同问题。"
+        },
+        {
+          "concept": "runtime-transaction-lab",
+          "reason": "把迁移提交接回真实事务完成与回滚。"
+        },
+        {
+          "concept": "mapped-runtime-projection",
+          "reason": "信封类型仍需要对应的运行时解析。"
+        },
+        {
+          "concept": "passkey-recovery",
+          "reason": "对照凭证恢复与密钥恢复各自的责任。"
+        }
+      ]
+    },
+    {
+      "id": "TS-04",
+      "title": "从模型派生清楚的类型",
+      "question": "哪些关系可以交给编译器，哪些值还必须真正创建或校验？",
+      "summary": "从字段包装、配置表和事件名讲到只读递归，用实际输出揭示类型与对象的差别。",
+      "outcomes": [
+        "逐键解释映射、修饰符与名称派生",
+        "用正反例检查可选、数组和递归叶子",
+        "区分类型投影、运行时数据和公开接口"
+      ],
+      "guide": "ts-04-mapped-utility-template-literal-types.md",
+      "anchor": "ts-04",
+      "prerequisites": [
+        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03"
+      ],
+      "concepts": [
+        {
+          "id": "mapped-fields",
+          "heading": "一、映射类型逐个取键，再决定每个键的结果"
+        },
+        {
+          "id": "mapped-modifiers",
+          "heading": "二、readonly、可选与 undefined 是三件事"
+        },
+        {
+          "id": "mapped-runtime-projection",
+          "heading": "三、Pick 与 Omit 不会从对象里删除字段"
+        },
+        {
+          "id": "mapped-partial-keys",
+          "heading": "四、只让指定字段可选，并保留业务关系"
+        },
+        {
+          "id": "mapped-record",
+          "heading": "五、Record 用有限键保证配置完整"
+        },
+        {
+          "id": "mapped-key-remap",
+          "heading": "六、键重映射把字段名与值类型一起带过去"
+        },
+        {
+          "id": "mapped-filter",
+          "heading": "七、映射成 never 可以删除键"
+        },
+        {
+          "id": "mapped-template",
+          "heading": "八、模板字面量适合小而稳定的命名协议"
+        },
+        {
+          "id": "mapped-satisfies",
+          "heading": "九、satisfies 检查形状，as const 约束推断"
+        },
+        {
+          "id": "mapped-recursion",
+          "heading": "十、递归只读必须先定义叶子和深度"
+        },
+        {
+          "id": "mapped-tuples",
+          "heading": "十一、数组与元组要保留原来的形状"
+        },
+        {
+          "id": "mapped-evidence",
+          "heading": "十二、以错误可读性和维护成本决定抽象到哪一步"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "indexed-value",
+          "reason": "沿字段键理解处理器参数为何能保持对应。"
+        },
+        {
+          "concept": "security-source-sink",
+          "reason": "类型变窄不会自动清洗或删除真实值。"
+        },
+        {
+          "concept": "component-public-interface",
+          "reason": "类型化事件名要与组件实际接口一致。"
+        },
+        {
+          "concept": "crypto-envelope",
+          "reason": "将运行时输入校验应用到密文信封。"
+        }
+      ]
+    }
+  ]
+}

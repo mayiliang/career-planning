@@ -99,12 +99,21 @@ function normalizeMarkdownAnchor(value: string): string {
     .replace(/\s+/g, '-');
 }
 
-function markdownAnchors(markdown: string): Set<string> {
+function markdownAnchors(markdown: string, includeMaterialAliases = false): Set<string> {
   const anchors = new Set<string>();
   for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*#*\s*$/gm)) {
     const heading = match[1] ?? '';
     const normalizedHeading = normalizeMarkdownAnchor(heading);
     if (normalizedHeading) anchors.add(normalizedHeading);
+    // 站内讲义的小节地址与读取服务一致：中文标点也会被移除。
+    // 其他 Markdown 仍沿用原有锚点规则，不扩大站内地址的适用范围。
+    if (includeMaterialAliases) {
+      const materialAnchor = heading.trim().toLocaleLowerCase('en-US')
+        .replace(/[`*_~]/g, '')
+        .replace(/[^\p{L}\p{N}\s-]/gu, '')
+        .replace(/\s+/g, '-').replace(/-+/g, '-');
+      if (materialAnchor) anchors.add(materialAnchor);
+    }
     // 站内讲义读取服务允许用知识点代码作为稳定短锚点；全量 Markdown
     // 门禁必须与这个真实路由行为一致，避免强迫互链使用冗长中文标题 slug。
     const code = heading.match(/\b[A-Z][A-Z0-9]*-\d+\b/i)?.[0];
@@ -135,7 +144,10 @@ function localMarkdownLinkProblems(root: string): string[] {
         continue;
       }
       if (rawAnchor) {
-        const anchors = markdownAnchors(fs.readFileSync(targetFile, 'utf8'));
+        const anchors = markdownAnchors(
+          fs.readFileSync(targetFile, 'utf8'),
+          path.dirname(targetFile) === path.join(knowledgeDirectory, 'chinese-guides'),
+        );
         if (!anchors.has(normalizeMarkdownAnchor(rawAnchor))) {
           problems.push(`${path.relative(root, sourceFile)} -> ${target}: missing anchor`);
         }

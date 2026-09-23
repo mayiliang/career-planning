@@ -37,7 +37,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文补充讲义：TS-04](../chinese-guides/ts-04-mapped-utility-template-literal-types.md#ts-04)。覆盖范围：独立主讲义从映射与同态修饰符推进到 Pick/Omit/Record、键重映射、模板字面量、受控递归、数组/元组、satisfies、编译器性能、公共兼容和显式 DTO 回退。
+- 学习资料：[中文补充讲义：TS-04](../chinese-guides/ts-04-mapped-utility-template-literal-types.md#ts-04)。覆盖范围：独立主讲义用字段包装、运行时投影、配置表和事件名解释映射、修饰符、Pick/Omit/Record、局部可选、键过滤、模板字面量与 satisfies；用 Date、数组和元组说明受控递归与实际对象的区别。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文补充讲义：TS-04》，定位映射修饰符、键重映射、模板字面量和递归类型的机制及性能边界；首考题 2（机制解释）：给定 `UserDto`，说明如何从 `readonly id?:number` 生成表单字段 `onIdChange`，以及为什么 `Date` 不能按普通对象递归；首考题 3（最小产出）：固定 fixture `UserDto={readonly id?:number; profile:{name:string}; createdAt:Date; tags:string[]}`；实现 `PartialByKeys`、`EventName<T>` 和受控 `DeepReadonly`，交付 DTO→表单映射、`Date` 保留策略、数组/可选字段正反类型测试与编译结果；首考题 4（受限排错）：给定异常“`DeepReadonly<Date>` 后 `getTime` 不可调用”；只在递归条件、内建对象豁免、数组分支三项中排查，交付最小类型复现、证伪断言、根因修复和回归；首考题 5（学习复述）：用 3 分钟说明递归工具类型的语义与性能风险，回答何时应改为显式 DTO。复测变式：仅将 `tags` 改为 `readonly string[]`，保持 `profile` 必填、`Date` 策略和其余 DTO 字段不变；预期数组写入被类型拒绝且 `Date.getTime` 仍可调用；提交新的映射结果、正反类型断言和编译记录作为新证据。命题边界：只使用给定 DTO 和本点工具类型。
 - 通过标准：映射代码、正反类型断言和 `Date`/数组/可选字段记录可复核；不把内建对象误递归。否决项：用 `any`、无限递归类型或忽略 `Date` 方法失败。评估边界：只评估映射、工具与模板字面量，不评估运行时序列化。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -46,7 +46,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文补充讲义：TS-05](../chinese-guides/ts-05-conditional-infer-distribution.md#ts-05)。覆盖范围：独立主讲义讲清条件类型可赋值方向、infer 模式、联合分布与整体判断、never/unknown/any、递归深度、重载/方差、模板解析、NoInfer、性能和跨版本类型测试。
+- 学习资料：[中文补充讲义：TS-05](../chinese-guides/ts-05-conditional-infer-distribution.md#ts-05)。覆盖范围：独立主讲义以逐项代入、合法赋值、预期类型错误和运行输出解释可赋值方向、约束与回退、infer、分布与整体判断、never/unknown/any、联合过滤、递归预算、重载、模板解析、NoInfer 与维护成本。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文补充讲义：TS-05》，定位条件类型、`infer`、分布式行为、方括号阻止分布和 `never` 的说明；首考题 2（机制解释）：比较 `Unwrap<Promise<string>|null>` 与 `[T] extends [Promise<infer U>]` 的推导，解释为何一个分发一个不分发；首考题 3（最小产出）：给定固定输入 `Promise<string>`、`string|number`、`never`、`Promise<string>|Promise<number>`；实现 `Unwrap`、`ParametersOf` 与非分布版本，交付每个输入的类型断言、五题推导表和编译记录，并用测试验证最后一项推导为 `string|number`；首考题 4（受限排错）：给定异常“联合类型被逐成员解包，期望整体判断却得到 `string|number`”；只检查裸类型参数、方括号、`never` 分支三项，提交每项假设的类型证伪、根因修复与回归；首考题 5（学习复述）：用 3 分钟说明 `infer` 失败和 `never` 传播的含义，回答如何用更简单的显式类型降低维护成本。复测变式：仅将第四个固定联合输入的第二个成员从 `Promise<number>` 改为 `null`，保持前三个输入、`Unwrap`/`ParametersOf`/非分布实现及 `never` 分支不变；预期分布式 `Unwrap<Promise<string>|null>` 为 `string|null`，非分布版本保留整体联合；提交新的两组类型断言、推导表行和编译记录作为新证据。命题边界：只使用给定四类输入。
 - 通过标准：类型断言、推导表和编译日志可复核，四类输入结论正确；能说明何时禁止复杂类型体操。否决项：以断言伪造推导、遗漏 `never` 或把非分布写成裸参数。评估边界：只评估条件类型推导，不评估 Promise 的运行时实现。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -55,7 +55,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文补充讲义：TS-06](../chinese-guides/ts-06-functions-overloads-variance-component-apis.md#ts-06)。覆盖范围：独立主讲义从调用合同、可选参数与元组推进到重载/联合、this、协变/逆变/双变、async 错误与取消、组件所有权、泛型推断、声明 ABI 和替换安全。
+- 学习资料：[中文补充讲义：TS-06](../chinese-guides/ts-06-functions-overloads-variance-component-apis.md#ts-06)。覆盖范围：独立主讲义用遍历、rest 元组、标题重载、this、资料回调与保存操作解释协变逆变、方法双变反例、void/async、通知命令取消、受控与非受控、泛型列表与公开声明消费。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文补充讲义：TS-06》，定位重载解析、参数替换安全和方法双变性的章节，并写出一个过窄回调风险；首考题 2（机制解释）：给定 `load(id:string):User`、`load(ids:string[]):User[]` 与 `onSelect:(user:User)=>void`，解释重载签名、实现签名和回调逆变的关系；首考题 3（最小产出）：固定 fixture 为单 id `'u1'`、id 数组 `['u1','u2']`、`User={id:string,name:string}` 和只接受 `{id:'u1'}` 的过窄回调；实现 `load` 与安全 `onSelect` API，交付两个运行输出、合法/非法调用类型测试、完整重载实现与断言记录；首考题 4（受限排错）：给定异常“过窄回调被方法签名接纳，数组重载在运行时返回单对象”；只检查回调声明位置、重载实现签名、可选布尔参数三项，提交证伪代码、根因修复和双输入回归；首考题 5（学习复述）：用 3 分钟说明何时以联合参数代替重载，并回答方法双变性为什么需要额外谨慎。复测变式：仅将既有过窄回调的参数类型从 `{id:'u1'}` 改为 `User & {vip:true}`，保持单/数组 id、`User` 定义、两个 `load` 重载、实现签名和安全 `onSelect` API 不变；预期安全 API 拒绝该更窄回调，而接受 `(user:User)=>void`；提交新的编译拒绝诊断、合法替换回归和双输入运行记录作为新证据。命题边界：只使用给定 `load/onSelect` API。
 - 通过标准：调用输出、正反类型测试和重载实现记录可复核；调用端提示精确且过窄回调被拒绝。否决项：使用 `any`、断言或空实现掩盖替换不安全。评估边界：只评估函数、重载与回调类型，不评估组件框架运行时。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -66,7 +66,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文补充讲义：TS-07](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)。覆盖范围：独立主讲义从静态类型边界推进到 unknown、运行时 Schema、解析/归一化、未知字段与枚举、稳定错误、资源限制、契约测试、版本迁移、隐私和用户恢复；不绑定特定校验库。
+- 学习资料：[中文补充讲义：TS-07](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)。覆盖范围：独立主讲义用完整订单解析器、未知状态只读分支、错误码文案、归一化和字节限制读取器讲清 unknown、Schema、数值日期数组、未知字段、协议版本、模型投影、生成代码与用户恢复。
 - 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文补充讲义：TS-07》，定位 `unknown` 入口、字段解析、错误分类和版本兼容章节；首考题 2（机制解释）：以订单 JSON 为例，说明静态 `Order`、运行时 schema、解析错误和 UI 错误消息的分工；首考题 3（最小产出）：固定 fixture 为有效 `{id:1,amount:9,status:'paid'}`、缺 `id`、`amount:'9'`、未知 `status:'refunded'`；从 `unknown` 实现解析器与错误模型，交付 schema/守卫、四样本解析结果、错误 code→UI 映射和自动测试记录；首考题 4（受限排错）：给定日志“TypeScript 通过，`status=refunded` 在渲染器抛异常”；仅检查入口是否解析、错误分类、未知枚举兼容策略三项，提交证伪样本、根因修复和四样本回归；首考题 5（学习复述）：用 3 分钟解释为什么生成类型不能替代校验，并回答 `cause` 哪些信息可展示给用户。复测变式：仅将既有未知枚举样本的 `status` 字面量从 `refunded` 改为上游新增值 `pending`，保持 `id`/`amount`、其余三个样本、`unknown` 入口、schema 和错误 code→UI 映射机制不变；预期 `pending` 仍走未知枚举兼容分支、以降级 UI 呈现并且不崩溃；提交新的 `pending` 解析日志、降级展示断言和错误 code 记录作为新证据。命题边界：首考只依据本点中文讲义与订单 fixture。
 - 通过标准：`unknown` 入口、四样本解析日志、错误映射和测试可复核；错误可区分且未知枚举不致崩溃。否决项：直接把网络值断言为 `Order`、吞掉错误或用 UI 成功代替解析证据。评估边界：只评估前端运行时契约和错误模型，不评估真实 OpenAPI 服务部署。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -75,7 +75,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文补充讲义：TS-08](../chinese-guides/ts-08-domain-state-permission-modeling.md#ts-08)。覆盖范围：独立主讲义从实体/值对象/品牌推进到判别状态、命令与事件、RBAC/ABAC/关系授权、服务端重判、乐观并发、幂等、事务/outbox、审计、演进和状态空间测试。
+- 学习资料：[中文补充讲义：TS-08](../chinese-guides/ts-08-domain-state-permission-modeling.md#ts-08)。覆盖范围：独立主讲义以品牌 ID、判别状态、统一动作表、纯转换函数和桌面审核观察页解释角色与资源授权、陈旧版本、终态和退回原因；继续说明幂等收据、命令事件、事务/outbox、可信时间、审计与归档演进。
 - 严格考核：挑战类型：DESIGN_CASE；首考题 1（资料定位）：只允许使用《中文补充讲义：TS-08》，定位状态—动作单一来源、品牌 id、客户端可见性、服务端授权及陈旧提交的说明；首考题 2（机制解释）：给定审核状态与角色，说明业务状态、异步状态和授权为什么不能合并成一个布尔值；首考题 3（最小产出）：固定 fixture 为 `draft→submitted→approved|rejected`、角色 `author|reviewer`、动作 `submit|approve|reject` 与两份版本 `version:3/4`；交付状态—动作表、判别联合/品牌类型、按钮可见性规则、服务端请求 guard、非法跃迁和陈旧版本的运行时测试记录；首考题 4（受限排错）：给定异常“version:3 的 approve 在客户端隐藏却仍被陈旧请求提交”；仅检查状态动作表、版本比较、服务端授权三项，提交每项证伪、根因、修复和并发回归；首考题 5（学习复述）：用 3 分钟区分判别联合、运行时校验和服务端授权职责，并回答新增状态如何演进。复测变式：仅在既有状态—动作表新增状态条目 `archived`，并为该条目的允许动作集合设为 `∅`；保持原有状态、角色、动作、`version:3/4`、客户端可见性规则和服务端版本/授权 guard 不变；预期 `archived` 的三个动作均在类型、按钮和服务端 guard 三层被拒绝；提交新的状态表行、三层拒绝记录和陈旧版本回归作为新证据。命题边界：只使用给定审核 fixture。
 - 通过标准：状态表、类型/运行时测试和陈旧请求日志可复核；非法动作同时被客户端和服务端策略拦截。否决项：仅隐藏按钮、依赖未交付项目枚举或忽略版本冲突。评估边界：只评估业务建模与授权边界，不评估真实身份系统。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟
@@ -86,7 +86,7 @@
 
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
-- 学习资料：[中文讲义：TS-09 TypeScript 版本迁移与弃用治理](../chinese-guides/ts-09-version-migration-module-governance.md#ts-09)、[TypeScript 6.0 正式发布说明](https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/)（英文原文，仅用于版本核验）、[TypeScript 7.0 正式发布说明](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)（英文原文，仅用于版本核验）。覆盖范围：独立主讲义先讲 target/module/resolution、类型发现、声明、CLI/LSP/API、框架嵌入与逐包迁移，再以 2026-08-31 官方状态解释 5.9→6.0→7.0、原生编译器、程序化 API 缺口、双轨、验证、退出和回滚；英文原文不作为必读，也不得作为独立首考题源，仅用于时效核验。
+- 学习资料：[中文讲义：TS-09 TypeScript 版本迁移与弃用治理](../chinese-guides/ts-09-version-migration-module-governance.md#ts-09)、[TypeScript 6.0 正式发布说明](https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/)（英文原文，仅用于版本核验）、[TypeScript 7.0 正式发布说明](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)（英文原文，仅用于版本核验）。覆盖范围：独立主讲义通过 TypeScript 5.7.2 的 ESM 小包、包外 JS/声明消费和缺扩展名反例解释模块语义、类型发现及产物；按 2026-09-15 官方发布说明整理 6.0 默认值与弃用、7.0 CLI/API 轨道、逐包验证、兼容退出和回滚；英文原文仅作时效核验，不作为必读内容，也不得作为独立首考题源。
 - 严格考核：挑战类型：TOOL_OPERATION；首考题 1（资料定位）：只允许使用《中文讲义：TS-09 TypeScript 版本迁移与弃用治理》，定位模块解析、6.0 默认配置、7.0 无程序化 API、嵌入式语言限制和双轨包的章节；首考题 2（机制解释）：给定 browser app、Node service、Vue component package 三个包，解释 `target`、模块格式、解析、类型发现、运行时加载与编译器 API 兼容为何须分别验证；首考题 3（最小产出）：固定 fixture 为 `apps/web`（bundler）、`apps/api`（node20）和 `packages/ui`（Vue/Volar + 声明输出），以及旧配置 `module:commonjs,target:es2019,rootDir:src`；制定 5.9→6.0→7.0 双轨迁移清单，交付并验证三个包迁移前后 `tsc --version`、类型/运行/打包/声明日志、配置差异、side-effect import、类型发现与工具兼容矩阵；首考题 4（受限排错）：给定异常“7.0 CLI 通过，但 Vue 编辑器仍由 6.0/Volar 驱动，api 又出现 ESM/CJS 加载错误”；只检查编译器/API 轨道、模块格式/解析、`types` 发现三项，提交逐项证伪、根因修复和三包回归；首考题 5（学习复述）：用 3 分钟给出审计、分包试迁、兼容窗口、退出条件和回滚顺序，并解释为什么性能提升或编辑器无红线都不足以验收。复测变式：仅将 `apps/api` 切至 node20 解析，保持 `apps/web`、`packages/ui`、双轨工具和其余配置不变；预期 API 的编译解析与 Node 运行一致，另外两包的类型、编辑器和打包结果不变。命题边界：英文原文不得作为独立首考题源；不要求升级真实生产项目，不得以 `skipLibCheck`、批量断言或关闭严格项规避问题；实施时必须重新核验当时正式发布说明。
 - 通过标准：三包迁移清单、配置 diff、编译/运行/打包日志可复核；模块语义与运行一致。否决项：只给编辑器截图、使用 `skipLibCheck`、批量断言或未验证运行时加载。评估边界：只评估给定 workspace 的迁移诊断，不评估第三方构建工具的内部实现。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 135 分钟；考核 90 分钟；复测 75 分钟

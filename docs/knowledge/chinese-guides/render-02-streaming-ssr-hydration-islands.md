@@ -1,144 +1,269 @@
-# 流式渲染与交互接管知识点讲义
+# 正文已经出现，为什么按钮还不能用
 
 ## RENDER-02 流式 SSR、Hydration 与 Islands 架构
 
-服务器一次性等待所有数据再发送 HTML，会让一个慢推荐阻塞整个页面；把 HTML 分段发送可以先交付外壳和关键内容。但流式只改变“何时送达”，没有自动解决一致性、脚本成本、缓存、授权和错误恢复。随后客户端还要把静态标记接管成可交互界面，接管前后必须保持同一结构和状态。本讲沿网络流、渲染边界、序列化与交互所有权建立完整模型。
+课程正文已经准备好，延伸阅读还需要两秒。如果服务器等两者全部完成才发送页面，读者会一直空等；如果先发正文，读者可以早一点开始。但正文出现之后，收藏按钮可能还在等脚本，客户端也可能拿着另一份数据开始接管。
+
+本讲把“数据就绪”“字节到达”“内容显示”和“交互就绪”分别观察。前半部分解释流式边界与 Hydration，后半部分提供一个只用 Node 内置模块的完整本地观察页。观察页演示真实 HTTP 分段与原生增强，不把普通 DOM 事件绑定冒充 React Hydration。
 
 ### 学习前先确认
 
-- 直接前置：[RENDER-01 SPA、SSR、SSG、ISR 与混合渲染决策](../chinese-guides/render-01-spa-ssr-ssg-isr-hybrid-decisions.md#render-01)。它已递归包含网络、缓存和浏览器渲染基础；本讲直接使用 SSR、CSR、路由缓存、状态码和脚本预算。
+- 直接前置：[RENDER-01 SPA、SSR、SSG、ISR 与混合渲染决策](../chinese-guides/render-01-spa-ssr-ssg-isr-hybrid-decisions.md#render-01)。先理解 HTML 生成时机、缓存范围和客户端脚本成本。
 
-### 一、传统 SSR 的等待屏障在哪里
+### 一、找出是谁让主要内容继续等待
 
-非流式 SSR 通常收集整棵页面所需数据，完成渲染后一次发送 HTML。任何慢依赖都会拉长 TTFB，但结构简单：发头前能决定状态码，客户端只面对完整文档。对于内容很小、数据同速或必须原子呈现的页面，这可能仍是最可靠方案。
+假设资料正文 80 ms 就绪，延伸阅读 1500 ms，个人进度 500 ms。如果渲染函数先等待一个包含全部数据的 Promise.all，HTML 就被最慢的依赖拦住。并发读取减少串行等待，却没有移除“等所有结果才能输出”的屏障。
 
-真正的问题是不同区域的依赖和重要度不同。导航、商品摘要已就绪，评论和推荐仍等待；若全部绑在一个 Promise.all，次要区域阻塞主要任务。先画依赖图与用户关键路径，只有能独立加载、失败和重试的区域才适合作边界。
+先问用户能否独立使用已完成区域。正文不依赖推荐，可以先交付；余额与同一时刻的可扣金额若必须保持一致，则不能为了更快而随意拆成两份快照。边界来自业务关系，而不是只看组件文件分开了没有。
 
-### 二、流式 SSR 分阶段发送可用内容
+次要数据可以延迟到达、失败后局部显示错误，但不应让正文假装失败。反过来，核心资料不存在或无权访问，就不应该先发送它的公开外壳，再等待后续区域补一个拒绝。
 
-**流式服务端渲染（Streaming Server Rendering）**让服务器先发送文档外壳和已完成边界，随后把慢区域的 HTML/指令继续写入响应。浏览器可以更早解析、加载资源和显示内容，用户不必等待最慢依赖。
+### 二、流式输出沿服务器、网络和浏览器逐步发生
 
-流式响应仍受代理/CDN 缓冲、压缩阈值、TCP/HTTP 流控和浏览器解析影响。服务端调用 flush 不保证用户立刻看到；必须在真实部署链抓 Network timing 和字节到达。某些平台会聚合小 chunk，过度切碎还增加头部和调度成本。
+**Streaming SSR** 让服务器在整页全部完成之前输出可用 HTML，后续继续发送其他内容。HTTP 流中的一段写入，不一定对应浏览器收到的一块数据，更不一定对应一次绘制。
 
-一旦状态头和部分 body 已发送，后续错误通常不能改成完整 500/404。边界要有可内嵌错误与重试，关键授权/路由存在性最好在开始流前决定。流中断时客户端辨别不完整，不能把半页当成功。
+```mermaid
+flowchart TB
+  A[关键数据与路由判定完成] --> B[发送首段 HTML]
+  B --> C[网络与代理传输]
+  C --> D[浏览器解析并显示正文]
+  B --> E[次要数据继续读取]
+  E --> F[追加内容或框架边界补丁]
+  F --> D
+  D --> G[相关脚本加载与执行]
+  G --> H[对应交互可以使用]
+```
 
-### 三、边界同时定义加载、错误、取消与缓存
+代理缓冲、压缩、流控和浏览器解析都会影响到达与显示。服务器调用 `write()`，只能证明尝试写出；本机 curl 能看到分段，也不能证明生产 CDN 后仍按同样时序交付。过度切小块还会增加调度成本。
 
-每个流式边界记录所需数据、占位内容、超时、错误 UI、重试、取消、缓存与敏感性。边界不是随手包一个 Suspense；若两个区域必须保持同一事务快照，就不应独立到达产生矛盾。
+原生 HTML 可以顺序追加；框架也可以发送占位替换所需的 HTML 和指令。后者是框架协议，必须由匹配版本的客户端处理。不能把任何 JSON 流都称为流式 SSR，也不能从某框架的私有补丁格式推断通用浏览器机制。
 
-外壳应保持布局和语义稳定，避免后续内容造成巨大位移。占位与最终内容使用相同标题层级和区域名称，焦点不会因替换丢失。错误边界说明哪部分失败并允许局部恢复，不能让推荐失败阻塞购买按钮。
+### 三、开始发送以后，状态码的决定窗口已经改变
 
-用户导航离开或连接断开后，服务器取消不再需要的数据请求与渲染，释放数据库连接和计算。取消是协作信号；已经发生的业务写入不能因输出流断开自动回滚。
+响应头发出后，后来的推荐失败通常不能把原来的 200 改成 500。该失败仍需在页面对应区域和服务端记录中表达，不能因为 HTTP 是 200 就当整页业务成功。
 
-### 四、Hydration 把服务器 HTML 接管为交互界面
+顶层认证、资源存在性和必要重定向应尽量在首段前决定。每个私有子区域也要独立执行相应授权；父路由可访问不代表用户拥有全部子资源。
 
-**注水（Hydration）**让客户端运行时读取服务器已存在的 DOM，恢复组件状态并绑定事件，而不是重新创建全部标记。初始 HTML 可以先读，但按钮通常要等相关脚本和接管完成才可靠工作。
+以 React 的 Node 流式 API 为例，`onShellReady` 适合在 shell 就绪后开始发送，`onAllReady` 可以等待全部内容；一旦开始流式响应就不能再调整已发送状态码。React 对部分错误的客户端恢复有其自身规则，不是所有框架都一样。[renderToPipeableStream](https://react.dev/reference/react-dom/server/renderToPipeableStream)
 
-hydration 成本包括下载/解析模块、执行组件代码、重建虚拟树、读取序列化状态和绑定事件。服务器生成更多 HTML不意味着客户端 JavaScript 更少；若整棵树都接管，低端设备可能在看见内容后仍长时间无法交互。
+如果选择等关键数据完成再发头，TTFB 可能稍晚，却换来正确状态和稳定主体。是否值得要回到本页任务，不能只为了抢首字节牺牲结果含义。
 
-交互就绪需要明确测量。点击回放、事件委托或选择性 hydration 是框架优化，但不能假设所有事件都安全排队。关键按钮在未接管时可用原生表单/链接，或明确禁用并说明，而不是看似可点却丢操作。
+### 四、Hydration 需要客户端重建一致的首次理解
 
-### 五、首次客户端渲染必须与服务器一致
+**Hydration** 通常让客户端框架在已有服务器标记上建立状态与交互关系，而不是从空容器开始画页面。这里保留英文，因为“注水”容易遮住实际发生的工作。
 
-**注水不匹配（Hydration Mismatch）**发生在服务器 DOM 与客户端第一次期望不同。常见原因包括渲染中读取当前时间、随机数、窗口尺寸、本地存储、用户区域设置、不同数据版本、无效 HTML 嵌套或服务端/客户端代码分支。
+客户端下载并执行相关组件代码，使用初始数据形成它对界面的理解，再接管已有内容。已经能阅读，不代表 JavaScript 已下载，也不代表需要该运行时的按钮已可靠响应。
 
-修复原则是相同输入产生相同初始输出。时间和随机值由服务器生成并序列化稳定结果；浏览器特有信息在 hydration 后 effect 中读取，并给服务器可接受占位；数据带版本且客户端复用同一快照，后台刷新在接管后发生。
+不同框架可能有事件回放和优先接管机制，但不能假设所有用户操作都自动排队。能用原生链接和表单的操作，可以先保留原生路径；必须依赖脚本的按钮，在未就绪时应给明确状态，避免看起来可用却丢失操作。
 
-不要用 suppress warning 大面积隐藏不匹配。框架可能丢弃服务器 DOM、重建子树、丢焦点或绑定到意外节点。只对真正允许差异的孤立文本使用抑制，并记录理由与测试。
+SSR 本身可以完全不使用 Hydration，普通服务端模板加少量脚本也是合法方案。React Server Components 又有独立边界，相关内容见 [REACT-09](../chinese-guides/react-09-compiler-rsc-security-upgrades.md#react-09)，不要把三者当同一术语。
 
-### 六、序列化是信任边界和数据合同
+### 五、首次渲染使用同一快照，再考虑刷新
 
-服务器传给客户端的初始状态会进入 HTML、脚本或框架载荷，任何能打开页面的人都可能读取。只序列化客户端完成任务必需的数据；密钥、内部错误、数据库字段、未授权对象和其他用户缓存绝不能因为组件方便被发送。
+服务器显示 v4 标题，客户端首轮却用刚查询到的 v5；服务端按 UTC 显示日期，客户端按本地时区重新格式化；两边各自生成随机 ID。这些都可能让首次内容不一致。
 
-序列化格式处理日期、BigInt、Map、类实例、循环引用与 undefined。最好转换成明确 DTO，并用安全序列化器转义 `<`、脚本终止序列等，防止 XSS。内容安全策略、nonce 与 Trusted Types 仍需正确配置。
-
-状态要包含数据版本、查询键和身份范围，客户端 query cache hydration 才能复用而不串租户。反序列化后仍做运行时校验，尤其当载荷可被 CDN、扩展或旧页面缓存影响。
-
-### 七、Islands 把脚本限制在真实交互区域
-
-**群岛架构（Islands Architecture）**把页面主要内容保持为服务器/静态 HTML，只为搜索框、购物车或播放器等交互岛加载运行时。岛之间通过显式 props、URL、DOM 事件或共享服务通信，避免整页框架接管。
-
-岛边界适合内容主导、少量互不依赖交互的页面。高度协同的复杂编辑器若被切成许多岛，会重复运行时、状态同步和事件协议，复杂度高于单一应用。不要为纯静态文本建立岛。
-
-每个岛声明加载触发：立即、可见、空闲或用户交互。延迟 hydration 节省主线程，但用户先点击时必须有可靠反馈；关键操作不应等到很晚。共享依赖去重和版本一致性要由构建系统保证。
-
-### 八、选择性与渐进 Hydration 关注优先级
-
-选择性 hydration 允许优先接管用户正在交互或更关键的边界，渐进 hydration 按顺序加载。优先级来自用户任务和可观察信号，不是组件树深度。导航、搜索和主要提交通常高于评论装饰。
-
-边界脚本加载失败时，服务器 HTML仍可读，交互区域显示重试或回退链接。客户端错误不能破坏其他已接管区域。模块加载、数据请求和 hydration 本身分别记录耗时与错误，便于定位“内容已见但点不动”。
-
-预加载过多低优先模块会抵消延迟收益。使用真实设备和输入延迟验证，观察脚本字节、长任务、INP 和任务完成，而不是只看 hydration API 调用时间。
-
-### 九、流式数据必须维护版本与快照语义
-
-外壳读取商品 v3，慢库存边界稍后读取 v4，页面可能出现跨版本组合。若业务允许最终刷新，显示数据时间/同步状态；若必须一致，边界共享请求快照或先取得版本 token，再按同一版本查询。
-
-客户端导航期间旧流片段可能迟到。每个路由/边界带导航 ID 或 AbortSignal，提交 DOM 前确认仍属于当前页面。服务端也停止旧请求。仅靠 Promise 完成顺序会让旧页面覆盖新导航。
-
-缓存边界要区分公共与私有。可缓存的产品描述与用户专属价格不能放在同一公共片段。片段缓存键、失效与整页组合需要真实响应验证，避免局部缓存泄露。
-
-### 十、客户端导航不是完整刷新缩小版
-
-完整刷新由服务器返回文档和状态码，客户端导航可能请求框架数据载荷并复用布局。两条路径必须得到一致权限、重定向、错误和缓存结论。只测试点击链接会漏直接访问与搜索爬虫，只测刷新会漏旧载荷竞态。
-
-预取能减少等待，却可能提前读取用户无意访问的数据、浪费流量或缓存权限敏感结果。按网络、设备和链接意图控制，预取请求同样需要认证、取消和正确缓存键。
-
-历史恢复与 bfcache 可能复用已经 hydration 的页面。pageshow 后检查连接、身份和数据时效，不重复绑定事件或保留已退出用户信息。
-
-### 十一、无 JavaScript 与渐进增强定义最低可用层
-
-内容站的正文、导航和基础表单可以依靠 HTML/HTTP 工作，再由 JavaScript增强。复杂实时编辑器不必在无 JS 下完整等价，但加载失败时应说明原因、保留已输入内容并提供恢复，而不是空白。
-
-服务器表单 action 与客户端拦截必须共享校验、CSRF 和幂等语义。hydration 前提交若走原生路径，结果仍正确；接管后增强为局部更新。这样也减少“按钮看见但事件尚未绑定”的窗口。
-
-可访问性在接管前后保持：语义、名称、键盘顺序和焦点不改变。边界完成通知不要抢焦点，动态错误通过适度 live region 告知。
-
-### 十二、流式错误与安全不能留到最后
-
-在开始输出前完成认证、顶层授权和敏感路由判定。子边界仍对资源再次授权，不能因为父页面允许就返回所有数据。错误栈和内部服务名不进入流式补丁，公开错误携带安全 requestId。
-
-流式 HTML 仍需转义不可信内容，框架协议载荷也可能成为注入面。依赖安全公告、运行时版本和服务端函数暴露要单独治理。React Server Components 等专有协议有自己的序列化和授权边界，不应从通用流式概念推断安全。
-
-响应断开后记录已发送阶段与取消结果，避免服务端继续昂贵工作。代理日志和浏览器控制台中的载荷要脱敏。
-
-### 十三、边界图帮助控制复杂度
-
-为页面画数据依赖、渲染边界、缓存范围、脚本入口和错误传播。每条边标明服务器/客户端、可序列化输入、版本、取消和 owner。若一个边界依赖另一个未完成结果，明确顺序或合并，避免隐式 waterfall。
-
-边界数量不是越多越好。每个边界增加占位、错误、测试、网络片段和代码分割成本。按用户可独立理解和恢复的区域切分，并用性能证据决定是否值得。
-
-设计评审同时看正常、慢、失败、导航离开和权限变化五张图。只有最终成功截图无法发现流式系统的主要风险。
-
-### 十四、验证跨服务器、网络和客户端三段
-
-服务器记录每个边界数据开始/结束、首字节、shell ready、all ready、取消和错误；网络抓取 chunk 时间、代理缓冲和资源优先级；客户端记录内容出现、脚本加载、hydration、长任务、交互和 mismatch。三段用 request/navigation ID 关联。
-
-构造摘要立即、库存 800ms、推荐 2s 的页面，测试推荐失败不阻塞购买；再注入服务器/客户端时区、随机数、旧数据版本、chunk 404、导航离开、禁用 JS、慢网和低端 CPU。检查初始 HTML、最终 DOM、焦点、控制台和敏感载荷。
-
-性能用多次样本与现场 RUM，比较非流式基线。若 TTFB 改善但脚本和 INP 变差，应调整客户端边界，而不是宣称流式整体成功。
-
-### 十五、发布与版本兼容
-
-HTML/框架载荷可能引用特定构建的脚本，滚动部署和 CDN 缓存会组合新旧版本。资产使用内容 hash并保留合理窗口；服务器载荷与客户端 runtime 需要兼容或粘性版本。回滚同样验证旧 HTML 能取得旧 chunk。
-
-框架升级可能改变流式 API、缓存、错误边界和 hydration 警告。锁定版本，保存代表页面故障回归，阅读当前官方迁移/安全公告。不要把实验性能力当稳定合同。
-
-边缘与 serverless 平台对流、超时、连接和 response buffering 支持不同，在目标环境实测。开发机能逐 chunk 输出不代表 CDN 后也一样。
-
-### 十六、常见反例与适用边界
-
-- 整页包在一个流式边界，没有局部错误和恢复。
-- 渲染时读取时间、随机数或浏览器状态，靠 suppress 隐藏 mismatch。
-- 序列化整个服务端对象，包含无权字段、密钥或错误栈。
-- 为所有静态文本创建岛，重复运行时和脚本开销大于收益。
-- 只测最终 DOM，不测初始 HTML、chunk 时序、禁用 JS 和导航竞态。
-- 本地流式正常便假设代理/CDN 不缓冲。
-
-数据不可独立、页面小且一次 SSR 已满足预算时，非流式更简单。Islands 适合内容主导与稀疏交互，不是所有后台应用的默认架构。技术价值必须由用户关键路径、脚本预算和故障隔离证明。
-
-### 十七、学完后应能说明
-
-你应能解释流式 HTML 从服务器到浏览器的时序，设计含加载、错误、取消、缓存和授权的边界；保证服务器与客户端首次输出一致；控制序列化和脚本预算；判断 Islands/选择性 hydration 是否合适；并用慢源、流中断、mismatch、chunk 失败、导航和禁用 JS 证据证明页面可恢复。
-
-继续查证可参考 [React renderToPipeableStream](https://react.dev/reference/react-dom/server/renderToPipeableStream)、[React hydrateRoot](https://react.dev/reference/react-dom/client/hydrateRoot) 与 [web.dev Islands Architecture](https://web.dev/articles/islands-architecture)。
+```ts example=render02-shared-snapshot
+type Snapshot = { title: string; version: number; dateLabel: string };
+function view(s: Snapshot): string { return `${s.title} · v${s.version} · ${s.dateLabel}`; }
+const server: Snapshot = { title: '摄影入门', version: 4, dateLabel: '2026-09-20' };
+const initialClient: Snapshot = { ...server };
+const refreshed: Snapshot = { ...server, title: '摄影基础', version: 5 };
+console.log(view(server) === view(initialClient));
+console.log(view(server) === view(refreshed));
+console.log(view(refreshed));
+// => true
+// => false
+// => 摄影基础 · v5 · 2026-09-20
+```
+
+例子只比较确定性输出，不执行框架 Hydration，也不校验网络输入。真实实现要安全传递初始快照，让客户端首次使用它；接管后再按策略刷新。时间、随机值和需要稳定的 ID 同样要共享或使用框架支持的确定方式。
+
+浏览器专属信息可以先用一致占位，接管后读取，再明确更新。无效 HTML 嵌套也会被浏览器修正，导致 DOM 与代码预期不同；并非所有 mismatch 都是数据版本问题。
+
+React 明确要求首次输出与服务器一致，差异应作为 bug 修复，不保证自动修正所有属性。大面积使用 `suppressHydrationWarning` 隐藏日志，不会让事实一致。[hydrateRoot](https://react.dev/reference/react-dom/client/hydrateRoot)
+
+### 六、序列化状态就是向浏览器公开数据
+
+HTML 里不可见的 JSON、脚本中的初始状态、框架传输载荷，都能被收到响应的人读取。只隐藏 DOM 节点不会保护已经发出的字段。
+
+先构造最小公开 DTO，再选择适合嵌入位置的安全序列化方式。JSON 字符串合法，不等于可以不处理就放进 HTML 的 script 元素；HTML 解析器仍会识别脚本结束标记。
+
+```js example=render02-safe-state
+const dto = { title: '</script><img src=x onerror=alert(1)>', version: 4 };
+const serialized = JSON.stringify(dto).replace(/</g, '\\u003c');
+console.log(serialized.includes('</script>'));
+console.log(JSON.parse(serialized).title === dto.title);
+console.log(Object.keys(JSON.parse(serialized)).join(','));
+// => false
+// => true
+// => title,version
+```
+
+这里说明 JSON 在 HTML 原始文本中的结束标记问题，只处理自编 DTO，不是通用 HTML sanitizer。属性、URL、富文本等上下文另有要求；读取后仍要按数据合同检查，展示普通文本用 `textContent`，不能再把解析出的标题交给 `innerHTML`。
+
+真实框架优先使用其支持的序列化路径，配合 CSP、必要 nonce 与输出最小化。不要手拼整个服务端实体，也不要因为某字段暂时“客户端没用到”就允许秘密进入页面。进一步的信任边界见 [SEC-01](../chinese-guides/sec-01-xss-csrf-trust-boundaries.md#sec-01)。
+
+### 七、Islands 把客户端工作限制在需要交互的区域
+
+**Islands Architecture** 让正文等静态区域保持 HTML，只有播放器、收藏或局部筛选这样的区域加载客户端逻辑。它关心交互所有权与加载范围，不要求每座岛一定使用不同框架。
+
+正文无需脚本，计划表单先用原生提交，旁边的快捷加时按钮再由脚本增强，是容易理解的起点。复杂编辑器如果所有面板都共享撤销历史和即时状态，拆成很多互相发消息的岛反而会增加协调成本。
+
+不同岛可以按重要度加载：主要操作尽早，页尾装饰可在可见或空闲时处理。以 Astro 为例，`client:load`、`client:idle`、`client:visible` 是它的具体调度入口，不能当作浏览器属性或跨框架通用 API。[Astro Islands](https://docs.astro.build/en/concepts/islands/)
+
+延迟加载并非免费：先点击时要有可理解反馈，脚本失败有恢复，公共依赖避免重复下载。选择性 Hydration 与 Islands 都可能减少一次性客户端工作，但前者通常仍由框架调度同一应用的边界，二者不宜直接画等号。
+
+### 八、运行一个真的分段页面，分开观察脚本和内容
+
+把下面完整文件保存为 `stream-lab.mjs`，用 Node.js 22 执行 `node stream-lab.mjs`，打开终端打印的本地地址。没有外部依赖、真实账号或数据库，所有状态都来自固定资料和 URL 中的合成参数。
+
+先打开流式模式，正文会先到达；延伸阅读默认延迟两秒。把 `scriptDelay` 改为 3000，观察增强按钮还在等脚本时，原生表单是否能提交；把 `mode` 改为 `buffered`，对照整页等待。`fail=1` 只让延伸阅读失败。
+
+```js example=render02-stream-lab runtime=project file=stream-lab.mjs
+import { createServer } from 'node:http';
+
+const port = Number(process.env.PORT ?? 43741);
+let serial = 0;
+function wait(ms, signal) {
+  return new Promise(resolve => {
+    if (signal.aborted) { resolve(false); return; }
+    const finish = value => { clearTimeout(timer); signal.removeEventListener('abort', aborted); resolve(value); };
+    const aborted = () => finish(false);
+    const timer = setTimeout(() => finish(true), ms);
+    signal.addEventListener('abort', aborted, { once: true });
+  });
+}
+const number = (text, fallback, max) => text !== null && /^\d+$/.test(text) && Number.isSafeInteger(Number(text)) && Number(text) <= max ? Number(text) : fallback;
+const escape = text => text.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const island = `
+const input = document.getElementById('minutes');
+const button = document.getElementById('add');
+button.addEventListener('click', () => {
+  const current = Number(input.value);
+  if (input.value === '' || !Number.isInteger(current) || current < 0 || current > 180) {
+    document.getElementById('island-status').textContent = '先填写 0 至 180 的整数分钟。'; return;
+  }
+  input.value = String(Math.min(180, current + 5));
+  document.getElementById('island-status').textContent = '已在本地加 5 分钟；提交后由服务器读取。';
+});
+button.disabled = false;
+document.getElementById('island-status').textContent = '增强脚本已就绪；原生提交始终可用。';
+`;
+const style = `
+:root{font:16px/1.8 system-ui,"Microsoft YaHei",sans-serif;color:#183f38;background:#edf3ef}*{box-sizing:border-box}
+body{margin:0;padding:36px}main{max-width:1080px;margin:auto}h1{font-size:34px;margin:4px 0 10px}h2{font-size:21px;margin:0 0 12px}
+nav{display:flex;gap:18px;flex-wrap:wrap;margin:18px 0}a{color:#236b59;text-underline-offset:4px}section{border:1px solid #cdded4;border-radius:16px;padding:25px;background:white;margin:20px 0}
+.columns{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}.columns section{min-width:0}.tag{letter-spacing:.12em;font-size:13px;color:#56796c}
+label{display:block}input,button{font:inherit;border:1px solid #91b6a7;border-radius:8px;padding:8px 12px;color:inherit;background:#f6faf7}input{width:105px}button{cursor:pointer;margin:8px 5px 8px 0}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #af771b;outline-offset:3px}.muted{font-size:14px;color:#5b766a}.error{background:#fff7e8;border-color:#d9bc82}
+`;
+const server = createServer(async (req, res) => {
+  const id = ++serial, controller = new AbortController();
+  res.on('close', () => { if (!res.writableFinished) console.log(id, '连接关闭，停止等待'); controller.abort(); });
+  try {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end('Method Not Allowed'); return; }
+    if (url.pathname === '/island.js') {
+      if (!await wait(number(url.searchParams.get('delay'), 600, 5000), controller.signal)) return;
+      res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' }); res.end(island); return;
+    }
+    if (url.pathname !== '/') { res.writeHead(404); res.end('Not Found'); return; }
+    const mode = url.searchParams.get('mode') === 'buffered' ? 'buffered' : 'stream';
+    const delay = number(url.searchParams.get('delay'), 2000, 5000);
+    const scriptDelay = number(url.searchParams.get('scriptDelay'), 600, 5000);
+    const minutes = number(url.searchParams.get('minutes'), 30, 180);
+    const title = escape('摄影入门：先读正文，再等延伸阅读');
+    const shell = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>分段阅读观察室</title><style>${style}</style></head><body><main>
+      <div class="tag">B21 · 内容到达 / 脚本就绪</div><h1>分段阅读观察室</h1>
+      <p id="mode">当前模式：${mode}；延伸阅读 ${delay} ms；脚本 ${scriptDelay} ms</p>
+      <nav aria-label="观察模式"><a href="/?mode=stream">分段发送</a><a href="/?mode=buffered">等待完整页面</a><a href="/?scriptDelay=3000">脚本晚到</a><a href="/?fail=1">延伸阅读失败</a></nav>
+      <div class="columns"><section id="summary"><h2>${title}</h2><p>先决定画面要表达什么，再观察光线、主体与背景。正文可以独立阅读，不必等待推荐结果。</p><p>这里由服务器直接输出 HTML。刷新、关闭脚本或让延伸阅读失败，都不会改变已经交付的正文。</p><p class="muted">这是固定教学资料，不保存真实学习进度。</p></section>
+      <section><h2>本次阅读计划</h2><p id="confirmed">服务器读到的计划：${minutes} 分钟</p>
+      <form method="get" action="/"><input type="hidden" name="mode" value="${mode}"><input type="hidden" name="scriptDelay" value="${scriptDelay}"><input type="hidden" name="delay" value="${delay}">
+      <label for="minutes">计划分钟数</label><input id="minutes" name="minutes" type="number" min="0" max="180" step="1" value="${minutes}" required>
+      <div><button type="submit">用原生表单提交</button><button type="button" id="add" disabled>快捷加 5 分钟</button></div></form>
+      <p id="island-status" role="status" class="muted">增强脚本尚未就绪；可以直接输入并提交。</p></section></div>
+      <script async src="/island.js?delay=${scriptDelay}"></script>
+      <p class="muted">延伸阅读独立到达；若下方结果没有完整到达，可刷新重试。</p>`;
+    const tail = url.searchParams.get('fail') === '1'
+      ? '<section id="recommendation" class="error"><h2>延伸阅读暂不可用</h2><p>正文与计划表单仍可用。</p><a href="/">重新加载</a></section>'
+      : '<section id="recommendation"><h2>延伸阅读已到达</h2><p>下一步可以观察同一场景的顺光与侧光，比较主体轮廓。</p></section>';
+    const headers = { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" };
+    if (mode === 'stream') { res.writeHead(200, headers); res.write(shell); console.log(id, '首段已写出'); }
+    if (!await wait(delay, controller.signal)) return;
+    if (mode === 'buffered') { res.writeHead(200, headers); res.write(shell); console.log(id, '完整模式开始写出'); }
+    res.end(tail + '</main></body></html>'); console.log(id, '文档完成');
+  } catch {
+    if (res.destroyed) return;
+    if (!res.headersSent) { res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('观察页发生错误'); }
+    else res.destroy();
+  }
+});
+server.listen(port, '127.0.0.1', () => {
+  console.log(`观察页：http://127.0.0.1:${server.address().port}`);
+});
+```
+
+它顺序追加普通 HTML，异步脚本只增强一个按钮，没有框架补丁、虚拟树接管或真实持久化。表单使用 GET 是因为它只改变当前展示参数；发布、付款等写操作不能照搬成 GET。
+
+查看 Network 的文档响应和脚本时间线，再试着关闭 JavaScript：正文、链接和原生表单仍可使用，快捷按钮保持禁用。中途停止加载会关闭连接，服务端取消等待计时器；它没有执行任何业务写入，因此也不涉及业务回滚。代码只演示小型响应，不代替生产服务的容量、背压和超时治理，相关基础见 [NODE-04](../chinese-guides/node-04-http-bff-production-engineering.md#node-04)。
+
+### 九、区域可以独立到达，事实却不能随意混版
+
+资料正文读取 v4，慢区域随后读取 v5，两者是否能同时出现，取决于业务允许的快照范围。推荐列表通常可以独立刷新；同一份授权结论与私有内容则不能各用互不相关的旧状态。
+
+如果要求一致，先取得共享快照或版本标识，让相关区域依据同一事实。允许最终刷新时，明确刷新时机与结果归属，不把“分段”当成免除一致性要求的理由。
+
+公共正文和个人进度不能因为在同一流里就共享缓存。只要整份响应包含私有数据，公共缓存资格就要重新判断；所谓“公共片段”需要实际框架或代理的片段隔离机制，普通 HTTP 响应不会按组件名称自动分开存储。
+
+### 十、导航离开后，迟到片段必须先核对归属
+
+用户从摄影资料切到设计资料，旧请求的结果仍可能完成。客户端请求取消是减少工作的一步；真正提交状态时，还要确认它属于当前导航。失败和清理回调也不能跳过这项判断。
+
+```js example=render02-navigation-owner
+let navigation = 1, visible = '摄影正文';
+const oldRequest = { navigation: 1 };
+function commit(request, content) {
+  if (request.navigation !== navigation) return '忽略旧结果';
+  visible = content; return '采用当前结果';
+}
+navigation += 1; visible = '设计正文';
+console.log(commit(oldRequest, '摄影的迟到推荐'));
+console.log(visible);
+console.log(commit({ navigation: 2 }, '设计正文与推荐'));
+// => 忽略旧结果
+// => 设计正文
+// => 采用当前结果
+```
+
+这里是状态归属模型，不是浏览器 HTML 解析器或框架传输实现。完整新文档导航由浏览器管理文档归属；应用在客户端导航中自己处理数据流、缓存和组件状态时，才需要在相应边界落实同样的原则。
+
+中断输出不证明后端写操作被取消。若某个交互可能已经提交，应按原意图查询结果，见 [BIZ-07](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#三结果未知时查询原意图不要先换一个新键)。
+
+### 十一、占位、错误与接管都要保持可操作
+
+占位内容保留区域标题和合理尺寸，减少后续位移；加载完成不应随意抢焦点。错误要指出失败区域与恢复动作，不能把整页都变成一个没有上下文的 toast。
+
+表单接管前后的输入不应突然消失。框架首次接管、背景刷新和用户输入同时发生时，需要清晰的状态所有权。复杂表单的发送快照、草稿和基线可接着读 [BIZ-05](../chinese-guides/biz-05-form-table-detail-state-consistency.md#四发送快照冻结以后新输入属于下一次提交)。
+
+脚本加载失败与数据加载失败也是两类问题：正文可能已完整，只有增强操作不可用。为主要任务保留原生路径或明确的恢复入口，避免一个次要岛的异常破坏其他区域。延迟接管要观察用户首次操作，而不只看最终页面能否点动。
+
+### 十二、在实际部署链上核对收益与恢复
+
+观察至少分三段：服务端记录首段与完成时刻，网络确认字节经过代理后何时到达，浏览器记录正文出现、脚本就绪和主要动作结果。关联同一次导航，避免把不同请求的时间拼在一起。
+
+本地观察页证明 Node 与本机浏览器间能分段，不能证明生产 CDN 不缓冲，也不能预测真实 LCP 或 INP。可先选一个代表页面，再核对慢数据、局部失败、脚本失败、无 JS、直接刷新和客户端导航；投入集中在会改变结论的路径。
+
+滚动发布还可能组合旧 HTML 与新客户端资源。构建哈希、旧资源保留、框架载荷版本和回滚窗口要配合；不要在新发布时立即删除仍被缓存文档引用的脚本。框架升级时核对当前官方 API 和安全公告，实验能力的稳定性另行标明。
+
+### 动手想一想
+
+正文已到，增强脚本 3 秒后才到，延伸阅读在 2 秒时失败。哪些部分可以一直使用，哪些应等待，哪里应出现恢复提示？再说明这份观察能证明什么，不能证明哪一种框架的 Hydration 正确性。
+
+### 参考与延伸阅读
+
+- [React：renderToPipeableStream](https://react.dev/reference/react-dom/server/renderToPipeableStream)：核对 Node 流式 shell、错误与状态码窗口。
+- [React：hydrateRoot](https://react.dev/reference/react-dom/client/hydrateRoot)：核对首次输出一致性和 mismatch 边界。
+- [Astro：Islands](https://docs.astro.build/en/concepts/islands/)：理解局部交互及不同加载时机的具体实现。
+- [RENDER-01：生成时机与缓存](../chinese-guides/render-01-spa-ssr-ssg-isr-hybrid-decisions.md#render-01)：回到路由的数据、缓存、脚本与失败策略。

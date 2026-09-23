@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "batch": "B17",
+  "title": "从登录状态到数据处理边界",
+  "reviewedOn": "2026-09-19",
+  "chapters": [
+    {
+      "id": "IDENTITY-01",
+      "title": "浏览器如何记住身份",
+      "question": "登录成功后，下一次请求凭什么认出你？",
+      "summary": "从 Cookie 的实际携带开始，理解会话轮换、CSRF、退出与浏览器身份能力的边界。",
+      "outcomes": [
+        "分清认证、会话与业务授权",
+        "观察 HttpOnly、轮换、拒绝与撤销",
+        "解释分区 Cookie 和新身份能力的回退"
+      ],
+      "prerequisites": [
+        "sec-01-xss-csrf-trust-boundaries.md#sec-01"
+      ],
+      "guide": "identity-01-session-cookie-token-browser-boundaries.md",
+      "anchor": "identity-01",
+      "concepts": [
+        {
+          "id": "session-roles",
+          "heading": "一、认证、会话与授权回答三个问题"
+        },
+        {
+          "id": "session-cookie",
+          "heading": "二、Cookie 负责携带，服务器负责解释"
+        },
+        {
+          "id": "session-lifecycle",
+          "heading": "三、会话应有轮换、两种期限和撤销入口"
+        },
+        {
+          "id": "session-lab",
+          "heading": "四、运行一个能看见 HttpOnly 效果的本地实验"
+        },
+        {
+          "id": "session-csrf",
+          "heading": "五、HttpOnly、SameSite 与 CSRF 要一起理解"
+        },
+        {
+          "id": "session-tokens",
+          "heading": "六、Token 的用途比字符串外形重要"
+        },
+        {
+          "id": "session-renewal",
+          "heading": "七、续期需要上限，刷新需要处理重复使用"
+        },
+        {
+          "id": "session-late-response",
+          "heading": "八、退出之后，迟到响应不能让页面重新登录"
+        },
+        {
+          "id": "session-bff",
+          "heading": "九、BFF 把令牌留在服务端，也保留服务端责任"
+        },
+        {
+          "id": "session-partition",
+          "heading": "十、分区 Cookie 不提供跨站共享登录"
+        },
+        {
+          "id": "session-capabilities",
+          "heading": "十一、Storage Access、FedCM 与新身份 UI 各做一件事"
+        },
+        {
+          "id": "session-evidence",
+          "heading": "十二、沿旧凭证和失败路径检查边界"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "security-write-gates",
+          "reason": "回看写请求为什么需要独立的 CSRF 判断。"
+        },
+        {
+          "concept": "passkey-stages",
+          "reason": "理解浏览器认证之后，服务端还需要建立会话。"
+        },
+        {
+          "concept": "oauth-roles",
+          "reason": "把第三方授权和本地登录状态接起来。"
+        },
+        {
+          "concept": "privacy-purpose",
+          "reason": "识别身份凭证和日志中的个人信息。"
+        }
+      ]
+    },
+    {
+      "id": "IDENTITY-02",
+      "title": "一步步读懂 OAuth 与 OIDC",
+      "question": "拿到授权码或 Token，为什么还不能直接宣布登录成功？",
+      "summary": "沿授权码的去向解释 PKCE、state、nonce、发行方、受众和本地会话，并用失败输入核对边界。",
+      "outcomes": [
+        "区分授权、身份声明与本地会话",
+        "计算 PKCE 并解释回调校验顺序",
+        "区分已发布安全基线与 OAuth 2.1 草案"
+      ],
+      "prerequisites": [
+        "identity-01-session-cookie-token-browser-boundaries.md#identity-01"
+      ],
+      "guide": "identity-02-oauth-oidc-pkce-security.md",
+      "anchor": "identity-02",
+      "concepts": [
+        {
+          "id": "oauth-roles",
+          "heading": "一、先把角色与两种业务目的分开"
+        },
+        {
+          "id": "oauth-channels",
+          "heading": "二、授权码经过浏览器，令牌通过交换取得"
+        },
+        {
+          "id": "oauth-pkce",
+          "heading": "三、PKCE 把授权请求与兑换者连起来"
+        },
+        {
+          "id": "oauth-transaction-values",
+          "heading": "四、state、nonce 与 PKCE 分别记住哪件事"
+        },
+        {
+          "id": "oauth-request",
+          "heading": "五、构造请求时固定端点和返回地址"
+        },
+        {
+          "id": "oauth-callback",
+          "heading": "六、回调先认事务，再交换一次授权码"
+        },
+        {
+          "id": "oauth-claims",
+          "heading": "七、签名验证与 claims 关系检查缺一不可"
+        },
+        {
+          "id": "oauth-discovery",
+          "heading": "八、Discovery 与密钥轮换只能从可信发行方开始"
+        },
+        {
+          "id": "oauth-binding",
+          "heading": "九、账号绑定使用发行方与主体，不靠邮箱碰巧相同"
+        },
+        {
+          "id": "oauth-scope",
+          "heading": "十、scope 限制访问范围，业务授权决定具体动作"
+        },
+        {
+          "id": "oauth-standards",
+          "heading": "十一、稳定安全基线与 OAuth 2.1 草案分开记录"
+        },
+        {
+          "id": "oauth-evidence",
+          "heading": "十二、以失败发生在哪一步来组织验证和用户体验"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "session-lifecycle",
+          "reason": "协议验证成功后才进入本地会话生命周期。"
+        },
+        {
+          "concept": "session-late-response",
+          "reason": "刷新和退出并发时不让旧响应恢复身份。"
+        },
+        {
+          "concept": "domain-permissions",
+          "reason": "scope 与角色仍须落实到具体动作的业务授权。"
+        },
+        {
+          "concept": "privacy-choice",
+          "reason": "不要把一次授权当作所有数据用途的许可。"
+        }
+      ]
+    },
+    {
+      "id": "PRIVACY-01",
+      "title": "把隐私要求落实到数据生命周期",
+      "question": "拒绝、撤回或删除之后，数据真的停止流动了吗？",
+      "summary": "从字段必要性开始，用诊断队列、保留边界和删除观察页说明用户选择如何影响每份副本。",
+      "outcomes": [
+        "按目的解释字段是否必要及保存多久",
+        "让撤回约束排队任务并限定导出范围",
+        "追踪供应商、索引与备份的删除状态"
+      ],
+      "prerequisites": [],
+      "guide": "privacy-01-data-minimization-consent-retention-rights.md",
+      "anchor": "privacy-01",
+      "concepts": [
+        {
+          "id": "privacy-purpose",
+          "heading": "一、先描述处理活动，再列数据库字段"
+        },
+        {
+          "id": "privacy-minimization",
+          "heading": "二、最小化先问不收集还能不能完成任务"
+        },
+        {
+          "id": "privacy-derived",
+          "heading": "三、哈希、向量和摘要不自动等于匿名"
+        },
+        {
+          "id": "privacy-choice",
+          "heading": "四、处理依据与用户选择是不同字段"
+        },
+        {
+          "id": "privacy-withdrawal",
+          "heading": "五、撤回要让已经排队的任务重新检查"
+        },
+        {
+          "id": "privacy-notice",
+          "heading": "六、把重要说明放在用户作决定的位置"
+        },
+        {
+          "id": "privacy-map",
+          "heading": "七、数据地图要画到索引、客服和供应商"
+        },
+        {
+          "id": "privacy-retention",
+          "heading": "八、保留规则需要起点、期限、例外和到期动作"
+        },
+        {
+          "id": "privacy-deletion-lab",
+          "heading": "九、运行删除观察页，看见部分成功为什么不是完成"
+        },
+        {
+          "id": "privacy-restore",
+          "heading": "十、备份恢复要先尊重当前删除状态"
+        },
+        {
+          "id": "privacy-rights",
+          "heading": "十一、导出、更正、限制与删除分别设计"
+        },
+        {
+          "id": "privacy-vendors",
+          "heading": "十二、供应商与 AI 用途也要能停止和退出"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "session-roles",
+          "reason": "把用户身份确认与权利请求范围分开判断。"
+        },
+        {
+          "concept": "contract-boundary",
+          "reason": "外部数据和内部字段都需要明确的运行时契约。"
+        },
+        {
+          "concept": "region-residency",
+          "reason": "把单项活动的数据地图扩展到实际处理区域。"
+        },
+        {
+          "concept": "region-rights",
+          "reason": "把删除传播延伸到多个区域和处理方。"
+        }
+      ]
+    },
+    {
+      "id": "PRIVACY-02",
+      "title": "让跨区域处理有清楚的边界",
+      "question": "主库在指定区域，哪些旁路仍可能把数据带出去？",
+      "summary": "沿摘要功能梳理主体、分类、区域和供应商，用版本化出口判断解释阻断、降级与权利传播。",
+      "outcomes": [
+        "从事实识别分类与区域处理路径",
+        "把经确认的规则落实为可解释的出口判断",
+        "在未知、故障和撤回后保持处理边界"
+      ],
+      "prerequisites": [
+        "privacy-01-data-minimization-consent-retention-rights.md#privacy-01"
+      ],
+      "guide": "privacy-02-cross-region-classification-engineering-controls.md",
+      "anchor": "privacy-02",
+      "concepts": [
+        {
+          "id": "region-facts",
+          "heading": "一、先收集四类事实，再讨论能否传输"
+        },
+        {
+          "id": "region-classification",
+          "heading": "二、分类说明是什么，分级说明出事有多大影响"
+        },
+        {
+          "id": "region-residency",
+          "heading": "三、数据驻留要覆盖一整条路径"
+        },
+        {
+          "id": "region-sources",
+          "heading": "四、把法律资料记录为可复核的来源快照"
+        },
+        {
+          "id": "region-policy",
+          "heading": "五、批准的是具体处理活动，不是永久打开一个开关"
+        },
+        {
+          "id": "region-gate",
+          "heading": "六、把服务端出口判断写成可解释的结果"
+        },
+        {
+          "id": "region-ui",
+          "heading": "七、页面应在正文发送前说明当前状态"
+        },
+        {
+          "id": "region-logs",
+          "heading": "八、日志只收定位所需的字段"
+        },
+        {
+          "id": "region-vendors",
+          "heading": "九、供应商故障不能悄悄改变批准范围"
+        },
+        {
+          "id": "region-queue",
+          "heading": "十、队列执行时重新核对当前规则与选择"
+        },
+        {
+          "id": "region-rights",
+          "heading": "十一、多区域删除必须等到范围内的结果可说明"
+        },
+        {
+          "id": "region-evidence",
+          "heading": "十二、用事实变化与执行证据完成一次复核"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "privacy-map",
+          "reason": "先定位数据副本，再决定区域和处理方的控制范围。"
+        },
+        {
+          "concept": "privacy-withdrawal",
+          "reason": "排队执行应重新读取当前选择与版本。"
+        },
+        {
+          "concept": "privacy-restore",
+          "reason": "恢复前应用当前删除记录，避免旧数据复活。"
+        },
+        {
+          "concept": "network-abort-outcome",
+          "reason": "区分尚未发送和已发送但结果未知，给出诚实状态。"
+        }
+      ]
+    }
+  ]
+}

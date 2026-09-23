@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "batch": "B23",
+  "title": "从交互状态到交付对象",
+  "reviewedOn": "2026-09-22",
+  "chapters": [
+    {
+      "id": "COMP-02",
+      "title": "让每份输入有明确的决定者",
+      "question": "输入为何会跳回旧值，清空和迟到保存又该听谁的？",
+      "summary": "从输入回退解释受控、非受控、初值、模式、事件回声和保存归属，用观察页区分当前草稿与已确认快照。",
+      "outcomes": [
+        "为值、草稿、焦点与派生状态分别确定所有者",
+        "说明默认值、外部更新和重置的不同含义",
+        "保留新输入并限制命令句柄的能力"
+      ],
+      "prerequisites": [
+        "comp-01-component-responsibility-api-composition.md#comp-01"
+      ],
+      "guide": "comp-02-controlled-uncontrolled-state-imperative.md",
+      "anchor": "comp-02",
+      "concepts": [
+        {
+          "id": "component-owner-facts",
+          "heading": "一、先列出有哪些值，再分别指定所有者"
+        },
+        {
+          "id": "component-owner-controlled",
+          "heading": "二、受控表示持续提供当前值"
+        },
+        {
+          "id": "component-owner-uncontrolled",
+          "heading": "三、非受控表示初值之后由实例管理"
+        },
+        {
+          "id": "component-owner-mode",
+          "heading": "四、把模式写进类型，也写进生命周期"
+        },
+        {
+          "id": "component-owner-events",
+          "heading": "五、外部更新进入组件，不应自动变成回声"
+        },
+        {
+          "id": "component-owner-draft",
+          "heading": "六、草稿可以与来源不同，但必须知道为什么"
+        },
+        {
+          "id": "component-owner-reset",
+          "heading": "七、重置和迟到响应都要验证归属"
+        },
+        {
+          "id": "component-owner-handle",
+          "heading": "八、句柄暴露能力，不把内部都交出去"
+        },
+        {
+          "id": "component-owner-lab",
+          "heading": "九、用观察页区分当前值与保存快照"
+        },
+        {
+          "id": "component-owner-framework",
+          "heading": "十、在 React 与 Vue 中保留同一份含义"
+        },
+        {
+          "id": "component-owner-integration",
+          "heading": "十一、表单、URL 和持久化需要一个入口"
+        },
+        {
+          "id": "component-owner-evidence",
+          "heading": "十二、用少量顺序验证所有权"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "component-contract-api",
+          "reason": "公共契约先说明输入与事件，再说明当前值由谁决定。"
+        },
+        {
+          "concept": "business-edit-snapshot",
+          "reason": "保存的是当时快照，确认结果不能吞掉后续输入。"
+        },
+        {
+          "concept": "ux-task-focus",
+          "reason": "重置与失败恢复也要保留可理解的键盘路径。"
+        },
+        {
+          "concept": "component-test-contract",
+          "reason": "围绕显示值、事件和焦点核对所有权。"
+        }
+      ]
+    },
+    {
+      "id": "UX-01",
+      "title": "让用户理解状态并继续任务",
+      "question": "部分资料导入失败以后，怎样帮助用户修正问题并保住已经完成的内容？",
+      "summary": "以修正资料为线索，连接任务、信息架构、状态反馈、错误恢复、焦点、原型和真实可用性证据。",
+      "outcomes": [
+        "从任务与事实设计反馈和下一步动作",
+        "区分明确拒绝、发送前阻断与结果未知",
+        "用可复核观察形成改动并说明指标的适用范围"
+      ],
+      "prerequisites": [
+        "a11y-01-wcag-testing-governance.md#a11y-01",
+        "biz-02-state-machines-business-invariants.md#biz-02"
+      ],
+      "guide": "ux-01-interaction-states-usability-validation.md",
+      "anchor": "ux-01",
+      "concepts": [
+        {
+          "id": "ux-task-goal",
+          "heading": "一、先说明谁要完成什么事"
+        },
+        {
+          "id": "ux-task-architecture",
+          "heading": "二、信息架构让对象和路径找得到"
+        },
+        {
+          "id": "ux-task-state",
+          "heading": "三、先区分事实，再决定显示哪些状态"
+        },
+        {
+          "id": "ux-task-feedback",
+          "heading": "四、反馈要对应用户刚做的事"
+        },
+        {
+          "id": "ux-task-recovery",
+          "heading": "五、恢复动作说清将处理哪一部分"
+        },
+        {
+          "id": "ux-task-focus",
+          "heading": "六、焦点和状态文字一起设计"
+        },
+        {
+          "id": "ux-task-lab",
+          "heading": "七、用完整页面观察修正与键盘路径"
+        },
+        {
+          "id": "ux-task-disclosure",
+          "heading": "八、信息多少取决于当前决定"
+        },
+        {
+          "id": "ux-task-prototype",
+          "heading": "九、原型先验证最不确定的部分"
+        },
+        {
+          "id": "ux-task-research",
+          "heading": "十、让真实参与者完成任务，而不是评价截图"
+        },
+        {
+          "id": "ux-task-metrics",
+          "heading": "十一、指标有分母，结论有适用范围"
+        },
+        {
+          "id": "ux-task-delivery",
+          "heading": "十二、把发现交付成可实现的状态合同"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-flow-state",
+          "reason": "交互状态需要符合实际业务事实与允许迁移。"
+        },
+        {
+          "concept": "mutation-recovery-outcome",
+          "reason": "结果未知需要确认原操作，不能笼统再次提交。"
+        },
+        {
+          "concept": "component-owner-reset",
+          "reason": "旧结果与外部重置不能覆盖新的编辑会话。"
+        },
+        {
+          "concept": "delivery-trace-criteria",
+          "reason": "把体验诉求写成能够观察的任务结果。"
+        }
+      ]
+    },
+    {
+      "id": "ENG-08",
+      "title": "把证据对准同一份制品",
+      "question": "扫描和签名都有了，怎样确认它们属于即将发布的那份文件？",
+      "summary": "从制品摘要连接依赖来源、SBOM、漏洞与许可、provenance、签名、消费端政策和历史使用记录。",
+      "outcomes": [
+        "说明不同供应链证据分别回答什么问题",
+        "区分签名完整性、受信身份与发布政策",
+        "按制品摘要定位晋级对象和历史消费者"
+      ],
+      "prerequisites": [
+        "eng-03-dependencies-lockfile-workspaces-peer.md#eng-03"
+      ],
+      "guide": "eng-08-software-supply-chain-sbom-provenance.md",
+      "anchor": "eng-08",
+      "concepts": [
+        {
+          "id": "supply-trust-artifact",
+          "heading": "一、先确定要交付的是哪一份字节"
+        },
+        {
+          "id": "supply-trust-dependencies",
+          "heading": "二、锁住解析结果，还要审查来源和执行能力"
+        },
+        {
+          "id": "supply-trust-sbom",
+          "heading": "三、SBOM 先说明自己统计的范围"
+        },
+        {
+          "id": "supply-trust-subject",
+          "heading": "四、不同证据必须对上同一个对象"
+        },
+        {
+          "id": "supply-trust-reports",
+          "heading": "五、漏洞和许可证分别作结论"
+        },
+        {
+          "id": "supply-trust-provenance",
+          "heading": "六、provenance 说明如何产生，信任取决于谁出具"
+        },
+        {
+          "id": "supply-trust-signature",
+          "heading": "七、签名正确以后，还要检查是谁签的什么"
+        },
+        {
+          "id": "supply-trust-lab",
+          "heading": "八、用真实摘要与签名观察四种失败"
+        },
+        {
+          "id": "supply-trust-builder",
+          "heading": "九、把构建环境也当作依赖管理"
+        },
+        {
+          "id": "supply-trust-policy",
+          "heading": "十、消费端把通过、失败和未知分开"
+        },
+        {
+          "id": "supply-trust-promotion",
+          "heading": "十一、晋级同一制品，保留可查询的使用记录"
+        },
+        {
+          "id": "supply-trust-response",
+          "heading": "十二、升级和响应都围绕同一条证据链"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "eng-lockfile",
+          "reason": "固定依赖解析是可解释构建输入的一部分。"
+        },
+        {
+          "concept": "eng-artifact-gate",
+          "reason": "需要验证实际发布对象，而不是只验证源码目录。"
+        },
+        {
+          "concept": "filesystem-basic-atomic",
+          "reason": "切换发布入口时仍需维护对象与路径的正确关系。"
+        },
+        {
+          "concept": "delivery-trace-baseline",
+          "reason": "证据要对应当前制品、环境与政策版本。"
+        }
+      ]
+    },
+    {
+      "id": "LINUX-01",
+      "title": "先看清路径再决定怎样操作",
+      "question": "文件没有写权限为什么还能删除，链接和归档又怎样改变操作范围？",
+      "summary": "从目录树、inode、权限组与 umask 解释 Linux 文件行为，再用独立临时目录实验观察链接切换与归档恢复。",
+      "outcomes": [
+        "区分名称、对象、目录权限与进程身份",
+        "解释权限选择、默认创建模式与链接解析",
+        "确认命令参数、范围、原子性和真实验证边界"
+      ],
+      "prerequisites": [],
+      "guide": "linux-01-filesystem-permissions-safe-commands.md",
+      "anchor": "linux-01",
+      "concepts": [
+        {
+          "id": "filesystem-basic-path",
+          "heading": "一、路径是寻找对象的路线"
+        },
+        {
+          "id": "filesystem-basic-inode",
+          "heading": "二、文件名、目录项和 inode 分开理解"
+        },
+        {
+          "id": "filesystem-basic-directory",
+          "heading": "三、目录的执行位表示能沿路径继续寻找"
+        },
+        {
+          "id": "filesystem-basic-identity",
+          "heading": "四、先选匹配的权限组，再看是否允许"
+        },
+        {
+          "id": "filesystem-basic-umask",
+          "heading": "五、umask 是按位去掉权限"
+        },
+        {
+          "id": "filesystem-basic-links",
+          "heading": "六、相对符号链接从链接所在目录解释"
+        },
+        {
+          "id": "filesystem-basic-diagnosis",
+          "heading": "七、诊断从身份和对象开始，再查容量与内容"
+        },
+        {
+          "id": "filesystem-basic-arguments",
+          "heading": "八、引号和参数边界决定命令到底收到什么"
+        },
+        {
+          "id": "filesystem-basic-lab",
+          "heading": "九、在新临时目录串起名称、权限与链接"
+        },
+        {
+          "id": "filesystem-basic-atomic",
+          "heading": "十、原子替换解决可见性，不自动解决持久性"
+        },
+        {
+          "id": "filesystem-basic-scope",
+          "heading": "十一、归档和清理都先确认范围"
+        },
+        {
+          "id": "filesystem-basic-evidence",
+          "heading": "十二、权限故障按层查，结果在实际身份下确认"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "node-files-handles",
+          "reason": "路径找到文件后，打开句柄还有自己的生命周期。"
+        },
+        {
+          "concept": "node-files-atomic",
+          "reason": "原子可见性与持久性需要分别处理。"
+        },
+        {
+          "concept": "supply-trust-artifact",
+          "reason": "发布路径最终应指向已核对身份的制品字节。"
+        },
+        {
+          "concept": "business-access-enforcement",
+          "reason": "应用授权与文件系统访问属于不同执行边界。"
+        }
+      ]
+    }
+  ]
+}

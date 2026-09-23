@@ -13,53 +13,29 @@
     "biz-07-errors-idempotency-eventual-consistency.md"
   ],
   "terms": {
-    "anti corruption layer": {
-      "file": "f18e8444334587fe.wav",
-      "text": "Anti Corruption Layer"
+    "abac": {
+      "file": "039f5155a363616b.wav",
+      "text": "ABAC"
+    },
+    "anti-corruption layer": {
+      "file": "9ead436f3ebe5fb1.wav",
+      "text": "Anti-corruption Layer"
     },
     "api contract": {
       "file": "7bf80414eb7648ce.wav",
       "text": "API Contract"
     },
-    "attribute based access control": {
-      "file": "7e36ab275fafc0d0.wav",
-      "text": "Attribute Based Access Control"
-    },
-    "baseline": {
-      "file": "8ba8496a2525ae17.wav",
-      "text": "Baseline"
-    },
-    "cancellation": {
-      "file": "80812d7992dd498c.wav",
-      "text": "Cancellation"
-    },
-    "compatibility": {
-      "file": "fa528d3adef61d19.wav",
-      "text": "Compatibility"
-    },
     "compensation": {
       "file": "b66ecab57861b722.wav",
       "text": "Compensation"
-    },
-    "conditional request": {
-      "file": "58bef71c42159d6d.wav",
-      "text": "Conditional Request"
-    },
-    "data transfer object": {
-      "file": "656998b42c9c2e57.wav",
-      "text": "Data Transfer Object"
-    },
-    "deny by default": {
-      "file": "f8c13f9454927172.wav",
-      "text": "Deny by Default"
     },
     "dirty state": {
       "file": "9f7b69847ed44d34.wav",
       "text": "Dirty State"
     },
-    "draft": {
-      "file": "7743ce348d9284d6.wav",
-      "text": "Draft"
+    "dto": {
+      "file": "9477dda6f1a441d0.wav",
+      "text": "DTO"
     },
     "eventual consistency": {
       "file": "f7a085bb86bb332f.wav",
@@ -69,29 +45,37 @@
       "file": "8a3f6aee00f005cd.wav",
       "text": "Idempotency Key"
     },
-    "long running operation": {
-      "file": "8125e0693bbc27a1.wav",
-      "text": "Long Running Operation"
-    },
-    "optimistic concurrency control": {
-      "file": "db5df9c03b8526eb.wav",
-      "text": "Optimistic Concurrency Control"
+    "long-running operation": {
+      "file": "46106047aef21c74.wav",
+      "text": "Long-running Operation"
     },
     "policy decision point": {
       "file": "63f43bcc5199630f.wav",
       "text": "Policy Decision Point"
     },
+    "policy enforcement point": {
+      "file": "1dbc22c86972f078.wav",
+      "text": "Policy Enforcement Point"
+    },
     "polling": {
       "file": "34fcd7b19518d43e.wav",
       "text": "Polling"
     },
-    "push": {
-      "file": "d107ea3629c32671.wav",
-      "text": "Push"
+    "problem details": {
+      "file": "05d4d4a62d58081a.wav",
+      "text": "Problem Details"
     },
-    "role based access control": {
-      "file": "1b0bde278cb33095.wav",
-      "text": "Role Based Access Control"
+    "rbac": {
+      "file": "2552b1c0272ab701.wav",
+      "text": "RBAC"
+    },
+    "saga": {
+      "file": "936fccfc8fe9a540.wav",
+      "text": "Saga"
+    },
+    "transactional outbox": {
+      "file": "d14473cdc6247654.wav",
+      "text": "Transactional Outbox"
     }
   }
 }

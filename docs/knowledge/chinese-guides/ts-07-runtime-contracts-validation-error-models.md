@@ -2,175 +2,317 @@
 
 ## TS-07 接口契约、运行时校验与错误模型
 
-TypeScript 类型在编译后消失。接口响应、localStorage、URL、postMessage、环境变量和 AI 输出即使写了 `as User`，运行时仍可能完全不同。可靠系统把外部值以 unknown 接入，通过可执行 schema 解析和归一化，再交给内部模型；失败则进入稳定、可恢复且不泄密的错误模型。
+页面声明了一种订单类型，上游却返回 `amount: '9'`。编辑器没有红线，页面计算金额时才出错。问题不在于 TypeScript 不够严格，而在于真实数据没有经过检查，程序就把它当成了已经可信的订单。
+
+本讲沿着“收到字节 → 解析 JSON → 校验字段 → 形成内部模型 → 显示结果”逐层建立约定。主例子使用订单读取接口，金额暂按演示协议使用非负有限数字；它不是生产计费模型。代码块可分别运行，类型检查基线为 TypeScript 5.7.2 的严格模式。
 
 ### 学习前先确认
 
-- 直接前置：[TS-02 联合类型、收窄、`never` 与穷尽检查](../chinese-guides/ts-02-unions-narrowing-never-exhaustiveness.md#ts-02)。本讲直接使用 unknown、守卫、判别联合与穷尽分支，泛型不是硬前置。
+- 直接前置：[TS-02 联合类型、收窄、never 与穷尽检查](../chinese-guides/ts-02-unions-narrowing-never-exhaustiveness.md#ts-02)。需要能通过判别字段区分成功、失败和兼容分支。
 
-### 一、静态类型只覆盖受检查的程序关系
+读完应能说明每一步究竟证明了什么，写出带稳定错误码的解析器，并让未知状态得到可理解的只读展示。
 
-函数参数标注 User 能阻止已检查调用者传 number，却不能让网络 JSON 变成 User。`response.json()` 的值来自外部，声明文件无法约束服务器、缓存、代理或旧版本实际返回。
+### 一、类型描述预期，解析器检查实际输入
 
-`as User` 是编译器断言，不执行检查。它应只出现在已经有其他证明的位置；直接断言外部值等于关闭报警器。
+**接口契约（Contract）**不止是一份字段表。它还约定状态码、数据含义、版本、失败形式、可选字段、未知值的处理与资源限制。
 
-建立原则：越过运行时边界的值都是 unknown，只有解析成功的内部值才获得领域类型。
+`response.json()` 完成 JSON 语法解析，不检查业务字段。把返回值断言为 Order，只会改变编译器的看法。把入口保存为 unknown，才能要求后续代码先提供证据。
 
-### 二、接口契约包含成功、失败与演进
-
-**接口契约（API Contract）**不只是一个成功 DTO，还包括方法、状态、标头、认证、错误 code、分页、幂等、版本与兼容。前后端类型相同也不能证明 HTTP 与业务语义一致。
-
-OpenAPI/JSON Schema/Protobuf 等可作为单一来源生成类型与校验器，但生成物仍需在运行时执行，并验证生成版本与服务版本。手写类型和 schema 双份维护则用测试检查漂移。
-
-契约 owner、变更策略和消费者矩阵比工具名更重要。
-
-### 三、Schema 是可执行的结构规则
-
-**运行时模式（Runtime Schema）**检查值形状、字段类型、范围、格式与组合，并可返回路径化问题。schema 库提供组合、推断和错误格式，不替你决定业务规则。
-
-基础检查区分 object/null/array，使用 Object.hasOwn 处理必需字段，限制字符串长度、数值 finite、安全整数和数组数量。日期字符串还需格式与实际日历有效性，URL 需协议/源业务规则。
-
-schema 通过表示满足已声明规则，不表示数据真实、已授权或无恶意业务含义。
-
-### 四、Parse 与 validate 可以包含归一化
-
-validate 常只判断接受/拒绝；parse 可以把外部表示转换为内部模型，例如 ISO 时间转 Temporal/Date、空白字符串转 null、旧字段迁移到新结构。
-
-归一化必须确定、可测试，不把错误值悄悄改成合法业务状态。`amount:'9'` 是否允许转 number 是接口决定；安全或财务边界通常严格拒绝比宽松 coercion 更好。
-
-保留原始值只用于受控诊断，内部模型不携带未知多余字段进入后续序列化。
-
-### 五、严格对象与未知字段策略
-
-服务端新增字段通常应向后兼容，客户端可忽略未知字段；但配置、命令和安全策略可能要求 strict object，未知字段即失败。选择取决于方向与风险。
-
-“strip unknown”适合读取响应的宽容消费者，“reject unknown”适合写命令和签名对象，passthrough 容易把攻击者字段带到数据库或下游。每个 schema 明确策略。
-
-原型危险键与对象原型也要处理。将外部对象复制为安全内部对象，不直接继续修改原引用。
-
-### 六、判别联合承载版本和状态
-
-以稳定 `type`/`kind`/`version` 区分消息：
-
-```ts
-type Event =
-  | { version: 1; type: 'created'; id: string }
-  | { version: 1; type: 'deleted'; id: string; reason?: string };
+```ts example=ts07-unknown-boundary
+const raw: unknown = JSON.parse('{"amount":"9"}');
+function rejected() {
+  // @ts-expect-error 还不知道 raw 是什么，更没有证明 amount 是数字
+  raw.amount.toFixed(2);
+}
+if (typeof raw === 'object' && raw !== null && 'amount' in raw) {
+  console.log(typeof raw.amount); // => string
+}
 ```
 
-schema 先检查公共字段，再按 discriminant 分支。未知 type 可以安全忽略、保存为 unknown-event 或拒绝，取决于协议；不能默认当成最接近已知状态。
+object 检查还要排除 null；数组虽然也是 object，但未必是协议要求的记录。来自 JSON 的普通数据和任意 JavaScript 对象也有区别：后者可能带 getter、Proxy 或原型行为。下文解析器面向 JSON 数据，不把“接受任意对象而绝不触发用户代码”作为承诺。
 
-内部 switch 用 assertNever，新增成员会迫使处理所有分支。
+### 二、先画出每层失败应该去哪里
 
-### 七、未知枚举需要兼容策略
-
-服务端可能新增 `status:'refunded'`，旧客户端只知道 paid。直接抛异常会让整页崩溃，把它强转 paid 又造成错误决策。
-
-可返回 `{kind:'unknown-status', rawStatus}`，UI 显示“该状态需更新后查看”，并禁用高风险操作。对安全命令则 fail closed，要求升级。兼容不等于继续执行未知含义。
-
-监控未知值频率与服务版本，避免降级状态永久无人处理。
-
-### 八、错误模型分离内部原因与用户表达
-
-错误至少包含稳定 code、边界 path/field、可重试性、requestId/correlationId 和受控 cause。用户文案由 UI 按 code、本地化和上下文映射，不直接显示 error.message 或原始响应。
-
-```ts
-type DataError =
-  | { code: 'NETWORK'; retryable: true }
-  | { code: 'INVALID_RESPONSE'; retryable: false; path?: string }
-  | { code: 'FORBIDDEN'; retryable: false };
+```mermaid
+flowchart TB
+  A["响应字节"] --> B{"状态、类型、体积允许"}
+  B -- 否 --> X["传输或资源错误"]
+  B -- 是 --> C{"JSON 语法有效"}
+  C -- 否 --> Y["格式错误"]
+  C -- 是 --> D["unknown 值"]
+  D --> E{"字段与版本校验"}
+  E -- 无效 --> Z["带路径的契约错误"]
+  E -- 已知状态 --> F["可用的内部模型"]
+  E -- 新状态 --> G["只读兼容模型"]
 ```
 
-错误 code 是程序合同，改名需版本治理；日志信息可以更丰富但先脱敏与限长。
+请求失败不等于字段错误；语法正确也不等于订单有效。比如 HTML 登录页可能以 200 返回，但不是约定的 JSON；`{"id":1}` 是合法 JSON，却缺少业务字段。
 
-### 九、throw、Result 与状态各有位置
+把错误分层，用户才有合适的下一步。网络暂时失败可以重试；字段格式不兼容应保留页面并提示刷新或联系支持；权限拒绝不能靠无限重试解决。请求时序与取消可回看[NET-01](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。
 
-不可继续的底层失败可以 throw，由边界统一捕获；预期业务分支如冲突、无库存用 Result/判别联合更清晰；UI 再把结果映射到 loading/success/empty/error/recovering。
+### 三、用完整解析器把 unknown 变成可用结果
 
-不要把所有错误都变 `null` 丢失原因，也不要让每层 catch 后重新 throw 新字符串丢失 cause。边界添加上下文一次，并保留关联 ID。
+下面只接受 id、amount、status 三个字段；发现额外字段直接拒绝。id 必须是正安全整数，amount 必须是非负有限数字，status 必须是长度合理的字符串。已知状态是 paid 和 unpaid；其他非空状态作为只读兼容结果保留，不能当成已付款。
 
-Promise rejection 类型在 TypeScript 中不受函数签名完整表达，调用约定与测试必须补上。
+**Result** 把成功与失败写成判别联合。未知状态是可展示的成功解析结果，但不具备已知业务状态的操作能力。
 
-### 十、异常规范化从 unknown 开始
+```ts example=ts07-order-parser
+type Issue = {
+  code: 'OBJECT' | 'UNKNOWN_FIELD' | 'ID' | 'AMOUNT' | 'STATUS';
+  path: string;
+};
+type OrderView =
+  | { kind: 'known'; id: number; amount: number; status: 'paid' | 'unpaid' }
+  | { kind: 'unsupported'; id: number; amount: number; rawStatus: string };
+type ParseResult =
+  | { ok: true; value: OrderView }
+  | { ok: false; issues: readonly Issue[] };
 
-catch variable 在严格配置下是 unknown。先判断 Error、DOMException、HTTP error 或库错误，再映射内部 code。跨 realm 的 `instanceof Error` 可能失效，可同时检查安全结构。
+function parseOrder(raw: unknown): ParseResult {
+  const fail = (code: Issue['code'], path: string): ParseResult =>
+    ({ ok: false, issues: [{ code, path }] });
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return fail('OBJECT', '$');
+  }
+  if (Object.keys(raw).some(key => !['id', 'amount', 'status'].includes(key))) {
+    return fail('UNKNOWN_FIELD', '$');
+  }
+  if (!('id' in raw) || typeof raw.id !== 'number'
+      || !Number.isSafeInteger(raw.id) || raw.id <= 0) {
+    return fail('ID', '$.id');
+  }
+  if (!('amount' in raw) || typeof raw.amount !== 'number'
+      || !Number.isFinite(raw.amount) || raw.amount < 0) {
+    return fail('AMOUNT', '$.amount');
+  }
+  if (!('status' in raw) || typeof raw.status !== 'string'
+      || !/^[a-z][a-z0-9_-]{0,31}$/.test(raw.status)) {
+    return fail('STATUS', '$.status');
+  }
+  if (raw.status === 'paid' || raw.status === 'unpaid') {
+    return { ok: true, value: {
+      kind: 'known', id: raw.id, amount: raw.amount, status: raw.status,
+    } };
+  }
+  return { ok: true, value: {
+    kind: 'unsupported', id: raw.id, amount: raw.amount, rawStatus: raw.status,
+  } };
+}
+const messages: Record<Issue['code'], string> = {
+  OBJECT: '订单格式不正确',
+  UNKNOWN_FIELD: '订单字段与当前版本不兼容',
+  ID: '订单编号无效',
+  AMOUNT: '订单金额无效',
+  STATUS: '订单状态格式无效',
+};
+function describe(result: ParseResult): string {
+  if (!result.ok) {
+    const first = result.issues[0];
+    return first ? first.code + ' ' + first.path + '：' + messages[first.code] : '订单校验失败';
+  }
+  const order = result.value;
+  if (order.kind === 'unsupported') return '暂不支持此订单状态，仅供查看';
+  return order.id + '：' + (order.status === 'paid' ? '已付款' : '未付款');
+}
+const samples: unknown[] = [
+  { id: 1, amount: 9, status: 'paid' },
+  { amount: 9, status: 'paid' },
+  { id: 1, amount: '9', status: 'paid' },
+  { id: 1, amount: 9, status: 'refunded' },
+  { id: 1, amount: 9, status: 'pending' },
+  { id: 1, amount: 9, status: 'paid', role: 'admin' },
+];
+for (const sample of samples) console.log(describe(parseOrder(sample)));
+// => 1：已付款
+// => ID $.id：订单编号无效
+// => AMOUNT $.amount：订单金额无效
+// => 暂不支持此订单状态，仅供查看
+// => 暂不支持此订单状态，仅供查看
+// => UNKNOWN_FIELD $：订单字段与当前版本不兼容
+```
 
-永远限制序列化 cause 深度、字符串长度和自定义 getter，避免错误上报自身抛错或泄露。Abort/timeout 与真实失败分开，不把用户取消记成错误率。
+注意成功分支重新构造对象，没有把 raw 展开进去。这让内部模型只含明确选取的字段。解析器采用“遇到第一个错误即返回”，所以错误数量天然有上限；表单希望一次展示多个问题时，可以收集有限数量的 issues，但要同时限制输入规模。
 
-### 十一、路径化问题服务表单与诊断
+### 四、解析、归一化与业务校验分开决定
 
-schema issue 可以有 path `['items',3,'price']`、code、expected/received。映射到表单时只暴露用户能修正的字段问题；服务端内部路径和原始值不显示。
+**归一化（Normalization）**是主动改变表示，例如去掉标题首尾空格；它应该是明确的产品规则，不是“想办法让任何输入通过”。
 
-数组和联合可能产生大量 issue，设置上限并合并。错误摘要把焦点和字段关联交给可访问 UI，不能只把 JSON dump 给用户。
+把字符串 '9' 自动变成 9，看起来友好，却可能顺手把空字符串变成 0，掩盖上游类型错误。订单读取接口与用户表单应有各自的入口规则。
 
-### 十二、请求解码先限制资源
+```ts example=ts07-normalization
+type TitleResult = { ok: true; title: string } | { ok: false; code: 'TITLE' };
+function parseTitle(raw: unknown): TitleResult {
+  if (typeof raw !== 'string') return { ok: false, code: 'TITLE' };
+  const title = raw.trim();
+  if (title.length === 0 || title.length > 80) return { ok: false, code: 'TITLE' };
+  return { ok: true, title };
+}
+console.log(JSON.stringify(parseTitle('  条件类型  '))); // => {"ok":true,"title":"条件类型"}
+console.log(JSON.stringify(parseTitle(9))); // => {"ok":false,"code":"TITLE"}
+console.log(Number('')); // => 0
+```
 
-在 parse 前检查 HTTP status、Content-Type、Content-Length（若可信）并给流式读取设置最大字节。JSON.parse 可能消耗内存/CPU，深层对象与超大数组会形成资源攻击。
+这里的 80 按 JavaScript 字符串长度计数，即 UTF-16 code unit，不等同于 80 个用户感知字符。若产品按字数或字素限制，应明确另一套计数规则。
 
-schema 也可能在复杂联合/正则上昂贵。限制深度、数量、字符串长度，避免灾难性正则。服务端和客户端都需要边界，前端校验不能保护服务端。
+“标题非空”属于输入规则；“此用户能修改这份资料”属于授权；“资料是否已经发布”属于业务状态。不要把它们都藏在一个名为 validate 的巨大函数里，否则错误来源和测试边界都会变得模糊。
 
-### 十三、请求输入与响应输出应分别建模
+### 五、数字、日期和数组不能只检查 typeof
 
-CreateOrderInput、OrderRecord、OrderResponse 和 OrderView 有不同字段和信任。复用数据库 Entity 作为所有 DTO 会暴露内部字段并耦合迁移。
+`typeof NaN` 和 `typeof Infinity` 都是 number。JSON 本身不能直接写这两个名字，但其他入口或极大指数值仍可能带来非有限数字。ID 需要安全整数，金额还要明确币种与精度，不能只看数字类型。
 
-请求 schema 对未知字段更严格，响应消费者可对新增字段宽容；内部领域模型包含经过归一化的不变量；UI view model 包含显示派生。每层转换函数可测试。
+```ts example=ts07-number-boundaries
+function parseMinorUnits(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0
+    ? raw : null;
+}
+console.log(parseMinorUnits(900), parseMinorUnits(9.5)); // => 900 null
+console.log(parseMinorUnits(Infinity), parseMinorUnits(Number.MAX_SAFE_INTEGER + 1)); // => null null
+```
 
-### 十四、生成类型不等于运行时验证
+这个工具接受按最小货币单位计数的整数，只展示精度边界；真正订单还要带币种，不同币种的单位规则不能写死成“都乘 100”。
 
-从 OpenAPI 生成 `.d.ts`/client 能保证调用代码与文档一致，却不能保证服务实际响应一致。生成 runtime schema、响应拦截器或契约测试，确保真实样本经过解析。
+日期字符串要约定时区、精度和格式。Date.parse 能解析不代表它符合协议，自动日期纠正也可能把不存在的日期变成另一天。需要时先校验协议格式，再验证各日期分量能往返一致。时间区间还要检查开始不晚于结束。
 
-版本固定到 spec hash，CI 检查未提交生成差异。不要在生产每次动态下载未经验证的 schema 决定安全解析。
+数组先限制长度，再检查每项；需要唯一 ID 时还要检查重复。嵌套数据应限制深度与总节点数。类型上的 readonly 也不冻结数组，接收后是否复制或冻结，是单独的运行时决策。
 
-### 十五、前后端契约测试补充单边校验
+### 六、未知字段和未知枚举需要各自的策略
 
-provider test 证明服务实现 schema 和语义，consumer test 证明客户端依赖字段与错误。消费者驱动契约适合跨团队演进，但不能覆盖所有业务和基础设施。
+对未知字段通常有三种选择：拒绝、删除后接受、原样保留。它们不是同一程度的“宽松”。
 
-测试成功、每类错误、未知字段、未知枚举、null/缺失、超大值、旧版本与新增可选字段。真实 HTTP 层还检查状态和 Content-Type。
+| 场景 | 一种可解释的选择 | 原因 |
+| --- | --- | --- |
+| 修改账号权限的请求 | 拒绝未声明字段 | 及时暴露错误或越权参数 |
+| 允许上游加字段的只读响应 | 校验已知字段，再投影新对象 | 保持兼容，同时不让额外字段流入内部 |
+| 代理透传协议 | 在明确隔离的原始载荷里保留 | 必须有独立用途、体积限制和下游边界 |
 
-### 十六、PostMessage、存储与 AI 输出同样需要解析
+本讲主例子选择拒绝额外字段，是为了让契约偏差立即可见。实际读取接口若允许增量字段，可以改为投影策略，但应把这项改变写进契约，不能只去掉一个报错就称作兼容。
 
-event.data、localStorage 字符串、IndexedDB 旧记录、URLSearchParams 和模型结构化输出都在边界。TypeScript interface 不会随存储 schema 自动迁移，也不能让模型保证 JSON。
+未知枚举则涉及业务含义。refunded 不应被猜成 paid，也不应被默认赋予退款操作。解析器保留 rawStatus 供内部定位，UI 使用固定兼容文案，后续动作必须确认是已知状态。若未知值影响写操作、金额计算或权限，通常应拒绝继续处理。类型过滤不会替你做这些决定，见[TS-05 的联合过滤](../chinese-guides/ts-05-conditional-infer-distribution.md#七过滤联合靠的是失败分支返回-never)。
 
-消息验证 origin/source 后再 parse schema；存储记录按 version 迁移；URL 限制长度与允许集合；AI 输出 parse 失败可重试/修复但不能直接执行工具或写数据库。
+### 七、稳定错误码连接日志与用户的下一步
 
-### 十七、品牌类型只能在验证入口创建
+**错误模型（Error Model）**至少分开面向程序的 code、定位用的路径，以及面向用户的文案。错误 message 可能被翻译或修改，不适合拿来做分支判断。
 
-UserId 与 OrderId 都是 string 时可用 branded type 防混用，但若任何地方 `as UserId`，品牌失去价值。提供 parseUserId/check format 的唯一构造入口。
+例如订单金额错误保留 `AMOUNT` 与 `$.amount`，页面显示“订单金额无效”，日志用请求追踪编号定位原始处理过程。内部 cause 可以包含异常链，但不应直接显示响应全文、访问令牌、数据库信息或用户输入。
 
-品牌不验证数据库存在、权限或当前租户，只证明通过本地格式/来源规则。序列化后品牌消失，再进入系统时重新解析。
+```ts example=ts07-error-mapping
+type Failure =
+  | { code: 'OFFLINE' }
+  | { code: 'FORBIDDEN' }
+  | { code: 'CONFLICT'; currentVersion: number };
+function recovery(error: Failure): string {
+  switch (error.code) {
+    case 'OFFLINE': return '连接恢复后重试';
+    case 'FORBIDDEN': return '当前账号无法执行此操作';
+    case 'CONFLICT': return '资料已更新，请重新查看第 ' + error.currentVersion + ' 版';
+  }
+}
+console.log(recovery({ code: 'CONFLICT', currentVersion: 4 })); // => 资料已更新，请重新查看第 4 版
+```
 
-### 十八、版本化 schema 支持渐进迁移
+意外异常从 unknown 开始收窄；不要假定任何 throw 都是 Error。日志可以记录经过筛选的分类和堆栈，页面使用兜底文案。校验失败、业务拒绝与程序缺陷最好能区分，否则一个“请求失败”会让排查失去方向。
 
-持久数据和消息包含 schemaVersion。解析器先识别版本，旧版本通过纯迁移函数逐步升级，当前版本再严格验证；未知未来版本不按旧结构猜测。
+### 八、资源限制必须发生在昂贵操作之前
 
-迁移函数不依赖网络和当前 UI，输入输出可保存 fixture。大规模数据采用双读/单写和覆盖率，失败保留旧数据与恢复路径。
+先调用 response.json，再检查数组长度，无法阻止超大响应占用内存。Content-Length 只能作为提示，可能缺失或不能代表解码后读到的字节。下面直接累计响应流的字节，并在达到上限后取消读取。
 
-### 十九、日志、隐私与可观测性
+这是独立的 JSON 读取器，返回值仍是 unknown，之后必须交给业务解析器。示例在支持 Fetch API 的 Node 22 或浏览器中运行，不发真实网络请求。
 
-记录 code、path、schemaVersion、release、requestId 与计数，默认不记录完整 payload。调试采样也要字段 allowlist、访问控制、留存和删除策略。
+```ts example=ts07-bounded-json
+type ReadResult =
+  | { ok: true; value: unknown }
+  | { ok: false; code: 'HTTP' | 'CONTENT_TYPE' | 'TOO_LARGE' | 'BODY' | 'JSON' };
+async function readJson(response: Response, maxBytes: number): Promise<ReadResult> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) throw new Error('无效字节上限');
+  const stop = async () => { await response.body?.cancel().catch(() => {}); };
+  if (!response.ok) { await stop(); return { ok: false, code: 'HTTP' }; }
+  const media = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
+  if (media !== 'application/json' && !/^application\/[a-z0-9.+-]+\+json$/.test(media)) {
+    await stop(); return { ok: false, code: 'CONTENT_TYPE' };
+  }
+  if (!response.body) return { ok: false, code: 'BODY' };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        return { ok: false, code: 'TOO_LARGE' };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, code: 'BODY' };
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const value: unknown = JSON.parse(text);
+    return { ok: true, value };
+  } catch {
+    return { ok: false, code: 'JSON' };
+  }
+}
+const make = (body: string) => new Response(body, { headers: { 'Content-Type': 'application/json' } });
+console.log(JSON.stringify(await readJson(make('{"id":1}'), 32))); // => {"ok":true,"value":{"id":1}}
+console.log(JSON.stringify(await readJson(make('{"id":1}'), 4))); // => {"ok":false,"code":"TOO_LARGE"}
+console.log(JSON.stringify(await readJson(make('{'), 32))); // => {"ok":false,"code":"JSON"}
+```
 
-同类 parse error 聚合，关注突然上升和新字段，不为每个用户数据创建高基数标签。错误监控必须能连接到服务版本和接口 owner。
+这里把 UTF-8 解码失败与 JSON 语法失败统一归入 JSON 类别，业务需要时可以细分。示例限制了保留的数据量，但分配合并缓冲区仍会增加一份内存；流到达前的网络缓冲也由运行环境管理。它不是任意大文件的流式 JSON 解析方案。
 
-### 二十、类型与运行时测试共同证明边界
+实际 fetch 还应传入超时或取消信号，避免小而永不结束的响应一直等待。请求端也要在服务端限制字节和解析深度；浏览器限制不能替服务器兜底。
 
-类型测试证明解析成功后字段精确、调用者必须处理 Result 分支、品牌不能混用；运行时测试用 unknown 样本检查接受/拒绝、路径、归一化和脱敏。
+### 九、版本字段让变化有明确入口
 
-Property-based/fuzz 测试可生成缺失、额外、深层和类型变化，mutation test 检验删掉某条校验会不会被发现。固定回归保存真实事故的最小脱敏样本。
+**Schema** 是数据形状和校验规则的说明，可以手写，也可以由库执行。协议变化时，版本字段使解析器知道该按哪套规则解释，而不是猜测某个字段缺失意味着什么。
 
-### 二十一、失败要有用户恢复路径
+一个消息信封可以规定 `{ version: 1, kind: 'order.updated', payload: ... }`。先检查 version 与 kind，再调用对应 payload 解析器。未知版本进入“不支持的协议版本”分支，不应直接断言成当前结构。
 
-数据格式错误时，UI 不应白屏。读取场景可显示局部不可用、重新加载、升级应用或联系支持；写入校验问题让用户修正；权限失败不重复请求；冲突提供刷新/合并。
+旧版本若仍受支持，流程应是“按旧规则解析 → 显式迁移 → 当前内部模型”。迁移不能仅给旧对象加一个新版本号；金额单位改变、字段改名和状态拆分，都需要真实转换与边界样本。
 
-恢复动作本身受取消、重试预算和当前账号约束。错误模型的价值是让系统选择正确下一步，不只是让日志好看。
+浏览器存储、URL、postMessage、插件消息和 AI 输出也是外部入口。尤其不要把 AI 输出声称符合某个 JSON Schema，等同于已经通过本地校验。跨窗口消息还需要核对发送来源与窗口，见[SEC-04 的消息检查](../chinese-guides/sec-04-cross-origin-isolation-embedding-permissions.md#八postmessage-同时核对三件事)。
 
-### 二十二、何时选择 schema 库或手写解析
+### 十、输入、记录、响应与页面模型不必长得一样
 
-小而稳定的边界可手写清晰守卫；复杂嵌套、复用与错误路径适合成熟 schema 库。选择关注 bundle、性能、类型推断、标准兼容、维护和安全公告。
+| 模型 | 例子 | 不应顺手混入 |
+| --- | --- | --- |
+| 输入命令 | 修改标题、期望版本 | 客户端自报的管理员身份 |
+| 数据库记录 | 存储 ID、审计字段、内部状态 | 直接整体返回页面 |
+| API 响应 | 对调用者公开的订单字段 | 密钥、内部排错细节 |
+| 页面模型 | 显示文案、只读兼容状态 | 被当成服务端权威结果 |
 
-不要让库 DSL 取代领域命名。把 schema、内部类型和转换封装在边界模块，业务层不依赖具体库错误对象。
+从一份类型反复使用 Partial、Omit 派生所有模型，容易让某个新内部字段意外进入公开接口。类型工具有用，但公开边界最好能够逐字段审阅。可对照[TS-04 的运行时投影](../chinese-guides/ts-04-mapped-utility-template-literal-types.md#三pick-与-omit-不会从对象里删除字段)。
 
-对跨团队长期契约，再增加可发现的示例与版本说明：一份最小合法输入、一份常见失败、一份向后兼容新增字段。示例由 schema 校验并在 CI 执行，避免文档代码与真实规则各自演进；但示例只是教学入口，不能替代完整 schema 与攻击边界测试。
+品牌类型可以标记“已通过某项解析”的 ID，减少误传，但品牌并不随 JSON 自动保存，也不能证明授权。品牌构造应集中在校验入口，网络往返后重新解析。状态与权限的关系见[TS-08](../chinese-guides/ts-08-domain-state-permission-modeling.md#ts-08)。
 
-### 学完后应能说明
+### 十一、生成代码能减少重复，不能代替执行校验
 
-你应能解释 TypeScript 静态类型为何不能验证外部值，设计 unknown→schema parse→内部模型/稳定错误的边界；能处理未知字段/枚举、版本迁移、资源限制、错误脱敏和用户恢复，并用类型测试、契约测试、fuzz 与真实 HTTP 证据保持声明和运行时一致。
+OpenAPI 或其他契约文件可以生成类型、客户端、校验器；具体工具生成了哪一种，要看产物和运行路径。只有生成 .d.ts 或 interface，运行时就没有多出任何检查。
+
+选择校验库时，先看对象默认是拒绝、删除还是保留未知字段，再看数值转换、异步规则、错误路径和包体积。把推导出的类型与实际解析入口放在一起，可以减少手写两份规则的漂移，但不要把库的默认行为当作业务规则。
+
+提供方应验证实际响应符合发布契约；消费方应保留几个代表样本，覆盖成功、缺失、错误类型、新枚举和版本变化。两边测试关注的是边界承诺，不是重复检查所有字段赋值语句。
+
+### 十二、把失败做成用户能继续的状态
+
+重读主例子的六条输出：有效数据进入已知模型；缺 ID 和金额类型错误给出明确 code 与路径；新增状态只读展示；额外权限字段被拒绝。每个结果都能说明原因，不依赖渲染器在访问字段时碰巧抛异常。
+
+页面遇到兼容问题时，应尽量保留用户已经输入的内容，给出刷新、重新登录、查看新版本或联系支持的合适入口。不要自动把失败解析成空列表，否则用户可能误以为数据被删除。
+
+日志同样需要边界：记录错误分类、有限数量的路径和追踪编号，避免完整载荷、令牌及高基数原始状态值大量进入指标标签。读者最终应能从一条错误沿原路径找到是哪层约定被破坏，而不是在整个应用里搜索“请求失败”。
+
+### 参考与延伸阅读
+
+- [TypeScript：收窄](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)：unknown 入口与判别联合。
+- [MDN：Response.json](https://developer.mozilla.org/en-US/docs/Web/API/Response/json)：JSON 读取与失败。
+- [MDN：读取响应流](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader/read)：逐块读取的结果。
+- [继续阅读 TS-08](../chinese-guides/ts-08-domain-state-permission-modeling.md#ts-08)：从已经解析的数据出发判断业务动作。

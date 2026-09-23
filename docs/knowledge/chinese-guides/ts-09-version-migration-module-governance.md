@@ -1,186 +1,286 @@
-# TypeScript 工程治理知识点讲义
+# TypeScript 知识点讲义
 
 ## TS-09 TypeScript 版本迁移、模块语义与弃用治理
 
-升级 TypeScript 不是把 package.json 的版本号改大。编译器、语言服务、程序化 API、模块解析、声明输出、框架模板工具与运行时各有独立兼容面。稳定迁移要先冻结基线，按包说明运行边界，分阶段处理诊断和弃用，再用类型、构建、真实运行与消费者证据决定推进或回滚。
+升级 TypeScript 后，命令行通过了，编辑器还在报错；或者源码能找到模块，编译出来的 JavaScript 却无法启动。这些现象往往不是一项配置能解释的，因为“检查类型”“生成文件”“加载模块”和“编辑器服务”可能由不同工具完成。
+
+本讲先用一个小型 ESM 包观察完整产物，再讨论逐包迁移与工具兼容。版本信息按 2026-09-15 读取的官方发布说明整理；其中关于 6.0、7.0 的描述是发布说明中的版本事实，不代表本仓库已升级。可运行实验使用本仓库已安装的 TypeScript 5.7.2 与 Node 22.23.0。实际迁移时应重新核验目标版本和框架工具的支持状态。
 
 ### 学习前先确认
 
-- 直接前置：[TS-01 类型系统、结构化类型与严格模式](../chinese-guides/ts-01-type-system-structural-strict-mode.md#ts-01)。本讲默认理解编译时与运行时边界，不要求先学完所有高级类型语法。
-- 直接前置：[ENG-03 依赖、锁文件、Workspace 与 Peer Dependencies](../chinese-guides/eng-03-dependencies-lockfile-workspaces-peer.md#eng-03)。版本解析、锁文件、workspace 与 peer 兼容由该文独立解释。
+- 直接前置：[TS-01 类型系统、结构化类型与严格模式](../chinese-guides/ts-01-type-system-structural-strict-mode.md#ts-01)。需要理解类型擦除、严格检查与运行时能力的区别。
+- 直接前置：[ENG-03 依赖、锁文件、workspaces 与 peerDependencies](../chinese-guides/eng-03-dependencies-lockfile-workspaces-peer.md#eng-03)。迁移还涉及包解析、版本锁定与工具依赖，不能只修改一个数字。
+
+读完应能从实际产物定位模块问题，为 browser app、Node service 和组件库分别列出验证项，并写清兼容窗口与回滚条件。
+
+### 一、先找出是谁在检查这份代码
+
+**编译器（Compiler）**不是仓库里唯一接触 TypeScript 的工具。命令行、编辑器、框架语言工具、声明生成器、代码分析插件，可能各自加载不同版本。
+
+| 执行入口 | 要查的事实 | 常见误解 |
+| --- | --- | --- |
+| 项目脚本里的 tsc | 实际可执行文件、版本、读取的配置 | 全局 tsc 就代表项目版本 |
+| 编辑器语言服务 | 当前工作区所选 TypeScript 与扩展 | 没有红线就说明命令行通过 |
+| vue-tsc 等框架工具 | 自身版本、依赖的编译器 API | 普通 tsc 能检查所有模板 |
+| 声明或代码分析工具 | 从哪个包导入 TypeScript | CLI 升级后内部 API 自动兼容 |
+
+迁移记录应包含工具版本、对应包、配置路径与运行方式。例如“web 的 vue-tsc 通过”比“TS 通过”更可复核。先保留迁移前的真实输出，再改变一项，否则之后很难判断错误是不是本来就存在。
+
+### 二、把 target、module、解析、lib 和 types 分开看
+
+| 配置 | 主要回答 | 不会替你完成 |
+| --- | --- | --- |
+| target | 输出保留到哪一级 JavaScript 语法，并影响默认库声明选择 | 给旧环境安装新 API |
+| module | 按什么模块模式检查或输出 | 决定所有部署环境的加载规则 |
+| moduleResolution | 编译器怎样模拟模块查找 | 修改 Node 的真实解析器 |
+| lib | 编译器认为有哪些标准与宿主 API | 创建 DOM、fetch 或 polyfill |
+| types | 哪些类型包进入全局环境 | 禁止源码导入其他包的类型 |
+
+**模块解析（Module Resolution）**应符合代码最终由谁加载。交给 bundler 的网页与直接交给 Node 的服务，不一定使用同一组合。NodeNext 模拟 Node 的模块判断，具体规则也会随编译器演进；需要稳定绑定某代 Node 行为时，要确认目标 TypeScript 是否支持对应版本化模式。
+
+比如给纯 Node 工具加入 DOM lib，会让 document 在类型层存在，但 Node 里仍可能没有它。把 target 调低也不会自动补上 Promise 或新数组方法。语法、声明和运行时能力是三个需要对齐的事实。
+
+### 三、运行一个真的生成 JavaScript 与声明的小包
+
+在新的 lesson-note-kit 目录保存下面四个文件。这个包只接受字符串标题，去掉首尾空格并拒绝空标题；它不访问网络、不依赖框架。package.json 中的版本是实验固定基线，不是升级建议。
+
+```json example=ts09-package runtime=project file=package.json
+{
+  "name": "@lesson/note-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["dist"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "devDependencies": { "typescript": "5.7.2" }
+}
+```
+
+```json example=ts09-config runtime=project file=tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedSideEffectImports": true,
+    "verbatimModuleSyntax": true,
+    "declaration": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "noEmitOnError": true,
+    "skipLibCheck": false
+  },
+  "include": ["src/**/*.ts"]
+}
+```
+
+```ts example=ts09-title runtime=project file=src/title.ts
+export function normalizeTitle(value: string): string {
+  const title = value.trim();
+  if (title.length === 0) throw new Error('标题不能为空');
+  return title;
+}
+```
+
+```ts example=ts09-index runtime=project file=src/index.ts
+import { normalizeTitle } from './title.js';
+
+export interface Note {
+  readonly title: string;
+}
+export function createNote(title: string): Note {
+  return Object.freeze({ title: normalizeTitle(title) });
+}
+```
+
+安装这个实验目录的依赖，再运行 build，会产生 dist/index.js、dist/title.js、各自的 .d.ts 与 source map。源码写的是 './title.js'，实际文件是 title.ts：编译器在检查时通过扩展名替换找到源码，而输出保留供 Node 加载的 .js 路径。
+
+Object.freeze 是实际浅冻结；readonly 是静态写入限制。本例只有一个字符串字段，所以浅冻结足够。不要把这两项泛化为任意嵌套对象的深度不可变。
+
+### 四、故意改错一次，看问题发生在哪一层
+
+在正常构建后，只把 index.ts 的 './title.js' 改成 './title'，再编译。TypeScript 5.7.2 的 NodeNext 会指出 ESM 相对导入缺少扩展名。恢复后重新构建，错误应消失。
 
-### 一、先识别实际使用了几套 TypeScript
+再做一组有边界的对照：保留缺扩展名的导入，把实验配置的 module 改为 ESNext、moduleResolution 改为 bundler。此时类型检查允许这种路径，但直接用 Node 加载编译结果会找不到 dist/title。因为本实验没有 bundler 替它解析和重写。
 
-仓库可同时存在根依赖、包内依赖、全局 `tsc`、编辑器内置版本、Vue/Volar 或 ESLint 使用的编译器 API、测试转译器与构建插件。终端 `tsc --version` 只证明当前命令解析到一个版本。
+| 版本基线 5.7.2 下的组合 | 编译 | 直接由 Node 加载 |
+| --- | --- | --- |
+| NodeNext，导入 './title.js' | 通过 | 成功 |
+| NodeNext，导入 './title' | 拒绝缺扩展名 | 不产生新产物 |
+| ESNext + bundler，导入 './title' | 通过 | 找不到模块 |
 
-记录 package manager why/list、锁文件、每个脚本的可执行路径、编辑器 workspace version、插件与 peer range。CI、开发机和发布镜像必须能解释版本来源。
+noEmitOnError 不会删除上次构建留下的旧文件。验证失败时应看退出码，并在独立输出目录观察本轮产物，不能继续运行旧 dist 再宣布新构建成功。
 
-禁止依赖全局 tsc。命令通过 workspace 脚本运行并保存版本头，避免本地绿、CI 红。
+这是一个模块解析反例，不是说所有 bundler 配置都不能服务 Node。真正交给打包器处理的服务，需要以其产物为验证对象。实验结束后恢复四文件基线配置。
 
-### 二、target、module 与 moduleResolution 是不同轴
+### 五、从包外消费产物，才能检查公开入口
 
-target 控制输出/假设的 JavaScript 语法级别；module 控制发出的模块形式或保留策略；moduleResolution 控制 TypeScript 怎样找到 import 的文件与类型。三者必须与真实运行时/打包器配对。
+包内源码别名可能掩盖声明路径问题。把已构建小包打成 tarball，再在旁边的 consumer 目录安装这份包，检查包里实际包含的文件。
 
-浏览器 bundler 项目通常让 bundler 处理模块，选择 bundler/preserve/esnext 方向；Node 项目依据 Node 版本、package.json type、文件扩展名和 exports 选择 node20/nodenext 等。不能整仓复制一个 tsconfig。
+在 lesson-note-kit 中执行以下命令；npm pack 只创建本地压缩包，不发布包。private 标记也保留着。
 
-编译成功不保证 Node 按同一格式加载。对每个包执行真实 import/start 测试。
+```powershell example=ts09-build-pack runtime=project
+npm install
+npm run build
+npm pack --ignore-scripts
+```
 
-### 三、类型发现与 lib 影响全局世界
+在相邻 consumer 目录创建下面三个文件，再安装本地 tarball。命令里的相对路径对应刚才的目录名；本实验不把 TypeScript 加进 consumer 的依赖。
 
-`types` 控制进入项目的 `@types` 全局包，`lib` 控制 DOM/ES 等标准声明。测试、Node 与浏览器环境混在一个 config 会让代码错误依赖不存在的全局。
+```json example=ts09-consumer-package runtime=project file=consumer/package.json
+{
+  "name": "note-kit-consumer",
+  "private": true,
+  "type": "module"
+}
+```
 
-为 web、server、test、worker 分 config 或 project reference，明确 types/lib。升级时 DOM 声明变化也可能带来错误，不能全部归因于语言检查。
+```js example=ts09-consumer-js runtime=project file=consumer/main.mjs
+import { createNote } from '@lesson/note-kit';
+const note = createNote('  条件类型  ');
+console.log(note.title);
+console.log(Object.isFrozen(note));
+try { createNote('   '); } catch (error) { console.log(error.message); }
+// => 条件类型
+// => true
+// => 标题不能为空
+```
 
-检查 skipLibCheck 的使用。它可缩短迁移阻塞，却会隐藏依赖声明冲突，必须有 owner 与退出计划。
+```ts example=ts09-consumer-types runtime=project file=consumer/types.ts
+import { createNote } from '@lesson/note-kit';
+import type { Note } from '@lesson/note-kit';
+const note: Note = createNote('泛型');
+function rejected() {
+  // @ts-expect-error 公开声明只接受字符串
+  createNote(3);
+  // @ts-expect-error 公开声明保留 readonly
+  note.title = '另一标题';
+}
+```
 
-### 四、声明输出是库的消费者合同
+```powershell example=ts09-consumer-commands runtime=project
+npm install ../lesson-note-kit/lesson-note-kit-1.0.0.tgz
+node main.mjs
+node ../lesson-note-kit/node_modules/typescript/bin/tsc types.ts --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck false
+```
 
-库不仅要自身 typecheck，还要生成 `.d.ts`、package exports/types 条件并在外部 fixture 消费。内部私有路径、不可命名推断或版本特有 lib 类型可能泄露进声明。
+JavaScript 消费结果应依次是“条件类型”、true、“标题不能为空”；类型消费应通过，并确认两处预期错误有效。如果包里漏了 title.js、exports 指向源码，或 .d.ts 引用未发布路径，这一步会暴露问题。
 
-保存 declaration diff，区分格式顺序变化与语义变化。用最低支持 TypeScript 版本消费，必要时 typesVersions 或降级语法；不要只在最新编辑器打开源码证明发布可用。
+本例只承诺 ESM 的 import 消费。CommonJS、不同 moduleResolution 或更旧编译器需要各自的消费场景，不能凭这一组结果宣称全面兼容。
 
-### 五、严格项变化会暴露真实假设
+### 六、类型发现与副作用导入也会改变结果
 
-strict、noUncheckedSideEffectImports、exactOptionalPropertyTypes、noUncheckedIndexedAccess 等可能新增诊断。逐类处理：是代码实际可能为空、声明错误、环境缺失还是工具不兼容。
+**verbatimModuleSyntax** 让类型专用导入的擦除与普通导入的保留更明确。只用于类型时使用 import type；需要运行时执行时保留普通导入，不要指望编译器替你猜测模块副作用。
 
-不要批量 `as`、`!`、any、关闭 strict 或无限 skipLibCheck。源代码修复若在旧版本也正确，可提前合入，减少升级分支差异。
+例如 `import './register.js'` 没有导入变量，却可能注册组件。路径拼错时，未检查的副作用导入会藏住问题。开启 noUncheckedSideEffectImports 可以让无法解析的此类导入报错。CSS 等非 JavaScript 资源如果由 bundler 处理，应提供匹配实际支持范围的声明，并让构建器验证文件确实存在；笼统声明所有名字都会弱化这层检查。
 
-诊断台账记录 code、包、根因、修复与验证，避免同类错误被不同团队重复“临时处理”。
+lib 与 types 也要分包安排。网页需要 DOM 声明；服务器使用 Node 类型；测试环境可能额外需要测试工具全局。把它们全堆进基础 tsconfig，会让某些包意外使用只在测试环境存在的变量。
 
-### 六、弃用配置需要先理解原用途
+**paths** 用于告诉 TypeScript 如何理解路径映射，本身不保证改写输出中的导入。若输出仍是 '@/config'，Node 也需要真实可用的加载规则，或在构建阶段重写。只因编辑器能跳转到文件就认为部署可用，是典型误判。
 
-baseUrl、旧 moduleResolution、outFile 或 importsNotUsedAsValues 等配置可能来自历史工具链。删除前说明原本解决什么，现代替代是什么，是否仍有消费者。
+### 七、6.0 的默认值变化要改成可审阅的配置差异
 
-有 codemod 时先在分支运行，逐项审查 diff。ignoreDeprecations 只作为有期限的迁移窗口，不能让弃用永久无人处理。
+按 2026-09-15 核验的官方 6.0 发布说明，6.0 是通往原生编译器的过渡版本。和依赖旧默认值的配置相比，需要特别核对以下项目：
 
-### 七、模块解析必须与运行时一致
+| 6.0 发布说明中的变化 | 迁移时要确认 |
+| --- | --- |
+| strict 默认开启 | 原有错误是新增检查暴露，还是新代码引入 |
+| module 默认 ESNext，target 默认跟随当年支持版本 | 产物目标是否仍符合部署环境 |
+| rootDir 默认当前配置目录 | dist 的目录层次有没有变化 |
+| types 默认空数组 | Node、测试等全局类型是否显式列出 |
+| noUncheckedSideEffectImports 默认开启 | 资源导入是否有正确声明和真实构建支持 |
 
-**模块解析（Module Resolution）**回答一个 import specifier 最终对应哪个源码、声明或包入口。它必须与 Node、浏览器打包器、测试器和发布包真正采用的解析规则一致；类型检查能找到声明而运行时找不到 JavaScript，仍然是失败的工程配置。
+这些是目标版本的行为，不应倒灌成“所有 TypeScript 版本都如此”。本讲小包显式配置关键项，方便观察升级差异。
 
-Node ESM 的扩展名、package exports、type 字段与 conditional exports 会影响运行；bundler 可能支持 alias、CSS 与虚拟模块，Node 不理解。TypeScript paths 只帮助解析类型，不会自动改写运行时 import。
+发布说明也列出 baseUrl、ES5 相关选项等弃用变化。处理 baseUrl 时，要重新检查裸路径是否依赖它；paths 的相对目标可能需要相应调整。不要只删除选项而不核对导入含义。对于目标版本支持的新 module/moduleResolution 组合，也应按该版本文档判断，不把 5.7 的兼容结论永久套用。
 
-每个 alias 同时配置 bundler/runtime/test，或通过 package exports 提供统一入口。side-effect-only import 拼错在旧配置下可能静默，启用检查后修真实路径。
+### 八、7.0 的 CLI 与程序化 API 要分轨核验
 
-### 八、ESM/CJS 互操作需要真实执行
+**CLI** 是通过命令执行检查；**LSP** 是编辑器和语言服务通信的协议；**Compiler API** 则让插件直接创建程序、读取类型或操作语法树。三者用途不同，某一入口可用不能证明另两项兼容。
 
-default import、namespace、require、动态 import 和 `__esModule` 在编译器、Node 与 bundler 间有历史差异。esModuleInterop 改善类型/emit 体验，不把任意 CJS 包变成原生 ESM。
+7.0 官方发布说明介绍了原生实现，并明确 7.0 不随包提供程序化 API。说明中提到未来 7.1 的新 API 计划，属于后续计划，不是本讲已验证的可用能力。
 
-测试从 ESM 消费 CJS、从 CJS 消费 ESM（若承诺）、动态 import、CLI 启动和测试运行器。查看最终产物与 package exports，不只看源码提示。
+官方提供 **@typescript/typescript6** 兼容包，带 tsc6 可执行入口与 6.0 API；需要直接导入 typescript 的工具还涉及 npm alias。理解这种双轨时，应写清：
 
-### 九、Project References 与增量缓存也会失效
+- 哪个包名解析到 6.0 API，供框架或分析工具加载。
+- 哪个可执行入口使用 7.0，负责独立 CLI 工作。
+- 编辑器、模板工具和声明生成分别走哪一轨。
+- 何时重新验证、什么条件满足后退出兼容轨道。
 
-复合项目用 references、composite、declaration 和 tsbuildinfo 加速。升级编译器后旧增量缓存可能不兼容或掩盖问题，迁移基线包含一次干净构建和一次增量构建。
+7.0 发布说明特别提醒嵌入 TypeScript 的 Vue/Volar、模板等工具存在迁移约束。实际实施时还要核验这些工具当时的正式支持版本；这不是对所有后续工具版本永久“不支持”的判定。原生编译器的官方性能案例也不能替代自己仓库的测量。
 
-引用图应与包依赖一致，避免循环和直接源码越界。声明先构建，消费者再检查；并行 CI 不能读取半写产物。
+### 九、逐包迁移，基础配置只共享真正相同的规则
 
-### 十、编辑器、CLI 与 API 是三种产品面
+| 包的用途 | 模块与宿主重点 | 需要的证据 |
+| --- | --- | --- |
+| browser app | bundler 的模块规则、DOM、资源导入 | 类型检查、打包、浏览器启动 |
+| Node service | 输出格式与部署 Node 一致 | 类型检查、实际启动、关键导入 |
+| Vue component package | 模板工具、声明导出、消费方 | 模板检查、构建、外部消费 |
 
-CLI tsc 负责命令行检查/emit，**语言服务器协议（Language Server Protocol）**（LSP）负责编辑体验，**程序化编译器 API（Programmatic Compiler API）**被 ESLint、Volar、MDX、代码生成器等嵌入。一个面可升级不表示另两个自动兼容。
+这个表是按职责制定的迁移方法，不宣称当前仓库服务器已经采用 NodeNext。当前仓库的 web、server 与 shared 都能见到 ESNext/bundler 配置，需要结合各自构建链判断。不能因为都是 .ts 文件就强行共用完整 tsconfig。
 
-迁移矩阵分别记录 diagnostics、completion/navigation、插件、template typecheck、programmatic tool 与性能。编辑器没有红线不能替代 CI，CLI 更快也不能证明模板工具已切换。
+基础配置适合共享严格选项；宿主库、模块模式、输出位置、测试全局等通常留在各包。Project References 可以表达项目构建依赖，composite/declaration 等约定要一起满足。引用图不等于包的发布图，依然要检查最终导入与声明入口。
 
-### 十一、框架嵌入语言是独立兼容层
+逐包试迁时锁定编译器、框架工具和构建依赖，记录使用的配置及命令。尽量把配置整理、业务类型修复与编译器升级分成可解释的变更，减少一次出现多种根因。
 
-Vue SFC、Svelte、Astro、MDX 和 Angular template 等会把嵌入代码映射到 TypeScript 虚拟文件，并依赖语言服务/API。升级核心编译器前查框架与插件官方支持矩阵。
+### 十、诊断先归类，再比较性能
 
-对 Vue 同时跑 `vue-tsc`/Volar、普通 tsc（适用包）、Vite build、组件测试和编辑器功能。不能只对生成的 `.ts` 文件成功就宣布 SFC 兼容。
+| 现象 | 优先找的证据 |
+| --- | --- |
+| 只有编辑器出错 | 所选编译器版本、语言扩展与项目归属 |
+| 找不到全局变量 | lib、types、类型包与配置继承 |
+| 编译通过但启动失败 | 输出里的导入、扩展名、type 与 exports |
+| 模板报错而普通 TS 通过 | 框架语言工具使用的 API 轨道 |
+| 只在消费方失败 | 发布文件与声明、解析模式、编译器范围 |
+| 类型推导明显变慢 | 递归、联合扩张、重复声明与项目边界 |
 
-### 十二、建立逐包迁移地图
+不要第一时间打开 skipLibCheck。它跳过声明文件的部分检查，可能隐藏冲突；既不修复运行时加载，也不保证库类型一致。临时兼容措施若确有必要，应记录范围、负责人和退出条件，不能用它冒充迁移完成。
 
-为 `apps/web`、`apps/server`、`packages/ui` 等记录：运行时、module/moduleResolution/target、lib/types、是否 emit、声明消费者、框架插件和当前命令。按包升级能定位错误归属。
+性能比较要固定机器、文件集合、配置与检查范围，区分冷构建、增量构建和编辑器响应。清理或隔离相应增量缓存，先预热再按约定重复少量测量；不能把“少检查了一批文件”产生的加速算成编译器收益。复杂类型的边界可回看[TS-05](../chinese-guides/ts-05-conditional-infer-distribution.md#十二用一张推导表决定工具是否值得保留)。
 
-基础共享 config 只放真正共同项，环境差异在包内覆盖。迁移一个包时其他包结果作为不变量，避免全仓同时变化无法归因。
+### 十一、弃用登记要写替代方式和退出条件
 
-### 十三、冻结可复核基线
+**弃用（Deprecation）**表示某种写法需要迁移，可能尚未删除；具体还能用多久，以目标版本说明为准。项目登记表应该让维护者能执行：
 
-升级前保存 git commit、锁文件、Node/package manager/TypeScript 版本、完整命令、类型诊断、测试、构建、运行、声明、耗时与峰值内存。环境可重建。
+| 项目 | 记录内容 |
+| --- | --- |
+| 旧行为 | 哪个包、哪个配置或 API、为什么还在依赖 |
+| 替代方式 | 新配置、代码路径或工具版本 |
+| 兼容窗口 | 暂时由哪一轨提供能力 |
+| 验证方式 | 哪个构建、运行或消费场景证明替换成功 |
+| 退出条件 | 对应工具正式支持、产物一致、调用方完成迁移 |
 
-基线若本来红，先分类已知失败并冻结数量/签名，不能把旧问题算成升级回归，也不能因噪声看不到新增问题。
+输出 .d.ts 的包还要声明最低 TypeScript 版本。引入调用方旧版本无法解析的新语法，即使 JavaScript 完全不变，也会破坏消费。更改回调参数、重载或泛型推断规则，同样可能影响调用者；代表场景可以来自[TS-06 的函数接口](../chinese-guides/ts-06-functions-overloads-variance-component-apis.md#ts-06)。
 
-### 十四、分阶段而不是跨大版本跳跃
+仅发布说明里说“兼容”，不能替代自己的导出面与调用方式。对需要支持的消费范围分别保留正例与应拒绝例，减少无目标的配置矩阵膨胀。
 
-从 5.7 可先到 5.9，处理推断和弃用；再到 6.0 适应新默认和移除项；最后评估 7.0 原生工具链。每阶段锁精确版本、提交独立修复并可回退。
+### 十二、用可恢复的产物完成迁移
 
-阶段顺序不是迷信，价值是缩小差异和获得官方迁移桥。若必须直接跨越，也要按各版本 release notes 分类处理，不能一次批量断言。
+可以按以下顺序整理交付：
 
-### 十五、当前版本事实快照
+1. 保留迁移前锁文件、配置、实际命令与产物位置，记录已存在的诊断。
+2. 选择一个包试迁，确认类型、真实运行或打包，以及公开声明消费。
+3. 对需要旧 API 的工具保留明确兼容轨道，核对编辑器与 CI。
+4. 扩大到其他包，更新脚本、开发说明和支持范围。
+5. 确认旧配置或工具退出条件后，再移除临时兼容项。
 
-截至 2026-08-31，TypeScript 官方已发布 6.0 与 7.0。6.0 是从 JavaScript 实现过渡到原生 7.0 的桥接版本，带来默认项与弃用/移除变化；7.0 是 Go 原生编译器与语言服务器，官方说明完整构建常见显著加速。
+回滚需要一起恢复锁文件、配置、脚本、工具轨道及相关产物，避免新旧输出混用。增量缓存按配置和工具版本隔离；恢复版本后重新构建，比继续使用不明来源的旧 dist 更容易判断结果。source map 也应与发布产物对应，避免错误堆栈指向错误源码。
 
-TypeScript 7.0 当前不提供稳定程序化 compiler API，官方预计后续版本提供新 API；需要 API 的工具可与 `@typescript/typescript6` 并行。Vue/Volar、MDX、Astro、Svelte 与部分 Angular 模板工作流可能仍需 6.0。实施升级时必须重新核对官方发布说明，这段快照不是永久兼容承诺。
+本讲的小包证明了基线下的编译、ESM 加载、声明消费与一个解析反例；没有在真实仓库实施 6.0/7.0 升级，也没有据此宣布 Vue 工具链可迁移。沿着这些证据逐包推进，才能把“升级成功”说具体。
 
-### 十六、当前仓库的真实起点
+### 参考与延伸阅读
 
-本仓库 package.json 与锁文件当前固定 TypeScript 5.7.2，并包含 Vue/Volar 相关工具。因此不能因为 7.0 已正式发布就直接替换为 7.0 并只跑 tsc。
-
-合理路线是：确认所有 workspace 实际版本；5.7→5.9 修复基线；6.0 处理默认/弃用并让 API 依赖工具稳定；隔离评估 7.0 CLI/LSP；按 Vue/Volar 当前支持决定单轨还是 6/7 双轨。
-
-### 十七、6.0 的迁移意义
-
-官方 6.0 说明包括 strict/module/target 等默认变化、noUncheckedSideEffectImports 默认开启、baseUrl 等弃用、classic resolution 与 outFile 等移除/不再支持，以及对 7.0 的准备。精确清单以当前官方文档为准。
-
-已有显式配置的项目未必受默认变化影响，但仍要检查继承 config 和空 config。不要为保持旧行为无脑显式写所有旧默认；先决定目标环境和长期方向。
-
-### 十八、7.0 的原生架构改变工具集成
-
-7.0 的 tsc 与 LSP 可显著改善大型项目速度，但原生实现、并行与新服务协议使程序化 API/插件边界不同。性能收益是升级输入，不是正确性证明。
-
-比较诊断集合、声明、运行和编辑功能，再测时间/内存。并行可能改变输出顺序和竞态暴露，固定测试资源和比较语义内容。
-
-### 十九、双轨方案要显式分工
-
-若 CLI 可用 7.0、框架/ESLint 工具仍需 6.0，package alias 和脚本明确 `typecheck:native`、`typecheck:embedded` 等，不让 PATH 偶然选择。锁文件记录精确版本，CI 打印每条命令版本。
-
-双轨会增加诊断差异、安装和维护成本，设置退出条件：哪些工具发布兼容、哪些差异归零、何时统一。不能把临时双轨变永久无人负责架构。
-
-### 二十、诊断差异按类别处理
-
-新错误可能来自语言正确性、lib.d.ts、模块解析、声明包、插件虚拟文件或配置默认。先最小复现并确认使用哪个编译器，再查 release notes/issue。
-
-对真实 bug 修代码，对上游声明问题升级/补窄修复并跟踪，对编译器回归保留隔离 fixture 和官方 issue。不要用同一个 ts-ignore 覆盖所有类别。
-
-### 二十一、性能比较控制缓存与并行
-
-分别测干净构建、增量、watch 首次与编辑响应；固定代码、Node、CPU、并行参数和磁盘缓存。运行多次取中位数，记录峰值内存与 CI 成本。
-
-TypeScript 7 的并行/诊断选项按官方当前说明使用。更快但漏诊断、声明不同或工具崩溃不能接受；稍慢但正确也可能需继续优化。
-
-### 二十二、弃用治理要有 owner 和截止
-
-建立 deprecation register：选项/API、出现位置、替代、阻塞工具、owner、目标版本、删除条件。新代码禁止继续使用，旧代码按风险迁移。
-
-编译器、框架和 DefinitelyTyped 的弃用同时追踪。设置 ignore 只能指向台账和到期版本，CI 到期重新失败。
-
-### 二十三、声明与消费者兼容需要矩阵
-
-库在支持的最低/最高 TS、Node ESM/CJS、bundler 和应用 fixture 中安装真实 tarball，避免 workspace 源码路径掩盖 exports。检查 types、typesVersions、sideEffects 与 declaration maps。
-
-公共声明不要无意使用新版本才识别的语法。若要提高最低版本，按 semver 和迁移说明发布。
-
-### 二十四、Source Map 与调试链也要回归
-
-emit、bundler 和运行时升级可能改变 Source Map。生产样例抛出已知错误，确认堆栈映射到正确源码、release 与列号；声明 map 也检查编辑器跳转。
-
-类型检查通过而生产堆栈不可诊断，会降低运营能力。迁移证据包含调试链，不只构建产物存在。
-
-### 二十五、自动化测试覆盖多条工具链
-
-运行 tsc noEmit、vue-tsc/模板检查、lint typed rules、unit/E2E、生产 build、Node 启动、声明消费和编辑器 smoke。每项说明使用版本。
-
-创建反例：错 side-effect import、ESM 扩展、模板 prop、声明消费者与全局类型污染，确保相应门禁会失败。只跑“当前全绿”无法证明工具真的工作。
-
-### 二十六、回滚不等于丢掉所有修复
-
-版本和锁文件可回到旧编译器，已证明正确且旧版兼容的源码修复可保留。回滚后重跑旧基线，确认没有半迁移 config、生成物或缓存。
-
-提前定义触发条件：关键运行失败、声明破坏、编辑器不可用、性能超预算或上游插件阻塞。回滚记录根因和再次尝试条件。
-
-### 二十七、发布迁移说明与组织知识
-
-记录为何升级、受影响包、配置变化、常见新错误、工具分工、验证命令、已知限制和回滚。开发者知道编辑器选择哪个版本，CI 为什么跑两条类型检查。
-
-完成后清理临时 alias、ignore、补丁和分支，更新模板项目。一次升级的经验进入自动化检查，降低下一次成本。
-
-### 学完后应能说明
-
-你应能区分 target/module/moduleResolution、类型发现、声明输出、CLI/LSP/API 与框架嵌入工具；能从真实依赖和锁文件建立逐包基线，分阶段处理诊断、弃用和 ESM/CJS；还能针对当前 6.0/7.0 原生迁移与无程序化 API 边界设计双轨、验证、退出和回滚，而不是把版本号升级当完成。
+- [TypeScript：模块理论](https://www.typescriptlang.org/docs/handbook/modules/theory.html)、[模块参考](https://www.typescriptlang.org/docs/handbook/modules/reference.html)：宿主、解析与输出的关系。
+- [Node.js：ESM](https://nodejs.org/api/esm.html)：相对导入扩展名与包加载。
+- [TypeScript：verbatimModuleSyntax](https://www.typescriptlang.org/tsconfig/verbatimModuleSyntax.html)、[skipLibCheck](https://www.typescriptlang.org/tsconfig/skipLibCheck.html)、[Project References](https://www.typescriptlang.org/docs/handbook/project-references.html)：配置的具体边界。
+- [TypeScript 6.0 正式发布说明](https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/)、[7.0 正式发布说明](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)：2026-09-15 核验的版本来源，实施时重新确认。

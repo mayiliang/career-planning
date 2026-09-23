@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import { catalogUrl, guideRoot, readMaterialExamples, prepareMaterialExamples } from './learning-material-examples.mjs';
 
-const batchIds = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12'];
+const batchIds = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'b25'];
 const catalogs = await Promise.all(batchIds.map(async (batch) => JSON.parse(await readFile(new URL(`${batch}.json`, catalogUrl), 'utf8'))));
 const chapters = catalogs.flatMap((catalog) => catalog.chapters);
 const batches = JSON.parse(await readFile(new URL('./pronunciation-batches.json', import.meta.url), 'utf8'));
@@ -40,6 +40,19 @@ for (const [index, catalog] of catalogs.entries()) {
     ['ENG-01', 'ENG-02', 'ENG-03', 'ENG-05'],
     ['TEST-01', 'TEST-02', 'TEST-03', 'CAREER-01'],
     ['CAREER-02', 'CAREER-04', 'CAREER-05', 'WEB-02', 'WEB-03'],
+    ['A11Y-01', 'BROWSER-01', 'BROWSER-02', 'WEB-04'],
+    ['WEB-05', 'NET-01', 'SEC-01', 'SEC-02'],
+    ['SEC-04', 'SEC-03', 'SEC-05', 'TS-04'],
+    ['TS-05', 'TS-06', 'TS-07', 'TS-08', 'TS-09'],
+    ['IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02'],
+    ['NODE-01', 'NODE-02', 'NODE-04', 'AIDEV-01'],
+    ['AIDEV-02', 'AIDEV-03', 'BIZ-01', 'BIZ-02'],
+    ['BIZ-03', 'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07'],
+    ['BIZ-08', 'TEST-04', 'RENDER-01', 'RENDER-02'],
+    ['DATA-01', 'DATA-02', 'REALTIME-01', 'COMP-01'],
+    ['COMP-02', 'UX-01', 'ENG-08', 'LINUX-01'],
+    ['LINUX-02', 'LINUX-03', 'LINUX-04', 'DOCKER-01', 'DOCKER-02'],
+    ['ENG-06', 'DEPLOY-01', 'OBS-01', 'PERF-01'],
   ][index]);
   assert.match(catalog.reviewedOn, /^\d{4}-\d{2}-\d{2}$/);
   assert(!Number.isNaN(Date.parse(catalog.reviewedOn)) && new Date(catalog.reviewedOn).toISOString().slice(0, 10) === catalog.reviewedOn);
@@ -69,6 +82,26 @@ for (const chapter of chapters) {
     'TEST-03': 'https://playwright.dev/', 'CAREER-01': 'https://capd.mit.edu/',
     'CAREER-02': 'https://c4model.com/', 'CAREER-04': 'https://sre.google/',
     'CAREER-05': 'https://google.github.io/eng-practices/',
+    'A11Y-01': 'https://www.w3.org/',
+    'SEC-01': 'https://cheatsheetseries.owasp.org/',
+    'IDENTITY-02': 'https://www.rfc-editor.org/',
+    'PRIVACY-01': 'https://www.samr.gov.cn/',
+    'PRIVACY-02': 'https://www.cac.gov.cn/',
+    'NODE-01': 'https://nodejs.org/', 'NODE-02': 'https://nodejs.org/',
+    'NODE-04': 'https://nodejs.org/', 'AIDEV-01': 'https://docs.github.com/',
+    'AIDEV-02': 'https://docs.github.com/', 'AIDEV-03': 'https://fast-check.dev/',
+    'BIZ-01': 'https://learn.microsoft.com/', 'BIZ-02': 'https://stately.ai/',
+    'BIZ-03': 'https://cheatsheetseries.owasp.org/', 'BIZ-04': 'https://www.rfc-editor.org/',
+    'BIZ-06': 'https://learn.microsoft.com/', 'BIZ-07': 'https://www.rfc-editor.org/',
+    'BIZ-08': 'https://www.nasa.gov/', 'TEST-04': 'https://docs.pact.io/',
+    'RENDER-01': 'https://web.dev/', 'RENDER-02': 'https://react.dev/',
+    'DATA-01': 'https://tanstack.com/', 'DATA-02': 'https://tanstack.com/', 'COMP-01': 'https://react.dev/',
+    'COMP-02': 'https://react.dev/', 'UX-01': 'https://www.w3.org/',
+    'ENG-08': 'https://slsa.dev/', 'LINUX-01': 'https://man7.org/',
+    'LINUX-02': 'https://man7.org/', 'LINUX-03': 'https://www.gnu.org/',
+    'LINUX-04': 'https://man.openbsd.org/', 'DOCKER-01': 'https://docs.docker.com/', 'DOCKER-02': 'https://docs.docker.com/',
+    'ENG-06': 'https://docs.github.com/', 'DEPLOY-01': 'https://nginx.org/',
+    'OBS-01': 'https://opentelemetry.io/', 'PERF-01': 'https://web.dev/',
   };
   const officialHost = specializedHosts[chapter.id] ?? (chapter.id.startsWith('TS-') ? 'https://www.typescriptlang.org/'
     : chapter.id.startsWith('REACT-') ? 'https://react.dev/'
@@ -124,4 +157,4 @@ await new Promise((resolve, reject) => {
   worker.once('error', (error) => { clearTimeout(timer); reject(error); });
   worker.once('exit', (code) => { clearTimeout(timer); if (code !== 0) reject(new Error(`示例进程退出 ${code}`)); });
 });
-console.log(`B01–B12 资料检查通过：${chapters.length} 篇主讲义，${concepts.size} 个唯一概念入口，${connections} 条知识连接，${links} 个正文内部引用，${examples.length} 个通用示例输出一致（${process.version}）；另登记 ${allExamples.filter(({ runtime }) => runtime === 'browser').length} 个浏览器示例、${allExamples.filter(({ runtime }) => runtime === 'project').length} 个页面、项目或终端片段，需按正文场景另行核对。`);
+console.log(`B01–B25 资料检查通过：${chapters.length} 篇主讲义，${concepts.size} 个唯一概念入口，${connections} 条知识连接，${links} 个正文内部引用，${examples.length} 个通用示例输出一致（${process.version}）；另登记 ${allExamples.filter(({ runtime }) => runtime === 'browser').length} 个浏览器示例、${allExamples.filter(({ runtime }) => runtime === 'project').length} 个页面、项目或终端片段，需按正文场景另行核对。`);

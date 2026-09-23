@@ -1,163 +1,245 @@
-# Docker 镜像构建知识点讲义
+# 镜像已经构建成功，为什么还不能放心运行
 
 ## DOCKER-01 镜像、容器、Dockerfile 与构建缓存
 
-Docker 把应用与运行所需文件打包为可分发制品，但不会自动让构建可重现、镜像最小或运行安全。一个 `docker build` 成功，只说明 Dockerfile 在当前上下文产生了某个结果；密钥可能已进入历史层、缓存可能被无关文件破坏、基础镜像可能漂移、进程也可能仍以 root 运行。本讲从不可变镜像、构建输入、缓存和运行边界建立完整模型。
+同一个项目，在开发机能启动，换一台机器却缺文件；重新构建后版本号没变，页面内容却变了；容器被删除，手动修好的配置也消失了。要解释这些现象，需要先区分构建输入、镜像内容和一次容器运行，而不是把它们统称为“Docker 环境”。
 
-示例贯穿一个前端或 Node 服务：先用锁文件安装和编译，再把必要产物复制进非 root 运行阶段，最后比较改源码与改锁文件时的缓存日志、镜像清单和启动行为。
+本讲从一个没有第三方依赖的资料页开始，给出可保存成文件的构建与运行例子，再将规律推广到真实前端项目的依赖安装、缓存和发布。示例服务只供本机学习，生产的 TLS、鉴权、日志与部署策略另行设计。
 
 ### 学习前先确认
 
-- 直接前置：[LINUX-01 文件系统、权限与安全命令](../chinese-guides/linux-01-filesystem-permissions-safe-commands.md#linux-01)。本讲直接使用路径、用户、权限、信号、文件系统与制品验证。
+- 直接前置：[LINUX-01 文件系统、权限与安全命令](../chinese-guides/linux-01-filesystem-permissions-safe-commands.md#linux-01)。需要理解路径、进程身份、文件权限与持久化对象。
 
-### 一、镜像与容器不是同一对象
+### 一、镜像定义内容，容器带上一次运行条件
 
-**镜像（Image）**是按内容寻址、由只读层和配置组成的分发制品；tag 是可移动名称，digest 才标识具体内容。**容器（Container）**是镜像配置加运行时可写层、命名空间、cgroup、挂载和网络后的一次进程实例。
+**镜像（Image）**包含文件系统层与运行配置，是可以分发的制品。**容器（Container）**则是在这些内容之上，加入一次运行的进程、可写层、环境、挂载和网络。镜像里写着什么，与进程此刻实际看到什么，不一定相同。
 
-修改运行容器不会更新原镜像，容器删除后可写层通常消失。长期数据放卷或外部服务，配置通过明确运行输入提供；不要进入容器手工修补再把实例当发布物。
+同一镜像启动 A、B 两个容器，A 在可写层改了文件，不会自动改原镜像或 B 的文件。重启同一个容器通常保留其可写层；删除并创建新容器则不能依赖旧可写层。卷和 bind mount 还有独立生命周期，下一篇会展开。
 
-同一镜像可运行多个容器，但运行结果还受环境、挂载、用户、能力、网络和平台架构影响。部署记录要保存 image digest 与运行配置，不能只记 tag。
+Linux 容器共享宿主内核，命名空间和 cgroup 让它拥有受约束的视图与资源，并不是每个容器里都启动一套完整虚拟机。Docker Desktop 的 Linux 容器一般运行在其 Linux 虚拟环境里，因此宿主路径与 Linux 容器路径也不能直接等同。
 
-### 二、Dockerfile 是构建程序
+排查“同一镜像表现不同”，需要同时比较镜像身份、平台架构、环境、用户、挂载、端口和资源限制。仅截图一个 tag 无法证明运行条件相同。
 
-Dockerfile 指令定义基础、文件复制、命令执行、元数据、用户、工作目录和入口。每条指令的结果取决于前序文件系统、指令文本、构建参数、挂载和输入文件。把它当可审查构建代码，而非安装笔记。
+### 二、tag 是名字，digest 才对准具体内容
 
-使用明确语法版本和 BuildKit 能力；固定所需包管理器与锁文件。合并命令可减少某些层，但过度把所有步骤塞一行会降低缓存与诊断，按变化频率和逻辑原子性组织。
+`atlas-web:demo` 是便于人使用的 tag，它可以被重新指向另一份镜像。digest 是对相应内容对象的摘要；部署要核对的是你实际拉取和运行的那一个对象。多平台镜像的索引摘要与某个平台镜像摘要不是同一个层级，记录时说明对象类型和架构。
 
-`RUN`, `COPY`, `ADD` 语义不同。下载优先由受控工具完成并验证摘要；远程 ADD 等隐含行为应谨慎。构建阶段不要启动需要长期运行的服务。
+固定基础镜像 digest 可以让更新变成显式选择，但不能保证构建自动字节一致。时间戳、工具版本、下载结果、安装脚本和构建器也可能改变输出。`npm ci` 固定依赖解析的一部分，并不冻结任意安装脚本访问的全部外部世界。
 
-### 三、构建上下文定义可见输入
+本讲例子使用 `node:22-bookworm-slim` 作为可理解的教学默认，它是会移动的标签。实际发布应选取受支持且经过核对的基础镜像 digest，记录平台与更新流程；不要抄写一个未经查询的假摘要，也不要把固定版本理解成永远不打补丁。
 
-**构建上下文（Build Context）**是构建器可访问并计算的文件集合。`COPY . .` 不仅影响镜像，还把整个上下文传给构建器；`.git`, 本地 `node_modules`, 测试产物、日志和 `.env` 可能泄露或破坏缓存。
+制品来源、SBOM、签名和扫描必须对准同一对象，见 [ENG-08](../chinese-guides/eng-08-software-supply-chain-sbom-provenance.md#四不同证据必须对上同一个对象)。构建成功只回答“某次过程产生了结果”，还没回答结果是否适合运行。
 
-`.dockerignore` 在发送前排除不需要文件，规则需测试。先列上下文来源和大小，明确 Dockerfile/ignore 相对位置；monorepo 从根构建时上下文更大，必须精确复制 workspace 所需清单。
+### 三、构建上下文是可供构建器读取的输入范围
 
-忽略文件只防止它进入上下文，不替代秘密扫描、仓库治理和最小目录。若文件已被早期层复制，后续 `rm` 不能从历史层移除。
+**构建上下文（Build Context）**由 build 命令指定。例如 `docker build -f deploy/Dockerfile .` 的上下文是当前目录，不是自动变成 deploy 目录。COPY 的源路径从上下文解析，不能借 `../` 任意读取上下文之外的文件。
 
-### 四、层与缓存键
+BuildKit 会优化实际传输与使用的输入，因此不宜简单说每次必然上传所有字节；但你仍必须把上下文当作构建器可能接触的范围，尤其使用远程构建器时。`.env`、私钥、源码仓库元数据和本地 node_modules 都不应因为一个 `COPY . .` 顺手进入发布层。
 
-Dockerfile 指令形成内容关系的层/元数据。**层缓存（Layer Cache）**在指令及其依赖输入匹配时复用结果。某个早期层变化会让后续层重算；缓存命中不表示远端仓库内容仍安全或业务结果正确。
+`.dockerignore` 用于排除输入。它与 Dockerfile 所在位置、Dockerfile 专属 ignore 文件和规则顺序有关，要按实际构建入口验证。运行阶段删除秘密不能抹掉较早层中已经保存的秘密；应阻止它进入不该进入的输入和层。
 
-按变化频率组织：先复制 package.json/lockfile/必要 workspace 清单安装依赖，再复制源码构建。只改源码时依赖层可复用；锁文件变化时依赖层应失效。若先 `COPY . .`，任意文档变化都可能重装依赖。
+monorepo 的上下文可以是仓库根，但 COPY 应明确覆盖目标包与解析依赖所需的 workspace 清单。只复制一个 package.json 却漏掉工作区依赖，会造成“缓存很快但构建不完整”。
 
-包索引更新与安装放在同一 RUN，清理无用缓存。使用 cache mount 加速下载但不把缓存当镜像内容；定义共享范围，防止低信任构建污染高信任缓存。
+### 四、缓存复用的是已有结果，不是重新判断业务正确
 
-### 五、多阶段构建分离工具与运行面
+**层缓存（Layer Cache）**根据指令及其相关输入决定能否复用。对典型的依赖安装流水线，先复制依赖清单与锁文件，再安装，最后复制源码，能把“改文案”与“重新解析依赖”分开。
 
-构建阶段可含编译器、devDependencies 和源码；运行阶段只复制产物与必要运行依赖。阶段用明确名称，`COPY --from=builder` 精确选择目录。这样缩小镜像、漏洞面和泄露概率。
+```dockerfile
+# 说明片段：要求项目已有匹配的 package-lock.json。
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY src/ ./src/
+```
 
-多阶段不自动最小：如果复制整个 `/app`，仍可能带源码、缓存和秘密。生成产物清单，检查最终镜像文件、包和大小。前端静态站点可由最小 Web 服务镜像托管，但运行配置注入方式需设计。
+真实项目还需要相应构建配置与其他源码，不能把这三行当完整 Dockerfile。若先 COPY 全部文件再 npm ci，一个无关源码变化也会改变安装步骤的前置内容。反过来，漏复制影响安装的 workspace 清单，会让缓存依据不完整。
 
-调试/测试可有独立 target，发布流水线明确构建 production target。不要把调试工具永久留在运行镜像；需要现场诊断时使用受控调试容器。
+| 改动 | 应重点观察的现象 |
+| --- | --- |
+| 只改源码 | 合理分层下，依赖安装结果可复用 |
+| 改锁文件或依赖清单 | 安装步骤及受影响的后续步骤需要重新计算 |
+| 只改复制文件的 mtime | Docker 的相关校验不把 mtime 单独计入缓存依据 |
+| 远端包源改变、本地输入未变 | 已缓存的 RUN 不会为了你自动重新查询远端 |
+
+cache mount 缓存下载数据，与直接复用整条 RUN 结果不同。远程缓存还涉及写入权限，低信任任务不应覆盖发布流程依赖的缓存。命中缓存不能替代验证，空缓存可构建也不能独自证明字节级可重现。[Docker 缓存规则](https://docs.docker.com/build/cache/invalidation/)
+
+### 五、多阶段让构建工具不必跟着应用一起交付
+
+```mermaid
+flowchart TB
+  Input["源码、清单和构建配置"] --> Build["build 阶段：安装与生成"]
+  Build --> Out["明确的产物目录"]
+  Out --> Runtime["runtime 阶段<br/>只复制运行所需"]
+  Runtime --> Image["检查镜像内容与身份"]
+  Image --> Container["带上用户、挂载和网络运行"]
+```
+
+**多阶段构建（Multi-stage Build）**在一个 Dockerfile 中建立多个阶段。构建阶段可有编译器、devDependencies 和源码；运行阶段只拿需要的产物与运行依赖。如果跨阶段复制整个工作目录，依然可能把缓存、源码和秘密带过去。
+
+前端静态输出通常可以交给 Web 服务器，不必把开发服务器和编译工具带进生产。Node 服务如果没有被打包成独立文件，仍需要运行依赖；不能因为“用了多阶段”就把 node_modules 全删了再期待启动成功。
 
-### 六、基础镜像与可重现性
+下面用原生 Node 生成一个静态页面，目的在于让输入、产物和阶段关系都能看见。它没有包安装步骤，因此不能用它的构建时间证明真实项目的依赖缓存收益。
+
+### 六、一个能从五个文件读懂的镜像实验
+
+在新目录中保存下列文件。`lesson.json` 是构建输入：
+
+```json example=docker01-lesson runtime=project file=lesson.json
+{"title":"理解镜像与容器","summary":"页面在构建时生成，运行时只读取产物。"}
+```
 
-tag 如 `node:latest` 会移动，昨天与今天可能不同。固定受支持版本，生产可进一步固定 digest，并建立更新机器人/流程；固定 digest 不等于永不更新，而是更新变成显式评审。
+`build.mjs` 生成页面，并只将服务文件与页面放入 out。文本先转义再进入 HTML：
 
-选择 glibc/alpine/distroless 等要考虑原生依赖、证书、时区、shell 和诊断需求，不只比压缩大小。过度极简可能把必要调试和兼容成本移到事故现场。
+```js example=docker01-build runtime=project file=build.mjs
+import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
+const lesson = JSON.parse(await readFile(new URL('./lesson.json', import.meta.url), 'utf8'));
+if (typeof lesson.title !== 'string' || typeof lesson.summary !== 'string') throw new Error('资料字段必须为文本');
+const escape = value => value.replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
+const out = new URL('./out/', import.meta.url);
+await mkdir(out, { recursive: true });
+const html = `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>${escape(lesson.title)}</title>
+<style>body{max-width:760px;margin:72px auto;padding:0 32px;font:18px/1.8 system-ui;color:#183047;background:#f4f7fa}article{padding:40px;background:white;border:1px solid #dce5ed;border-radius:20px}small{color:#526777}h1{line-height:1.3}</style>
+<article><small>镜像内容实验</small><h1>${escape(lesson.title)}</h1><p>${escape(lesson.summary)}</p><p>修改源资料后，需要重新构建才能生成新页面。</p></article></html>`;
+await writeFile(new URL('index.html', out), html);
+await copyFile(new URL('./server.mjs', import.meta.url), new URL('server.mjs', out));
+console.log('生成 out/index.html 与 out/server.mjs');
+```
 
-字节级可重现还受时间戳、下载源、平台和构建器影响。记录 BuildKit/平台、来源和参数，比较 digest；无法完全复现时至少确保依赖锁定、来源证明和可解释差异。
+`server.mjs` 只提供首页与健康入口，不接受任意文件路径，也不需要写工作目录：
 
-### 七、依赖安装可重现且最小
+```js example=docker01-server runtime=project file=server.mjs
+import http from 'node:http';
+import { readFile } from 'node:fs/promises';
+const html = await readFile(new URL('./index.html', import.meta.url));
+const port = Number(process.env.PORT ?? 8080);
+if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('PORT 无效');
+const server = http.createServer((request, response) => {
+  if (request.method !== 'GET') { response.writeHead(405); response.end(); return; }
+  if (request.url === '/healthz') { response.writeHead(200); response.end('ok'); return; }
+  if (request.url !== '/') { response.writeHead(404); response.end('not found'); return; }
+  response.writeHead(200, { 'content-type':'text/html; charset=utf-8', 'cache-control':'no-store' });
+  response.end(html);
+});
+server.listen(port, process.env.HOST ?? '0.0.0.0', () => {
+  console.log(JSON.stringify({ event:'listening', port:server.address().port }));
+});
+let stopping = false;
+const stop = () => {
+  if (stopping) return;
+  stopping = true;
+  const deadline = setTimeout(() => { server.closeAllConnections(); process.exit(1); }, 5000);
+  deadline.unref();
+  server.close(error => {
+    clearTimeout(deadline);
+    process.exitCode = error ? 1 : 0;
+  });
+};
+process.on('SIGTERM', stop);
+process.on('SIGINT', stop);
+```
 
-使用冻结 lockfile，失败而不是自动改锁。monorepo 只复制解析依赖图所需 manifest；生产阶段只保留生产依赖或打包产物。缓存包目录不应进入最终层。
+`Dockerfile` 的运行文件归 root 所有且普通用户可读，应用使用 Node 官方镜像中的 node 用户：
 
-私有依赖凭据通过 BuildKit secret/SSH mount 等临时通道，不能用 ARG/ENV 写 token。验证构建历史、层和日志无秘密；失败任务也撤销短期凭据。
+```dockerfile example=docker01-image runtime=project file=Dockerfile
+# syntax=docker/dockerfile:1
+ARG NODE_IMAGE=node:22-bookworm-slim
+FROM ${NODE_IMAGE} AS build
+WORKDIR /work
+COPY lesson.json build.mjs server.mjs ./
+RUN node build.mjs
 
-包安装脚本能执行代码，构建身份和网络最小。生成 SBOM/扫描属于供应链治理，但镜像自身仍要检查基础和 OS 包。
+FROM ${NODE_IMAGE} AS runtime
+ENV NODE_ENV=production PORT=8080 HOST=0.0.0.0
+WORKDIR /app
+COPY --from=build --chown=0:0 /work/out/ ./
+USER node
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+CMD ["node", "server.mjs"]
+```
 
-### 八、ARG、ENV 与秘密边界
+第五个文件 `.dockerignore` 使用允许列表，只给构建器这次真正需要的输入：
 
-ARG 是构建输入，可能出现在历史/缓存；ENV 写入镜像配置并传给容器。二者都不适合秘密。前端构建时环境通常编译进公开 JS，更不能保存服务端凭据。
+```text
+*
+!Dockerfile
+!.dockerignore
+!lesson.json
+!build.mjs
+!server.mjs
+```
 
-把真正运行配置留到容器启动，通过环境、只读配置或秘密挂载提供；但静态前端若要同镜像跨环境，需要启动时生成公开配置或外部配置端点。明确哪些值公开。
+先可用 `node build.mjs`、`node out/server.mjs` 单独观察应用。Docker 环境中再执行下一节。原生运行只验证 Node 程序，不证明镜像层、运行用户或容器隔离已经正确。
 
-构建参数影响产物时记录在 provenance，并确保缓存键包含它。不要让同 tag 隐含生成不同功能制品而无法追溯。
+### 七、按现象核对构建与运行
 
-### 九、非 root 与文件权限
+在上述新目录中执行，命令针对这个专用实验镜像与容器：
 
-镜像创建专用 UID/GID，在复制文件时设置 owner，最后 `USER` 切换。运行验证 `id`, 写路径和绑定端口；不要启动后靠 root 修改再降权而留下过宽文件。
+```bash
+docker build --progress=plain -t atlas-image-lab:v1 .
+docker image inspect atlas-image-lab:v1 --format '{{.Id}} {{.Config.User}} {{json .Config.Cmd}}'
+docker run --rm --name atlas-image-lab --read-only --cap-drop ALL \
+  --security-opt no-new-privileges=true -p 127.0.0.1:18080:8080 atlas-image-lab:v1
+```
 
-只给进程必要可写目录，根文件系统尽量只读，临时目录用 tmpfs/受限卷。卷挂载 UID 映射需在目标环境测试。监听高端口后由代理对外，避免额外能力。
+在另一个终端请求 `http://127.0.0.1:18080/` 和 `/healthz`。首页应包含 lesson.json 中的中文标题，健康入口返回 ok。`docker exec atlas-image-lab id` 应显示非 root 身份；`docker inspect atlas-image-lab` 查看实际用户、只读设置、发布地址和健康结果，而不是只看 Dockerfile 意图。
 
-容器 root 在隔离内仍有风险，尤其特权、宿主 socket 或宽挂载。去除不需要 capabilities，禁 privilege escalation，设置 seccomp/AppArmor 等由部署层落实。
+使用 `docker stop -t 8 atlas-image-lab` 结束这一实验容器，观察应用是否在宽限期内正常退出。`--rm` 会在退出后删除这个容器，实验数据不应放在它的可写层。固定名称如果已存在，应先确认归属，不能为了运行例子去删除其他容器。
 
-### 十、ENTRYPOINT、CMD 与信号
+第二次不改输入构建，观察可复用步骤；修改 lesson.json 再构建，生成步骤应重新执行。最终阶段应含 index.html 与 server.mjs，不需 lesson.json 或 build.mjs。没有读取 BuildKit 日志、最终文件和运行身份，就不要把预期写成已验证事实。
 
-exec form 让应用直接接收信号；shell form 可能让 shell 成 PID 1 且不转发。若需要启动脚本，最后 `exec` 主进程并正确处理子进程。
+### 八、非 root 与只读文件系统解决不同问题
 
-定义 CMD 默认参数和 ENTRYPOINT 稳定程序，不把配置硬编码进不可覆盖长字符串。容器应以前台单主进程为主，多进程需要合适 supervisor 和退出语义。
+USER 限定进程身份；只读根文件系统限制写入；capabilities、no-new-privileges 和系统调用策略进一步约束能力。它们解决不同问题，也都不是“完全隔离”的保证。挂载 Docker socket 或宿主敏感目录会显著扩大能力。
 
-测试 SIGTERM：停止接流量、完成/取消在途、期限内退出，返回正确码。只有 SIGKILL 才结束说明镜像生命周期不合格。
+应用若需要写缓存，应提供明确的临时目录或受限卷，不要把整个根文件系统改回可写来绕开一个报错。bind mount 与卷可能遮住镜像里原有路径，文件 owner 也以实际挂载为准；镜像中 COPY 的 owner 不能自动修复任意宿主挂载权限。
 
-### 十一、健康与就绪不要混淆
+构建阶段以 root 创建运行文件，再用非 root 读取，是一种合理安排；不必为了“全部文件归应用用户”让可执行代码也变得可写。需要运行时写入的目录应另外分配。权限链路见 [LINUX-04](../chinese-guides/linux-04-server-security-ssh-users-firewall.md#二最小权限要沿着可写关系检查)。
 
-镜像可提供 HEALTHCHECK，但语义和调度平台支持需明确。存活回答进程是否应重启，就绪回答是否能接流量；依赖短暂失败不一定应杀进程。
+### 九、入口必须让信号到达真正的应用
 
-检查使用容器内实际可用工具，限制频率、超时和资源。只测 `/` 返回 200 可能漏关键初始化；深度检查又可能给依赖增加压力。设计分层端点。
+CMD 的 exec form，例如 `["node", "server.mjs"]`，避免额外 Shell 横在信号路径中。ENTRYPOINT 常指定固定可执行程序，CMD 提供默认参数；运行时覆盖的含义要与两者组合一起理解。
 
-健康检查不修复服务，只提供信号。部署层根据状态执行流量和重启策略，并记录失败原因。
+若使用启动脚本做少量初始化，最后用 `exec` 启动主程序，让它接管进程位置。Shell form 或未转发信号的脚本可能让停止请求停在 Shell，直到宽限期结束才被强杀。需要回收大量子进程时，可以配置适当的 init，而非默认所有应用都自动具备 PID 1 行为。
 
-### 十二、镜像网络元数据
+前面的服务处理 SIGTERM/SIGINT、停止接收连接并设置截止时间。它的短请求实验不能证明真实流式请求、数据库事务和多进程应用都能排空；应按 [LINUX-02](../chinese-guides/linux-02-process-port-log-network-diagnostics.md#十一停止服务是一段有期限的协作)和业务合同验证。
 
-`EXPOSE` 是文档元数据，不自动向宿主/公网发布端口。应用绑定地址与运行网络决定容器内可达；发布端口由 `docker run -p` 或编排配置。
+### 十、端口、健康状态和重启不是一个开关
 
-不要把数据库或管理端点因 EXPOSE 误认为安全/危险，检查实际网络规则。镜像应允许运行时指定端口但保持清晰默认与健康配置。
+EXPOSE 是镜像元数据，不自动发布宿主端口。`-p 127.0.0.1:18080:8080` 才规定从宿主回环 18080 转到容器 8080；应用仍需在容器内对相应接口监听。容器内仅监听 127.0.0.1，通常无法从外部桥接网络访问。
 
-证书和 CA bundle 需要按 HTTPS 客户端需求包含并更新。缺失时会表现为网络错误，不应用禁验证解决。
+HEALTHCHECK 运行检查并产生状态。Docker Engine 的普通 restart policy 主要响应容器退出，不会仅因 health 变成 unhealthy 就自动替你重启进程。Compose 的依赖健康条件也只是协作条件，不是完整自愈系统。
 
-### 十三、镜像大小与启动性能
+前面的 `/healthz` 证明服务事件循环能处理该请求；它没有数据库，因此不承担数据库就绪证明。真实服务可以分别定义存活与就绪，避免把一次依赖暂时失败变成整组应用同时重启。下一篇的 [启动与恢复](../chinese-guides/docker-02-compose-network-volumes-environments.md#五启动依赖只约束一次启动过程)继续讨论这个区别。
 
-大小影响传输、缓存和存储，但层复用意味着总下载不只看单镜像数字。通过 layer 分析找大文件和重复内容，先删除无用构建产物/包，而不是盲目压缩。
+### 十一、构建参数与秘密要分开传递
 
-合并层无法从历史删除早期加入的秘密/大文件；要在同一指令不落层或重写构建。多阶段最有效地隔离构建垃圾。
+ARG 用于构建，ENV 可写进镜像配置并成为容器默认环境。二者都不适合传递秘密。即使 ARG 没有成为最终 ENV，仍可能经命令、历史、日志或证明材料泄露；前端构建时读取的变量更可能被编译进公开 JavaScript。
 
-启动时间还受应用初始化、JIT、依赖和健康阈值影响。测冷拉取、冷启动和滚动场景，设置性能预算。
+需要私有依赖时，BuildKit 的 secret mount 可在单个构建步骤提供临时文件或环境，SSH mount 则提供受控认证通道。挂载机制不保证你执行的命令不会把内容打印或复制到产物；安装脚本本身仍是受信代码。
 
-### 十四、多架构构建
+secret 内容变化不自动使构建缓存失效。若秘密变更对应的操作必须重新执行，可以显式更新非敏感的缓存版本输入，但不要把秘密本身改成普通 ARG 来“解决缓存”。运行时秘密应由部署层提供，不能为了开发方便永久写入镜像。
 
-amd64 与 arm64 的二进制、原生依赖和性能可能不同。构建多平台 manifest 时每个平台都有具体 digest；测试实际架构，不只 QEMU 构建成功。
+### 十二、发布的是镜像和运行合同的组合
 
-BuildKit 平台变量区分 build/target，交叉编译明确工具链。不要把主机生成的 node_modules 复制进不同架构镜像。
+发布记录保存基础与目标摘要、平台、构建来源、产物范围和运行配置。amd64 与 arm64 的原生依赖不同，不能把本机 node_modules 复制进另一架构容器。glibc 与 musl 的差异也可能决定依赖能否启动，不能只比较镜像大小。
 
-发布记录保存 manifest list 与平台摘要。回滚和签名验证针对正确对象。
+开发 target 可有源码挂载、热更新和调试工具；发布 target 应有明确允许的文件与能力。不同目标不要共用含糊 tag，让开发镜像意外覆盖生产。重新拉取旧镜像也不自动回滚已变化的数据库或安全策略。
 
-### 十五、缓存导入导出的信任
+镜像扫描、SBOM 与签名属于制品治理；资源限制、端口、卷和秘密属于运行安排。两部分连起来，才能说明一份镜像为什么能在指定环境中按预期提供服务。多服务的运行安排见 [DOCKER-02](../chinese-guides/docker-02-compose-network-volumes-environments.md#一先画出服务和数据各自属于谁)。
 
-远程缓存加速 CI，但可能包含执行结果和敏感元数据。低信任 PR 不应覆盖受保护分支发布缓存；缓存键绑定锁文件、平台和工具版本。命中后仍运行验证。
+### 动手想一想
 
-缓存失效可导致性能退化而非功能错误，也可能长期复用过期下载。安全更新需要显式刷新相关输入，不用 `--no-cache` 作为永久策略。
+把 lesson.json 改了，但只重启旧容器，页面应该变吗？把新的 index.html 挂载到 `/app/index.html` 后，进程在启动时已读入的页面又会不会立刻改变？分别指出构建、挂载和应用读取发生的时刻。
 
-监控上下文大小、命中率和各层耗时，优化基于证据。过度微调 Dockerfile 会降低可读性，保留因果注释。
+再考虑一个 unhealthy 但没有退出的容器：是谁负责判断是否撤流、重试或重启？不要把这项责任藏在“Docker 会处理”的一句话里。
 
-### 十六、扫描与制品身份
+### 参考与延伸阅读
 
-扫描最终镜像 OS/语言包、秘密和配置，结果绑定 digest。基础镜像漏洞与应用依赖分开归属；无修复项记录缓解与到期。扫描数据库会更新，历史镜像需重扫/查询。
-
-生成 SBOM 和 provenance、签名属于 ENG-08 的完整链；此处确保镜像层清单、基础 digest 和运行用户等信息可被捕获。tag 移动后仍能追到原 digest。
-
-不要把扫描绿灯等于运行安全。宽能力、宿主 socket、公开端口和秘密挂载由部署配置决定。
-
-### 十七、验证构建产物
-
-在干净环境构建两次，记录日志、digest、平台、base、上下文大小和缓存。仅改源码应复用依赖层；改 lockfile 应重建依赖。检查 `docker history`, image inspect 和文件清单。
-
-运行时验证非 root、只读根、必要写目录、端口、健康、SIGTERM 和关键请求。搜索镜像/历史确认 `.env`, 私钥、源码与本地 node_modules 未进入。
-
-故意注入 `COPY . .` 在安装前、移动 base tag、错误架构、秘密 ARG 和只读写失败，观察证据并修复。不能只测正常启动。
-
-### 十八、本地开发与生产镜像分离
-
-开发镜像可含热更新、调试端口和源码挂载，但不得被误推为生产 tag。使用独立 target、Compose 覆盖和仓库策略，生产流水线只接受规定 target 与 digest。开发凭据和缓存不进入构建上下文。
-
-在开发容器内运行编辑器会引入 UID、文件监听和性能差异，应记录平台限制；不要为兼容本机把生产镜像改成 root 或加入无关工具。公共依赖层可复用，但最终运行面分别验证。
-
-镜像标签明确版本、commit 和渠道，避免 dev 覆盖 release。制品库设置保留与不可变，清理按 digest 引用关系，防止删掉正在部署或回滚所需对象。
-
-构建文档还应给出从零环境获取仓库、选择平台、验证依赖来源并产生相同目标镜像的命令入口。若步骤依赖开发者机器上未声明的文件、代理或登录状态，干净 runner 会暴露这种隐性输入。定期删除本地缓存复建，区分真正可重现与“我的机器已有缓存所以成功”。
-
-### 十九、最终复核
-
-发布前回答：上下文包含什么；每层因何失效；依赖是否锁定；基础是否不可变且可更新；秘密是否只临时使用；最终镜像有哪些文件/包；运行身份和写边界；信号/健康；平台；digest 与供应链证据。
-
-高级 Docker 构建能力不在于写更短的 Dockerfile，而在于每个输入可追溯、每次缓存命中可解释、最终运行面最小、制品能以 digest 重建和验证。镜像是交付边界，容器只是它在特定约束下的一次运行。
+- [Dockerfile reference](https://docs.docker.com/reference/dockerfile/)：指令、入口、用户、端口和健康检查。
+- [Build context](https://docs.docker.com/build/concepts/context/)：输入范围与 ignore 规则。
+- [Build cache invalidation](https://docs.docker.com/build/cache/invalidation/)：文件、RUN 与 secret 的失效条件。
+- [Multi-stage builds](https://docs.docker.com/build/building/multi-stage/)：阶段与精确产物复制。
+- [Build secrets](https://docs.docker.com/build/building/secrets/)：临时凭据的传入方式与责任边界。
+- [Node 官方 Docker 镜像](https://github.com/nodejs/docker-node)：镜像变体、运行身份与平台说明。
+- [Docker restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/)：进程退出后的重启规则。

@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "batch": "B22",
+  "title": "让数据同步与组件行为可信",
+  "reviewedOn": "2026-09-21",
+  "chapters": [
+    {
+      "id": "DATA-01",
+      "title": "让资料副本共享正确的身份",
+      "question": "两个页面读同一份资料，怎样共享请求，又避免拿到别人的旧结果？",
+      "summary": "从目录与详情不一致出发，建立查询键、新鲜度、请求去重、失效、分页和会话隔离的清晰边界。",
+      "outcomes": [
+        "区分远端副本、草稿与请求状态",
+        "为可共享结果设计完整查询身份",
+        "解释写后刷新、会话切换与持久化恢复"
+      ],
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01"
+      ],
+      "guide": "data-01-server-state-cache-keys-invalidation-deduplication.md",
+      "anchor": "data-01",
+      "concepts": [
+        {
+          "id": "query-state-ownership",
+          "heading": "一、先问谁拥有事实，再决定状态放在哪里"
+        },
+        {
+          "id": "query-state-view",
+          "heading": "二、有旧数据和正在请求，可以同时成立"
+        },
+        {
+          "id": "query-state-identity",
+          "heading": "三、查询键描述可以共享的响应身份"
+        },
+        {
+          "id": "query-state-freshness",
+          "heading": "四、新鲜时间、保留时间和刷新频率分别设置"
+        },
+        {
+          "id": "query-state-deduplication",
+          "heading": "五、去重共享的是同一笔在途读取"
+        },
+        {
+          "id": "query-state-session",
+          "heading": "六、迟到响应先确认属于哪个查询和会话"
+        },
+        {
+          "id": "query-state-invalidation",
+          "heading": "七、失效描述副本可能过时，重取才获得新事实"
+        },
+        {
+          "id": "query-state-pagination",
+          "heading": "八、列表身份、页身份与对象身份不能混用"
+        },
+        {
+          "id": "query-state-failure",
+          "heading": "九、刷新失败要保留可用信息，也限制重试"
+        },
+        {
+          "id": "query-state-notifications",
+          "heading": "十、预取与实时通知都只是刷新策略的一部分"
+        },
+        {
+          "id": "query-state-hydration",
+          "heading": "十一、SSR 恢复和持久化要保留来源边界"
+        },
+        {
+          "id": "query-state-evidence",
+          "heading": "十二、用请求时间线判断问题，而不只看命中率"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "session-late-response",
+          "reason": "旧会话响应不能借新会话的身份重新写回。"
+        },
+        {
+          "concept": "render-stream-snapshot",
+          "reason": "服务端恢复数据要保留生成它的身份与首次快照。"
+        },
+        {
+          "concept": "mutation-recovery-baseline",
+          "reason": "区分确认基线与尚未被确认的临时修改。"
+        },
+        {
+          "concept": "realtime-flow-cursor",
+          "reason": "实时通知只有在恢复边界明确时才能可信地更新查询。"
+        }
+      ]
+    },
+    {
+      "id": "DATA-02",
+      "title": "提前显示之后仍能正确恢复",
+      "question": "页面先显示修改结果，遇到超时、冲突或离线时，怎样保住用户的工作？",
+      "summary": "从乐观覆盖层走到意图身份、未知结果、版本冲突和离线 outbox，说明恢复不能误删输入或重复业务效果。",
+      "outcomes": [
+        "为每次临时变化保留自己的身份",
+        "区分明确失败、未知结果与版本冲突",
+        "解释离线记录、依赖、账号范围和重新发送条件"
+      ],
+      "prerequisites": [
+        "data-01-server-state-cache-keys-invalidation-deduplication.md#data-01",
+        "biz-07-errors-idempotency-eventual-consistency.md#biz-07"
+      ],
+      "guide": "data-02-optimistic-updates-conflicts-offline-mutations.md",
+      "anchor": "data-02",
+      "concepts": [
+        {
+          "id": "mutation-recovery-suitability",
+          "heading": "一、先判断操作适不适合提前显示"
+        },
+        {
+          "id": "mutation-recovery-baseline",
+          "heading": "二、基线、覆盖层和草稿分别承担责任"
+        },
+        {
+          "id": "mutation-recovery-intent",
+          "heading": "三、一次业务意图需要跨重试不变的身份"
+        },
+        {
+          "id": "mutation-recovery-outcome",
+          "heading": "四、没有收到成功，不等于操作已经失败"
+        },
+        {
+          "id": "mutation-recovery-conflict",
+          "heading": "五、版本冲突需要保留比较起点"
+        },
+        {
+          "id": "mutation-recovery-list",
+          "heading": "六、列表中的临时变化要跟着稳定对象走"
+        },
+        {
+          "id": "mutation-recovery-outbox",
+          "heading": "七、离线 outbox 是持久记录，不是一串 Promise"
+        },
+        {
+          "id": "mutation-recovery-dependencies",
+          "heading": "八、依赖与并发决定哪些操作可以重放"
+        },
+        {
+          "id": "mutation-recovery-account",
+          "heading": "九、账号切换后，旧操作不能替新账号发送"
+        },
+        {
+          "id": "mutation-recovery-network",
+          "heading": "十、联网提示只负责触发尝试，确认仍来自服务端"
+        },
+        {
+          "id": "mutation-recovery-feedback",
+          "heading": "十一、失败恢复首先保护用户理解"
+        },
+        {
+          "id": "mutation-recovery-evidence",
+          "heading": "十二、选能揭示丢输入和重复效果的观察"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-edit-snapshot",
+          "reason": "已经发送的快照与后续输入分别保留。"
+        },
+        {
+          "concept": "business-recovery-intent",
+          "reason": "重试需要沿用同一业务意图，而不是新造一次操作。"
+        },
+        {
+          "concept": "query-state-invalidation",
+          "reason": "确认写入后，关联查询仍要获得新的远端事实。"
+        },
+        {
+          "concept": "component-contract-focus",
+          "reason": "失败和重试时保留输入节点、焦点与操作上下文。"
+        }
+      ]
+    },
+    {
+      "id": "REALTIME-01",
+      "title": "连接恢复以后把消息补齐",
+      "question": "连接显示已恢复，怎样确认缺失的事件真的补回了当前页面？",
+      "summary": "比较 SSE、WebSocket 与 WebTransport 的传输边界，通过真实 SSE 观察重复、断线、缺口和快照恢复。",
+      "outcomes": [
+        "区分传输接收与业务应用的确认",
+        "按已应用游标处理重复和历史缺口",
+        "为慢消费者、授权变化与发布窗口设计恢复"
+      ],
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01",
+        "biz-07-errors-idempotency-eventual-consistency.md#biz-07"
+      ],
+      "guide": "realtime-01-sse-websocket-webtransport-reliability.md",
+      "anchor": "realtime-01",
+      "concepts": [
+        {
+          "id": "realtime-flow-ack",
+          "heading": "一、消息的确认要说清已经走到哪一步"
+        },
+        {
+          "id": "realtime-flow-choice",
+          "heading": "二、协议选择跟着消息任务走"
+        },
+        {
+          "id": "realtime-flow-sse",
+          "heading": "三、SSE 帧有格式，事件 ID 却没有自动业务语义"
+        },
+        {
+          "id": "realtime-flow-transport",
+          "heading": "四、可靠传输不等于业务恰好处理一次"
+        },
+        {
+          "id": "realtime-flow-cursor",
+          "heading": "五、只推进已经连续应用的游标"
+        },
+        {
+          "id": "realtime-flow-lab",
+          "heading": "六、用真实 SSE 观察重复、续接和补齐"
+        },
+        {
+          "id": "realtime-flow-snapshot",
+          "heading": "七、重复、乱序与快照需要分别解释"
+        },
+        {
+          "id": "realtime-flow-backpressure",
+          "heading": "八、慢消费者需要有边界的队列"
+        },
+        {
+          "id": "realtime-flow-authorization",
+          "heading": "九、连接身份不是永久订阅许可"
+        },
+        {
+          "id": "realtime-flow-queries",
+          "heading": "十、实时事件把查询与写入连接起来"
+        },
+        {
+          "id": "realtime-flow-evolution",
+          "heading": "十一、多实例与长期连接扩大版本责任"
+        },
+        {
+          "id": "realtime-flow-evidence",
+          "heading": "十二、验证恢复后的事实，而不只看收到消息"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-recovery-delta",
+          "reason": "增量事件的重复和缺口必须由应用恢复规则解释。"
+        },
+        {
+          "concept": "query-state-notifications",
+          "reason": "事件可以触发查询失效，也可以按可靠版本合并。"
+        },
+        {
+          "concept": "mutation-recovery-outcome",
+          "reason": "已发送与已提交之间的未知结果需要保留原意图。"
+        },
+        {
+          "concept": "contract-test-messages",
+          "reason": "重连遇到不同版本消息时，也需要兼容的消费合同。"
+        }
+      ]
+    },
+    {
+      "id": "COMP-01",
+      "title": "让组件的输入与行为可预期",
+      "question": "同一个搜索面板放在不同页面，怎样让调用者不用猜测它会做什么？",
+      "summary": "用资料搜索面板串起职责、公共 API、事件、组合、语义、焦点、样式与演进，再用双实例观察真实行为。",
+      "outcomes": [
+        "写出输入、事件、状态和组合点的明确含义",
+        "划清页面业务决定与组件交互责任",
+        "通过多实例和错误恢复检查可观察承诺"
+      ],
+      "prerequisites": [
+        "a11y-01-wcag-testing-governance.md#a11y-01"
+      ],
+      "guide": "comp-01-component-responsibility-api-composition.md",
+      "anchor": "comp-01",
+      "concepts": [
+        {
+          "id": "component-contract-responsibility",
+          "heading": "一、用一句用户任务描述组件职责"
+        },
+        {
+          "id": "component-contract-api",
+          "heading": "二、把公共契约写成调用者能回答的问题"
+        },
+        {
+          "id": "component-contract-states",
+          "heading": "三、用明确状态替代相互打架的开关"
+        },
+        {
+          "id": "component-contract-events",
+          "heading": "四、事件先说清意图，再说清载荷"
+        },
+        {
+          "id": "component-contract-composition",
+          "heading": "五、组合点承载差异，也分配责任"
+        },
+        {
+          "id": "component-contract-defaults",
+          "heading": "六、默认值和语义变体会影响真实操作"
+        },
+        {
+          "id": "component-contract-focus",
+          "heading": "七、更新结果时，把输入和焦点留给用户"
+        },
+        {
+          "id": "component-contract-adapter",
+          "heading": "八、把后端形状转换成组件需要的模型"
+        },
+        {
+          "id": "component-contract-style",
+          "heading": "九、样式开放到哪里，就要维护到哪里"
+        },
+        {
+          "id": "component-contract-lab",
+          "heading": "十、用两个实例观察同一份契约"
+        },
+        {
+          "id": "component-contract-verification",
+          "heading": "十一、验证用户承诺，不把内部结构写成合同"
+        },
+        {
+          "id": "component-contract-evolution",
+          "heading": "十二、让文档和迁移跟上真实用法"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "business-api-models",
+          "reason": "组件消费适合视图的模型，避免直接依赖整个后端 DTO。"
+        },
+        {
+          "concept": "query-state-view",
+          "reason": "已有结果、刷新和失败要在视图中有明确表示。"
+        },
+        {
+          "concept": "business-access-enforcement",
+          "reason": "只读与入口隐藏不能代替服务端执行授权。"
+        },
+        {
+          "concept": "component-test-contract",
+          "reason": "验证公共行为、键盘与事件，不固定内部包裹结构。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,127 +1,263 @@
-# 接口语义与模型边界知识点讲义
+# 接口传来的字段，怎样成为页面上的事实
 
 ## BIZ-04 API 契约、DTO 与前端模型
 
-接口不是一组能通过类型检查的字段，而是调用双方对操作含义、输入限制、成功结果、失败方式、版本演进和可观察性的共同承诺。前端若直接把服务端 JSON 当页面状态，服务端的字段命名、空值习惯和发布节奏就会渗入每个组件；一旦出现旧客户端、未知枚举、部分响应或协议切换，问题便从一个 mapper 扩散到整个产品。本讲建立从业务操作到传输对象、领域解释与界面模型的分层方法。
+资料导入接口返回 `progress: 0`，页面却显示“没有进度”；另一次服务升级增加了 REVIEWING 状态，旧客户端把它显示成“已完成”。这些问题的代码往往很短：一个 `||`，一个默认成功的 `switch` 分支。真正缺少的是字段和结果的共同含义。
+
+**API Contract** 不只描述报文长什么样，还说明调用后能确认什么、哪些信息仍未知、失败后如何继续。本讲以课程资料的修改和导入查询为例，把业务意图、传输数据、内部解释与页面表达接起来。
 
 ### 学习前先确认
 
-- 直接前置：[BIZ-01 业务对象、关系与统一语言](../chinese-guides/biz-01-domain-objects-relations-ubiquitous-language.md#biz-01)。本讲用业务对象、命令、事件和统一语言定义接口语义。
-- 直接前置：[TS-07 运行时契约、Schema 与错误建模](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)。本讲假定你已经知道外部输入必须在运行时校验，静态类型不能证明网络数据可信。
+- 直接前置：[BIZ-01 业务对象、关系与统一语言](../chinese-guides/biz-01-domain-objects-relations-ubiquitous-language.md#biz-01)。接口需要沿用已经明确的对象和动作。
+- 直接前置：[TS-07 运行时契约、Schema 与错误建模](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#ts-07)。外部数据进入 TypeScript 之前，仍需运行时校验。
 
-### 一、契约先描述业务操作，再描述报文
+### 一、先写调用者能得到什么承诺
 
-**接口契约（API Contract）**应先回答调用者要完成什么业务意图，例如“提交报销”“查询导入进度”“撤销草稿”，再规定请求、成功、业务拒绝、临时故障和未知结果。只记录 URL、方法和字段类型，会遗漏权限、幂等、状态前置条件、分页顺序、时间单位与错误后的恢复方式。
+“保存资料，返回 JSON”无法指导调用方处理重试和冲突。可以先写一张简短操作卡，明确成功之后的业务事实。
 
-一个操作合同至少包含主体与权限、目标资源、命令语义、前置版本、字段约束、成功后的事实、稳定错误码、重试/幂等规则、缓存语义和审计信息。读取接口还要说明快照时间、排序稳定性与后续页游标；写入接口要说明 200/201/202/204 各自代表什么，不能由客户端猜测。
+| 项目 | 修改资料标题的示例合同 |
+| --- | --- |
+| 意图 | 修改指定资料的标题，不改变归属机构 |
+| 前提 | 当前主体有修改权限，读取版本仍有效 |
+| 输入 | 资料 ID、期望版本、明确的可修改字段 |
+| 成功 | 返回服务端确认后的对象及新版本 |
+| 冲突 | 不执行覆盖，返回可解释的冲突结果 |
+| 响应丢失 | 不能推断是否提交，按操作记录或幂等协议恢复 |
+| 缓存影响 | 详情、相应列表和表单基线需要更新 |
 
-REST、RPC 或消息只是承载方式。把 `POST /orders/{id}:approve` 改成 `ApproveOrder` RPC，不会自动解决“谁可批准、重复请求如何处理、批准后返回哪个版本”。协议设计必须服从业务合同，而不是以传输风格代替语义。
+合同中的“成功”决定页面能说什么。创建后台任务的 202 表示已经接受处理，不是导入成功；204 没有响应正文，不能一律调用 `response.json()`；读取任务得到 200，只说明这次查询成功，任务状态仍可能是 FAILED。
 
-### 二、DTO 是边界形状，不是业务实体
+这些语义与传输状态需要配合。避免把所有错误都装进 200 后再让客户端猜；已有协议若这样设计，适配层必须明确识别业务拒绝。HTTP 通用语义可在 [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) 查证，具体操作成功后的承诺仍由双方约定。
 
-**数据传输对象（Data Transfer Object）**描述穿过网络或进程边界的数据形状。它为序列化、兼容和传输效率服务，可能使用字符串时间、可选字段、协议枚举和分页包装。领域模型则表达业务含义与不变量；界面模型表达用户此刻需要看到、编辑和操作的状态。
+### 二、DTO、领域模型和展示模型分别解决一个问题
 
-同一订单 DTO 可以被映射成列表行、详情页和审批面板三个界面模型。列表需要摘要与可分页键，详情需要完整关系，审批面板需要可用动作和拒绝原因。让组件直接访问原始 DTO，会把字段缺失、协议默认值与格式化逻辑复制多次，也让页面无法清晰表达加载、未知和权限不足。
+**DTO** 是跨边界传输的数据结构。它可能使用字符串时间、协议状态和分页包装，不必与数据库实体或页面组件的结构相同。
 
-不要把数据库表、领域实体和 DTO 强行做成同一个类型。数据库迁移、内部不变量与对外兼容的变化速度不同；共用类型会让内部字段意外暴露，或为了兼容旧客户端长期扭曲领域模型。
+领域模型解释业务事实，例如某份资料是否处于待复核；展示模型把事实映射成当前页面的文案、操作和格式。列表需要短标题，详情需要完整内容，表单需要允许暂时为空的输入，这三者可以不同。
 
-### 三、缺失、null、零值与空集合有不同含义
+```mermaid
+flowchart TB
+  A[网络数据 unknown] --> B[解析形状 大小和字段约束]
+  B --> C[DTO 与协议版本]
+  C --> D[解释状态 单位和缺失含义]
+  D --> E[内部业务事实]
+  E --> F[列表投影]
+  E --> G[详情投影]
+  E --> H[表单初值与独立草稿]
+  B --> I[输入不符合合同]
+```
 
-JSON 中字段缺失可能表示旧服务未提供、调用者未请求或值不适用；`null` 表示服务明确传递一个空/未知状态；`0`、`false`、空字符串和空数组都是具体值。使用 `value || fallback` 会把这些状态压扁，导致零金额显示为无数据、明确 false 变成默认 true。
+不是每个简单应用都需要三套几乎相同的文件。真正需要分开的是责任：谁验证实际输入，谁解释未知值，谁维护业务规则，谁决定展示。边界变化频率不同、来源不可信或有多个消费者时，显式适配通常更容易维护。
 
-每个字段应写空值表：是否必需、缺失时的兼容行为、是否允许 null、业务默认由谁决定、空集合是否代表已加载且无结果。业务默认应在拥有规则的一层应用，而不是由 JSON Schema 的 `default` 或 protobuf 零值偷偷决定。
+数据库新增内部备注，不意味着响应自动多一个字段；页面增加展开状态，也不应该改变服务端领域对象。按用途构造对象，可以避免把一处结构变化扩散到所有层。
 
-部分响应和字段选择需要携带“哪些字段已确认”的语义。用列表摘要覆盖详情缓存，可能把未返回字段误删；更安全的做法是分开缓存模型，或以明确补丁合并并保留版本。
+### 三、缺失、null、零值和空集合要分别解释
 
-### 四、未知枚举必须保持未知，而不是伪装成功
+在本讲的导入查询合同里，progress 缺失表示该版本未提供，null 表示当前阶段无法计算百分比，0 表示已经知道总工作量但尚未处理。空数组 `errors: []` 表示本次返回的错误集合为空，和没有请求错误详情不是一回事。
 
-服务端先发布新状态 `BLOCKED`，旧客户端只认识 `PENDING/SUCCEEDED/FAILED`。若 mapper 的 `default` 返回 SUCCEEDED，用户会看到严重的虚假完成。客户端应保留原始未知值，映射为“状态待确认”或受限能力，并记录兼容遥测。
+| 值 | 可能的合同含义 | 页面不该擅自做什么 |
+| --- | --- | --- |
+| 字段缺失 | 未提供、未选择或旧协议不支持 | 不自动猜成零 |
+| null | 明确没有值或目前未知 | 不自动猜成成功 |
+| 0 | 一个有效数值 | 不被 `value || fallback` 吞掉 |
+| false | 明确关闭或否定 | 不替换成默认 true |
+| 空字符串 | 允许的空文本，或应被校验拒绝 | 不按所有字段通用处理 |
+| 空数组 | 已返回一个空集合 | 不等于还没加载 |
 
-关闭世界的编译时联合类型适合内部穷尽检查，开放世界的网络枚举必须准备未知分支。protobuf 能保留未知字段或以数值承载未知枚举，并不意味着业务层理解其含义。传输可解码与语义兼容是两个问题。
+`??` 只会为 null 和 undefined 使用后备值，能保护 0 和 false，却仍会合并 null 与缺失。如果业务需要区分两者，必须保留字段存在性，不能仅把 `||` 全替换成 `??` 就结束。
 
-新增可选字段通常向后兼容，删除或改变既有字段语义通常破坏兼容；新增枚举对没有未知分支的消费者也可能破坏。每次变更应按真实消费者能力评估，不靠“JSON 多字段会被忽略”这种单点判断。
+```js example=biz04-presence-values
+const samples = [{}, { progress: null }, { progress: 0 }];
+for (const dto of samples) {
+  const source = !Object.hasOwn(dto, 'progress') ? 'missing'
+    : dto.progress === null ? 'null' : 'number';
+  console.log(source, dto.progress ?? '无法计算');
+}
+// => missing 无法计算
+// => null 无法计算
+// => number 0
+```
 
-### 五、防腐层集中吸收外部变化
+两行都显示“无法计算”，内部却保留了不同原因，方便决定是否请求新版本或等待下一阶段。展示可以简化，事实不必因此丢失。
 
-**防腐层（Anti Corruption Layer）**在外部 DTO 与内部领域/UI 模型之间完成校验、单位转换、枚举解释、错误归一、版本兼容和默认策略。它保护内部统一语言不被某个后端或第三方 API 的偶然形状污染。
+### 四、完整转换器先解析，再处理未知状态
 
-```ts
+网络世界可能比当前客户端的联合类型更大。新增状态不应该落进默认完成分支。下面给出可以独立运行的完整例子：解析最低必要形状，再生成进度展示结果。百分比只代表进度，不单独证明任务成功。
+
+```ts example=biz04-progress-mapper
+type ProgressDto = { status: string; progress?: number | null };
 type ProgressView =
   | { kind: 'known'; percent: number }
   | { kind: 'unknown'; source: 'missing' | 'null' }
   | { kind: 'unsupported'; rawStatus: string };
-
+function parseProgress(input: unknown): ProgressDto | null {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) return null;
+  const record = input as Record<string, unknown>;
+  if (typeof record.status !== 'string' || !record.status || record.status.length > 80) return null;
+  if (!Object.hasOwn(record, 'progress')) return { status: record.status };
+  const value = record.progress;
+  if (value !== null && (typeof value !== 'number' || !Number.isFinite(value)
+    || value < 0 || value > 100)) return null;
+  return { status: record.status, progress: value };
+}
 function mapProgress(dto: ProgressDto): ProgressView {
-  if (!Object.hasOwn(dto, 'progress')) return { kind: 'unknown', source: 'missing' };
+  if (!['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED'].includes(dto.status)) {
+    return { kind: 'unsupported', rawStatus: dto.status };
+  }
+  if (dto.progress === undefined) return { kind: 'unknown', source: 'missing' };
   if (dto.progress === null) return { kind: 'unknown', source: 'null' };
-  if (!knownStatuses.has(dto.status)) return { kind: 'unsupported', rawStatus: dto.status };
   return { kind: 'known', percent: dto.progress };
+}
+for (const input of [
+  { status: 'RUNNING', progress: 0 }, { status: 'RUNNING', progress: null },
+  { status: 'RUNNING' }, { status: 'REVIEWING', progress: 100 },
+  { status: 'RUNNING', progress: '80' },
+]) {
+  const dto = parseProgress(input);
+  console.log(JSON.stringify(dto === null ? { kind: 'invalid' } : mapProgress(dto)));
+}
+// => {"kind":"known","percent":0}
+// => {"kind":"unknown","source":"null"}
+// => {"kind":"unknown","source":"missing"}
+// => {"kind":"unsupported","rawStatus":"REVIEWING"}
+// => {"kind":"invalid"}
+```
+
+REVIEWING 即使携带 100，也仍是客户端不理解的状态。解析失败与未知状态不同：前者违背形状合同，后者形状合法但缺少业务解释。可以分别呈现“数据暂不可用”和“状态待确认”，限制高风险操作并留下必要诊断。
+
+转换器常被放在 **Anti-corruption Layer** 中，集中吸收外部协议变化。它应有清晰职责，不能变成任意吞错、随意补默认值的地方。更多校验边界见 [TS-07](../chinese-guides/ts-07-runtime-contracts-validation-error-models.md#三用完整解析器把-unknown-变成可用结果)。
+
+### 五、局部修改必须说明省略和清空分别代表什么
+
+读取时的缺失含义，不能直接套到更新请求上。本例给编辑请求定义：省略 description 表示保持原值；传 null 表示清空；传字符串表示替换；其他类型拒绝。
+
+```js example=biz04-explicit-patch
+function applyEdit(current, patch) {
+  if (!Object.hasOwn(patch, 'description')) return { ...current };
+  if (patch.description !== null && typeof patch.description !== 'string') {
+    throw new TypeError('description 必须是字符串或 null');
+  }
+  return { ...current, description: patch.description };
+}
+const before = { title: '摄影入门', description: '需准备相机' };
+console.log(JSON.stringify(applyEdit(before, {})));
+console.log(JSON.stringify(applyEdit(before, { description: null })));
+console.log(JSON.stringify(applyEdit(before, { description: '' })));
+// => {"title":"摄影入门","description":"需准备相机"}
+// => {"title":"摄影入门","description":null}
+// => {"title":"摄影入门","description":""}
+```
+
+这是自定义单字段更新规则，没有实现完整 PATCH 协议，也没有做授权。它故意只处理 description，不将整个请求对象展开到实体上。
+
+如果选择 `application/merge-patch+json`，就必须遵循 JSON Merge Patch：对象成员中的 null 表示删除该成员，省略表示不修改；这与上面“保留字段且值为 null”的规则不同。数组通常作为整体替换，也不是逐项追加。[RFC 7396](https://www.rfc-editor.org/rfc/rfc7396.html)
+
+因此接口不能只写“支持 PATCH”，还要说明媒体类型、字段语义、校验和并发前提。前端保存时应构造明确的修改载荷，不能把校验信息、UI 开关和只读字段一起发送。
+
+### 六、错误结构应该告诉调用方下一步做什么
+
+程序依据稳定 code 或 problem type 分类，用户阅读可改进的说明文字。别让客户端依赖“该资料已被他人修改”这句文案做逻辑判断，也别把内部 SQL、堆栈和凭据放进响应。
+
+可以使用 **Problem Details** 的通用结构，并按项目合同增加业务字段。下面是一个示意报文，实际 HTTP 响应状态也应为 412。
+
+```json
+{
+  "type": "https://example.test/problems/stale-material",
+  "title": "资料已更新",
+  "status": 412,
+  "code": "STALE_MATERIAL",
+  "detail": "请保留当前输入，读取最新版本后再决定如何合并。",
+  "requestId": "request-demo-18"
 }
 ```
 
-转换器应尽量纯粹、可测试且只有一个权威实现。不要在每个组件里写相似 switch，也不要把远程错误对象原样抛到 UI。若不同页面确有不同表达，在共享领域解释之后再生成各自 view model。
+`example.test` 只是教学域名。RFC 9457 的 status 是对实际 HTTP 状态的补充，不应拿正文里的状态偷偷替换传输层语义。扩展字段、字段错误路径和可重试条件仍要形成自己的稳定合同。[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html)
 
-### 六、错误合同要支持判断和恢复
+输入错误可以引导修正字段；权限拒绝需要重新判断能力；冲突保留草稿；未知结果先查询。错误边界和恢复的完整过程放在 [BIZ-07](../chinese-guides/biz-07-errors-idempotency-eventual-consistency.md#biz-07)，这里先让报文承载足够信息。
 
-区分输入无效、认证失败、无权、状态冲突、限流、依赖暂不可用、超时未知结果和内部故障。HTTP 状态提供通用语义，稳定业务错误码说明产品原因，`requestId` 帮助关联日志，公开 message 面向用户；调试堆栈与敏感内部信息不应进入响应。
+### 七、版本、时间、单位和分页都属于合同
 
-200 只说明 HTTP 层成功，响应体仍可能表达业务拒绝；同样，网络断开不证明写入未执行。客户端根据错误类别决定修正输入、重新认证、刷新对象、等待重试、查询意图状态或联系支持。所有失败都显示“请稍后重试”会诱导重复写入，也让用户丢失可修正信息。
+`duration: 90` 是秒还是分钟？`updatedAt` 是 UTC 时间点还是没有时区的本地文字？`total: 0` 是已知为空还是没有统计？这些细节足以改变用户判断，不能由组件自己猜。
 
-错误结构要兼容演进。新增 details 项时旧客户端可忽略；更换错误码含义或把 409 改成 200+flag 则可能破坏已有恢复逻辑。服务端日志与客户端遥测应记录规范化类别，而不是依赖可变文案。
+对象版本用于并发前提，协议版本用于解释报文，二者不是一个概念。资料 v18 可能仍使用接口合同 v2；Schema 没变，不代表资料内容没有被别人修改。
 
-### 七、HTTP+JSON、gRPC-Web 与消息各有边界
+分页也要约定排序和快照。按更新时间排序时，多个对象可能同一时间，需要稳定的次级键；游标绑定当前筛选与权限范围，不应从“全部资料”页面直接复用于另一个机构。游标能改善定位，不能凭空制造整个查询期间不变的快照。
 
-HTTP+JSON 适合浏览器广泛互操作、可观察的请求响应和缓存语义，调试成本低。gRPC-Web 适合组织已有 protobuf 合同、生成客户端和代理基础设施的场景，但浏览器与代理限制、流模式、错误 metadata 和版本治理仍需设计。异步消息适合解耦长任务和事件通知，却需要持久状态查询、幂等与重放。
+列表响应可能只有标题与状态，详情还包含正文。把列表摘要替换整个详情缓存，会把“未返回”误解成“已删除”。可以分开模型，或使用明确的字段掩码与版本合并，具体编辑过程见 [BIZ-05](../chinese-guides/biz-05-form-table-detail-state-consistency.md#biz-05)。
 
-不要因为“强类型”就选择某协议。生成类型不能证明运行时对端正确，也不能替代业务解释。选型表至少比较调用方向、流式需求、浏览器/代理支持、缓存、调试、错误、兼容、消息大小和组织运维能力。
+### 八、缓存验证与写入前提解决不同问题
 
-同一业务操作可以有多个适配器，但领域合同应一致。HTTP 409 与 gRPC `ABORTED` 可以映射到同一版本冲突；消息消费失败则进入重试/死信和可查询处理状态。协议差异由适配层吸收，界面不应出现三个互相矛盾的错误模型。
+ETag 是服务端给响应表示的验证器，客户端按原样使用，不解析其中数字来推断全局顺序。`If-None-Match` 常用于检查是否可以继续使用已有响应；`If-Match` 常用于写入前确认原前提仍成立。
 
-### 八、版本演进优先兼容窗口而非路径复制
+```http
+GET /materials/photo-intro
 
-**兼容性（Compatibility）**包含旧消费者调用新提供者、新消费者调用旧提供者以及滚动发布期间的混合组合。先采用可加性变化：增加可选字段、扩大读取容忍、双写/双读迁移；破坏性变更需要弃用公告、使用度量、迁移截止和删除条件。
+HTTP/1.1 200 OK
+ETag: "material-18"
+Cache-Control: private, no-cache
 
-路径 `/v2` 能隔离大版本，却不会自动治理字段语义和旧版本退役。无限保留版本会增加安全与测试面。更细粒度的兼容策略是 expand—migrate—contract：先让提供方同时支持新旧，迁移消费者并观测，再删除旧合同。
+PATCH /materials/photo-intro
+If-Match: "material-18"
+Content-Type: application/json
 
-版本信息可以位于媒体类型、头、Schema 或接口路径，选择哪种不如生命周期清楚重要。数据库列、事件 Schema 与客户端缓存也要纳入发布顺序；只改 OpenAPI 文件而未部署实现，或部署实现却不更新合同，都会造成虚假安全感。
+{"title":"摄影入门新版"}
+```
 
-### 九、缓存、分页和时间是契约的一部分
+这是报文示意，省略了正文长度等实际报文细节。`private` 约束共享缓存，`no-cache` 表示复用前验证，不是禁止保存；敏感内容需要禁止存储时，应考虑 `no-store`。缓存策略与业务需求一起决定。
 
-读取响应应说明可缓存范围、ETag/Last-Modified、Vary 维度和私有数据限制。租户、用户、语言、权限或筛选影响响应时，缓存键必须包含相应维度。把认证响应放进共享缓存是严重泄露风险。
+If-Match 使用强比较，弱 ETag 不能作为等价的写入前提。前提不成立通常返回 412；业务层自行定义的版本冲突也常使用 409，双方必须约定清楚。授权不能因为缓存验证命中而跳过，详见 [BIZ-03](../chinese-guides/biz-03-rbac-abac-data-permissions.md#biz-03)。
 
-偏移分页在集合持续写入时可能重复或跳过；游标分页需要稳定排序键、方向和过期策略。客户端不能把游标当业务 ID，也不能对不同筛选复用。总数是精确快照、估算还是未知，也应在合同中明确。
+### 九、换成 Protobuf，也不能省掉字段含义
 
-时间字段写明时区、精度和区间语义。推荐传输明确的时间点或带 offset 字符串，领域层转换；“截止当天”究竟是闭区间还是下一个时间点前，应由业务规则定义。金额则传最小货币单位或明确十进制定点，避免浮点与单位猜测。
+HTTP+JSON 适合常见浏览器接口，便于观察和调试；Protobuf 可以配合生成代码与 RPC 体系管理结构，但“能解码”不代表“懂业务”。gRPC-Web 还要核对所用实现、代理和流模式的支持，不能直接照搬原生 gRPC 的全部能力。
 
-### 十、Webhook 与事件合同需要真实性和重放设计
+字段存在性尤其值得留意。采用隐式 presence 的标量字段时，默认零值可能无法区分“未设置”与“明确设置为零”；显式 presence 或 FieldMask 可以表达不同需求，具体行为取决于语法、edition 和生成器。[Protobuf Field Presence](https://protobuf.dev/programming-guides/field_presence/)
 
-Webhook 是提供方主动调用消费者，必须有事件 ID、类型、发生时间、资源版本、签名与重放窗口。接收 2xx 只表示消费者接受投递，不自动证明业务已完成；提供方可能重试，消费者必须幂等。
+```text
+业务含义                  JSON 合同                  Protobuf 设计需明确
+未提供百分比              省略 progress              是否跟踪字段存在性
+明确为 0                  progress: 0                不能因默认值丢失意图
+将字段清空                约定 null 或专门操作        FieldMask / presence / 专门命令
+未知业务状态              保留 rawStatus 并降级       解码保留能力与业务未知分支分别设计
+```
 
-事件描述已发生事实，不能把一个可能被拒绝的命令伪装成事实。Schema 演进遵守兼容原则，消费者不认识的新事件类型应安全记录或忽略，不能使整个通道崩溃。敏感内容最小化，必要时只发送对象引用再由有权消费者查询。
+不要为了选择协议而先引入不需要的代理和生成链。比较调用方向、消息大小、流式需求、调试与兼容成本，选择团队能维护的方案；让接口适配器把协议错误映射为稳定业务结果。
 
-同步响应、异步事件和查询结果最终要能按对象 ID、事件 ID 与 request ID 关联。没有关联标识时，超时和重复投递很难判断，用户也无法得到可靠恢复状态。
+### 十、通知事件不替代状态查询，Webhook 也需要合同
 
-### 十一、验证要覆盖报文之外的语义
+资料导入完成后，服务端可能推送事件或发送 Webhook。事件需要稳定 ID、类型、对象标识、版本和必要事实，帮助接收方识别重复及关联原任务。
 
-Schema 测试验证必需字段、类型和格式；mapper 单元测试覆盖缺失、null、零值、未知枚举与单位；提供者集成测试验证状态码和业务错误；消费者契约测试验证真实依赖的兼容面；端到端测试验证关键恢复路径。它们保护不同层，不能互相替代。
+Webhook 到达时先按协议验证真实性、时间窗口和原始报文，再可靠接收。若签名基于原始字节，不能先重新序列化 JSON 再用另一份字节验签。固定时间窗口限制重放范围，事件去重还需独立处理。
 
-建立新旧版本矩阵：旧客户端+新服务、新客户端+旧服务、混合代理、慢响应、部分响应和重复事件。对每个写操作注入响应丢失，确认客户端不会以新意图重复副作用。对未知字段和枚举做生成式输入，确保 UI 不会误报成功。
+接收方返回 2xx 的含义要约定：通常只是成功接受本次投递，不自动证明后续业务全部完成。提供方仍可能因响应丢失重发。未知事件类型可以进入明确的兼容分支，但不能吞掉已知关键事件的处理失败。
 
-监控中比较 Schema 校验失败、未知枚举、弃用字段使用、错误类别和客户端版本。兼容问题若只能等用户截图发现，说明合同没有进入生产观测。
+推送可能中断，查询仍要能恢复事实。具体任务的版本、进度和取消协议，继续看 [BIZ-06](../chinese-guides/biz-06-async-jobs-import-export-progress.md#biz-06)。
 
-### 十二、常见反例与适用边界
+### 十一、兼容看消费者实际依赖了什么
 
-- 用 TypeScript `as` 把外部数据强转成内部类型。
-- 页面直接 import DTO，各自解释 null、时间和枚举。
-- 把 HTTP 200、protobuf 可解码或 mock 能返回当作语义正确。
-- 将未知枚举映射为成功，或把缺失字段无条件填业务默认。
-- 只维护一份静态接口文档，没有实现验证、使用度量和弃用计划。
-- 为每次小改动创建永久 `/vN`，却不关闭旧版本。
+新增可选字段往往较容易兼容，但旧客户端若严格拒绝未知字段，仍会失败；新增枚举若旧客户端默认成功，则更危险。兼容性需要看真实消费者行为，不能仅凭“JSON 能多放字段”判断。
 
-单体内部的简单函数调用不需要模拟网络 DTO；只要边界真实存在、变化节奏不同或输入不可信，就应分离合同与模型。OpenAPI/JSON Schema 的解析生成属于专门工具知识，消费者驱动兼容门禁由 TEST-04 深入，本讲聚焦语义与模型边界。
+常用迁移顺序是先扩展读取能力，再切换写入并迁移消费者，最后收缩旧支持。路径 `/v2` 能提供隔离入口，却不能自动清除旧数据、缓存和事件，也不能替你决定旧版本何时退役。
 
-### 十三、学完后应能说明
+一张小矩阵可以覆盖关键组合：旧客户端读新服务，新客户端读旧服务，滚动发布中两种服务同时运行。标注哪些字段可缺省、哪些状态不理解、哪些操作应暂停，再决定需要哪些有针对性的例子。
 
-你应能为一个业务操作写出包含成功、拒绝、未知结果和版本的合同；区分 DTO、领域模型和界面模型；设计缺失/null/未知枚举的防腐映射；解释协议选型与兼容窗口；并用 Schema、mapper、提供者和消费者证据证明新旧客户端不会误解同一业务事实。
+协议结构生成由专门工具处理；这篇的重点是语义边界。关于生成与消费者门禁，可分别继续到 API 和 TEST 相关知识点，不必为了一个简单字段变化搭建整套新平台。
 
-继续查证可参考 [RFC 9110 HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html) 与 [Protocol Buffers Programming Guides](https://protobuf.dev/programming-guides/)。
+### 十二、把合同落实到例子和运行观察
+
+先用少量有区分力的输入核对 mapper：0、null、缺失、未知枚举和错误类型；再确认真实服务返回的状态与字段是否一致。对于写入，还要观察版本冲突后是否真的没有覆盖，以及响应丢失后能否恢复原意图。
+
+生成类型检查的是调用代码，运行时解析检查的是实际数据，真实接口观察检查的是部署实现。三者各有责任，不能用其中一个替另两个作保证。
+
+保留可定位的合同版本、示例和兼容决定。运行时记录解析失败、未知状态和弃用字段的必要计数，避免复制敏感正文。发现异常后能回答“哪种客户端、哪份合同、哪个字段被误解”，就能把修复限制在正确边界。
+
+### 动手想一想
+
+服务端返回新状态 REVIEWING，且 progress 为 100。旧页面应该显示完成、失败，还是待确认？先分别判断结构是否合法、状态是否认识、百分比能证明什么，再决定文案与可用操作。
+
+### 参考与延伸阅读
+
+- [RFC 9110：HTTP 语义](https://www.rfc-editor.org/rfc/rfc9110.html)：查询成功状态、条件请求和缓存验证器的规范边界。
+- [RFC 7396：JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7396.html)：核对省略、null 与数组替换的特定协议语义。
+- [RFC 9457：Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html)：查询通用错误结构及扩展规则。
+- [Protobuf：Field Presence](https://protobuf.dev/programming-guides/field_presence/)与 [gRPC-Web 官方项目](https://github.com/grpc/grpc-web)：按实际协议版本核对字段存在性和浏览器能力。

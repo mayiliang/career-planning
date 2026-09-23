@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "batch": "B13",
+  "title": "从可访问操作到浏览器协作",
+  "reviewedOn": "2026-09-14",
+  "chapters": [
+    {
+      "id": "A11Y-01",
+      "title": "让操作完整可达",
+      "question": "用户能否找到入口、完成操作，并理解错误与结果？",
+      "summary": "通过标题编辑和阅读排序，把规范、语义、焦点、错误和通知连接成完整任务。",
+      "outcomes": [
+        "从具体障碍定位规范要求",
+        "设计名称、焦点和错误恢复",
+        "区分自动检查与真实辅助技术证据"
+      ],
+      "guide": "a11y-01-wcag-testing-governance.md",
+      "anchor": "a11y-01",
+      "prerequisites": [
+        "web-01-html-semantics-forms-accessibility.md#web-01"
+      ],
+      "concepts": [
+        {
+          "id": "a11y-task-path",
+          "heading": "一、从完整任务找到障碍"
+        },
+        {
+          "id": "a11y-wcag-levels",
+          "heading": "二、读懂 WCAG 的层次与边界"
+        },
+        {
+          "id": "a11y-name-role",
+          "heading": "三、名称、角色和状态要与可见界面一致"
+        },
+        {
+          "id": "a11y-editor-lab",
+          "heading": "四、亲手操作一个有错误恢复的资料页"
+        },
+        {
+          "id": "a11y-focus",
+          "heading": "五、焦点应跟随用户任务"
+        },
+        {
+          "id": "a11y-errors",
+          "heading": "六、错误要说明原因，也要给出下一步"
+        },
+        {
+          "id": "a11y-live-region",
+          "heading": "七、动态通知要少而清楚"
+        },
+        {
+          "id": "a11y-pointer",
+          "heading": "八、鼠标操作也需要宽容度"
+        },
+        {
+          "id": "a11y-equivalent-media",
+          "heading": "九、等价信息取决于图片的用途"
+        },
+        {
+          "id": "a11y-desktop-preferences",
+          "heading": "十、桌面放大与用户偏好也是正常使用"
+        },
+        {
+          "id": "a11y-evidence",
+          "heading": "十一、每种检查只能支持相应结论"
+        },
+        {
+          "id": "a11y-governance",
+          "heading": "十二、把一次修复变成团队可复用的约定"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "native-dialog",
+          "reason": "把焦点选择落实到原生模态表单。"
+        },
+        {
+          "concept": "runtime-delegation",
+          "reason": "解释排序按钮如何从实际点击目标找到动作。"
+        },
+        {
+          "concept": "css-text-size",
+          "reason": "把桌面文字放大接回尺寸与布局规则。"
+        },
+        {
+          "concept": "review-comments",
+          "reason": "把可访问性问题写成具体、可行动的评审请求。"
+        }
+      ]
+    },
+    {
+      "id": "BROWSER-01",
+      "title": "拆开渲染、事件与存储",
+      "question": "一次点击之后，画面、事件和数据分别发生了什么？",
+      "summary": "用传播日志和事务回滚对照，区分显示变化、处理次数与真正提交。",
+      "outcomes": [
+        "解释渲染成本与同步布局",
+        "追踪事件路径并清理重复监听",
+        "按事务而非单次请求判断数据提交"
+      ],
+      "guide": "browser-01-render-events-storage.md",
+      "anchor": "browser-01",
+      "prerequisites": [
+        "web-01-html-semantics-forms-accessibility.md#web-01",
+        "js-04-async-promise-browser-event-loop.md#js-04"
+      ],
+      "concepts": [
+        {
+          "id": "runtime-three-paths",
+          "heading": "一、先区分画面、行为和数据"
+        },
+        {
+          "id": "runtime-render-stages",
+          "heading": "二、渲染阶段各自在算什么"
+        },
+        {
+          "id": "runtime-forced-layout",
+          "heading": "三、为什么读一个宽度会让页面停一下"
+        },
+        {
+          "id": "runtime-critical-path",
+          "heading": "四、首次出现与下一次响应是不同问题"
+        },
+        {
+          "id": "runtime-event-lab",
+          "heading": "五、运行一个能看见事件路径的页面"
+        },
+        {
+          "id": "runtime-delegation",
+          "heading": "六、传播、默认行为和委托不是一回事"
+        },
+        {
+          "id": "runtime-listener-lifetime",
+          "heading": "七、监听器也需要清理和数据边界"
+        },
+        {
+          "id": "runtime-storage-choice",
+          "heading": "八、存储先看语义，再看容量"
+        },
+        {
+          "id": "runtime-transaction-lab",
+          "heading": "九、亲眼看一次请求成功后的回滚"
+        },
+        {
+          "id": "runtime-transaction-scope",
+          "heading": "十、事务范围与时间都要短而明确"
+        },
+        {
+          "id": "runtime-schema-upgrade",
+          "heading": "十一、升级数据库时要想到另一张标签页"
+        },
+        {
+          "id": "runtime-storage-notification",
+          "heading": "十二、多标签通知与持久真源分开"
+        },
+        {
+          "id": "runtime-debug-evidence",
+          "heading": "十三、把现象转成可证伪的问题"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "observer-feedback",
+          "reason": "理解尺寸测量与写入为什么可能形成循环。"
+        },
+        {
+          "concept": "coordination-lock-lab",
+          "reason": "区分多标签通知、互斥与数据库提交。"
+        },
+        {
+          "concept": "css-intrinsic",
+          "reason": "追踪宽度改变如何让内容重新布局。"
+        },
+        {
+          "concept": "debug-facts",
+          "reason": "把性能与存储现象分成可证伪的候选。"
+        }
+      ]
+    },
+    {
+      "id": "BROWSER-02",
+      "title": "安排工作与跨页协作",
+      "question": "页面怎样及时响应，又能取消、释放和恢复工作？",
+      "summary": "从观察器到可取消切片，再用双标签实验区分广播、锁与检查点。",
+      "outcomes": [
+        "按问题选择观察器与调度入口",
+        "写出可取消且有回退的计算",
+        "解释生命周期、广播、互斥和恢复的边界"
+      ],
+      "guide": "browser-02-observers-scheduling-lifecycle-coordination.md",
+      "anchor": "browser-02",
+      "prerequisites": [
+        "browser-01-render-events-storage.md#browser-01"
+      ],
+      "concepts": [
+        {
+          "id": "observer-selection",
+          "heading": "一、先选择信号，再安排工作"
+        },
+        {
+          "id": "observer-intersection",
+          "heading": "二、交叉不等于用户真的读到了"
+        },
+        {
+          "id": "observer-lab",
+          "heading": "三、同时观察宽度、滚动与属性"
+        },
+        {
+          "id": "observer-feedback",
+          "heading": "四、尺寸回调必须能够收敛"
+        },
+        {
+          "id": "observer-records",
+          "heading": "五、DOM 记录与性能条目有不同用途"
+        },
+        {
+          "id": "scheduling-yield",
+          "heading": "六、让出主线程与等待 Promise 不同"
+        },
+        {
+          "id": "scheduling-cancel-lab",
+          "heading": "七、运行一段可以取消的批量计算"
+        },
+        {
+          "id": "scheduling-worker",
+          "heading": "八、什么时候把工作搬进 Worker"
+        },
+        {
+          "id": "lifecycle-recovery",
+          "heading": "九、页面隐藏、冻结和返回时发生什么"
+        },
+        {
+          "id": "coordination-broadcast",
+          "heading": "十、广播是提醒，不是可靠状态历史"
+        },
+        {
+          "id": "coordination-lock-lab",
+          "heading": "十一、用两个标签页观察锁的持有与释放"
+        },
+        {
+          "id": "coordination-checkpoint",
+          "heading": "十二、恢复靠检查点，外部副作用靠幂等"
+        },
+        {
+          "id": "lifecycle-resources",
+          "heading": "十三、资源要有明确的主人"
+        },
+        {
+          "id": "coordination-evidence",
+          "heading": "十四、用少量对照确认自己理解了什么"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "runtime-transaction-scope",
+          "reason": "把检查点落实为有明确范围的持久更新。"
+        },
+        {
+          "concept": "a11y-live-region",
+          "reason": "区分可见进度与需要朗读的状态。"
+        },
+        {
+          "concept": "modern-container",
+          "reason": "先判断尺寸响应能否由 CSS 完成。"
+        },
+        {
+          "concept": "review-result-guard",
+          "reason": "防止取消或切换任务后的旧结果继续提交。"
+        }
+      ]
+    },
+    {
+      "id": "WEB-04",
+      "title": "做好浮层与视觉增强",
+      "question": "怎样添加浮层和动画，同时保持焦点、状态与历史清楚？",
+      "summary": "在同一资料页观察 popover、dialog 和可关闭的过渡，再解释导航的提交责任。",
+      "outcomes": [
+        "按任务区分非模态面板与模态表单",
+        "分清更新回调与视觉过渡的阶段",
+        "保留真实链接并避免重复历史提交"
+      ],
+      "guide": "web-04-native-layered-ui-view-transitions.md",
+      "anchor": "web-04",
+      "prerequisites": [
+        "browser-01-render-events-storage.md#browser-01",
+        "a11y-01-wcag-testing-governance.md#a11y-01"
+      ],
+      "concepts": [
+        {
+          "id": "native-choose",
+          "heading": "一、先判断用户是在继续阅读还是进入新任务"
+        },
+        {
+          "id": "native-top-layer",
+          "heading": "二、top layer 为什么能越过普通层级"
+        },
+        {
+          "id": "native-popover",
+          "heading": "三、Popover 负责显示与轻触关闭"
+        },
+        {
+          "id": "native-dialog",
+          "heading": "四、Dialog 的模态来自 showModal"
+        },
+        {
+          "id": "native-ui-lab",
+          "heading": "五、运行一个带基础路径的资料列表"
+        },
+        {
+          "id": "native-baseline",
+          "heading": "六、基础可用与关闭增强要分别检查"
+        },
+        {
+          "id": "native-transition-phases",
+          "heading": "七、视图过渡分成三个阶段理解"
+        },
+        {
+          "id": "native-snapshot",
+          "heading": "八、快照中的卡片不是第二份可操作界面"
+        },
+        {
+          "id": "native-concurrency",
+          "heading": "九、连续操作先处理数据竞争，再处理动画"
+        },
+        {
+          "id": "native-real-links",
+          "heading": "十、真实链接保留浏览器本来的能力"
+        },
+        {
+          "id": "native-navigation",
+          "heading": "十一、Navigation API 不需要再推一次历史"
+        },
+        {
+          "id": "native-capabilities",
+          "heading": "十二、定位、运动与交互各自渐进增强"
+        },
+        {
+          "id": "native-evidence",
+          "heading": "十三、完成交互要核对哪些事实"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "a11y-focus",
+          "reason": "为进入、取消和关闭后的焦点选择提供依据。"
+        },
+        {
+          "concept": "runtime-render-stages",
+          "reason": "区分真实 DOM 工作与视觉快照。"
+        },
+        {
+          "concept": "review-result-guard",
+          "reason": "把导航数据竞争与动画取消分开处理。"
+        },
+        {
+          "concept": "modern-supports-color",
+          "reason": "沿具体能力检测组织可关闭的增强。"
+        }
+      ]
+    }
+  ]
+}

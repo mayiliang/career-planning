@@ -1,145 +1,231 @@
-# 组件状态所有权知识点讲义
+# 输入明明改了，为什么又跳回原来的值
 
 ## COMP-02 受控、非受控、状态同步与命令式能力
 
-一个可编辑组件经常既要独立工作，又要服从表单、路由或上层业务状态。真正困难的不是写出 `value` 和 `onChange`，而是决定谁拥有事实、初值何时生效、外部重置如何解释、异步结果能否覆盖新输入，以及焦点等命令能力应暴露到什么程度。若同一值同时由父组件和内部状态写入，界面迟早出现闪回、循环更新或无法重置。本讲建立跨框架的唯一所有者模型。
+标签编辑器最初显示“基础”。用户改成“进阶”，页面闪了一下，又变回“基础”；点清空后，旧默认值再次出现；保存请求晚到，还把刚输入的“实践”覆盖了。这几种问题常有同一个起点：没有分清谁决定当前值，谁只是提出改变，谁保存的是过去的快照。
+
+本讲接着组件公共契约，讨论值如何在父组件、子组件、表单、URL 和异步结果之间流动。先建立所有权，再看 React 与 Vue 的实现映射，最后用可直接打开的观察页亲手重现接受、拒绝、重置和迟到响应。
 
 ### 学习前先确认
 
-- 直接前置：[COMP-01 组件职责、API、组合与扩展边界](../chinese-guides/comp-01-component-responsibility-api-composition.md#comp-01)。本讲直接使用组件契约、事件、状态模型、可访问语义与逃生口。
+- 直接前置：[COMP-01 组件职责与公共契约](../chinese-guides/comp-01-component-responsibility-api-composition.md#comp-01)。本讲沿用输入、事件、组合、键盘语义和焦点责任，深入其中的状态所有权。
 
-### 一、每个状态在一个时刻只有一个权威所有者
+### 一、先列出有哪些值，再分别指定所有者
 
-**单一事实来源（Single Source of Truth）**不是所有状态都放进全局 store，而是某个具体值在某一时刻只有一个决定它的权威位置。上层拥有时，子组件渲染传入值并发出改变意图；子组件拥有时，上层只给初值或配置，后续由内部状态推进。
+**Single Source of Truth** 指同一份事实在当前时刻有一个明确的决定者，不是把整个页面的所有状态都塞进同一个 store。一个组件可以同时拥有好几种不同状态，各有自己的职责。
 
-先列出状态目录：业务值、草稿、展开、焦点、请求状态、验证结果和派生值。业务值可能由父表单拥有，焦点通常由组件内部拥有；派生值应从权威输入计算而非复制。不同状态可以有不同所有者，不等于整组件只能一种模式。
+| 搜索选择器中的状态 | 可能的所有者 | 原因 |
+| --- | --- | --- |
+| 已选资料 ID | 父表单 | 需要与其他字段一起提交、撤销 |
+| 搜索框里尚未提交的文字 | 组件或页面草稿 | 服务于当前输入过程 |
+| 键盘高亮的候选项 | 组件 | 需要协调方向键与焦点 |
+| 服务端确认的选择 | 远端结果及其缓存 | 与未提交选择有不同生命周期 |
+| 已选数量 | 从已选 ID 计算 | 无需另存一份可写数字 |
 
-所有者选择看谁需要协调、持久化、撤销和验证。若两个兄弟必须同步，把共同状态提升到最近共同父级；若状态只影响组件内部短暂交互，留在本地可减少耦合。
+两个面板必须同步选中项时，把选择交给最近的共同所有者；它们的焦点仍可以独立。组件拆分以后，并不意味着每个子组件都应复制一份选择数组，再互相监听。
 
-### 二、受控组件把值与请求改变分开
+这里的“一个决定者”针对的是某份值。草稿与确认值是两份不同事实，可以分别拥有；把它们都叫 `value` 才容易误以为存在一个神奇的最后写入者。可回看 [DATA-01 状态归属](../chinese-guides/data-01-server-state-cache-keys-invalidation-deduplication.md#一先问谁拥有事实再决定状态放在哪里)，区分远端副本与用户工作。
 
-**受控组件（Controlled Component）**由调用者持续提供当前值，组件通过事件报告用户意图。触发 `onChange(next)` 不表示输入立刻成为 next；只有父级接受并传回新值后，界面才确认改变。
+### 二、受控表示持续提供当前值
 
-契约写明值 prop、事件、相等规则、非法输入和延迟回写行为。组件不能在事件后偷偷长期使用内部副本，否则父级拒绝、格式化或异步回写时会产生双源。允许短暂视觉反馈时，也要把它建模为 pending 草稿并能与权威值协调。
+**受控组件（Controlled Component）**从调用者接收当前值，用户操作时发出改变意图，调用者决定下一次传入什么。发出事件与接受变化是两步。
 
-受控模式适合表单统一提交、跨组件联动、URL 状态、撤销历史与业务验证。代价是调用者必须完整处理事件，频繁高层更新也可能增加性能成本；可通过局部草稿或提交边界解决，而不是破坏所有权。
+```js example=comp02-owner-decision
+let value = ['基础'];
+const requests = [];
+function request(next, allowed) {
+  requests.push([...next]);
+  if (allowed) value = [...next];
+}
+request(['进阶'], false);
+console.log(value.join('、'), requests.length);
+request(['实践'], true);
+console.log(value.join('、'), requests.length);
+value = []; // 外部重置是所有者的更新，不是新的用户请求。
+console.log(value.length, requests.length);
+// => 基础 1
+// => 实践 2
+// => 0 2
+```
 
-### 三、非受控组件只把默认值当初始化输入
+拒绝第一条请求时，确认值仍是“基础”；接受第二条后才变为“实践”；外部重置没有凭空制造第三条用户事件。这个同步模型解释所有权，不模拟某个框架的 DOM 提交时机。
 
-**非受控组件（Uncontrolled Component）**在挂载时从 `defaultValue` 等输入建立内部状态，随后由自身拥有。父级之后改变默认值通常不应覆盖用户编辑；若需要重置，应提供显式 reset 语义、改变实例 key 或重新挂载。
+连续文本输入要特别小心。React 原生受控 input 的 `onChange` 应同步更新其背后的输入值；把这次本地更新推迟到服务器验证后，会使输入回退或光标异常。需要异步确认时，可以让父级及时拥有输入草稿，另存验证状态或已提交值。父级“拥有草稿”并不要求服务器批准每个字符。[React input](https://react.dev/reference/react-dom/components/input)
 
-默认值不是持续同步值。把每次 prop 变化都复制到 state 会让用户输入被旧网络响应覆盖，也会让组件行为依赖渲染时机。文档必须解释默认值读取一次还是在某个版本变化时重新初始化。
+### 三、非受控表示初值之后由实例管理
 
-非受控适合可独立填写、父级只在提交时读取的控件，或高频局部输入。它仍要通过事件支持观察，也要能与原生表单、验证和可访问错误关联。
+**非受控组件（Uncontrolled Component）**从初始参数建立自己的值，后续编辑由实例管理。对本文的自定义标签 API，`defaultTags` 只在创建实例时读取；后来收到不同默认值不会自动覆盖已经输入的标签。
 
-### 四、不要在生命周期里无条件同步 props 到 state
+例如初值是 `['基础']`，用户改成 `['进阶']`，后台又交来初值 `['实践']`。按这个合同，当前编辑仍是“进阶”。如果调用者真正想让当前值变成“实践”，应走明确的重置或换对象流程，而不是把默认值假装成持续同步值。
 
-“prop 变化就 setState”看似同步，实际产生两个可写副本。若内部编辑与外部更新同时发生，无法知道哪个新；相等比较还会把对象引用、规范化和值版本问题混在一起。
+这条规则需要针对 API 说明，不能推导成“所有平台上的 default 属性以后绝对不起作用”。原生输入有当前 value、默认 value 与表单 reset 的关系；改变 DOM `defaultValue` 还可能改变之后的重置基准。React 的默认输入参数与自定义组件的重置合同也不是同一层。
 
-先问内部副本是否必要。可从 props 计算的值直接派生；昂贵计算可 memo；需要编辑草稿时，把 `draft` 与 `sourceVersion` 分开，并定义外部版本变化时保留、合并还是放弃草稿。
+非受控适合独立局部编辑、父级仅在提交时读取的场景。它同样可以通知外部观察变化，也需要标签、错误关联和表单适配。区别在谁决定下一次显示值，不在有没有回调。
 
-例如编辑用户名称时，服务器推送 v3，而用户基于 v2 有未保存草稿。正确界面显示冲突并让用户选择，不是 effect 自动把 v3 复制进输入，也不是永远忽略 v3。
+### 四、把模式写进类型，也写进生命周期
 
-### 五、模式切换应被禁止或显式迁移
+组件同时收到 `value` 和 `defaultValue` 时，不应让调用者猜哪个优先。下面用判别联合表达两种互斥配置：
 
-同一实例从非受控变受控意味着所有者更换。若没有迁移协议，内部值与传入值谁胜出不明确。开发期检测首次模式并在后续变化时告警；类型上可用判别联合阻止同时传 `value` 与 `defaultValue`。
+```ts example=comp02-mode-contract
+type Options =
+  | { mode: 'controlled'; value: readonly string[]; onChange: (next: readonly string[]) => void; defaultValue?: never }
+  | { mode: 'uncontrolled'; defaultValue?: readonly string[]; value?: never; onChange?: (next: readonly string[]) => void };
+function initial(options: Options): string[] {
+  return [...(options.mode === 'controlled' ? options.value : options.defaultValue ?? [])];
+}
+console.log(initial({ mode: 'controlled', value: ['基础'], onChange() {} }).join('、'));
+console.log(initial({ mode: 'uncontrolled' }).length);
+// @ts-expect-error 两种值来源不能同时提供。
+const invalid: Options = { mode: 'uncontrolled', value: ['冲突'] };
+void invalid;
+// => 基础
+// => 0
+```
 
-确需切换时，把它作为业务事件：冻结编辑、选择迁移值、更新所有者、清理旧状态并恢复交互。更简单的方式是以明确 key 重建新实例，同时处理焦点和未保存内容。
+此函数只负责读取初始配置；不能拿返回的数组长期替代受控模式下的最新 value。类型也无法阻止运行时外部数据和后续 prop 变化，实际组件应校验首次模式并拒绝未定义的切换。
 
-不要用 `value === undefined` 隐式判断所有情况，因为 `undefined` 可能是合法业务值。用显式 `mode` 或 prop 是否存在的可靠判断，并在 API 中说明 `null` 的含义。
+同一实例从非受控切到受控，相当于换决定者。最容易维护的公共合同是生命周期内不切换；确有需要时，明确保留哪份值、何时结束旧编辑、如何恢复焦点。通过新 key 重建可以重置实例，也会丢失原有局部状态，不能当没有代价的修复按钮。
+
+空数组不是缺省，空字符串也不是没有传值。用 `value || defaultValue` 判断会错误地复活默认值；业务允许 `undefined` 时，更应通过明确 mode 或合同约定的属性存在性区分模式。
 
-### 六、事件语义必须避免回声循环
+### 五、外部更新进入组件，不应自动变成回声
 
-组件只在用户或明确内部动作产生新意图时触发 change，不应因接收父级新值再次发出同一 change。否则父写入→子监听→子发事件→父再写入，形成循环或重复副作用。
+用户点选会产生意图；父级传来新值则是这个意图的结果或其他外部决定。子组件不应在接收新 prop 后再次发出同名用户 change，否则一次修改可能引发重复请求，甚至无限来回。
 
-区分 `input`、`change`、`commit`、`blur` 和 `submit`。文本每键更新与日期选择完成可能不同；事件名称和时机必须稳定。载荷可包含 nextValue、previousValue、reason 和原始交互类别，但不泄露内部 DOM。
+```mermaid
+flowchart TB
+  User["用户操作"] --> Intent["提出新值"]
+  Intent --> Owner["所有者决定"]
+  Owner --> View["渲染当前值"]
+  Reset["外部重置或导航"] --> Owner
+  View --> Observe["显示反馈<br/>不重复发用户事件"]
+```
 
-父级格式化输入时，组件显示传回的权威值，并维护光标位置。不能为避免光标跳动而偷偷忽略父值；应通过输入模型和选区恢复解决。
+有些组件需要通知“程序设置完成”，可以设计另一种来源明确的事件；不能让它与用户提交共用含糊的回调，再让父级猜是否应该保存。
 
-### 七、重置是契约的一部分
+也要区分输入、提交、失焦与校验。中文输入法组合过程中不宜每个临时片段都执行破坏性格式化；需要等待组合完成或提交再规范化。光标、选区和输入草稿都是交互责任，不能靠偷偷忽略外部值维持表面顺滑。
 
-重置可能意味着恢复初值、清空、回到服务端最新值、撤销当前会话或恢复表单默认。先命名语义。受控组件的 reset 由父级改变值；非受控组件可以响应原生 form reset 或明确方法，但不能混用。
+### 六、草稿可以与来源不同，但必须知道为什么
 
-异步保存完成后重置尤其危险。保存 A 发出，用户继续输入 B，A 成功回调不能把字段清空或恢复 A。以提交版本/operationId 判断结果是否仍属于当前草稿；过期结果只更新历史状态。
+如果用户正在编辑资料 A，服务器推送了 A 的新版本，不能只写一个“props 改了就覆盖 state”的监听。先看当前草稿是否有未保存变化，再决定直接采用、展示冲突还是允许用户放弃草稿。
 
-组件被隐藏再显示是否保留状态取决于实例是否仍挂载。不要依赖框架细节猜测；页面应显式选择保留、缓存或重建，并测试焦点与错误状态。
+可以把状态命名为 `source`、`sourceVersion`、`draft` 和 `editRevision`。前两项描述编辑依据，draft 是当前输入，最后一项描述本地编辑代次。它们不是重复存储同一事实，而是记录不同时间的事实。
 
-### 八、派生状态用计算保持一致
+纯派生值则不需要独立可写状态：已选数量、筛选结果、同步格式规则可从现有值计算。计算缓存属于性能手段，丢弃后应能重新算出同样结果。异步业务验证不同，需要记录验证的输入快照及待确认状态。
 
-总价、过滤结果、是否有效等由现有输入决定，通常不应独立存储。存两份会产生更新顺序问题。计算需要昂贵优化时，也应把缓存视为性能实现，事实仍来自原输入。
+复杂表单的基线与提交快照见 [BIZ-05](../chinese-guides/biz-05-form-table-detail-state-consistency.md#四发送快照冻结以后新输入属于下一次提交)。这里关心组件如何表达归属，不能仅因文案显示“已保存”就清空用户后来的输入。
 
-如果派生结果依赖异步服务器规则，它不再是纯派生：记录请求对应的输入版本、pending 和错误。旧验证返回不能覆盖新输入；同一输入可去重或缓存。
+### 七、重置和迟到响应都要验证归属
 
-“是否脏”可由当前值与基线比较，基线本身需要版本。对象深比较成本高时使用规范化领域模型或变更集合，不要用 JSON 字符串碰运气。
+“重置”可能是回到初次打开的值、清空、采用服务端最新值或切换另一条资料。把具体动作写出来，调用者才知道会丢掉什么。本讲观察页的“清空当前值”由父级执行，并使旧保存观察失效。
 
-### 九、异步状态要绑定请求身份
+```js example=comp02-save-snapshot
+let state = { entity: 'm1', epoch: 1, revision: 0, draft: '基础', confirmed: '基础', phase: 'idle' };
+let active = null;
+function begin(id) {
+  active = { id, entity: state.entity, epoch: state.epoch, revision: state.revision, draft: state.draft };
+  state.phase = 'pending'; return active;
+}
+function finish(request, ok) {
+  if (active?.id !== request.id || request.entity !== state.entity || request.epoch !== state.epoch) return '忽略旧观察';
+  active = null; state.phase = ok ? 'saved' : 'error';
+  if (ok) state.confirmed = request.draft;
+  return state.revision === request.revision ? '本次输入已有结果' : '已有新输入，继续保留';
+}
+const first = begin('save-1');
+state.draft = '进阶'; state.revision += 1;
+console.log(finish(first, true), state.draft, state.confirmed);
+const second = begin('save-2');
+state.epoch += 1; state.draft = ''; state.revision += 1; state.phase = 'idle'; active = null;
+console.log(finish(second, false), state.draft === '', state.phase);
+// => 已有新输入，继续保留 进阶 基础
+// => 忽略旧观察 true idle
+```
 
-用户连续输入会产生多个验证、建议或保存请求。为每次请求记录输入快照与 operationId；新请求启动时取消旧请求或在回调时比对身份。网络返回顺序不是用户操作顺序。
+第一笔成功确认的是“基础”，不能证明后来输入的“进阶”已经保存。第二笔在重置之后失败，也不能把错误重新挂到新的编辑会话上。模型只有一笔当前观察，不实现服务端并发合并；忽略回调也不撤销已经发生的远端写入。
 
-受控组件一般发出意图，由所有者处理保存；组件可显示由 props 传入的 pending/error。若组件内部拥有异步流程，也要把可观察状态和重试事件纳入契约，卸载时释放资源。
+真实异步流程应对成功、失败和 finally 都检查归属。取消用于减少资源浪费，代次检查保护仍可能到达的回调。具体写入结果未知时的恢复见 [DATA-02](../chinese-guides/data-02-optimistic-updates-conflicts-offline-mutations.md#四没有收到成功不等于操作已经失败)。
 
-不要把“按钮禁用”当去重。重复键盘提交、程序调用和网络重试仍存在；业务副作用需要服务端幂等。组件负责防误操作和表达状态，不能提供跨系统恰好一次保证。
+### 八、句柄暴露能力，不把内部都交出去
 
-### 十、最小命令式句柄
+**命令式句柄（Imperative Handle）**用于 focus、滚动到某处等瞬时操作。调用者需要把焦点移到标签输入，可以公开 `focus()`；通常无需同时获得内部 input、可写数组和验证器实例。
 
-**命令式句柄（Imperative Handle）**用于无法自然通过声明式输入表达的瞬时能力，如 `focus()`、`scrollIntoView()` 或 `openPrintDialog()`。它应按能力命名，只暴露稳定方法，不返回内部 DOM、可写状态或整个第三方实例。
+值仍通过声明式输入和事件流动。若父级按顺序调用 `setInternalValue()`、`clearError()`、`rerender()` 才能使用组件，接口已经迫使外部协调实现细节。先考虑一个明确的状态更新能否表达任务。
 
-句柄是逃生口。优先用状态和事件表达“是否打开”“选择什么”；若父级必须按顺序操纵内部细节，组件边界可能错误。焦点命令合理，因为焦点是瞬时平台效果；业务值修改仍应走契约。
+句柄也要说明尚未挂载、已经卸载、disabled、重复调用时会怎样。返回 `false` 表示当前不能聚焦，比假装一定成功更可解释；多实例各自保留句柄，避免模块变量永远指向最后一个组件。
 
-句柄要处理实例尚未挂载、禁用、重复调用和组件替换。方法返回值/异步行为有说明；升级实现后继续兑现语义，而不是保证内部节点身份。
+React 可以通过 `useImperativeHandle` 限定暴露内容；React 19 可将 ref 作为 prop，旧版本常用 forwardRef。Vue 可通过模板 ref 和 `defineExpose` 公开必要能力。版本语法要核对项目实际依赖，不能把一种写法冒充跨版本通用实现。[React 句柄文档](https://react.dev/reference/react/useImperativeHandle)
 
-### 十一、React 与 Vue 的实现映射
+### 九、用观察页区分当前值与保存快照
 
-React 中 `value + onChange`、状态提升和 ref 句柄映射到上述模型；Vue 的 prop + emit 与组件 `v-model` 也是同一所有权协议。框架语法不同，不能把双向绑定理解为两个所有者同时写。
+将完整代码保存为 `ownership-lab.html`，用桌面浏览器打开。左侧由父级决定值，右侧由局部实例管理。保存结果使用手动交付按钮，便于稳定观察顺序；页面没有网络请求，也不写真实学习记录。
 
-React 的 render snapshot 意味着事件闭包看到某次渲染的值；Vue 响应式也可能在批量更新后刷新 DOM。异步逻辑需要显式快照和版本，不能依赖“变量现在看起来是最新”。
+```html example=comp02-ownership-lab runtime=project file=ownership-lab.html
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>状态所有权观察页</title>
+<style>
+:root{font:16px/1.7 system-ui,sans-serif;color:#213e39;background:#edf3ef}*{box-sizing:border-box}main{max-width:1120px;margin:40px auto;padding:0 24px}h1{font-size:32px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}section{background:white;border:1px solid #cfddd5;border-radius:16px;padding:24px;margin:18px 0;min-width:0}h2{font-size:20px;margin-top:0}label{display:block}input,button{font:inherit;border:1px solid #91a99e;border-radius:8px;padding:9px 12px}input[type=text]{width:100%;margin:8px 0}button{background:#f6faf7;color:#234e40;cursor:pointer;margin:8px 6px 4px 0}:focus-visible{outline:3px solid #b66f1b;outline-offset:3px}.muted{color:#597066}output{font-weight:650;overflow-wrap:anywhere}#status{min-height:3em}li{overflow-wrap:anywhere}
+</style><main><p class="muted">B23 / 当前值 · 编辑代次 · 保存快照</p><h1>这一次变化，谁来决定</h1>
+<div class="grid"><section><h2>父级持续提供值</h2><label for="owned">资料标签</label><input id="owned" type="text" value="基础"><label><input id="accept" type="checkbox" checked> 父级接受用户修改</label><p>父级当前值：<output id="owner-value"></output></p><button id="reset" type="button">清空当前值</button><button id="focus" type="button">聚焦标签输入</button></section>
+<section><h2>局部实例管理值</h2><label for="local">局部标签</label><input id="local" type="text"><p>下一次初始化参数：<output id="initial"></output></p><button id="change-default" type="button">将初始参数改为进阶</button><button id="recreate" type="button">按当前参数重新初始化</button><p class="muted">改变初始参数不会覆盖当前编辑；重新初始化会明确放弃当前值。</p></section></div>
+<section><h2>观察保存结果</h2><button id="save" type="button">提交当前快照</button><button id="success" type="button">交付成功结果</button><button id="failure" type="button">交付失败结果</button><p id="status" role="status"></p><p>最近确认内容：<output id="confirmed"></output></p><ol id="events" aria-label="状态变化记录"></ol></section></main>
+<script>
+const el = id => document.getElementById(id);
+let owner='基础', confirmed='基础', revision=0, epoch=0, serial=0, pending=null, initial='基础';
+el('local').value=initial;el('initial').textContent=initial;
+function log(text){const li=document.createElement('li');li.textContent=text;el('events').append(li);while(el('events').children.length>8)el('events').firstElementChild.remove();}
+function render(){if(el('owned').value!==owner)el('owned').value=owner;el('owner-value').textContent=owner||'（空）';el('confirmed').textContent=confirmed||'（空）';}
+function receive(next){owner=next;revision++;render();}
+el('owned').addEventListener('input',()=>{const next=el('owned').value;log('用户提出：'+next);if(el('accept').checked)receive(next);else{render();el('status').textContent='父级拒绝本次变化，当前值保持。';}});
+el('reset').onclick=()=>{epoch++;receive('');el('status').textContent='当前编辑已清空；旧请求只保留用于演示迟到结果。';log('外部清空，没有再次发用户事件');};
+const handle=Object.freeze({focus(){if(!el('owned').isConnected)return false;el('owned').focus();return true;}});
+el('focus').onclick=()=>handle.focus();
+el('change-default').onclick=()=>{initial='进阶';el('initial').textContent=initial;};
+el('recreate').onclick=()=>{el('local').value=initial;log('局部值按新参数重新初始化');};
+el('save').onclick=()=>{if(pending){el('status').textContent='先交付现有结果，再提交下一笔。';return;}pending={id:++serial,value:owner,revision,epoch};el('status').textContent='等待结果：'+(pending.value||'（空）');log('提交快照 '+pending.id);};
+function finish(ok){if(!pending){el('status').textContent='当前没有待交付的结果。';return;}const request=pending;pending=null;if(request.epoch!==epoch){el('status').textContent='旧结果已忽略，清空后的值保持。';return;}if(ok)confirmed=request.value;render();el('status').textContent=ok?(revision===request.revision?'当前输入已确认。':'旧快照已确认；新输入尚未提交，继续保留。'):'本次保存失败；当前输入继续保留。';log((ok?'成功':'失败')+' '+request.id);}
+el('success').onclick=()=>finish(true);el('failure').onclick=()=>finish(false);render();el('status').textContent='可以提交一次快照，再继续修改输入。';
+</script></html>
+```
 
-避免为跨框架统一而造一套抽象钩子。统一行为合同、类型和测试场景即可，实现应遵守各自运行时惯例。
+依次尝试：取消“父级接受”后修改左侧，值应回到父级当前值；编辑右侧后改变初始参数，当前文字保持；点击重新初始化后，右侧才采用“进阶”。提交左侧快照后继续输入新文字，再交付成功，应只更新“最近确认内容”。再提交、清空、交付失败，新会话不应被旧错误覆盖。
 
-### 十二、表单集成与原生语义
+观察页使用原生 DOM 显式模拟协议，不代表 React 或 Vue 的内部实现。这里的重新初始化只重置一个局部字段，并未模拟整棵组件树卸载；真实重新挂载还涉及子状态与资源清理。拒绝输入用于展示协议，正式文本编辑优先接受本地草稿并单独校验，避免打断中文输入法。
 
-输入组件要明确 name、disabled、readonly、required、表单提交值和重置行为。自定义控件若无法参与原生表单，提供清晰适配器；隐藏 input 需要同步且不能破坏标签与错误关联。
+### 十、在 React 与 Vue 中保留同一份含义
 
-受控值在表单库中可能由字段控制器拥有，组件不要另建副本。非受控注册需提供稳定 ref/事件。选择一种集成模式并写示例，避免同一调用同时传 value、defaultValue 和库注册回调。
+React 的自定义 `value + onChange` 和 Vue 组件的 `modelValue + update:modelValue` 都可表达持续输入与改变事件。Vue 的 `defineModel` 简化了这个协议，并不意味着父子拥有两份可任意互写的事实。
 
-验证错误由谁拥有也要决定。组件负责显示和关联，领域规则通常由表单/服务端决定；内部格式错误可立即报告，但不能覆盖外部业务错误。
+父级没有提供模型值，子级却用 `defineModel` 的默认值显示内容时，父子可能出现不同初值；初始化最好由约定的所有者完成。多个 model 可以控制不同轴，例如 selected 与 open，但每开放一项就增加协调责任。组件内部高亮项不必因为“灵活”也全部变成公开受控参数。[Vue v-model](https://vuejs.org/guide/components/v-model.html)
 
-### 十三、并发与组合组件
+React 的事件闭包读取对应渲染快照，Vue 的 DOM 更新也存在批处理时机。两者都不能用“等一下变量自然就最新了”代替请求快照和归属。渲染阶段保持纯，不在计算 props 时发请求、修改父状态或登记不可清理的资源。
 
-复合选择器可能有公开值、内部高亮项、搜索草稿和打开状态。不要把所有内部状态都受控；只开放确有协调需求的轴。每增加一个可控轴，组合数量和测试面都会增长。
+性能优化放在明确所有权之后。去抖可以推迟查询，不能推迟必须即时保留的输入草稿；延迟的列表显示也不能反向覆盖当前输入。更完整的框架行为沿 [REACT-03](../chinese-guides/react-03-state-model-derived-controlled.md#react-03) 与 [VUE-03](../chinese-guides/vue-03-template-directives-events-forms.md#vue-03) 查阅。
 
-受控打开状态下，点击触发器发 `onOpenChange(true)`，父级若拒绝，组件保持关闭；内部不应先永久打开。允许即时动画时，也要在父级响应不一致时回到权威状态。
+### 十一、表单、URL 和持久化需要一个入口
 
-多实例共享选择时由共同所有者协调；实例本地焦点保持独立。复制同一数组进两个内部 state 再用 effect 同步，是循环与陈旧的来源。
+字段被表单库控制时，组件应消费字段控制器的值与事件，不再另建一套长期副本。非受控注册则需要稳定的读取、事件和 ref 合同。原生 name、disabled、readonly、required、提交和 reset 的含义也必须有明确映射。
 
-### 十四、测试所有权而不是实现变量
+URL 驱动筛选时，导航变化可以成为权威入口；输入框中尚未提交的文字仍可独立作为草稿。localStorage 仅用于初始化恢复时，就不应持续覆盖当前输入。若 URL、store 和本地值相互监听再互写，回声循环只是换了三个地方发生。
 
-建立迁移表，覆盖非受控初始化、用户编辑、默认值后来变化、受控接受/拒绝/延迟回写、外部 reset、模式切换告警、异步乱序、卸载和句柄。断言用户看见的值、事件序列和焦点，不检查内部 state 名称。
+恢复还要核对账号、对象、Schema 和基版本。切换资料后旧输入不能误装入新实体；重置时使旧请求上下文失效；卸载时释放监听和定时器。恢复失败可以保留允许的草稿并说明原因，不能宣称已同步。
 
-注入父级延迟、父级格式化、保存失败、两个连续提交和旧结果晚到。确认旧结果不覆盖新输入，change 不因接收 props 重复触发，重置后没有默认值复活。
+### 十二、用少量顺序验证所有权
 
-类型测试拒绝同时传 value/defaultValue，浏览器测试覆盖 IME、光标、键盘和原生表单。开发告警要精确指明冲突 prop 和迁移办法。
+优先选能区分模型的操作顺序：初值改变但用户已编辑、父级拒绝、外部清空、保存期间继续输入、重置后旧失败、两个实例分别聚焦。这些比重复点击十次成功更容易暴露双写。
 
-### 十五、持久化、URL 与外部 store
+核对显示值、事件次数、结果对应的输入和焦点，不依赖内部 state 名称。类型检查能拒绝非法配置，浏览器能观察键盘与节点行为，真实输入法和辅助技术仍需对应环境；代码模型不能替代这些平台验证。公共行为方法见 [TEST-02](../chinese-guides/test-02-component-testing-user-behavior-accessibility.md#test-02)。
 
-把值同步到 URL、localStorage 或全局 store 时，它们都可能成为另一个写入者。先指定权威：URL 驱动筛选时从 URL 解析并由导航更新；本地存储只作初始化或缓存时，不应持续覆盖当前会话。跨标签页 storage 事件要带版本与账号边界。
+最后让另一位调用者只读文档回答：当前值在哪里、默认值何时生效、清空由谁执行、旧结果怎样处置、句柄包含什么。如果仍需要翻内部代码才能回答，先补契约，再增加新参数。
 
-持久化失败不能让控件假装已保存。界面可继续保留草稿，但显示本地与远端状态；退出前按风险提示。恢复草稿时比较服务端基线版本，避免把旧账号、旧实体或旧 schema 内容注入当前表单。
+### 动手想一想
 
-全局 store 并未消除所有权问题。若组件本地、store 和 URL 都订阅彼此，回声循环更难定位。定义单向事件：用户意图到 owner 更新，再由派生消费者渲染；外部来源变化通过一个适配器进入。
+初始标签是“基础”，提交后又输入“进阶”，随后收到成功。请分别写出确认值、当前草稿和“是否还有未提交变化”。再把最后一步换成“先清空，后收到失败”，判断是否应该显示旧错误。
 
-### 十六、并发渲染与开发检查
+前一种情况确认“基础”、保留“进阶”，仍有未提交变化；后一种情况取决于清空是否开启新编辑会话。本讲选择开启新会话，旧结果不更新其状态，但远端操作是否已发生仍需单独确认。
 
-框架可能重复调用渲染逻辑或中断一次准备。渲染必须纯，不在读取 props 时修改父级或外部 store；初始化副作用放到明确生命周期并可清理。开发严格检查暴露的重复行为通常是在揭示非幂等实现，不应靠关闭检查解决。
+### 参考与延伸阅读
 
-事件处理保存必要身份，不依赖可变模块变量指向“当前组件”。列表重排、实例复用和并发异步都可能让这种引用指错对象。稳定 key 与 operationId 共同保持归属。
-
-性能优化不能改变权威语义。延迟值、transition 或去抖是展示与调度手段，提交与验证仍绑定原始输入版本；慢派生结果不能反向成为事实来源。
-
-最后让一个外部调用者仅依契约复现重置、延迟和失败，确认所有权无需阅读内部代码才能理解。
-
-### 十七、评审清单
-
-逐个状态回答：权威所有者是谁；初值何时读取；外部变化如何进入；事件何时发；异步结果如何识别；重置含义是什么；卸载是否保留；是否需要命令句柄。任何答案为“父子都可以写，最后同步”都需要重新建模。
-
-高级组件状态设计的核心不是消灭本地状态，而是让每份事实有唯一权威、每次跨边界变化有明确意图、每条异步结果有版本。所有者清楚后，受控、非受控和命令式能力只是三种可验证的接口选择。
+- [React input](https://react.dev/reference/react-dom/components/input)：核对受控输入、默认值与同步更新要求。
+- [React useImperativeHandle](https://react.dev/reference/react/useImperativeHandle)：限制 ref 公开能力，注意版本差异。
+- [Vue Component v-model](https://vuejs.org/guide/components/v-model.html)：核对 prop、事件、多个模型与默认值不一致问题。
+- [COMP-01 公共契约](../chinese-guides/comp-01-component-responsibility-api-composition.md#comp-01)：回到职责、语义和组合责任。
