@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import { catalogUrl, guideRoot, readMaterialExamples, prepareMaterialExamples } from './learning-material-examples.mjs';
 
-const batchIds = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'b25'];
+const batchIds = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'b25', 'b26'];
 const catalogs = await Promise.all(batchIds.map(async (batch) => JSON.parse(await readFile(new URL(`${batch}.json`, catalogUrl), 'utf8'))));
 const chapters = catalogs.flatMap((catalog) => catalog.chapters);
 const batches = JSON.parse(await readFile(new URL('./pronunciation-batches.json', import.meta.url), 'utf8'));
@@ -53,6 +53,7 @@ for (const [index, catalog] of catalogs.entries()) {
     ['COMP-02', 'UX-01', 'ENG-08', 'LINUX-01'],
     ['LINUX-02', 'LINUX-03', 'LINUX-04', 'DOCKER-01', 'DOCKER-02'],
     ['ENG-06', 'DEPLOY-01', 'OBS-01', 'PERF-01'],
+    ['PERF-02', 'PERF-03', 'PERF-04', 'H5-01'],
   ][index]);
   assert.match(catalog.reviewedOn, /^\d{4}-\d{2}-\d{2}$/);
   assert(!Number.isNaN(Date.parse(catalog.reviewedOn)) && new Date(catalog.reviewedOn).toISOString().slice(0, 10) === catalog.reviewedOn);
@@ -102,6 +103,7 @@ for (const chapter of chapters) {
     'LINUX-04': 'https://man.openbsd.org/', 'DOCKER-01': 'https://docs.docker.com/', 'DOCKER-02': 'https://docs.docker.com/',
     'ENG-06': 'https://docs.github.com/', 'DEPLOY-01': 'https://nginx.org/',
     'OBS-01': 'https://opentelemetry.io/', 'PERF-01': 'https://web.dev/',
+    'PERF-03': 'https://developer.chrome.com/', 'PERF-04': 'https://developer.chrome.com/',
   };
   const officialHost = specializedHosts[chapter.id] ?? (chapter.id.startsWith('TS-') ? 'https://www.typescriptlang.org/'
     : chapter.id.startsWith('REACT-') ? 'https://react.dev/'
@@ -157,4 +159,4 @@ await new Promise((resolve, reject) => {
   worker.once('error', (error) => { clearTimeout(timer); reject(error); });
   worker.once('exit', (code) => { clearTimeout(timer); if (code !== 0) reject(new Error(`示例进程退出 ${code}`)); });
 });
-console.log(`B01–B25 资料检查通过：${chapters.length} 篇主讲义，${concepts.size} 个唯一概念入口，${connections} 条知识连接，${links} 个正文内部引用，${examples.length} 个通用示例输出一致（${process.version}）；另登记 ${allExamples.filter(({ runtime }) => runtime === 'browser').length} 个浏览器示例、${allExamples.filter(({ runtime }) => runtime === 'project').length} 个页面、项目或终端片段，需按正文场景另行核对。`);
+console.log(`B01–B26 资料检查通过：${chapters.length} 篇主讲义，${concepts.size} 个唯一概念入口，${connections} 条知识连接，${links} 个正文内部引用，${examples.length} 个通用示例输出一致（${process.version}）；另登记 ${allExamples.filter(({ runtime }) => runtime === 'browser').length} 个浏览器示例、${allExamples.filter(({ runtime }) => runtime === 'project').length} 个页面、项目或终端片段，需按正文场景另行核对。`);

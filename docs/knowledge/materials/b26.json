@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "batch": "B26",
+  "title": "从资源到达到响应与布局",
+  "reviewedOn": "2026-09-24",
+  "chapters": [
+    {
+      "id": "PERF-02",
+      "title": "让关键内容更早到达",
+      "question": "文件不大、下载也很快，为什么正文仍然晚到，返回页面又可能读到旧内容？",
+      "summary": "沿资源发现、依赖链、连接、图片、缓存与导航恢复解释加载成本，用三次条件请求看清已有正文与验证器的关系。",
+      "outcomes": [
+        "从请求起点和依赖关系判断真正的等待",
+        "区分 HTTP 缓存、页面恢复与应用缓存",
+        "结合新鲜度和访问方式验证加载改动"
+      ],
+      "prerequisites": [
+        "net-01-browser-network-fetch-reliability.md#net-01",
+        "perf-01-core-web-vitals-performance-budgets.md#perf-01"
+      ],
+      "guide": "perf-02-network-resource-loading-cache-optimization.md",
+      "anchor": "perf-02",
+      "concepts": [
+        {
+          "id": "network-loading-waterfall",
+          "heading": "一、瀑布图先看什么时候开始，再看用了多久"
+        },
+        {
+          "id": "network-loading-dependencies",
+          "heading": "二、把主要内容画成依赖链"
+        },
+        {
+          "id": "network-loading-connection",
+          "heading": "三、连接与首字节要连同观察位置一起解释"
+        },
+        {
+          "id": "network-loading-transfer",
+          "heading": "四、下载大小、解压大小与执行成本分开看"
+        },
+        {
+          "id": "network-loading-media",
+          "heading": "五、图片与字体要同时解决发现和呈现"
+        },
+        {
+          "id": "network-loading-cache",
+          "heading": "六、HTTP 缓存让响应复用，不保证内容永远正确"
+        },
+        {
+          "id": "network-loading-lab",
+          "heading": "七、实际看一次 200、304 与更新后的 200"
+        },
+        {
+          "id": "network-loading-hints",
+          "heading": "八、不同资源提示各提前了哪一步"
+        },
+        {
+          "id": "network-loading-speculation",
+          "heading": "九、推测导航必须控制提前发生的事情"
+        },
+        {
+          "id": "network-loading-restore",
+          "heading": "十、返回页面时，先分清是哪一层恢复"
+        },
+        {
+          "id": "network-loading-lifetime",
+          "heading": "十一、导航取消与第三方失败也属于加载设计"
+        },
+        {
+          "id": "network-loading-evidence",
+          "heading": "十二、用三种访问方式确认改动有效"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "experience-performance-lcp",
+          "reason": "关键资源到达与主要内容呈现之间，还需要按 LCP 阶段定位等待。"
+        },
+        {
+          "concept": "edge-request-cache",
+          "reason": "浏览器的复用选择需要与源站、代理的缓存指令共同解释。"
+        },
+        {
+          "concept": "thread-response-main",
+          "reason": "下载结束之后，主线程仍可能阻止输入响应与内容呈现。"
+        },
+        {
+          "concept": "viewport-layout-pixels",
+          "reason": "图片显示尺寸和 DPR 决定需要多少像素，不能只追求更大的源文件。"
+        }
+      ]
+    },
+    {
+      "id": "PERF-03",
+      "title": "让输入尽快得到正确反馈",
+      "question": "请求早已完成，点击却没有反应：主线程在忙什么，怎样把控制权及时交还浏览器？",
+      "summary": "从任务、微任务和帧机会拆解交互，用可取消搜索讲清分块、任务身份与旧结果隔离，再连接 Worker、布局和长帧观察。",
+      "outcomes": [
+        "把慢交互分成输入等待、处理与呈现阶段",
+        "说明分块、Worker 与减少工作量各自的作用",
+        "让取消和过期任务不破坏新一轮输入"
+      ],
+      "prerequisites": [
+        "perf-01-core-web-vitals-performance-budgets.md#perf-01",
+        "browser-02-observers-scheduling-lifecycle-coordination.md#browser-02"
+      ],
+      "guide": "perf-03-main-thread-rendering-long-tasks-inp.md",
+      "anchor": "perf-03",
+      "concepts": [
+        {
+          "id": "thread-response-main",
+          "heading": "一、主线程为什么会挡住已经到达的输入"
+        },
+        {
+          "id": "thread-response-queues",
+          "heading": "二、任务、微任务和帧机会不是三条并行队列"
+        },
+        {
+          "id": "thread-response-interaction",
+          "heading": "三、先把一次慢交互分成三段"
+        },
+        {
+          "id": "thread-response-loaf",
+          "heading": "四、Long Task 与 LoAF 从不同角度看占用"
+        },
+        {
+          "id": "thread-response-work",
+          "heading": "五、减少总工作量通常比更细的切片更划算"
+        },
+        {
+          "id": "thread-response-layout",
+          "heading": "六、布局读写交错为什么会放大成本"
+        },
+        {
+          "id": "thread-response-lab",
+          "heading": "七、用可取消搜索看懂“最新任务获胜”"
+        },
+        {
+          "id": "thread-response-scheduling",
+          "heading": "八、分块还需要处理队列和中间状态"
+        },
+        {
+          "id": "thread-response-worker",
+          "heading": "九、Worker 搬走计算，也引入了一份通信约定"
+        },
+        {
+          "id": "thread-response-paint",
+          "heading": "十、绘制和合成也会成为瓶颈"
+        },
+        {
+          "id": "thread-response-observation",
+          "heading": "十一、现场采集要轻，而且要知道看不到什么"
+        },
+        {
+          "id": "thread-response-evidence",
+          "heading": "十二、从一条慢操作收敛到一次有依据的修改"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "experience-performance-inp",
+          "reason": "局部搜索演示需要与标准 INP 的生命周期和统计口径区分。"
+        },
+        {
+          "concept": "memory-lifetime-cache",
+          "reason": "用缓存减少计算时，要同时控制容量、身份与资源生命周期。"
+        },
+        {
+          "concept": "viewport-layout-constraints",
+          "reason": "布局成本和输入可达性都依赖组件真实的内容约束。"
+        },
+        {
+          "concept": "user-observation-context",
+          "reason": "异步任务的结果与观测记录都要归到开始时的正确上下文。"
+        }
+      ]
+    },
+    {
+      "id": "PERF-04",
+      "title": "让资源随任务一起结束",
+      "question": "关闭面板以后，旧监听、节点和临时图片为什么还可能留下？",
+      "summary": "从可达性、保留路径与相同操作周期定位内存问题，用可重复开关的预览组件展示监听、定时器和 Object URL 的分别释放。",
+      "outcomes": [
+        "区分正常增长、泄漏和频繁回收",
+        "沿保留路径寻找真正的持有者",
+        "为缓存、订阅和外部资源安排明确的退出方式"
+      ],
+      "prerequisites": [
+        "js-03-types-equality-copy-immutability.md#js-03",
+        "browser-02-observers-scheduling-lifecycle-coordination.md#browser-02"
+      ],
+      "guide": "perf-04-memory-listeners-resource-leaks.md",
+      "anchor": "perf-04",
+      "concepts": [
+        {
+          "id": "memory-lifetime-symptoms",
+          "heading": "一、增长、泄漏与频繁回收先分开"
+        },
+        {
+          "id": "memory-lifetime-reachability",
+          "heading": "二、垃圾回收看得到引用，看不懂业务已经结束"
+        },
+        {
+          "id": "memory-lifetime-cycle",
+          "heading": "三、比较相同生命周期位置，才有意义"
+        },
+        {
+          "id": "memory-lifetime-snapshot",
+          "heading": "四、从浅大小走到真正的保留路径"
+        },
+        {
+          "id": "memory-lifetime-listeners",
+          "heading": "五、移除监听需要同一个回调身份"
+        },
+        {
+          "id": "memory-lifetime-closures",
+          "heading": "六、闭包、Promise 和分离节点要一起追"
+        },
+        {
+          "id": "memory-lifetime-lab",
+          "heading": "七、用预览组件把创建和释放放在一起"
+        },
+        {
+          "id": "memory-lifetime-scheduled",
+          "heading": "八、定时器和观察器不要在清理后复活"
+        },
+        {
+          "id": "memory-lifetime-external",
+          "heading": "九、Object URL 与媒体资源不只占 JS 堆"
+        },
+        {
+          "id": "memory-lifetime-cache",
+          "heading": "十、缓存和弱引用解决不同的问题"
+        },
+        {
+          "id": "memory-lifetime-framework",
+          "heading": "十一、框架生命周期要区分暂停和最终销毁"
+        },
+        {
+          "id": "memory-lifetime-evidence",
+          "heading": "十二、修复后回答对象为什么不再留下"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "thread-response-scheduling",
+          "reason": "取消调度后还要防止旧回调重新排队或覆盖新任务。"
+        },
+        {
+          "concept": "network-loading-restore",
+          "reason": "页面进入往返缓存与最终销毁有不同的资源处理需求。"
+        },
+        {
+          "concept": "user-observation-privacy",
+          "reason": "堆快照可能包含输入与凭据，诊断数据同样需要最小化。"
+        },
+        {
+          "concept": "viewport-layout-lab",
+          "reason": "容器和窗口观察应由稳定的组件所有者创建与释放。"
+        }
+      ]
+    },
+    {
+      "id": "H5-01",
+      "title": "让布局适应空间与文字",
+      "question": "窗口很宽，侧栏里的卡片为什么仍会溢出，文字放大后又该怎样保持输入和操作？",
+      "summary": "区分 CSS 像素、布局视口、视觉视口和容器空间，用同一份表单观察宽度、文字与留白变化，说明动态单位和安全区的适用边界。",
+      "outcomes": [
+        "区分不同尺寸基准，按内容约束决定布局",
+        "解释容器查询、动态视口单位与安全区",
+        "在桌面窗口和文字变化中保持输入与阅读顺序"
+      ],
+      "prerequisites": [
+        "web-02-layout-cascade-responsive-logical-properties.md#web-02",
+        "a11y-01-wcag-testing-governance.md#a11y-01"
+      ],
+      "guide": "h5-01-viewport-responsive-safe-area-orientation.md",
+      "anchor": "h5-01",
+      "concepts": [
+        {
+          "id": "viewport-layout-pixels",
+          "heading": "一、CSS 像素描述布局，DPR 描述映射"
+        },
+        {
+          "id": "viewport-layout-layout",
+          "heading": "二、布局视口与 meta viewport 解决排版基准"
+        },
+        {
+          "id": "viewport-layout-visual",
+          "heading": "三、视觉视口解释当前真正可见的区域"
+        },
+        {
+          "id": "viewport-layout-constraints",
+          "heading": "四、响应式先说明哪些内容可以换行"
+        },
+        {
+          "id": "viewport-layout-container",
+          "heading": "五、媒体查询看窗口，容器查询看组件所在空间"
+        },
+        {
+          "id": "viewport-layout-units",
+          "heading": "六、svh、lvh 和 dvh 不等于三种键盘检测器"
+        },
+        {
+          "id": "viewport-layout-insets",
+          "heading": "七、安全区告诉你留白多少，不替你决定怎么留"
+        },
+        {
+          "id": "viewport-layout-lab",
+          "heading": "八、用同一个表单观察空间与文字变化"
+        },
+        {
+          "id": "viewport-layout-overlays",
+          "heading": "九、固定与粘性工具区要给内容留下位置"
+        },
+        {
+          "id": "viewport-layout-state",
+          "heading": "十、方向变化和窗口变化不应该重置业务任务"
+        },
+        {
+          "id": "viewport-layout-reflow",
+          "heading": "十一、文字放大与重排是两个相关但不同的检查"
+        },
+        {
+          "id": "viewport-layout-support",
+          "heading": "十二、把支持范围与未验证的环境写清"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "network-loading-media",
+          "reason": "真实显示宽度与像素需求决定响应式图片应提供的候选资源。"
+        },
+        {
+          "concept": "thread-response-layout",
+          "reason": "读取尺寸再修改布局可能增加重排，优先用 CSS 表达变化。"
+        },
+        {
+          "concept": "memory-lifetime-scheduled",
+          "reason": "尺寸监听和待执行的动画帧需要随组件生命周期清理。"
+        },
+        {
+          "concept": "experience-performance-cls",
+          "reason": "空间变化是否造成可计入的布局偏移，要结合时机与指标规则。"
+        }
+      ]
+    }
+  ]
+}

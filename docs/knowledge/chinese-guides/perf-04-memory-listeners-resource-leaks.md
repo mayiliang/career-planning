@@ -1,122 +1,301 @@
-# 浏览器内存与资源生命周期知识点讲义
+# 关闭界面以后，哪些东西还留在内存里
 
 ## PERF-04 内存、监听器与资源泄漏
 
-内存上涨不一定是泄漏，点击“垃圾回收”后下降也不能证明没有泄漏。浏览器应用会主动缓存、延迟回收并为图片、媒体和 GPU分配非 JS 堆资源；真正的问题是本应结束生命周期的对象仍被强引用，或资源增长最终影响用户。高级排查必须从稳定复现、对象图和保留路径建立证据，再把清理责任放回资源创建处。本讲覆盖 GC、快照、监听器、闭包、定时器、DOM、Blob、媒体、缓存与验证。
+一个资料预览面板第一次打开很顺畅，反复开关以后越来越慢。窗口缩放一次，日志却打印了十遍。另一边，应用加载几篇文章后内存上升，随后保持稳定，读者使用并没有异常。
+
+这两种增长未必是同一种问题。本篇从对象为什么还活着讲起，连接堆快照、保留路径、监听器、闭包、计时器、媒体与缓存。重点是建立明确的资源所有权，并用同样的操作过程确认变化，而不是到处把变量设成 null。
 
 ### 学习前先确认
 
-- 直接前置：[JS-03 类型、相等、复制与不可变](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)。对象身份、引用与可达性是理解 GC 和保留图的基础。
-- 直接前置：[BROWSER-02 观察器、调度与页面生命周期协作](../chinese-guides/browser-02-observers-scheduling-lifecycle-coordination.md#browser-02)。监听器、观察器、页面冻结和卸载决定资源何时应结束。
+- 直接前置：[JS-03 类型、相等、复制与不可变](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)。理解对象身份与引用，同一个对象可以经由多条路径访问。
+- 直接前置：[BROWSER-02 观察器、调度与页面生命周期协作](../chinese-guides/browser-02-observers-scheduling-lifecycle-coordination.md#browser-02)。知道资源的创建、暂停、恢复与最终结束是不同阶段。
 
-### 一、先区分泄漏、膨胀和回收抖动
+### 一、增长、泄漏与频繁回收先分开
 
-内存泄漏是已经不再需要的对象仍可达，重复操作后基线持续上升。内存膨胀是功能本身保留过多活跃数据，例如无限缓存；频繁分配回收会造成 GC抖动，即使最终能释放也可能卡顿。三者表现相似，修复不同。
+**内存泄漏（Memory Leak）**在这里指业务已经不再需要的对象或资源，因为仍被持有而没有结束应有生命周期。典型症状是反复执行同一操作并恢复到相同界面后，仍有越来越多旧对象留下。
 
-JS堆只是总内存一部分。DOM、图片解码、Canvas、GPU纹理、ArrayBuffer、Wasm、音视频和浏览器内部结构可能在其他统计中。任务管理器、Performance内存轨迹和Memory面板要结合使用，不能用单一 `performance.memory` 下结论。
+内存膨胀可能来自合法但过量的活跃数据，例如同时保留几百张大图。频繁分配与回收则可能造成 GC 开销，即使最终没有遗留对象，也会影响响应。前者可能需要减少保留规模，后者可能需要减少临时分配，不能一律靠“加 cleanup”解决。
 
-先定义用户可见影响：长期标签页变慢、崩溃、切换路由后仍保留敏感数据、移动端被系统杀死。没有增长趋势和生命周期期望，只看到一个“大对象”不等于缺陷。
+JS heap 不是浏览器总内存。DOM、图片解码、ArrayBuffer、媒体、GPU 和浏览器内部资源可能体现在不同统计中。任务管理器的总量与 Heap Snapshot 的大小不同，不一定是工具坏了。
 
-### 二、GC 根据可达性而非业务“无用”判断
+先写出期望：“关闭预览后，本面板的监听、周期任务和临时图片 URL 都应停止；文章缓存可以保留最近五篇。”有了预期，才知道增长代表合理缓存还是失去控制。一个孤立的大数字，缺少时间与生命周期信息，无法单独证明泄漏。
 
-**垃圾回收（Garbage Collection）**由引擎寻找不可达对象并回收；时机和算法属于实现，不受业务精确控制。开发者负责移除强引用，而不是调用 GC。对象离开局部作用域后若仍被监听器、缓存或闭包引用，就不会自动消失。
+### 二、垃圾回收看得到引用，看不懂业务已经结束
 
-**可达性（Reachability）**从 GC roots沿引用边判断对象是否仍能访问。roots包括全局对象、当前栈、活动任务、原生持有和其他引擎根。业务认为弹窗关闭，但 `window`监听器引用回调、回调闭包引用弹窗状态，这条路径仍使状态可达。
+**垃圾回收（Garbage Collection，GC）**处理的是对象是否仍可达。引擎不会理解“用户已经关掉面板，所以这里的业务数据没用了”。如果全局监听器仍持有回调，而回调仍能访问面板节点，这条引用链就还在。
 
-标记清除是理解模型，不应依赖具体代际或增量实现做业务正确性。强制 GC仅让实验样本更可比较，不是生产修复；回收后仍可达的对象才值得沿路径追踪。
+**可达性（Reachability）**可以理解为从引擎保留的根出发，是否还能沿引用找到对象。全局对象、正在执行的调用以及原生资源等，都可能参与让对象继续存活。
 
-### 三、稳定复现比单张快照重要
+```mermaid
+flowchart TB
+  A[长寿命对象<br/>例如 window] --> B[已注册的监听器]
+  B --> C[回调的闭包环境]
+  C --> D[已关闭的预览节点与数据]
+  E[从文档移除节点] -.->|只切断文档树上的边| D
+  F[结束面板生命周期] --> G[移除监听与任务<br/>释放外部资源]
+  G --> H[检查是否还有其他持有者<br/>不依赖立即 GC]
+```
 
-建立固定操作周期，例如进入路由、打开弹窗、播放、关闭和离开。先热身让模块、字体和缓存初始化，再重复 20或30次；在第0、N/2、N次的同一生命周期点等待或触发 GC并记录。每轮操作、数据与等待一致。
+循环引用本身也不一定泄漏。两个对象互相引用，只要整组对象已无法从根到达，现代追踪式 GC 仍可以处理。真正要找的是不该存在的可达路径，而不是一看到环就手动拆开所有字段。
 
-快照之间比较数量、浅大小、保留大小和新建/删除对象。稳定缓存会在前几轮上升后平台化；泄漏通常近似随轮次增长。噪声较大时增加轮次并关注同类对象与支配树，不为几 KB差异下结论。
+下面的例子没有控制 GC，只演示局部变量置空不会清除另一条强引用。
 
-自动化脚本要模拟真实输入，同时避免测试工具自己保存元素句柄或控制台对象。DevTools中打印对象会使其被控制台保留，排查时清空控制台并避免展开后长期引用。
+```js example=memory-another-reference
+let preview = { title: '已经关闭的预览' };
+const retained = new Map([['last', preview]]);
+preview = null;
+console.log(retained.get('last').title); // => 已经关闭的预览
+retained.delete('last');
+console.log(retained.size); // => 0
+```
 
-### 四、Heap Snapshot 是某时刻的对象图
+### 三、比较相同生命周期位置，才有意义
 
-快照显示构造器、对象数、浅大小、保留大小、Dominator和引用关系。Summary适合按类型看分布，Comparison比较两张快照，Containment查看对象关系。名称相同不代表同一业务对象，结合属性和创建路径确认。
+先热身一次，让模块、字体和必要缓存初始化。然后固定一个操作周期，例如打开预览、调整尺寸、关闭预览。每轮都回到同一位置，再比较对象数量、资源计数或快照。
 
-**保留路径（Retaining Path）**从目标对象回溯到 GC root，解释“谁让它仍可达”。修复通常位于路径中最接近业务所有权的强引用：全局监听器、Map缓存、定时器回调或订阅列表。删除目标对象的某个字段而路径仍存在，不会释放整体。
+不要拿“刚打开页面”和“正在播放视频”的内存直接比较后就宣布泄漏。它们本来承担不同工作。合理缓存可能先增长后稳定；遗留监听可能每轮多一个。趋势有助于发现候选，但仍需要查它实际保留了什么。
 
-保留大小估计移除对象后可能释放的从属图，受共享引用影响。最大的 dominator不一定能安全删除；框架根和模块缓存可能合法。证据要和生命周期预期结合。
+Chrome 的堆快照会触发相应的垃圾回收过程，以便观察仍存活的图。这个诊断动作不等于生产环境可以按业务时间要求对象马上回收。也不要把强制 GC 后总量稍微下降，当成问题已经解决。
 
-### 五、Allocation Instrumentation 帮助找到创建位置
+工具本身可能影响结果。控制台打印并保留对象、选中的 DOM 元素、测试代码保存的元素句柄，都可能形成额外引用。诊断时用计数和标识记录过程，避免把被测大对象存进调试数组。
 
-分配时间线在操作过程中记录对象分配和存活，可把增长关联函数和时间。它开销较高，应缩短录制范围并固定步骤。Allocation sampling开销较低但为抽样，适合先定位热点。
+### 四、从浅大小走到真正的保留路径
 
-如果快照看到大量相似闭包但不知道来源，时间线可在打开/关闭周期中标出哪次操作创建。修复后同脚本重录，确认存活对象不再随周期增加，而不是只看代码似乎调用了 cleanup。
+**堆快照（Heap Snapshot）**记录某个时刻的对象关系。Summary 适合按类型查看，Comparison 用于比较快照，Retainers 帮助回溯是谁还持有目标对象。具体界面会随工具版本变化，但核心问题始终是“从哪里还能访问它”。
 
-源码映射有助定位压缩代码，但生产 map应上传到受控分析平台而非默认公开。版本和构建摘要必须匹配，否则调用位置会误导。
+**浅大小（Shallow Size）**看对象自身占用，**保留大小（Retained Size）**考虑通过该对象独占保留的对象图。它不能简单把所有子对象相加，因为一些对象还可能被其他路径共享。
 
-### 六、监听器泄漏来自身份与所有权不清
+**支配关系（Dominator）**表示从根到目标的路径都必须经过某个对象。一个小回调可能间接保留一整棵节点树，因此浅大小很小，保留影响却很大。反过来，一个大缓存也可能是明确设计的活跃工作集，不能只按大小决定删除。
 
-`addEventListener`与`removeEventListener`需要相同目标、类型、回调身份和 capture语义。每次渲染创建新箭头函数，卸载时再创建另一个函数无法移除旧监听。将回调保存为稳定引用，或用 AbortSignal统一取消同一组件拥有的监听器。
+**保留路径（Retaining Path）**把症状连接到修复点。若看到 `window → listener → callback → panel`，应检查面板的监听清理；若是 `cache → item → panel`，则检查缓存归属与逐出。把 panel 的某个子字段置空，不代表其他路径已经消失。
 
-全局 window/document、媒体查询、路由、消息总线和第三方 SDK监听最容易跨页面存活。组件只应移除自己创建的资源，不能在卸载时清空共享总线。注册函数返回 disposer能把创建和清理绑定。
+分配时间线适合追“哪段操作创建了这些对象”；allocation sampling 开销较低，但提供的是抽样线索。不要混淆创建热点与泄漏根因：分配很多的函数不一定长期保留对象，长期保留对象的地方也可能没有大量分配。
 
-监听器数量不等于泄漏：事件委托可长期保留一个根监听。验证要看目标业务对象是否被监听器闭包保留，以及重复挂载是否增加相同订阅。
+### 五、移除监听需要同一个回调身份
 
-### 七、闭包保留的是可访问环境
+两段长得一样的箭头函数，是两个不同的函数对象。`removeEventListener` 需要匹配目标、事件类型、回调身份和 capture 语义。passive 等其他选项不按同样方式决定移除匹配，但保持注册与清理选项清晰一致更易维护。
 
-闭包使回调访问创建时变量。长寿命 Promise、队列、监听器或缓存中的回调可能间接保留大型数据和 DOM。即使回调只用一个字段，引擎优化细节不应成为释放保证；主动缩小捕获值并结束任务。
+```js example=memory-listener-identity
+const target = new EventTarget();
+let calls = 0;
+const onPulse = () => { calls++; };
+target.addEventListener('pulse', onPulse);
+target.removeEventListener('pulse', () => { calls++; });
+target.dispatchEvent(new Event('pulse'));
+console.log(calls); // => 1
 
-未完成的异步请求在离开页面后仍可能持有响应处理和组件状态。使用 AbortController取消，完成回调检查任务身份，finally释放引用。取消不一定能让远端停止，但本地不应再提交结果。
+target.removeEventListener('pulse', onPulse);
+target.dispatchEvent(new Event('pulse'));
+console.log(calls); // => 1
+```
 
-把变量设为 null只在它确实切断最后有效路径时有用。若同一对象还在 Map、DOM属性或订阅中，置空局部变量只是心理安慰。用保留路径验证。
+第一次清理失败，回调仍被调用；第二次使用原引用，才真正移除。这里用 EventTarget 演示身份规则，没有创建 DOM，也没有测量内存回收时刻。
 
-### 八、定时器、观察器和任务都需要终止合同
+可以用一个 AbortController 管理同一组件拥有的一组监听，但 `abort()` 不会自动关闭定时器、撤销 Object URL 或销毁所有第三方对象。它只影响接入这个 signal 的操作。`once: true` 也不等于生命周期清理：如果事件一直没发生，监听仍可能保留。
 
-`setInterval`、递归 timeout、rAF、idle callback、Mutation/Resize/IntersectionObserver都可能持有回调和目标。创建时记录句柄，离开生命周期时 clear/cancel/disconnect。回调内部再次调度时要先检查 aborted，避免清理后复活。
+长期存在的根监听或事件委托可以是合理设计。判断标准不是页面上必须“零监听”，而是面板结束后不应继续增加它独占的旧状态。
 
-后台节流会让计时器延迟，返回前台后可能集中执行。周期任务应依据实际时间和当前状态，而不是假设每秒精确一次。页面进入 bfcache时任务会暂停并恢复，`pageshow`后重新验证资源。
+### 六、闭包、Promise 和分离节点要一起追
 
-共享观察器可由中心管理引用计数；单组件观察器则由组件清理。两种模式混用会出现一个组件断开全部订阅或无人断开。
+闭包让函数访问创建时的环境，因此长寿命回调可能间接保留状态。不能泛化成“所有闭包都有泄漏”，也不能反过来假设引擎一定会替你精确裁掉所有无用变量。明确捕获需要的小值，结束订阅与任务，比猜优化细节可靠。
 
-### 九、Detached DOM 是症状，路径才是根因
+**分离节点（Detached DOM）**已经不在文档树中，却可能仍被 JavaScript 或其他对象持有。`element.remove()` 只改变树关系，不会自动清理全局监听、数组缓存或插件内部引用。节点自身和自身监听形成一个无法从根访问的整体，也不必然泄漏；要看外部保留路径。
 
-**分离的 DOM（Detached DOM）**已经从文档树移除却仍被 JS引用。常见路径是数组缓存节点、事件监听闭包、框架实例、调试变量或第三方控件。少量临时 detached节点可能在框架更新中正常，重复操作后持续增加才可疑。
+Promise 尚未完成，不意味着它必然永久存活。要看是谁持有它、异步操作和回调。反过来，真实在途请求、全局任务队列或永不清空的订阅表，可能确实延长状态寿命。
 
-从快照筛选 Detached，选择实际业务节点并查看到 window或其他 root的路径。若父节点被保留，整个子树都会保留；只把子项 textContent清空不解决父引用。修复 owner的订阅、缓存或实例销毁。
+取消 fetch 后，之前已注册或已进入队列的逻辑仍需要正确的身份判断；成功、失败和 finally 都不应修改下一次任务。可以回看 [PERF-03 的可取消搜索](../chinese-guides/perf-03-main-thread-rendering-long-tasks-inp.md#七用可取消搜索看懂最新任务获胜)。
 
-不要手工操作框架管理的 DOM后期待框架正确清理。门户、Teleport、弹层容器和 iframe有独立宿主，卸载合同要覆盖它们。
+### 七、用预览组件把创建和释放放在一起
 
-### 十、Blob URL、媒体和图形资源有显式生命周期
+保存为 `preview-lifecycle.html` 后直接打开。每次预览拥有一个全局尺寸监听、一个定时器和一个 Blob URL；关闭时分别释放，再移除节点。面板上的计数仅代表本例登记的资源，不是浏览器内部所有资源的统计。
 
-`URL.createObjectURL`创建的地址会让 Blob保持可用，使用结束调用 revokeObjectURL；不能在图像/下载真正消费前过早撤销。为每个创建点明确 owner和撤销时机，替换 URL时先释放旧值。
+```html example=memory-preview-page runtime=project file=preview-lifecycle.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>预览的资源生命周期</title>
+<style>
+  body { max-width: 920px; margin: 48px auto; padding: 0 24px;
+    font: 17px/1.8 system-ui; color: #253c56; background: #f5f7fb; }
+  main { padding: 32px; border: 1px solid #dce3ef; background: white; border-radius: 18px; }
+  h1 { font-size: 28px; }
+  button { font: inherit; padding: 9px 16px; margin: 5px 8px 5px 0;
+    border: 1px solid #496787; border-radius: 7px; background: #eff4fc; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid #bd7424; }
+  pre { padding: 18px; background: #eff3fa; white-space: pre-wrap; }
+  #host { min-height: 260px; border-block-start: 1px solid #dce3ef; padding-top: 18px; }
+  img { display: block; max-width: 100%; width: 360px; height: auto; }
+</style>
+<main>
+  <p>生命周期实验 · 所有内容仅在本页生成</p>
+  <h1>关闭面板，也结束它拥有的资源</h1>
+  <button id="open">打开或替换预览</button>
+  <button id="close">关闭预览</button>
+  <button id="pulse">模拟一次尺寸事件</button>
+  <pre id="counts" aria-label="本例登记的资源计数"></pre>
+  <p id="status" role="status">尚未打开预览</p>
+  <section id="host" aria-label="预览区域"></section>
+</main>
+<script>
+  const byId = (id) => document.getElementById(id);
+  const counts = { listeners: 0, timers: 0, objectURLs: 0, resizeCalls: 0, timerCalls: 0 };
+  const report = () => { byId('counts').textContent = JSON.stringify(counts, null, 2); };
+  let stopPreview = null;
+  function createPreview() {
+    const panel = document.createElement('article');
+    const image = document.createElement('img');
+    image.alt = '本地生成的蓝色资料预览占位图';
+    const note = document.createElement('p');
+    note.textContent = '这份预览拥有自己的监听、计时器和临时图片地址。';
+    panel.append(image, note);
+    byId('host').append(panel);
+    const blob = new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="360" height="120"><rect width="360" height="120" rx="16" fill="#dce9f7"/><text x="28" y="70" font-size="28" fill="#254d73">Local preview</text></svg>'], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    image.src = url;
+    counts.objectURLs++;
+    const controller = new AbortController();
+    let disposed = false;
+    window.addEventListener('resize', () => {
+      if (disposed) return;
+      counts.resizeCalls++;
+      note.textContent = `尺寸事件已处理，预览宽度 ${Math.round(panel.getBoundingClientRect().width)}px`;
+      report();
+    }, { signal: controller.signal });
+    counts.listeners++;
+    const timer = setInterval(() => {
+      if (disposed) return;
+      counts.timerCalls++;
+      report();
+    }, 250);
+    counts.timers++;
+    report();
+    return () => {
+      if (disposed) return;
+      disposed = true;
+      controller.abort(); counts.listeners--;
+      clearInterval(timer); counts.timers--;
+      image.removeAttribute('src');
+      URL.revokeObjectURL(url); counts.objectURLs--;
+      panel.remove();
+      report();
+    };
+  }
+  function closePreview() {
+    const dispose = stopPreview;
+    stopPreview = null; // 页面不再持有这份预览的清理闭包。
+    dispose?.();
+    byId('status').textContent = '预览已关闭，本例的活动资源已释放';
+  }
+  byId('open').addEventListener('click', () => {
+    closePreview();
+    stopPreview = createPreview();
+    byId('status').textContent = '预览已打开';
+  });
+  byId('close').addEventListener('click', closePreview);
+  byId('pulse').addEventListener('click', () => window.dispatchEvent(new Event('resize')));
+  window.addEventListener('pagehide', closePreview);
+  report();
+</script>
+</html>
+```
 
-MediaStream轨道、AudioContext、视频解码、Canvas和WebGL资源可能占用堆外内存。停止 UI不等于停止摄像头或轨道，离开任务时停止 tracks、断开节点、关闭 context并移除源。共享媒体会话需要引用计数，不能由一个组件关闭其他使用者。
+打开时前三项计数为 1；再次打开会先释放旧预览，因此仍为 1，而不是增长到 2。关闭后前三项为 0，再模拟尺寸事件或等待片刻，回调累计次数应保持不变。多次关闭也不应减成负数，这体现了清理的幂等性。
 
-Worker、WebSocket、BroadcastChannel、端口和文件句柄也要终止。它们可能通过消息回调保留状态，或即使 JS对象较小仍占系统资源。资源清单比只看 Heap更完整。
+代码故意让页面结束持有清理闭包：如果把每次 dispose 都存进一个永不清空的调试数组，那个数组本身可能延长节点与环境的寿命。`pagehide` 在此选择关闭可重新打开的临时预览；若从 bfcache 返回，需要重新打开，不把它当作仍在运行的面板。
 
-### 十一、缓存必须有容量、失效和身份边界
+计数回零证明本例走到了显式释放路径，不能证明整个页面已经没有泄漏，也不能证明内存立刻归还操作系统。要确认实际对象保留，还需快照与相同周期的证据。
 
-Map缓存没有上限就是业务选择的泄漏。定义最大条目/字节、TTL、LRU或业务失效，并在租户切换、登出和版本变化时清理私有数据。WeakMap只在键没有其他强引用时帮助回收，不提供枚举和确定释放。
+### 八、定时器和观察器不要在清理后复活
 
-WeakRef与FinalizationRegistry回调时机不确定，不能用于关闭文件、提交数据或安全清理。它们适合极少数辅助缓存，不是通用修复。业务生命周期仍用显式 dispose。
+递归 timeout、rAF、idle callback 与各种观察器都可能让回调或目标继续被持有。记录句柄，在所有者结束时 clear、cancel、disconnect；如果回调里还会安排下一次，也要检查结束标志，防止旧回调重新注册。
 
-缓存命中率、内存和重建成本共同决定容量。把所有对象都缓存以追求命中，会在移动端造成更大风险。生产遥测使用粗粒度大小和逐出，不上传缓存内容。
+IntersectionObserver、ResizeObserver 等若被多组件共享，单个组件通常应取消自己观察的目标，而不是 disconnect 整个共享实例。独占观察器则可以随组件整体结束。选择哪种模式，在创建处就应明确。
 
-### 十二、框架组件要采用对称资源管理
+后台节流、页面冻结和恢复会改变回调时刻，不能假设计时器恰好每秒执行。页面进入 bfcache 后也不是正常持续运行，应按业务需要暂停、关闭或恢复资源。缓存恢复的背景见 [PERF-02](../chinese-guides/perf-02-network-resource-loading-cache-optimization.md#十返回页面时先分清是哪一层恢复)。
 
-React effect、Vue生命周期和自定义组件都应让 setup返回 cleanup。依赖变化时先清理旧资源再创建新资源；开发模式重复挂载能暴露不对称，但不能把重复现象都归咎框架。清理函数应幂等，调用两次不会破坏共享对象。
+不要用额外的高频“清理轮询”弥补归属不清。尽量让创建返回 disposer，让调用者在明确边界结束它，资源清单比散落的补丁更好读。
 
-路由保活、Suspense、缓存组件和离屏树可能处于停用而非卸载。定义 active、paused、disposed三种状态：停用暂停昂贵工作，重新激活恢复，最终销毁释放资源。只监听 unmount会错过长期停用成本。
+### 九、Object URL 与媒体资源不只占 JS 堆
 
-第三方编辑器、图表和播放器通常提供 destroy；封装组件必须调用并验证其内部节点、监听和 Worker释放。没有公开销毁能力的库要通过隔离或替换控制风险。
+**Object URL**把一个 Blob 暴露为可供浏览器消费的临时地址。它被创建后，需要在不再使用时撤销。替换预览时，结束旧资源的使用，再撤销旧地址；不能在用户仍需要查看、另存或复用时过早收回。
 
-### 十三、生产检测关注趋势而非上传堆
+下载场景的消费时机与图片预览不同，不能统一写成“调用 click 后立刻 revoke 就永远安全”。要依据使用方式和目标浏览器确定何时结束，避免为了释放得快反而让下载失败。
 
-生产可采集有限内存近似、崩溃、标签页寿命、操作轮次和设备类别，用趋势发现候选；完整堆快照可能含敏感内容，不应自动上传。实验室用代表数据复现后再取快照。
+摄像头与麦克风流需要按所有权停止轨道；AudioContext、解码器、图像位图、WebGL 资源等各有适当的关闭或删除 API。隐藏播放器、移除 canvas 或停止更新 UI，不意味着底层资源已结束。
 
-设置资源计数器：活动监听、计时器、Worker、Object URL、媒体轨道和缓存条目。计数器由封装层维护，开发测试在路由离开后断言回到基线。计数本身也要避免持有被测对象。
+Worker、WebSocket、BroadcastChannel 和消息端口也应进入清单。共享连接要由共享服务管理最后一个使用者的退出，不能一个浮层关闭就切断全站连接。实时连接的生命周期见 [REALTIME-01](../chinese-guides/realtime-01-sse-websocket-webtransport-reliability.md#realtime-01)。
 
-发布后比较相同路由和任务的长会话趋势。若只有新版在第20轮后增长，关联制品和功能开关缩小范围；用户设备差异要分层，不能把所有增长归给新代码。
+### 十、缓存和弱引用解决不同的问题
 
-### 十四、验证修复必须回到同一操作周期
+没有容量上限的 Map 可能导致内存膨胀，但不能仅因它是 Map 就断言泄漏。应说明缓存对象是否仍有业务价值、最大条目或字节、有效期和身份切换规则。缓存文章与缓存账户权限不是同一类生命周期。
 
-对修复还要做所有权评审：列出每种资源由谁创建、在 active/paused/disposed 哪个阶段暂停或释放、共享时怎样引用计数、异常与取消怎样进入清理。把这些合同放进组件或服务 API，而不是只留在排障笔记。开发测试可以连续挂载卸载并断言计数回到基线，端到端长会话观察趋势，生产只采集低敏汇总。版本升级时第三方库可能改变内部资源，重新运行相同脚本；如果无法解释一条保留路径，就不能仅凭内存曲线暂时平稳宣称问题解决。
+下面实现一个只按条目数限制的简化 **LRU（Least Recently Used）**：读取会把条目移到最近使用的位置，写入超过容量时逐出最久未用的条目。
 
-故意注入未移除的 resize监听、未撤销 Blob URL、无限缓存和未停止媒体轨道。用同一脚本做热身和重复周期，保存三张快照、保留路径、资源计数与用户症状。每次只修一个已证明路径，再同条件复测平台化趋势和功能。
+```js example=memory-bounded-cache
+class RecentCache {
+  constructor(limit) {
+    if (!Number.isInteger(limit) || limit < 1) throw new RangeError('invalid limit');
+    this.limit = limit;
+    this.items = new Map();
+  }
+  get(key) {
+    if (!this.items.has(key)) return undefined;
+    const value = this.items.get(key);
+    this.items.delete(key);
+    this.items.set(key, value);
+    return value;
+  }
+  set(key, value) {
+    this.items.delete(key);
+    this.items.set(key, value);
+    if (this.items.size > this.limit) this.items.delete(this.items.keys().next().value);
+  }
+}
+const cache = new RecentCache(2);
+cache.set('A', '文章 A'); cache.set('B', '文章 B');
+cache.get('A');
+cache.set('C', '文章 C');
+console.log(cache.get('B')); // => undefined
+console.log([...cache.items.keys()].join(',')); // => A,C
+```
 
-学完后，你应能区分泄漏、膨胀和GC抖动；从可达性、Dominator和保留路径定位强引用；为监听、闭包、定时器、观察器、DOM、媒体和缓存建立 owner/cleanup合同；并用重复趋势而非单次强制 GC证明修复。继续查证可参考 [Chrome 内存问题指南](https://developer.chrome.com/docs/devtools/memory-problems)、[Heap Snapshot 指南](https://developer.chrome.com/docs/devtools/memory-problems/heap-snapshots)与 [MDN 内存管理](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Memory_management)。
+最多两个条目，不等于最多两兆内存；值的大小可以完全不同。本例没有 TTL、字节限制、身份隔离或外部资源析构。若缓存值持有 Object URL 或连接，逐出时还要执行属于它的释放流程。
+
+WeakMap 的键不会仅因为作为弱键就被它强行保活，适合把辅助信息关联到对象，但不提供可枚举的容量管理。WeakRef 与 FinalizationRegistry 不保证何时回收或执行回调，不能承担关摄像头、提交写入或删除秘密等确定性职责。显式 dispose 仍是业务资源管理的基础。
+
+### 十一、框架生命周期要区分暂停和最终销毁
+
+React Effect、Vue 生命周期或自定义组件都需要对称地创建与清理资源。依赖变化会结束旧一轮副作用，再启动新一轮；开发模式额外执行 setup/cleanup，可以帮助发现不对称，但不能用“开发模式才会重复”掩盖缺陷。
+
+路由缓存、KeepAlive、离屏树和弹层隐藏可能只让组件停用，并未卸载。可以按资源需要区分 active、paused、disposed：停止不可见的高频工作，保留可恢复状态，最终销毁时释放独占资源。不要机械地把所有停用都当销毁，也不要只等 unmount 才停止昂贵轮询。
+
+第三方编辑器、图表和播放器通常有自己的 destroy 或 dispose。封装层应该明确谁调用它、异常时如何清理、共享实例怎样退出。对于没有可靠释放能力的依赖，隔离或替换可能比反复清空 DOM 更有效。
+
+数据读取也要与身份和缓存键一起结束。组件关闭后其结果是否还进入共享缓存，要由数据层规则决定，而不是由一个组件顺手清空其他人的缓存。相关职责见 [DATA-01](../chinese-guides/data-01-server-state-cache-keys-invalidation-deduplication.md#data-01)。
+
+### 十二、修复后回答对象为什么不再留下
+
+一份有说服力的记录可以是：“预览关闭后，旧 resize 回调仍通过 window 保留 panel；改为所有者 signal 后，相同开关周期不再累加回调，快照里该路径消失，预览功能仍正常。”它同时包含生命周期、保留原因、修复点和行为结果。
+
+无需每次内容修改都长时间录制整个应用。对实际内存故障，先用资源计数或重复回调缩小对象，再抓对应快照和路径；对释放模式的教学示例，明确它验证的是释放动作，不夸成完整泄漏审计。
+
+生产观察可以关注版本、会话长度、任务轮次与粗粒度内存趋势，不应默认上传整个 heap。快照可能包含文章、输入、凭据与其他运行内容，应在受控环境使用代表数据。
+
+如果某条路径仍无法解释，曲线暂时平稳也不能替代说明。最终目标是让对象和外部资源的寿命都与任务相符，并让下一位维护者能从创建处找到结束方式。
+
+### 带着问题回看
+
+- 关闭面板并把局部变量设为 null，为什么旧节点仍可能存活？
+- 两个长得一样的箭头函数，为什么不能互相完成监听移除？
+- 资源计数为零与堆快照没有遗留路径，分别证明了什么？
+- LRU 限制了条目数量，为什么还可能需要字节预算和逐出清理？
+
+### 参考与延伸阅读
+
+- [Chrome：内存问题](https://developer.chrome.com/docs/devtools/memory-problems)：区分增长趋势、膨胀和频繁回收。
+- [Chrome：Heap Snapshot](https://developer.chrome.com/docs/devtools/memory-problems/heap-snapshots)：查询快照、对比和保留关系。
+- [MDN：内存管理](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Memory_management)：理解可达性、弱引用与回收限制。
+- [MDN：removeEventListener](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener)：核对回调身份与 capture 匹配。
+- [MDN：revokeObjectURL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)：查询临时地址释放。
+- [MDN：FinalizationRegistry](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry)：理解不能依赖终结回调及时执行的原因。

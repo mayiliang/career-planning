@@ -1,120 +1,250 @@
-# 网络加载与缓存优化知识点讲义
+# 让关键内容更早到达，而不让旧内容误导用户
 
 ## PERF-02 Network、资源加载与缓存优化
 
-网络优化不是把所有资源缓存得更久或提前下载得更多，而是在用户意图、资源可变性、连接成本和正确性之间安排请求。浏览器何时发现资源、如何排队、能否复用连接和响应、导航取消后是否浪费，以及恢复旧页面时数据是否仍可信，共同决定体验。本讲从瀑布阶段出发，逐层说明关键路径、压缩、图片、缓存、资源提示、推测导航和 bfcache 的边界。
+同样一张 120 KiB 的课程封面，有的页面打开后很快就显示，有的却等了两秒才开始下载。还有一种情况：第一次访问很慢，第二次很快，但发布新版本后，用户反而打不开旧页面。
+
+网络优化要同时回答“什么时候开始请求”“能否复用已有结果”“复用以后还对不对”。本篇沿着资料页的加载过程，讲清瀑布、依赖、图片、资源提示与几种缓存。缓存策略的完整定义可沿引用回查，这里重点解释如何作出选择、如何读懂结果。
 
 ### 学习前先确认
 
-- 直接前置：[NET-01 浏览器网络、Fetch 与可靠性](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。需要先理解 DNS、HTTP、缓存、取消、重试和连接生命周期。
-- 直接前置：[PERF-01 Core Web Vitals 与性能预算](../chinese-guides/perf-01-core-web-vitals-performance-budgets.md#perf-01)。优化必须由用户指标和预算驱动，而不是只追求更少请求。
+- 直接前置：[NET-01 浏览器网络、Fetch 与可靠性](../chinese-guides/net-01-browser-network-fetch-reliability.md#net-01)。先理解请求、状态、取消与重试，不把网络失败直接等同于业务失败。
+- 直接前置：[PERF-01 Core Web Vitals 与性能预算](../chinese-guides/perf-01-core-web-vitals-performance-budgets.md#perf-01)。知道主要内容出现、交互反馈和传输大小衡量的是不同成本。
 
-### 一、先读懂一次请求的阶段
+### 一、瀑布图先看什么时候开始，再看用了多久
 
-Network 瀑布通常包含排队、DNS、连接、TLS、请求发送、等待响应和下载。复用既有连接时前几段可能消失；HTTP/2 或 HTTP/3 下多请求共享连接，排队不必然等于浏览器线程阻塞。先确认工具对阶段的定义和协议，不能把颜色长度直接当根因。
+**瀑布图（Waterfall）**把多个请求放到同一条时间轴上。横条很短，只能说明这个请求在某段阶段耗时少；如果它直到很晚才被发现，主要内容仍会出现得晚。
 
-**首字节时间（Time to First Byte）**从导航或请求开始到收到响应首字节，混合了重定向、连接、边缘、服务器和网络往返。它适合发现响应开始晚，却不能说明下载、解析和渲染。CDN 命中与未命中、冷启动和身份检查都会改变 TTFB，应按缓存状态与地区分层。
+想象资料页的加载顺序：HTML 到达，下载入口脚本，脚本运行，取得课程信息，最后才创建图片标签。图片的下载只用了 150 毫秒，但前面的串行步骤花了一秒。此时换更快的图片服务器，无法消除“还不知道要请求哪张图”的等待。
 
-HAR 保存请求方法、URL、头、状态、时间和体积，便于比较，但常含 Cookie、Authorization、查询令牌和响应正文。分享前采用字段允许列表和脱敏规则，最好在采集源头生成安全版本；“删掉 Cookie”并不能覆盖正文和 URL 中的个人数据。
+在 Network 中先找到与用户慢点相关的请求，查看 Initiator，确认是谁触发了它；再看请求起点、优先级、协议、缓存来源和分段时间。不要先按 Size 排序，就认定最大的文件一定是最重要的瓶颈。
 
-### 二、关键路径是依赖图而非文件清单
+| 观察 | 目前能知道什么 | 还不能直接断定什么 |
+| --- | --- | --- |
+| 请求开始得晚 | 资源较晚进入加载流程 | 不一定是下载慢 |
+| 排队时间长 | 请求在等待某些调度或连接条件 | 不一定是 JavaScript 占满主线程 |
+| 等待首字节长 | 响应较晚开始到达 | 不等于服务器代码运行了同样久 |
+| 下载时间长 | 响应传输阶段耗时多 | 不一定只由文件大小决定 |
+| 请求已完成，内容仍没出现 | 网络完成与呈现之间还有工作 | 不应继续只盯网络 |
 
-**关键渲染路径（Critical Rendering Path）**连接 HTML 发现、CSSOM/DOM、阻塞脚本、字体、主要图片和首帧。资源体积相同，发现顺序不同会产生完全不同结果。先画出主要内容呈现前必须完成的依赖，其他内容应延迟、异步或在空闲阶段处理。
+### 二、把主要内容画成依赖链
 
-HTML 流式到达可以提前发现静态标签；资源若藏在客户端 JS、CSS 深层或串行 API 后，会产生发现延迟。模块图和动态 import 决定脚本链，CSS `@import` 常增加串行；字体与背景图要等样式解析。优化应缩短必要链，而不是把所有资源标成高优先级。
+**关键路径（Critical Path）**是影响目标完成时间的必要依赖链。它不是“首屏所有文件”的另一个名字。正文已经可读时才用到的导出库，可能很大，却不应该挡住正文出现。
 
-浏览器调度会综合资源类型、位置、可见性和 `fetchpriority`。提示只是提示，滥用高优先级会让真正关键资源竞争失败。每次调整都用瀑布与 LCP 阶段验证，避免只看标签存在。
+```mermaid
+flowchart TB
+  A[HTML 开始到达] --> B[浏览器发现正文与样式]
+  A --> C[发现主要图片并请求]
+  B --> D[主要内容可以排版]
+  C --> E[主要图片可解码]
+  D --> F[主要内容呈现]
+  E --> F
+  A --> G[加载非首屏统计模块]
+  G --> H[用户打开统计时再使用]
+```
 
-### 三、连接复用与源数量存在取舍
+如果主要图片被藏在统计模块里，图中的两条分支就被错误地串在一起。优化可以是让图片地址更早进入 HTML，或者把无关初始化移出必要链，而不是再添加十个 preload。
 
-DNS 查询、TCP/QUIC 和 TLS 都有往返成本。对确定会访问的少数关键跨源可使用 preconnect，只有域名未知资源时 dns-prefetch 更轻。每个提前连接消耗 socket、证书交换和网络，向十几个第三方预连接会争抢移动网络。
+下面只演示依赖关系的算术，假设两个任务互不竞争，数字不是浏览器实测结果。
 
-HTTP/2/3 允许多路复用，但不同域名、证书、代理和连接合并条件会限制复用。把资源拆到大量域名的旧式 domain sharding 在现代协议下常失去收益。判断应以实际连接 ID和协议为证据。
+```js example=network-dependency-time
+const html = 300;
+const image = 200;
+const extraModule = 600;
+console.log(html + extraModule + image); // => 1100
+console.log(html + Math.max(image, extraModule)); // => 900
+console.log(html + image); // => 500
+```
 
-连接复用也有隐私和故障范围。第三方连接可能在用户同意前暴露访问；共享域名故障会影响多资源。只为用户当前任务建立必要连接，并为不可达第三方设置超时和降级。
+第一行是图片被额外模块挡住；第二行是两者并行但仍等两者全部完成；第三行是正文目标只需要图片，不必等无关模块。真正的改善通常来自重新确认依赖。真实网络共享带宽、连接与 CPU，并行不能机械按最大值预测。
 
-### 四、压缩与编码要匹配内容
+### 三、连接与首字节要连同观察位置一起解释
 
-HTML、CSS、JS、JSON 和 SVG 等文本通常适合 gzip 或 Brotli；JPEG、WebP、AVIF、视频和 zip 已经压缩，再压收益小且耗 CPU。动态压缩级别要平衡源站时间和字节，预压缩静态资源可减少运行成本，但发布流程必须保证内容、编码和摘要一致。
+一次冷请求可能经过 DNS、建立连接、TLS、发送请求、等待与接收；复用连接后，某些阶段可能不再单独出现。**TTFB（Time to First Byte）**描述首字节到达前的时间，但工具选择的起点可能是导航开始或请求阶段，阅读报告前要确认口径。
 
-响应协商需要 `Vary: Accept-Encoding` 或等价缓存键，代理与 CDN 必须区分编码。若头声称 Brotli 而正文不是，浏览器无法解码；Range 请求和流式内容也要验证。传输大小减少不等于解析执行成本减少，巨大 JS 即使压缩很好仍会阻塞主线程。
+服务端处理慢、边缘回源、重定向、身份检查和网络往返都可能抬高它。若要进一步拆服务端阶段，可以使用受控的 Server-Timing 信息或链路记录；不能把浏览器的一段等待直接归到数据库。
 
-检查真实公网响应，而不是只看源文件大小。缓存命中、Service Worker 和 DevTools禁用缓存选项会改变传输列；报告同时保存资源原始、传输和解压后大小。
+HTTP/2、HTTP/3 能多路复用，不表示所有请求没有竞争。流量控制、优先级、拥塞、服务端调度和不同源的连接条件仍会影响结果。过去为了突破并发限制而拆很多域名，今天可能增加连接开销；应查看实际协议和连接复用，而不是套用旧经验。
 
-### 五、图片和字体需要发现、尺寸与格式协同
+`preconnect` 可以为确定会用的关键源提前准备连接，`dns-prefetch` 只提前解析。十几个不确定第三方都提前连接，会消耗资源，并在用户尚未选择相关功能时触及第三方。先减少不必要的源，再为少数明确的依赖提供提示。
 
-主要图片应在初始标记中可发现，提供 `width`/`height` 或 `aspect-ratio` 稳定布局，并用 `srcset`/`sizes`选择与显示尺寸匹配的候选。只换现代格式却继续下载远超设备尺寸的图片，收益有限。首屏关键图通常不应 lazy-load，屏外图才适合延迟。
+### 四、下载大小、解压大小与执行成本分开看
 
-格式选择考虑透明、动画、照片/线稿和解码支持；服务端或 CDN 转换要把源版本、尺寸、格式和质量纳入缓存键。质量评估需在目标设备看视觉结果，不能只比较字节。
+文本资源通常适合 gzip 或 Brotli，已压缩的图片、视频和归档再次压缩则不一定值得。静态文件预压缩可以减少在线 CPU 成本，但服务器必须发送与实际正文一致的 `Content-Encoding`，缓存也要区分编码变体。
 
-字体子集和必要字重能减少下载，回退字体的度量应接近最终字体以控制布局偏移。预加载只针对确定使用的少数文件，并匹配 `crossorigin`；否则会重复请求。文本可见与品牌字体之间需要明确策略。
+同一个 JS，磁盘上 600 KiB，gzip 后传输 150 KiB，并不意味着浏览器只解析 150 KiB。下载后仍需解码、解析和执行。一个压缩率很好的巨大数据对象，也可能在解析、创建对象和后续渲染时带来明显成本。
 
-### 六、HTTP 缓存由新鲜度与验证共同工作
+Network 的 Size、Transferred，以及 Resource Timing 的 `transferSize`、`encodedBodySize`、`decodedBodySize` 表达不同含义。一个零值可能受到缓存、跨源计时权限或其他响应来源影响，不能用“等于零”作为所有环境通用的缓存命中判断。跨源详细计时还可能需要 `Timing-Allow-Origin`，它和允许读取业务响应的 CORS 头不是一回事。
 
-响应在 freshness lifetime 内可直接复用；过期后可携带 ETag 或 Last-Modified 重新验证，服务器返回 304 表示沿用正文。`no-cache` 要求使用前验证，`no-store` 才是不存储。公共与私有、`s-maxage`、`stale-while-revalidate` 等指令必须结合数据敏感度和一致性要求。
+HAR 很适合保存前后请求证据，但也可能包含身份头、完整 URL、请求体和响应内容。分享时应只留下当前分析需要的字段，不能仅删除 Cookie 就认为已经没有敏感信息。需要观察的数据范围可回看 [OBS-01 的采集最小化](../chinese-guides/obs-01-frontend-observability-slo-alerting-privacy.md#十一数据最小化应发生在进入队列之前)。
 
-带内容哈希的静态资源可一年 immutable，入口 HTML 短缓存或验证，API 根据业务状态与身份决定。认证响应默认不能进入共享缓存；缓存键要包含会改变表示的租户、语言和授权维度，但敏感 token 不应成为可观察 URL。
+### 五、图片与字体要同时解决发现和呈现
 
-命中率不是唯一目标。陈旧价格、跨用户数据和旧权限的高命中是严重故障。优化同时报告节省字节、延迟、过期错误和失效成本。
+主图通常应能被浏览器尽早发现，不要给确认的 LCP 图片无条件加 `loading="lazy"`。屏外插图可以延迟加载。`width`、`height` 或合适的比例约束用于预留空间，解决的又是布局稳定性问题。
 
-### 七、preload 只解决晚发现的确定关键资源
+下面是标记示意，假设这些资源已存在，候选图片具有相同比例。`sizes` 描述实际显示宽度，`srcset` 列出候选固有宽度；浏览器结合这些信息及设备条件选图，而不是按照文件名里的数字猜。
 
-preload 告诉浏览器当前导航很快会使用某资源，并带 `as`、类型和跨源信息。它适合确实关键但浏览器正常发现过晚的字体、主要图片或脚本。若实际请求 URL、凭据模式或类型不一致，会出现两次下载；若资源后来不用，就浪费带宽。
+```html
+<img src="/assets/lesson-800.webp"
+     srcset="/assets/lesson-800.webp 800w, /assets/lesson-1600.webp 1600w"
+     sizes="(min-width: 1000px) 800px, 90vw"
+     width="1600" height="900" fetchpriority="high"
+     alt="事件循环中任务与渲染机会的关系">
+```
 
-modulepreload 面向模块及其依赖，preconnect只建连接，prefetch面向可能的未来导航。不要用一个术语替代另一个。先在瀑布找到发现延迟，再选择成本最小的提示。
+实际 CSS 若把图片限制成 500px，而 `sizes` 一直宣称 90vw，就可能选到不必要的大图。桌面高 DPR 和宽屏也会遇到这个问题，不能把响应式图片只理解为手机功能。具体像素关系见 [H5-01](../chinese-guides/h5-01-viewport-responsive-safe-area-orientation.md#一css-像素描述布局dpr-描述映射)。
 
-服务端 Early Hints 可以在最终响应前提示资源，但代理/CDN支持和缓存行为要实测。任何提示都不能代替缩短服务器响应和简化依赖图。
+字体应先减少真正使用的字重与字符范围，再决定加载策略。`font-display` 影响字体等待和回退行为，但不会让两套字体的字形度量自动一致；替换后的换行变化仍可能产生位移。只预加载实际使用的关键字体，并匹配 `as="font"`、类型与 `crossorigin`，避免重复请求。
 
-### 八、推测加载必须评估意图和副作用
+### 六、HTTP 缓存让响应复用，不保证内容永远正确
 
-**推测加载（Speculative Loading）**根据规则或用户信号提前为未来导航取资源或渲染页面。prefetch主要获取资源，prerender会在隐藏上下文执行文档与脚本。后者可能触发埋点、身份刷新、库存预留或第三方调用，因此只用于高概率、可安全执行且无不可逆副作用的页面。
+HTTP 缓存需要先决定能不能存，再决定何时能复用。新鲜响应可以按规则直接使用；需要验证时，客户端带上已有验证器，服务端可能返回 304，继续使用已有正文。
 
-预渲染页面要检测 prerendering/激活状态，把必须在真正访问时发生的副作用延后。认证和个性化数据可能在等待期间过期，激活后重新校验。支付、删除、退出和单次令牌页面不应因为点击概率高就预渲染。
+`no-cache` 允许存储但要求复用前验证，`no-store` 要求不要存储；`private` 用来排除共享缓存。带内容 hash 的静态资源适合较长新鲜期与 `immutable`，入口 HTML 通常需要及时验证。账户数据和公共帮助页不能采用同一种默认策略。完整指令对照见 [DEPLOY-01 的缓存规则](../chinese-guides/deploy-01-nginx-static-assets-reverse-proxy-https-cdn.md#八缓存指令分别回答能不能存与何时能复用)。
 
-记录命中、取消、浪费字节、内存和真实导航提升。推测错误率高时应收缩规则；Save-Data、弱网、低电量和后台状态可以禁用。兼容性不足时自然降级为普通导航。
+例如服务器给公共内容设置 60 秒新鲜期，边缘缓存已经保存了 40 秒，浏览器收到时并不是凭空又多出完整的 60 秒。HTTP 缓存会结合 Age、日期与传输经过的时间判断当前年龄。下面只演示忽略额外传输时间时的剩余量，不是完整缓存年龄算法。
 
-### 九、bfcache 恢复的是整页状态
+```js example=network-freshness-remainder
+const maxAge = 60;
+const age = 40;
+console.log(Math.max(0, maxAge - age)); // => 20
+console.log(Math.max(0, maxAge - 80)); // => 0
+```
 
-**往返缓存（Back Forward Cache）**在前进/后退时冻结并恢复整个文档，包括 JS 堆，而不是从 HTTP 缓存重新取响应。恢复极快，却可能带回陈旧身份、列表和连接状态。用 `pageshow.persisted` 区分恢复，并在恢复时刷新必须最新的数据。
+缓存正确性还取决于键：同一路径若随语言、身份或查询参数改变表示，就要避免错误共用。给私人结果加一个高命中率缓存，可能只是把错误更快地分发给更多人。
 
-`unload` 会显著妨碍 bfcache，优先使用 `pagehide`/`visibilitychange` 做有限清理。活动中的某些资源、事务或浏览器策略也会阻止缓存，可用 NotRestoredReasons 与 DevTools调查。不能把不命中原因猜成“浏览器不支持”。
+### 七、实际看一次 200、304 与更新后的 200
 
-页面进入 bfcache 时计时器和任务被暂停，恢复后继续。WebSocket、锁、媒体和敏感页面需要明确生命周期；用户退出后通过后退恢复时必须重新确认会话，不能显示上一用户私有内容。
+保存为 `conditional-response.mjs`，用 Node.js 22 执行。它启动一个仅监听本机的临时 HTTP 服务，完成三个请求后关闭，不写磁盘、不连接外部服务。这里的客户端主动回传单个 ETag，演示条件响应；Node fetch 不在这个例子里替我们实现浏览器 HTTP 缓存。
 
-### 十、Service Worker 与 HTTP 缓存不能混为一层
+```js example=network-conditional-response runtime=project file=conditional-response.mjs
+import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 
-Service Worker 可拦截请求并使用 Cache Storage，策略由应用代码决定；HTTP 缓存由响应头和浏览器实现决定。一次响应可能依次经过两层。调试时记录是否被 Worker控制、命中哪个 cache name、网络是否发出以及响应版本。
+let version = 1;
+const server = createServer((req, res) => {
+  if (req.method !== 'GET' || req.url !== '/lesson') {
+    res.writeHead(404, { 'Cache-Control': 'no-store' });
+    res.end();
+    return;
+  }
+  const body = JSON.stringify({ title: '缓存的三次请求', version });
+  const etag = '"' + createHash('sha256').update(body).digest('hex') + '"';
+  const headers = { 'Cache-Control': 'no-cache', ETag: etag };
+  // 本实验只处理客户端原样回传的一个强 ETag。
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, headers);
+    res.end();
+    return;
+  }
+  res.writeHead(200, { ...headers, 'Content-Type': 'application/json' });
+  res.end(body);
+});
+server.listen(0, '127.0.0.1');
+await once(server, 'listening');
+try {
+  const url = `http://127.0.0.1:${server.address().port}/lesson`;
+  const first = await fetch(url);
+  const stored = await first.json();
+  const etag = first.headers.get('etag');
+  console.log(first.status, '保存版本', stored.version);
+  const second = await fetch(url, { headers: { 'If-None-Match': etag } });
+  console.log(second.status, '响应正文长度', (await second.text()).length);
+  console.log('客户端继续使用版本', stored.version);
+  version = 2; // 模拟服务端内容已经更新。
+  const third = await fetch(url, { headers: { 'If-None-Match': etag } });
+  console.log(third.status, '取得新版本', (await third.json()).version);
+} finally {
+  await new Promise((resolve) => server.close(resolve));
+}
+```
 
-离线优先策略要按资源类型选择：app shell可缓存优先，频繁变化 API可网络优先并有超时，写请求进入队列必须处理幂等与冲突。全局 cache-first 会让更新和权限撤回失效。
+预期输出是 `200 保存版本 1`、`304 响应正文长度 0`、`客户端继续使用版本 1`、`200 取得新版本 2`。第二次仍然有网络往返，只是不用重传正文；304 不能从“没有正文”推导出页面应显示空白。
 
-Worker升级存在等待与多标签页并存。新 Worker不可在未确认兼容时删除旧缓存；激活和刷新 UX要保护用户输入。性能优化不能破坏更新正确性。
+代码没有实现多个 ETag、弱验证器和所有 HTTP 前置条件，因此不是可直接替换生产框架的条件请求中间件。学习重点是表示、验证器与已有副本的关系。浏览器缓存是否真的命中，仍要在目标浏览器中观察实际请求来源与响应。
 
-### 十一、第三方资源要有预算和退出路径
+### 八、不同资源提示各提前了哪一步
 
-广告、分析、客服和实验脚本可能建立连接、下载依赖、执行长任务并访问数据。为每个第三方记录 owner、目的、加载条件、用户同意、字节、主线程成本、超时和禁用方式。供应商 SLA不等于不会阻塞用户主线程。
+不要因为名字都带 pre，就把它们当作同一个开关。
 
-延后到同意或首个空闲阶段可以减少关键路径，但真正业务所需脚本要提供失败降级。sandboxed iframe、代理和权限策略可缩小影响，仍需验证。第三方变更可能不经过仓库发布，持续监控体积和行为。
+| 机制 | 提前做什么 | 典型使用条件 |
+| --- | --- | --- |
+| `dns-prefetch` | 域名解析 | 可能很快访问某个源 |
+| `preconnect` | 准备连接 | 确定会使用的少数关键源 |
+| `preload` | 请求本次导航确定需要的资源 | 关键资源正常发现得太晚 |
+| `modulepreload` | 加载模块并准备使用，依赖处理依实现而定 | 当前页面的模块加载需要提前 |
+| `prefetch` | 为可能的未来使用取回资源或文档 | 有一定意图、成本可接受 |
+| `prerender` | 为未来导航提前加载并执行页面 | 页面允许提前执行且激活可控 |
 
-模拟 DNS失败、脚本超时和返回巨大内容，确认页面核心任务仍可完成。只在第三方正常时测性能会高估系统韧性。
+preload 不会仅因为把 JS 下载了就自动执行它，也不会仅因为加载 CSS 就自动应用样式；页面仍需正常引用。URL、资源目的、CORS 与凭据模式不匹配，可能无法复用。不要同时预加载同一图片的多种格式，然后只用其中一种。
 
-### 十二、导航取消和竞态会制造隐藏浪费
+`fetchpriority` 调整的是提示优先级，不会创造额外带宽，也不能代替让资源变得可发现。Early Hints 可以在最终响应前提示资源，但链路中的代理与 CDN 必须支持；加上标签或头不等于获得了已验证收益。
 
-用户快速切换路由时，旧页面的 fetch、图片和动态 import可能继续，占用连接和 CPU，晚返回还可能覆盖新状态。使用 AbortSignal和请求身份取消或忽略过期结果；缓存层可共享真正相同的请求，但不能把不同身份和参数错误合并。
+### 九、推测导航必须控制提前发生的事情
 
-预取与真实导航同时发生时应复用而非重复，失败或部分响应要能回退。统计取消率和浪费字节，热门资源的大量取消说明触发时机错误。
+**推测加载（Speculative Loading）**根据规则或意图为未来导航准备内容。prefetch 文档通常不执行其页面 JavaScript，但请求本身已经发生；如果 GET 地址被错误设计成删除或扣款，单靠“不执行 JS”也不安全。prerender 还可能运行脚本、读取状态和触发第三方逻辑。
 
-网络优先级不能修复应用竞态。提交 UI 前检查当前路由、会话和查询键，登出时清除私有预取与在途响应。
+可以对“阅读下一篇公开资料”设置保守的候选范围，而不要把退出、支付、单次令牌或有写入副作用的路径一起匹配。支持 Speculation Rules 的浏览器也会自行决定是否执行，声明规则并不保证每次预加载。
 
-### 十三、验证优化要同时证明正确和更快
+需要等真实访问才执行的逻辑，可以根据 `document.prerendering` 与 `prerenderingchange` 安排激活处理，并避免重复注册。浏览器支持差异需要能力检测；不支持时普通链接仍应可用。埋点不能在预渲染时就算一次真实阅读，激活后还应重新确认可能变化的身份与数据。
 
-在固定浏览器、网络和 CPU 条件下保存冷缓存、热缓存、返回导航三组瀑布/HAR，并记录页面版本。对主要资源列发现者、优先级、协议、连接、缓存状态、传输与完成时刻。优化前后使用相同输入，多次运行避免偶然波动。
+```html
+<script type="speculationrules">
+{
+  "prefetch": [{
+    "source": "document",
+    "where": { "href_matches": "/public-lessons/*" },
+    "eagerness": "conservative"
+  }]
+}
+</script>
+```
 
-故障注入包括缓存旧入口、错误 Vary、第三方失败、preload未使用、预渲染副作用、登录态改变和 bfcache恢复。验收不仅看字节和 LCP，还看数据新鲜、埋点次数、权限、取消和关键任务。
+这只是规则结构示意，假设该前缀全部是可以安全预取的页面；接入前先审核实际路由。评估时同时记录使用比例、浪费字节和内存。用户没去的页面预取得再快，也不能算成已获得的体验收益。
 
-生产按设备、网络、地区和版本观察 RUM，确认没有把成本转移给弱网用户。实验室改善而字段恶化时，先检查样本、缓存和真实依赖，不要继续增加提示。
+### 十、返回页面时，先分清是哪一层恢复
 
-### 十四、学完后应能建立网络决策树
+**往返缓存（Back/forward Cache，bfcache）**可能在前进或后退时恢复整个文档及其 JavaScript 状态。HTTP 缓存复用的是响应，两者不是同一层。`pageshow` 的 `persisted` 为 true 时，说明这是一次 bfcache 恢复。
 
-你应能从瀑布分辨排队、连接、TTFB、下载和发现延迟，画出关键渲染依赖；能为 HTML、哈希资源、API和敏感数据选择缓存策略；能区分 preload、prefetch、prerender、bfcache与 Service Worker，并解释每种优化的浪费、副作用和失效边界。
+因此，HTML 使用 `no-cache` 不代表从 bfcache 恢复时一定先发条件请求。身份和高新鲜度数据要有恢复检查；仅在恢复后才开始清理敏感内容，还可能先短暂露出旧画面。敏感页面应结合离开时的显示策略、跨标签页退出通知和服务端权限检查设计，不能让“快速回来”绕过身份边界。
 
-选一个真实页面，提交冷/热/返回三轮证据，先修复一个可证明的关键路径问题，再注入陈旧缓存、取消和身份变化验证正确性。继续查证可参考 [MDN HTTP 缓存](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Guides/Caching)、[MDN preload](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Attributes/rel/preload)和 [web.dev bfcache](https://web.dev/articles/bfcache)。
+浏览器对 bfcache 的准入规则会变化，`no-store` 与各种活动资源的影响也应按当前实现确认。避免依赖 unload；诊断时使用 DevTools 的往返缓存检查和可用的未恢复原因，而不是凭一个监听器就断言所有浏览器都不能命中。
+
+Service Worker 则可能拦截请求，再从 Cache Storage 返回应用自己维护的响应。它不是 bfcache，也不会天然照着 HTTP 缓存指令替你实施业务新鲜度。全局 cache-first 可能长期保留旧 API 结果；升级时还要考虑旧页面和新 Worker 的共存。资源版本与更新顺序见 [DEPLOY-01](../chinese-guides/deploy-01-nginx-static-assets-reverse-proxy-https-cdn.md#十一让新旧页面都能找到自己的资源)。
+
+### 十一、导航取消与第三方失败也属于加载设计
+
+用户从课程 A 切到 B，A 的请求可能已经在网络中运行。AbortSignal 可以减少部分无用工作，但不能保证服务端撤销已经发生的写入，也不能取消所有图片和动态 import。提交页面状态前仍应检查任务身份，避免 A 的旧结果覆盖 B。
+
+预取、真实导航与数据缓存需要约定复用范围：相同资源可以共享，不同查询或身份不能合并。请求开始时正确，结束时账号已经切换，也不能把旧身份结果放进新会话。异步归属可回看 [OBS-01](../chinese-guides/obs-01-frontend-observability-slo-alerting-privacy.md#三文档访问页面切换和业务任务分别编号)。
+
+第三方脚本还会增加连接、传输、执行和数据处理成本。给它明确的加载条件、负责人、预算、失败降级和禁用入口。异步脚本虽然不按传统方式阻塞 HTML 解析，下载完成后仍可能在主线程运行很重的逻辑；这部分进入 [PERF-03 的主线程分析](../chinese-guides/perf-03-main-thread-rendering-long-tasks-inp.md#一主线程为什么会挡住已经到达的输入)。
+
+一个帮助组件加载失败，不应让核心正文一直停在 loading。优先保证用户当前任务能继续，再安排附加服务。
+
+### 十二、用三种访问方式确认改动有效
+
+把首次访问、再次访问、前进后退分开观察。首次访问主要暴露发现、连接和下载链；再次访问用于判断 HTTP 缓存与数据新鲜度；返回导航用于检查页面恢复、身份与任务连续性。三者不能用一次“禁用缓存”的录制互相替代。
+
+选择一个明确问题，例如主图被无关脚本延后发现。记录原来的触发者与时间线，只改变发现方式，再在同条件下观察 LCP 对应阶段。若请求提前了，但呈现仍晚，应继续查主线程和渲染，不必再叠更多资源提示。
+
+检查正确性也可以很小而具体：旧入口引用的资源仍可访问；更新内容后验证器改变；错误资源不返回 HTML；切换身份后不会复用私人结果；第三方失败时正文仍可阅读。没有真实 CDN 或目标浏览器证据时，保留未验证范围，不把本地条件响应实验说成全链路提速。
+
+网络工作的终点，是用户更早取得正确内容。把字节变少、命中率变高与用户实际少等了什么连接起来，优化记录才有意义。
+
+### 带着问题回看
+
+- 图片下载很快，却很晚才开始，应该先改图片格式还是资源发现链？
+- 304 没有正文，客户端为什么仍能展示内容？
+- 为什么 `no-cache` 不能保证返回页面时总先请求服务器？
+- 预取没有执行 JS，为什么仍要审核目标路由的副作用？
+
+### 参考与延伸阅读
+
+- [MDN：HTTP 缓存](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching)：查询新鲜度、验证器与共享缓存。
+- [MDN：preload](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/preload)：核对资源目的、复用条件与字体跨源模式。
+- [MDN：Resource Timing](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceResourceTiming)：区分时间、体积和跨源信息限制。
+- [MDN：Speculation Rules](https://developer.mozilla.org/en-US/docs/Web/API/Speculation_Rules_API)：查询规则、激活行为与安全预取边界。
+- [web.dev：bfcache](https://web.dev/articles/bfcache)：理解恢复生命周期与诊断方法。
+- [MDN：使用 Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)：区分应用缓存与 HTTP 缓存。

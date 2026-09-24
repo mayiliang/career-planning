@@ -12,33 +12,53 @@
     "h5-01-viewport-responsive-safe-area-orientation.md"
   ],
   "terms": {
-    "back forward cache": {
-      "file": "0a1a3f70753ca2f5.wav",
-      "text": "Back Forward Cache"
+    "cancellation": {
+      "file": "80812d7992dd498c.wav",
+      "text": "Cancellation"
     },
-    "critical rendering path": {
-      "file": "3b2f7fdc390d08e6.wav",
-      "text": "Critical Rendering Path"
+    "container query": {
+      "file": "bf226c2a8e4ba44b.wav",
+      "text": "Container Query"
+    },
+    "critical path": {
+      "file": "fed98c8c1fb2152c.wav",
+      "text": "Critical Path"
+    },
+    "css pixel": {
+      "file": "c501a943a313aad2.wav",
+      "text": "CSS pixel"
     },
     "detached dom": {
       "file": "a840c82d2331d040.wav",
       "text": "Detached DOM"
     },
-    "device pixel ratio": {
-      "file": "1e3e9ba72b565904.wav",
-      "text": "Device Pixel Ratio"
+    "dominator": {
+      "file": "7c761f5020d553e9.wav",
+      "text": "Dominator"
     },
-    "garbage collection": {
-      "file": "4f76b35955d6c947.wav",
-      "text": "Garbage Collection"
+    "fixed": {
+      "file": "992a93455c71fedd.wav",
+      "text": "fixed"
+    },
+    "forced synchronous layout": {
+      "file": "2db2262b2c1f4340.wav",
+      "text": "Forced Synchronous Layout"
+    },
+    "heap snapshot": {
+      "file": "141c83f5eeef82aa.wav",
+      "text": "Heap Snapshot"
+    },
+    "input delay": {
+      "file": "6e018fb150347537.wav",
+      "text": "Input Delay"
     },
     "layout viewport": {
       "file": "dd0dfb6a0113dc2e.wav",
       "text": "Layout Viewport"
     },
-    "long animation frame": {
-      "file": "6b59832029dcd4ab.wav",
-      "text": "Long Animation Frame"
+    "least recently used": {
+      "file": "69bbea31bd0d03c1.wav",
+      "text": "Least Recently Used"
     },
     "long task": {
       "file": "6cbf63f3932cf99e.wav",
@@ -48,9 +68,33 @@
       "file": "006295de1193b4fa.wav",
       "text": "Main Thread"
     },
+    "media query": {
+      "file": "23b06e81ca781e2c.wav",
+      "text": "Media Query"
+    },
+    "memory leak": {
+      "file": "7faa297fbbdcbca1.wav",
+      "text": "Memory Leak"
+    },
+    "object url": {
+      "file": "56017552d5f59ee0.wav",
+      "text": "Object URL"
+    },
     "reachability": {
       "file": "62f9e3e7d06eb58a.wav",
       "text": "Reachability"
+    },
+    "reflow": {
+      "file": "5fde57db9bba0084.wav",
+      "text": "Reflow"
+    },
+    "resize text": {
+      "file": "a0ac119e1d2d1c71.wav",
+      "text": "Resize Text"
+    },
+    "retained size": {
+      "file": "56458fbb393f7b8e.wav",
+      "text": "Retained Size"
     },
     "retaining path": {
       "file": "d892839c3994c97c.wav",
@@ -64,9 +108,17 @@
       "file": "a919b4a6cdd925a9.wav",
       "text": "Scheduling"
     },
+    "shallow size": {
+      "file": "7fc129d9a973f5bf.wav",
+      "text": "Shallow Size"
+    },
     "speculative loading": {
       "file": "119da5c7c1eaa325.wav",
       "text": "Speculative Loading"
+    },
+    "sticky": {
+      "file": "964a9431ff491fd7.wav",
+      "text": "sticky"
     },
     "time to first byte": {
       "file": "e6f60a16fdef31ac.wav",
@@ -75,6 +127,14 @@
     "visual viewport": {
       "file": "02f1cce05b2507f1.wav",
       "text": "Visual Viewport"
+    },
+    "waterfall": {
+      "file": "3cb562c897155ca6.wav",
+      "text": "Waterfall"
+    },
+    "web worker": {
+      "file": "3cfeaed5250f9cdb.wav",
+      "text": "Web Worker"
     }
   }
 }
