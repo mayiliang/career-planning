@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 1,
+  "batch": "B28",
+  "title": "从输出控制到可靠的模型运行时",
+  "reviewedOn": "2026-10-01",
+  "chapters": [
+    {
+      "id": "AISAFE-01",
+      "title": "让输出逐层满足使用条件",
+      "question": "输出合法以后，能否直接显示、引用或执行？",
+      "summary": "逐层检查摘要卡，处理误拦和失败恢复。",
+      "outcomes": [
+        "区分格式、事实、权限与解释器安全",
+        "观察各层拒绝条件",
+        "为误拦和审核故障设计恢复"
+      ],
+      "prerequisites": [
+        "sec-01-xss-csrf-trust-boundaries.md#sec-01"
+      ],
+      "guide": "aisafe-01-output-validation-content-safety-guardrails.md",
+      "anchor": "aisafe-01",
+      "concepts": [
+        {
+          "id": "output-boundary-consumer",
+          "heading": "一、从最终用途倒推要检查什么"
+        },
+        {
+          "id": "output-boundary-shape",
+          "heading": "二、解析成功之后，仍要检查对象和动作"
+        },
+        {
+          "id": "output-boundary-sink",
+          "heading": "三、在真正使用内容的位置守住解释边界"
+        },
+        {
+          "id": "output-boundary-evidence",
+          "heading": "四、事实、隐私与内容政策是三种判断"
+        },
+        {
+          "id": "output-boundary-threshold",
+          "heading": "五、阈值的代价要从具体样本看"
+        },
+        {
+          "id": "output-boundary-failure",
+          "heading": "六、无法判断时，保留工作而暂停危险动作"
+        },
+        {
+          "id": "output-boundary-layers",
+          "heading": "七、让几道控制分别承担责任"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "security-url",
+          "reason": "链接安全需要按解析后的真实目标判断。"
+        },
+        {
+          "concept": "response-stream-render",
+          "reason": "流式呈现不能把每个网络块当作安全边界。"
+        },
+        {
+          "concept": "automation-control-capacity",
+          "reason": "分类器转人工仍受审核容量限制。"
+        }
+      ]
+    },
+    {
+      "id": "AISAFE-02",
+      "title": "沿攻击路径限制实际后果",
+      "question": "模型受外部内容影响后，怎样阻止错误动作？",
+      "summary": "沿攻击路径观察权限、租户边界、预算与停止。",
+      "outcomes": [
+        "把攻击者能力连接到具体损失",
+        "区分错误计划与实际越权",
+        "记录红队证据和残余风险"
+      ],
+      "prerequisites": [
+        "aisafe-01-output-validation-content-safety-guardrails.md#aisafe-01"
+      ],
+      "guide": "aisafe-02-threat-modeling-red-teaming-abuse-defense.md",
+      "anchor": "aisafe-02",
+      "concepts": [
+        {
+          "id": "threat-path-loss",
+          "heading": "一、把风险写成可能发生的损失"
+        },
+        {
+          "id": "threat-path-flow",
+          "heading": "二、画出内容怎样变成动作"
+        },
+        {
+          "id": "threat-path-injection",
+          "heading": "三、提示注入与过度代理在链路上相遇"
+        },
+        {
+          "id": "threat-path-lab",
+          "heading": "四、用受控执行器观察错误计划的后果"
+        },
+        {
+          "id": "threat-path-persistence",
+          "heading": "五、长期数据与代码执行扩大了攻击面"
+        },
+        {
+          "id": "threat-path-redteam",
+          "heading": "六、红队把假设变成可重复的证据"
+        },
+        {
+          "id": "threat-path-stop",
+          "heading": "七、预算与紧急停止必须管到执行入口"
+        },
+        {
+          "id": "threat-path-residual",
+          "heading": "八、让发现进入下一次发布"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "output-boundary-layers",
+          "reason": "按控制层设计组合故障用例。"
+        },
+        {
+          "concept": "ai-governance-lineage",
+          "reason": "记忆与来源污染需要沿派生物定位后续影响。"
+        },
+        {
+          "concept": "mcp-core-trust",
+          "reason": "工具描述与上游消息不能自行授予执行权限。"
+        }
+      ]
+    },
+    {
+      "id": "AIGOV-01",
+      "title": "让来源和变更有据可查",
+      "question": "模型没变，旧评估和批准为什么仍会失效？",
+      "summary": "用来源图和配置门禁连接撤回、发布与审计。",
+      "outcomes": [
+        "追踪来源撤回的派生影响",
+        "让评估与批准绑定配置",
+        "解释凭证状态和适用边界"
+      ],
+      "prerequisites": [
+        "aiprod-02-high-risk-automation-human-in-the-loop.md#aiprod-02",
+        "privacy-02-cross-region-classification-engineering-controls.md#privacy-02"
+      ],
+      "guide": "aigov-01-data-model-change-audit-accountability.md",
+      "anchor": "aigov-01",
+      "concepts": [
+        {
+          "id": "ai-governance-registry",
+          "heading": "一、登记的是一项能力，不只是一个模型"
+        },
+        {
+          "id": "ai-governance-lineage",
+          "heading": "二、来源撤回要沿派生链找到影响"
+        },
+        {
+          "id": "ai-governance-release",
+          "heading": "三、批准必须绑定整个配置组合"
+        },
+        {
+          "id": "ai-governance-recovery",
+          "heading": "四、灰度、回退与下线恢复不同东西"
+        },
+        {
+          "id": "ai-governance-audit",
+          "heading": "五、用最少必要记录重建决定"
+        },
+        {
+          "id": "ai-governance-credentials",
+          "heading": "六、来源凭证回答的不是事实真伪"
+        },
+        {
+          "id": "ai-governance-export",
+          "heading": "七、导出后的文件才是用户带走的结果"
+        },
+        {
+          "id": "ai-governance-region",
+          "heading": "八、把地区条件写成可升级的决定"
+        },
+        {
+          "id": "ai-governance-incident",
+          "heading": "九、治理要能回答一次具体事故"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "ai-product-value-dataset",
+          "reason": "治理证据依赖独立样本与明确评分条件。"
+        },
+        {
+          "concept": "automation-control-snapshot",
+          "reason": "配置审批与业务动作批准都必须绑定实际版本。"
+        },
+        {
+          "concept": "region-facts",
+          "reason": "地区控制必须从真实主体、用途和数据流出发。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-01",
+      "title": "建立有明确边界的模型接口",
+      "question": "换供应商时，哪些差异必须拒绝？",
+      "summary": "用假 Provider 说明适配、上下文预算和尝试身份。",
+      "outcomes": [
+        "检查必需能力与返回结果",
+        "说明上下文取舍和提示版本",
+        "区分取消、截断、拒绝与未知"
+      ],
+      "prerequisites": [
+        "aiprod-01-ai-task-model-selection-value-validation.md#aiprod-01"
+      ],
+      "guide": "aiapp-01-model-interface-instructions-context-boundaries.md",
+      "anchor": "aiapp-01",
+      "concepts": [
+        {
+          "id": "model-runtime-contract",
+          "heading": "一、合同从用户任务开始"
+        },
+        {
+          "id": "model-runtime-adapter",
+          "heading": "二、适配器转换格式，也保留不能转换的差异"
+        },
+        {
+          "id": "model-runtime-roles",
+          "heading": "三、角色说明来源，不能代替授权"
+        },
+        {
+          "id": "model-runtime-context",
+          "heading": "四、上下文是有限工作集，不是长期记忆"
+        },
+        {
+          "id": "model-runtime-prompt",
+          "heading": "五、提示与采样是有版本的配置"
+        },
+        {
+          "id": "model-runtime-state",
+          "heading": "六、状态和身份让旧结果无法冒充新答案"
+        },
+        {
+          "id": "model-runtime-operations",
+          "heading": "七、预算、密钥和错误信息在服务端收敛"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "ai-product-value-task",
+          "reason": "接口应只承诺任务真正需要的输入输出。"
+        },
+        {
+          "concept": "ai-governance-release",
+          "reason": "接口配置变更会影响发布证据。"
+        },
+        {
+          "concept": "threat-path-injection",
+          "reason": "角色与数据标签不能替代执行权限边界。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-02",
+      "title": "从字节走到可恢复的回答",
+      "question": "断流时，怎样区分完成与半句回答？",
+      "summary": "从分块解码走到连续事件、取消与增量呈现。",
+      "outcomes": [
+        "区分字节、事件和业务终态",
+        "保护连续状态和用户草稿",
+        "解释取消、恢复与渲染边界"
+      ],
+      "prerequisites": [
+        "aiapp-01-model-interface-instructions-context-boundaries.md#aiapp-01",
+        "net-01-browser-network-fetch-reliability.md#net-01"
+      ],
+      "guide": "aiapp-02-streaming-sse-incremental-rendering.md",
+      "anchor": "aiapp-02",
+      "concepts": [
+        {
+          "id": "response-stream-layers",
+          "heading": "一、网络给的是字节，不是完整答案"
+        },
+        {
+          "id": "response-stream-sse",
+          "heading": "二、SSE 的分隔规则与应用的完成规则分开"
+        },
+        {
+          "id": "response-stream-decode",
+          "heading": "三、把不同切块方式送入同一个解析器"
+        },
+        {
+          "id": "response-stream-sequence",
+          "heading": "四、应用事件需要连续位置与明确终态"
+        },
+        {
+          "id": "response-stream-lab",
+          "heading": "五、在桌面上观察取消与草稿保留"
+        },
+        {
+          "id": "response-stream-cancel",
+          "heading": "六、取消先让旧尝试失效，再释放资源"
+        },
+        {
+          "id": "response-stream-render",
+          "heading": "七、渲染批次不等于安全边界"
+        },
+        {
+          "id": "response-stream-pressure",
+          "heading": "八、背压与阅读意图分别控制节奏"
+        },
+        {
+          "id": "response-stream-recovery",
+          "heading": "九、恢复与指标必须对应真实观察"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "model-runtime-state",
+          "reason": "流状态必须服从尝试身份和请求结果模型。"
+        },
+        {
+          "concept": "output-boundary-sink",
+          "reason": "安全呈现要在真正解释内容的位置生效。"
+        },
+        {
+          "concept": "input-coordination-chain",
+          "reason": "持续追加内容时仍要尊重用户的滚动归属。"
+        }
+      ]
+    }
+  ]
+}

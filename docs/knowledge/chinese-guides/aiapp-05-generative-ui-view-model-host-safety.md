@@ -2,134 +2,203 @@
 
 ## AIAPP-05 Generative UI 视图模型、宿主与安全边界
 
-生成式界面不是让模型编写一段 HTML 后直接塞进页面，而是允许模型在产品预先定义的表达空间里提出界面结构和数据。应用仍然拥有组件、交互、权限、无障碍和生命周期。这样既能让界面随任务变化，又不会把 DOM、Cookie、网络和业务动作交给不确定输出。学习这一点的关键，是从“生成代码”转向“解释受限、版本化的视图协议”。
+读书助手先给出三张摘要卡，用户在其中一张写下自己的备注。新结果到达，页面整块重绘：备注没了，焦点也跳回顶部。另一份结果带着一个陌生图表类型，页面又试图按模型给出的包地址下载组件。这两个问题看起来分别属于体验和安全，其实都源于同一件事：应用没有划清模型可以描述什么、宿主必须掌握什么。
+
+本讲从一个可更新的摘要面板建立受控视图。读完后，你应能设计组件注册表，保留用户输入与块身份，处理未知类型和版本，并区分普通数据渲染与隔离应用两种宿主边界。
 
 ### 学习前先确认
 
-- 直接前置：[AIAPP-04 Tool Calling 与工具结果呈现](../chinese-guides/aiapp-04-tool-calling-execution-result-ui.md#aiapp-04)，它递归包含结构化输出基础，并建立交互动作的确认、幂等和真实状态；[SEC-04 跨源隔离、嵌入与权限](../chinese-guides/sec-04-cross-origin-isolation-embedding-permissions.md#sec-04)，用于理解 iframe、来源校验和能力限制。两者分别承担业务动作与宿主隔离。
+- 直接前置：[AIAPP-04 Tool Calling 与工具结果呈现](../chinese-guides/aiapp-04-tool-calling-execution-result-ui.md#aiapp-04)。点击生成界面的按钮仍须经过真实执行与结果确认。
+- 直接前置：[SEC-04 跨源隔离、嵌入与权限](../chinese-guides/sec-04-cross-origin-isolation-embedding-permissions.md#sec-04)。需要理解 iframe、sandbox、来源和窗口身份。
 
-### 一、生成式 UI 的自由度来自受控语法
+### 一、先限制模型的表达方式
 
-**生成式界面（Generative UI）**让模型或 Agent 产生受限的结构化界面描述，由宿主验证并映射到预先审核的组件。模型选择“用表格还是卡片”“显示哪些已允许字段”，但不能随意注入脚本、注册组件、读取宿主状态或扩大权限。
+**生成式界面（Generative UI）**是让模型提出界面的数据和结构，由应用按受控规则选择组件并呈现的方式。模型可以建议“用列表展示三个候选”，宿主决定列表如何布局、哪些字段可见、按钮能表达什么动作。它并不必然涉及生成或执行 JavaScript。
 
-适用场景是任务输出形态多变却仍能被产品组件表达，例如旅行方案、审批摘要、检索结果、配置向导和数据对比。不适合没有稳定合同的一次性试验、纯文本已经足够的回答，或需要执行任意第三方代码的开发环境。
+同一份旅行比较有时适合表格，有时适合时间轴，这类任务有变化的表达需求。若一句话已经足够，额外引入组件协议只会增加失败面。先确定纯文本也能交代的事实，再决定交互形式如何帮助读者完成选择，不能把漂亮界面当作事实更可靠的证据。
 
-受控语法不是越丰富越好。每新增一个组件、样式或事件都扩大兼容、安全和测试面。先从 text、group、list、table、form、citation、artifact、action 等少量原语开始，确认能安全降级和长期演进后再扩展。
+可接受的自由度可以很小：标题、段落、固定列的表格、资料引用和受控动作。布局密度用宿主的主题令牌，链接走统一校验，不接受任意 CSS、事件函数、包地址或动态模板。每增加一种组件，都要定义空、加载、错误和只读状态，而不只是设计成功截图。
 
-### 二、View Model 隔离模型语义与框架组件
+### 二、视图模型把显示和业务事实分开
 
-**视图模型（View Model）**是经过校验、与具体 Vue/React 组件解耦的内部 UI 表示。它包含稳定块 ID、类型、协议版本、数据、状态、允许动作和来源，但不包含组件实例、任意 CSS 或可执行函数。
+**视图模型（View Model）**是供页面消费的内部数据表示。它描述稳定块 ID、类型、版本、内容与状态，不包含 Vue 实例、React 元素或待执行函数。外部结果先通过适配和校验，再变成视图模型；组件不需要理解每家供应商的字段。
 
-模型协议先转换成视图模型，再由渲染层映射。这样供应商字段、A2UI 或自定义事件不会散落在组件里；页面也可以用相同视图模型渲染 Web、移动端或纯文本。适配器保留无法映射的差异并显式降级，不能把未知字段强塞进 `props`。
+一个块用 ID 定位，不用数组下标作为身份。插入第一项时，后面的文本框仍应属于原来的材料；否则草稿和错误提示会错位。视图版本表示这份描述的版本，业务对象版本表示服务器事实的版本，两者不能互相替代。
 
-视图模型只描述显示与意图，不携带授权事实。`canDelete: true` 不能由模型决定；宿主根据当前主体和服务端能力派生按钮状态，点击后仍进入工具调用状态机。
+| 内部块 | 必需的语义 | 不应从模型获得的事实 |
+| --- | --- | --- |
+| text | 可显示的文字、块 ID | 内容必然真实或安全 |
+| reasoning-summary | 可公开的步骤说明 | 隐藏推理原文、执行成功 |
+| tool-call | 已校验提议、原调用 ID | 已批准、已有副作用 |
+| tool-result | 操作 ID、确认状态与来源 | 根据模型语气推断的成功 |
+| citation | 来源 ID、引用范围 | 永久访问权或事实背书 |
+| artifact | 制品 ID、类型、可见摘要 | 可直接打开的任意外部 URL |
 
-### 三、Component Registry 是允许列表和版本目录
+这是本讲的内部分类，不是 AG-UI、A2UI 或 MCP Apps 共同规定的消息集合。步骤说明只引用可以公开的计划或事实，无需暴露模型内部推理。制品和引用通常由服务端把标识解析成受权访问，不能让一个生成的 URL 越过附件权限。
 
-**组件注册表（Component Registry）**把协议中的类型与版本映射到受审核实现、输入 Schema、事件 Schema、无障碍要求和弃用策略。只有注册项可以渲染；未知类型显示安全占位或文本摘要，不进行动态 import、`eval` 或字符串组件查找。
+### 三、注册表决定哪些描述能变成组件
 
-注册项应声明最大嵌套、子组件类型、字段长度、可用主题 token、允许链接和可发事件。图表不接受任意 formatter 函数，Markdown 不开启原始 HTML，图片只接受经过代理和协议校验的 URL。复杂组件还要定义空、加载、部分、错误和只读状态。
+**组件注册表（Component Registry）**是类型与版本到受审核实现的映射，同时规定输入、输出事件、资源限制和降级方式。查不到 `chart@9` 时，宿主显示文本替代，不去寻找同名全局变量，也不动态导入模型给出的包。
 
-版本映射要精确。`chart@1` 与 `chart@2` 若属性含义不同就分别注册；旧客户端收到 v2 可以显示标题、数据摘要和升级提示，不能猜测用 v1 渲染。注册表发布与应用版本、协议回归和回滚绑定。
+注册并不代表所有 props 都安全。图表标签是文字，formatter 若是函数就有执行能力；图片 src、Markdown 链接、CSS URL 和跳转地址又是不同解释位置。宿主先构造允许的 props，避免 `Component {...modelObject}` 把 onClick、style 或隐藏字段带入组件。
 
-### 四、消息块有独立生命周期
+下面的独立实验演示一条受限绑定路径。保存为 `safe-binding.mjs`，用 Node.js 22 运行。输入使用本讲自定的点路径，不是 JSON Pointer，也不是 A2UI 路径实现。
 
-每个块以稳定 ID 经过 `announced → partial → complete/error/removed`。增量到达只更新同一版本和更高序号，重复事件幂等，终态后拒绝迟到更新。块之间通过 ID 引用，不依赖数组当前位置，避免插入后焦点和状态错位。
+```js example=aiapp05-safe-binding
+function readOwn(model, path) {
+  if (typeof path !== 'string' || path.length > 80) return 'blocked';
+  const parts = path.split('.');
+  if (parts.length > 4 || parts.some(p => !/^[a-zA-Z][a-zA-Z0-9]*$/.test(p)
+      || ['constructor', 'prototype', '__proto__'].includes(p))) return 'blocked';
+  let value = model;
+  for (const part of parts) {
+    if (!value || typeof value !== 'object' || !Object.hasOwn(value, part)) return 'missing';
+    value = value[part];
+  }
+  return typeof value === 'string' ? value : 'wrong_type';
+}
+const model = { report: { title: '本周资料' } };
+console.log(readOwn(model, 'report.title')); // => 本周资料
+console.log(readOwn(model, 'report.constructor')); // => blocked
+console.log(readOwn(model, 'report.toString')); // => missing
+console.log(readOwn(model, 'report')); // => wrong_type
+```
 
-部分块可以显示骨架、已确认字段和进度，但未完整校验的数据不触发动作。表格可以逐页添加已验证行，表单 Schema 尚未完整时只能只读占位。更新批次采用事务或版本快照，防止标题来自新版本、按钮仍绑定旧参数。
+例子不沿原型链取值，不执行表达式，只允许有限层级的字符串字段。生产系统首先校验来自 JSON 的数据；任意 JavaScript 对象可能有 getter 或 Proxy，不能把这个函数说成任意对象的安全沙箱。需要日期格式化等计算时，只开放已审核的纯函数及其输入合同，不把 `eval` 包装成“灵活绑定”。
 
-删除块也要处理焦点、屏幕阅读器和用户正在编辑的数据。若生成流建议删除用户已编辑表单，宿主应保留草稿并请求确认，而不是服从最新模型事件。
+### 四、运行一个保留用户输入的桌面面板
 
-### 五、Host Boundary 决定谁拥有能力
+保存下面完整页面为 `view-host.html`，用现代桌面浏览器打开即可。无需框架或网络。它模拟文本块、未知类型、异步更新和宿主关闭；不实现真实 Agent、iframe 或持久化。用户备注归宿主管理，生成块没有写备注的字段。
 
-**宿主边界（Host Boundary）**划分生成内容与真实应用之间可见的数据和可调用能力。普通组件树中，模型只提供数据；隔离 iframe 或 MCP App 中，子界面也只能通过明确桥接消息请求宿主服务，不能直接读取 DOM、Cookie、存储或任意网络。
+```html example=aiapp05-view-host runtime=project file=view-host.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>受控视图与独立草稿</title>
+<style>
+body { max-width: 900px; margin: 32px auto; font: 18px/1.6 system-ui; }
+button { font: inherit; margin: 4px; } textarea { width: 100%; min-height: 100px; font: inherit; box-sizing: border-box; }
+section { padding: 20px; border: 1px solid #547465; margin-top: 18px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+:focus-visible { outline: 3px solid #875b20; } #status { min-height: 2em; }
+</style>
+<h1>受控视图与独立草稿</h1>
+<p>本地合成结果；无网络、保存或真实工具执行。</p>
+<button id="update">更新摘要</button><button id="unknown">未知组件</button>
+<button id="late">安排延迟更新</button><button id="close">关闭面板</button>
+<button id="open">重新打开</button>
+<p id="status" role="status">准备就绪</p><main id="host"></main>
+<script>
+const host = document.querySelector('#host'), status = document.querySelector('#status');
+const drafts = new Map();
+let instance = 0, version = 0, active = false, timer = 0, output, input;
+const registry = new Map([['text@1', text => {
+  const node = document.createElement('pre'); node.textContent = text; return node;
+}]]);
+function accept(block, baseVersion, owner) {
+  if (!active || owner !== instance) return 'old_instance';
+  if (baseVersion !== version) return 'stale';
+  if (!block || typeof block !== 'object' || Array.isArray(block)
+      || Object.keys(block).sort().join(',') !== 'id,text,type,version'
+      || block.id !== 'summary' || typeof block.type !== 'string' || block.type.length > 30
+      || !Number.isInteger(block.version) || block.version < 1
+      || typeof block.text !== 'string' || block.text.length > 400) return 'invalid';
+  const render = registry.get(`${block.type}@${block.version}`);
+  const node = render ? render(block.text) : document.createElement('p');
+  if (!render) node.textContent = `当前不支持此组件。文字摘要：${block.text}`;
+  output.replaceChildren(node); version += 1;
+  return render ? 'updated' : 'text_fallback';
+}
+function show(result) { status.textContent = `${result}；视图版本 ${version}`; }
+function mount() {
+  if (active) return;
+  active = true; instance += 1; version = 0;
+  const panel = document.createElement('section');
+  const heading = document.createElement('h2'); heading.textContent = '资料摘要';
+  output = document.createElement('div'); output.id = 'generated';
+  const label = document.createElement('label'); label.htmlFor = 'draft'; label.textContent = '我的备注';
+  input = document.createElement('textarea'); input.id = 'draft';
+  input.value = drafts.get('report-a:notes') ?? '';
+  input.addEventListener('input', () => drafts.set('report-a:notes', input.value));
+  panel.append(heading, output, label, input); host.replaceChildren(panel);
+  show(accept({ id: 'summary', type: 'text', version: 1, text: '第一版资料摘要' }, 0, instance));
+}
+function unmount() {
+  if (!active) return;
+  active = false; instance += 1;
+  clearTimeout(timer); timer = 0;
+  host.replaceChildren(); output = undefined; input = undefined;
+  status.textContent = '面板已关闭；备注保留在本页内存';
+}
+function block(type, text) { return { id: 'summary', type, version: type === 'text' ? 1 : 9, text }; }
+document.querySelector('#update').addEventListener('click', () => {
+  show(accept(block('text', '新摘要：<img src=x onerror=alert(1)> 仍是文字'), version, instance));
+});
+document.querySelector('#unknown').addEventListener('click', () => {
+  show(accept(block('chart', '三个候选，仍可阅读摘要'), version, instance));
+});
+document.querySelector('#late').addEventListener('click', () => {
+  if (!active) return;
+  clearTimeout(timer); const base = version, owner = instance;
+  timer = setTimeout(() => { timer = 0; show(accept(block('text', '延迟到达的旧摘要'), base, owner)); }, 800);
+  status.textContent = '已安排 800ms 后的合成更新';
+});
+document.querySelector('#close').addEventListener('click', unmount);
+document.querySelector('#open').addEventListener('click', mount);
+window.addEventListener('pagehide', unmount);
+mount();
+</script>
+</html>
+```
 
-跨上下文消息核验 `origin`、source window、协议版本、消息 Schema、nonce 和能力。只检查字符串 `type` 或使用 `postMessage('*')` 都不够。宿主给每个实例最小能力句柄，并在卸载、权限变化或会话切换时撤销。
+先填写备注，再点“更新摘要”：只替换生成区域，文字框和已有输入不变，字符串中的 img 不会创建图片。点“未知组件”可看到文字替代，没有下载图表代码。安排延迟更新后立即更新摘要，800ms 后旧版本应返回 stale，不覆盖新摘要；安排后立即关闭，会清理定时器，重开仍从独立草稿恢复备注。
 
-iframe sandbox、CSP、Permissions Policy 和网络代理是互补控制。允许脚本并不等于允许同源，允许表单也不等于允许顶层导航。第三方资源需要独立供应链和数据流评审，不能借“生成式 UI”绕开应用安全要求。
+面板关闭使实例身份失效，同时清理待执行任务；被移除节点的监听随不可达节点回收。例子没有堆快照或完整泄漏审计。刷新会清空内存；生产持久化需要另定会话、材料、字段与版本的存储键以及删除政策。不能把“关闭后重开有备注”写成“刷新恢复已完成”。
 
-### 六、动作由事件合同返回宿主
+### 五、增量更新保护的不只是字段值
 
-组件事件只表达用户意图，例如 `submit_filter`、`open_citation` 或 `propose_purchase`，带组件 ID、视图版本和经 Schema 校验的数据。宿主根据当前状态解释，不能让模型指定任意函数名、URL 或工具参数直接执行。
+每次更新至少明确目标实体、所依据版本和更新内容。先验证整个更新，再提交到视图，避免标题已换为新版本，按钮还绑定旧参数。重复包可以在上游去重，序号缺口先等待或取快照；没有基线的 delta 不能靠最后到达者覆盖。
 
-有副作用动作进入 AIAPP-04 的验证、授权、确认和幂等链。生成按钮不能携带“已获批准”或服务端令牌；用户在表单编辑参数后产生新提议，旧批准失效。只读交互仍需要来源和对象授权。
+生成默认值和用户草稿分开。未编辑字段可以按产品约定接收新默认值；脏字段保留用户版本，出现冲突时展示差异。若模型要求删除正在编辑的块，应先保存草稿并提供解释或确认，不能把输入当作可随时抹掉的生成缓存。
 
-事件处理返回真实状态块，使界面从 pending 收敛到成功、失败或未知。模型之后可以解释结果，却不能覆盖执行事实。重复点击与重放通过 event ID 和幂等键去重。
+键盘焦点、选区和滚动也是用户正在进行的工作。局部更新保留控件节点，完整替换前记录合理的恢复位置；新结果不抢焦点，不逐 token 播报。例子点击按钮后焦点自然落在按钮上，它保证备注区域不被摘要更新重建，不宣称覆盖所有输入法或复杂富文本选区。增量与草稿分离可继续读 [AIAPP-02](../chinese-guides/aiapp-02-streaming-sse-incremental-rendering.md#六取消先让旧尝试失效再释放资源)。
 
-### 七、数据绑定必须可追踪且受限
+### 六、普通组件与隔离应用的边界不同
 
-声明式 UI 常用路径把组件属性绑定到数据模型。路径只在当前 surface 或明确作用域内读取，限制深度、类型和更新频率；禁止通过原型链、表达式求值或路径穿越访问宿主对象。
+**宿主边界（Host Boundary）**是应用决定哪些数据和能力可以交给生成内容或嵌入应用的界线。普通组件模式下，模型提供数据，代码始终来自宿主；这依赖受控字段和安全渲染，不会自动获得 iframe 隔离。隔离应用模式下，加载的是独立 HTML 程序，需要额外约束文档来源、sandbox、CSP、网络出口和桥接。
 
-计算值使用宿主预定义的纯函数目录，输入输出有 Schema，不能执行模型生成表达式。排序、格式化日期和简单条件可以是安全函数；任意 JavaScript、正则拒绝服务或动态网络请求不应成为数据绑定功能。
+确定来源的窗口通信同时核对精确 origin、source window、消息结构和当前实例。opaque origin 的沙箱可能把 origin 序列化为 `null`，此时不能把所有 `null` 消息当成同一可信来源；要使用经过审核的隔离代理、固定窗口或通道绑定、初始化状态与方法允许列表。确需向 opaque origin 使用通配目标时，应遵循对应桥接实现，不能把通配符复制到普通敏感消息发送中。
 
-敏感字段在进入视图模型前裁剪，组件不会因“隐藏”就获得数据。权限撤销后数据模型和派生缓存同步清除；调试工具也不能显示已不可见值。
+sandbox、CSP 和 Permissions Policy 控制不同方向。禁止父页面访问不等于禁止所有网络；资源可能被允许从指定域加载。来源可靠也不代表内容拥有业务权限。基础区别见 [SEC-04](../chinese-guides/sec-04-cross-origin-isolation-embedding-permissions.md#六sandbox-给的是能力不是可信身份)。具体 MCP Apps 桥接归 [AIUI-01](../chinese-guides/aiui-01-agent-ui-protocol-interoperability.md#四mcp-apps-连接资源与宿主桥接)。
 
-### 八、主题和布局只能使用设计系统令牌
+### 七、按钮返回意图，宿主决定动作
 
-模型可以选择预定义密度、层次或语义强调，不能传任意 CSS、绝对定位和 z-index。宿主把主题意图映射为设计 token，保证暗色、高对比度、字号缩放和品牌一致性。
+生成块可以声明“申请创建计划”的受限动作类型；不能传任意函数名、服务端令牌、URL 或 `approved: true` 来执行。宿主用当前会话和对象状态构造新提议，进入 [AIAPP-04 的确认流程](../chinese-guides/aiapp-04-tool-calling-execution-result-ui.md#三确认绑定的必须是将要执行的动作)。模型改变按钮文字不能把保存草稿变成正式发布。
 
-布局设置上限：嵌套深度、组件数量、表格列、图片尺寸和更新频率。超限时裁剪为摘要并提供显式继续，而不是让巨大组件树冻结页面。长内容使用虚拟化或分页，但保持语义阅读顺序。
+动作事件带块身份和视图版本，输入按事件 Schema 校验。用户已经修改表单时，旧视图按钮不能提交旧默认值；服务端错误应对应当前提交版本。真实操作已完成而生成界面仍显示加载时，权威结果应禁用重复执行入口，不能等模型再说一句“成功”。
 
-尺寸变化由宿主测量并节流，隔离 App 不能通过无限 resize 制造循环。弹层、焦点陷阱和顶层导航仍由主应用统一管理。
+下载与打开制品同样是能力。界面保存制品 ID、摘要和安全媒体类型，由服务端按当前用户解析访问；只读展示路径也可能暴露数据，不能因没有写数据库就跳过授权。销毁 surface 不自动取消已提交操作，应分别清理界面订阅与查询原操作状态。
 
-### 九、可访问性不能依赖模型自觉
+### 八、降级后仍要保留任务的核心信息
 
-注册组件自带角色、名称、状态和键盘行为；模型只提供符合 Schema 的用户内容。按钮必须有动作名称，字段有标签与错误关联，表格有表头，状态变化按语义段播报。空字符串或“点击这里”不能绕过必填可访问名称。
+未知组件可以降为表格或文字；未知关键版本必须停止相应解释，不能猜旧字段的意思。若缺的是确认能力，降级应给可信人工入口或停止动作，不能把“没有确认弹窗”解释成默认同意。
 
-生成图片的替代文本是候选，需要允许用户编辑；复杂图表提供数据表或文字摘要。增量更新不抢走焦点，不按 token 高频通知，用户可以暂停、跳到最新或切换纯文本。
+控制节点数、深度、每帧更新量、图片大小与活动实例数；过大结果先摘要和分页。组件的可访问名称、表头、字段错误和键盘操作由注册实现保证，模型只填内容。主题与尺寸更新节流，避免 resize 消息互相触发无限布局。资料中的桌面限制不意味着可忽视键盘使用者。
 
-纯文本不是次等错误页，而是协议不可用、组件未知、脚本关闭和辅助技术偏好的正式降级。关键事实、来源和可执行的人工路径在文本模式中仍完整。
+单块失败应保住会话和草稿。记录块类型、版本、失败阶段及必要关联 ID，不把原始危险 HTML 作为错误详情执行。刷新恢复时以稳定视图快照、连续位置和独立草稿重建，再向服务端核对工具事实；DOM 截图无法代替这些状态。
 
-### 十、错误边界要保住会话和用户输入
+### 带着问题回看
 
-单个块解析或渲染失败不应摧毁整条会话。错误边界记录块 ID、版本和安全错误类别，展示文本摘要、重试或报告入口。不要把原始危险 HTML 当“调试内容”回显。
+- 注册表查到组件以后，为什么仍不能把全部生成字段传成 props？
+- 延迟更新的 baseVersion 为什么比“最后收到的总是最新”可靠？
+- 未知图表可以变成文字，未知确认组件能否变成默认批准？
+- 本地面板关闭保留备注，证明了持久化或 iframe 隔离吗？
 
-用户输入与模型生成状态分开保存。流重连、协议升级或块替换时，已编辑草稿不会被覆盖；需要迁移时展示差异。未知结果块继续引用原工具操作 ID，刷新后查询而不是重新执行。
+### 参考与延伸阅读
 
-宿主崩溃恢复从持久化视图快照和事件水位线重建。只保存 DOM 快照会丢失来源、权限和动作状态；只保存模型消息又无法恢复用户编辑。
+核对日期：2026-10-01。页面实验只运行受控宿主代码，不执行模型代码或真实跨源桥接。
 
-### 十一、Generative UI 不是远程代码执行平台
-
-模型输出 HTML、脚本、组件包地址、npm 名称或 data URL 都是不可信文本。需要展示代码时用语法高亮的纯文本；需要运行用户代码时进入独立沙箱产品和权限模型，不能借组件注册表动态放行。
-
-远程 UI 资源必须预声明、签名或固定来源，经过供应链审查和 CSP。即使资源来自自己的 MCP Server，也可能被租户内容或依赖污染。宿主桥接只暴露声明能力，每次调用重新授权。
-
-不要用模型内容构造 `v-html`、事件属性、CSS URL、模板表达式或动态路由。净化器是最后防线之一，不是允许任意 UI 的许可证。
-
-### 十二、协议无关内部模型提高可迁移性
-
-AG-UI 更偏事件和状态流，A2UI 更偏声明式 surface 与组件目录，MCP Apps 提供隔离应用资源与宿主桥接。它们可以映射到同一个内部视图模型，但不能假设语义完全相同。
-
-内部核心只承诺产品所需的块、事件和能力；协议特有字段进入扩展区。映射失败显式记录，版本和来源进入 trace。这样替换传输或增加宿主时，业务组件不需要理解每个协议的握手细节。
-
-协议互操作的完整能力矩阵属于 AIUI-01，本讲只建立受控视图与宿主的稳定原则。
-
-### 十三、测试矩阵覆盖内容、状态和能力
-
-固定样本至少包含正常卡片、未知组件、未知版本、超深树、恶意 HTML、危险 URL、伪造 origin、重复事件、乱序、终态后更新、权限撤销、刷新恢复和纯文本宿主。每项说明预期降级和禁止副作用。
-
-自动断言注册表外代码不加载、危险属性不进入 DOM、无有效批准时执行器为零、焦点与草稿保留、旧客户端不崩溃。视觉快照只能证明外观，还需事件、权限和网络日志证明边界。
-
-性能测试测组件数、事件速率、主线程长任务、布局位移和内存释放。销毁 surface 后监听器、对象 URL、计时器和桥接能力都应释放。
-
-### 十四、复杂表单仍由宿主管理事务
-
-模型可以提出表单结构和初始值，但输入焦点、脏状态、校验、保存、冲突和撤销属于宿主事务。用户编辑后，迟到的模型 patch 不能覆盖字段；每个 patch 带 baseVersion 和允许路径，冲突时显示差异。密码、凭据、支付信息等敏感输入使用宿主专用组件，不回流普通对话或模型上下文。
-
-提交时从受控表单状态生成动作提议，再走工具参数、权限和审批。按钮显示“保存草稿”还是“正式发布”由注册组件的固定语义决定，模型不能只改 label 就改变动作。服务端返回字段级业务错误时，映射到当前表单版本；若结构已经变化，保留错误摘要并请求重新同步。
-
-多步骤向导保存明确 step、完成条件和用户输入版本。刷新恢复到服务端已确认与本地草稿的合并视图，不从已经渲染的 DOM 反推状态。这样生成式界面仍具备传统业务 UI 的可靠性。
-
-### 十五、性能预算限制动态表面
-
-限制 surface 深度、节点数、列表项、媒体大小、更新频率和同时活动的交互组件。虚拟化与懒加载由宿主决定，模型只提供语义优先级。高频 patch 先归并再渲染，保持焦点和滚动锚点；不可见 surface 暂停订阅并释放资源。
-
-监控解析、验证、布局、长任务、内存和交互延迟，按组件类型定位。超出预算降级为摘要或分页，而不是允许一个模型响应冻结整个会话。
-
-### 十六、形成可演进的生成式界面
-
-选择一个真实任务，先定义最小视图模型和纯文本等价，再建立注册表、状态、事件与宿主能力。用未知版本和恶意内容证明安全降级，用刷新和用户编辑证明恢复，用权限变化证明 UI 不拥有授权。
-
-发布检查同时覆盖键盘、屏幕阅读器、窄屏、离线、版本降级、恶意参数和宿主销毁；只有漂亮截图不能证明交互正确。
-
-学完后，你应能解释生成式界面为何是受限解释器而不是 HTML 生成器；能设计视图模型、组件注册表、宿主边界和动作回流；能让界面在协议变化、错误和无组件能力时仍然可读、可控、可恢复。
+- [MDN textContent](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)：理解文本节点与 HTML 解析的区别。
+- [MDN postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)：核对目标来源、发送窗口、消息接收与特殊来源条件。
+- [MDN iframe](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe)：查 sandbox、allow 和嵌入约束。
+- [MCP Apps 概览](https://modelcontextprotocol.io/extensions/apps/overview)：区分隔离应用资源与普通声明式组件；实际能力取决于宿主。

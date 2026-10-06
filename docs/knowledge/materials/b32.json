@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "batch": "B32",
+  "title": "可恢复的 MCP 请求与受控协作",
+  "reviewedOn": "2026-10-05",
+  "chapters": [
+    {
+      "id": "AGENT-03",
+      "title": "跨请求保留业务状态",
+      "question": "连接换到另一个实例后，怎样继续访问同一份草稿？",
+      "summary": "沿双实例实验解释传输、版本、显式句柄和中途补充输入。",
+      "outcomes": [
+        "区分连接、协议状态与业务记录",
+        "解释头部与正文校验",
+        "选择断线后的恢复方式"
+      ],
+      "prerequisites": [
+        "mcp-01-server-tools-resources-prompts-schema.md#mcp-01"
+      ],
+      "guide": "agent-03-mcp-transport-stateless-state-versioning.md",
+      "anchor": "agent-03",
+      "concepts": [
+        {
+          "id": "mcp-transport-version",
+          "heading": "一、先确定消息走哪条路，再确定按哪版解释"
+        },
+        {
+          "id": "mcp-transport-state",
+          "heading": "二、无状态核心移除了隐藏会话，没有删除业务事实"
+        },
+        {
+          "id": "mcp-transport-headers",
+          "heading": "三、HTTP 头部与正文必须描述同一件事"
+        },
+        {
+          "id": "mcp-transport-lab",
+          "heading": "四、运行两个实例，观察同一草稿跨请求存在"
+        },
+        {
+          "id": "mcp-transport-disconnect",
+          "heading": "五、连接断开后，要恢复对象而不是复活旧流"
+        },
+        {
+          "id": "mcp-transport-mrtr",
+          "heading": "六、中途需要输入，可以结束本轮响应再继续"
+        },
+        {
+          "id": "mcp-transport-migration",
+          "heading": "七、迁移要保留可解释的版本分支"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "discovery-cache-scope",
+          "reason": "发现缓存也必须按版本与身份划分。"
+        },
+        {
+          "concept": "task-recovery-cancel",
+          "reason": "长任务取消与关闭当前 HTTP 请求分别处理。"
+        },
+        {
+          "concept": "approval-control-input",
+          "reason": "补充输入不自动授予业务权限。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-04",
+      "title": "根据发现结果选择可用路径",
+      "question": "服务说支持工具，为什么客户端仍不能直接调用某个工具？",
+      "summary": "从能力声明走到列表、缓存、分页和可解释的兼容处理。",
+      "outcomes": [
+        "分清发现、列表与授权",
+        "按身份和请求划分缓存",
+        "让分页、取消和降级有明确终点"
+      ],
+      "prerequisites": [
+        "agent-03-mcp-transport-stateless-state-versioning.md#agent-03"
+      ],
+      "guide": "agent-04-mcp-client-discovery-compatibility.md",
+      "anchor": "agent-04",
+      "concepts": [
+        {
+          "id": "discovery-cache-discovery",
+          "heading": "一、发现回答支持什么，列表回答具体有什么"
+        },
+        {
+          "id": "discovery-cache-identity",
+          "heading": "二、服务名称和工具描述都不能证明身份"
+        },
+        {
+          "id": "discovery-cache-intersection",
+          "heading": "三、能力选择是多方条件的交集"
+        },
+        {
+          "id": "discovery-cache-scope",
+          "heading": "四、缓存的新鲜度和共享范围要分开判断"
+        },
+        {
+          "id": "discovery-cache-pagination",
+          "heading": "五、分页必须能结束，也必须能取消"
+        },
+        {
+          "id": "discovery-cache-compatibility",
+          "heading": "六、兼容层要解释能力缺口，不能伪造保证"
+        },
+        {
+          "id": "discovery-cache-recovery",
+          "heading": "七、调用前再检查一次，错误之后只恢复该恢复的部分"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "mcp-transport-migration",
+          "reason": "发现应配合明确的协议版本分支。"
+        },
+        {
+          "concept": "task-recovery-capability",
+          "reason": "Tasks 需要双方支持扩展，不能凭返回慢推断。"
+        },
+        {
+          "concept": "injection-boundary-origin",
+          "reason": "服务端描述与返回内容仍需保留不可信来源。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-05",
+      "title": "让批准对应将要发生的动作",
+      "question": "用户批准之后修改了接收方，原批准还有效吗？",
+      "summary": "用提议快照、累计额度与桌面实验解释批准、拒绝和撤销。",
+      "outcomes": [
+        "区分输入回应与权限授予",
+        "将批准绑定不可变提议",
+        "在修改、拒绝与撤销后保住用户工作"
+      ],
+      "prerequisites": [
+        "agent-01-loop-planning-stopping-recovery.md#agent-01",
+        "agent-04-mcp-client-discovery-compatibility.md#agent-04"
+      ],
+      "guide": "agent-05-human-in-the-loop-risk-approval.md",
+      "anchor": "agent-05",
+      "concepts": [
+        {
+          "id": "approval-control-decision",
+          "heading": "一、让人介入时，人必须仍能改变结果"
+        },
+        {
+          "id": "approval-control-input",
+          "heading": "二、补充输入与授予权限走不同判断"
+        },
+        {
+          "id": "approval-control-snapshot",
+          "heading": "三、批准绑定一份不可变提议"
+        },
+        {
+          "id": "approval-control-budget",
+          "heading": "四、范围授权还要防止多次小动作绕过上限"
+        },
+        {
+          "id": "approval-control-lab",
+          "heading": "五、运行一页提议修改与拒绝实验"
+        },
+        {
+          "id": "approval-control-continuity",
+          "heading": "六、拒绝、撤销和接管都要保留任务连续性"
+        },
+        {
+          "id": "approval-control-enforcement",
+          "heading": "七、审核质量靠人看得懂，也靠执行端守得住"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "tool-operation-approval",
+          "reason": "工具执行前也要核对批准所覆盖的具体动作。"
+        },
+        {
+          "concept": "interaction-recovery-versions",
+          "reason": "提议改变与草稿编辑都需要拒绝旧结果。"
+        },
+        {
+          "concept": "task-recovery-input",
+          "reason": "长任务等待输入时仍保留独立授权判断。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-06",
+      "title": "让长任务可以找回并安全停止",
+      "question": "页面关闭后重新回来，如何知道原任务完成还是取消？",
+      "summary": "依据 Tasks 扩展区分句柄、状态、输入、取消与业务幂等。",
+      "outcomes": [
+        "解释即时返回与任务返回",
+        "处理取消和完成的竞争",
+        "通过原句柄及操作记录恢复工作"
+      ],
+      "prerequisites": [
+        "agent-01-loop-planning-stopping-recovery.md#agent-01",
+        "agent-04-mcp-client-discovery-compatibility.md#agent-04"
+      ],
+      "guide": "agent-06-tasks-long-running-recovery-idempotency.md",
+      "anchor": "agent-06",
+      "concepts": [
+        {
+          "id": "task-recovery-capability",
+          "heading": "一、先确认双方支持任务，再处理两种返回形态"
+        },
+        {
+          "id": "task-recovery-handle",
+          "heading": "二、句柄让用户回来时找到同一件工作"
+        },
+        {
+          "id": "task-recovery-state",
+          "heading": "三、协议状态和内部工作阶段要分开命名"
+        },
+        {
+          "id": "task-recovery-input",
+          "heading": "四、输入更新是提交回应，不是直接修改任务状态"
+        },
+        {
+          "id": "task-recovery-cancel",
+          "heading": "五、取消请求被收到，不等于任务已经取消"
+        },
+        {
+          "id": "task-recovery-idempotency",
+          "heading": "六、幂等记录要覆盖刷新、重送和已经结束的任务"
+        },
+        {
+          "id": "task-recovery-worker",
+          "heading": "七、持久工作者恢复时先对账，再决定推进"
+        },
+        {
+          "id": "task-recovery-observation",
+          "heading": "八、轮询、通知和清理都服务于同一份事实"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "mcp-transport-disconnect",
+          "reason": "短请求中断与长任务生命周期不能混为一谈。"
+        },
+        {
+          "concept": "agent-control-recovery",
+          "reason": "恢复应先核对外部事实，再决定继续执行。"
+        },
+        {
+          "concept": "agent-coordination-result-version",
+          "reason": "父任务改变时还要拒绝子任务迟到产物。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-07",
+      "title": "把协作结果交回可验收的任务",
+      "question": "多个 Agent 给出相互冲突的结论，协调者应采信谁？",
+      "summary": "用任务信封、上下文裁剪、预算和证据版本控制协作。",
+      "outcomes": [
+        "选择值得拆分的独立任务",
+        "限定材料、能力与委派预算",
+        "根据原始证据处理冲突和迟到结果"
+      ],
+      "prerequisites": [
+        "agent-01-loop-planning-stopping-recovery.md#agent-01"
+      ],
+      "guide": "agent-07-multi-agent-coordination-context-isolation.md",
+      "anchor": "agent-07",
+      "concepts": [
+        {
+          "id": "agent-coordination-decomposition",
+          "heading": "一、先找能够独立完成的工作，再决定角色数量"
+        },
+        {
+          "id": "agent-coordination-envelope",
+          "heading": "二、任务信封让子任务可以被验收"
+        },
+        {
+          "id": "agent-coordination-isolation",
+          "heading": "三、裁剪上下文和限制能力要同时做"
+        },
+        {
+          "id": "agent-coordination-artifacts",
+          "heading": "四、共享产物需要版本与写入归属"
+        },
+        {
+          "id": "agent-coordination-evidence",
+          "heading": "五、冲突先找证据差异，再决定采用什么"
+        },
+        {
+          "id": "agent-coordination-result-version",
+          "heading": "六、计划变化与取消要阻止迟到结果覆盖"
+        },
+        {
+          "id": "agent-coordination-protocols",
+          "heading": "七、模型调用、MCP 工具与协作协议各有职责"
+        },
+        {
+          "id": "agent-coordination-evaluation",
+          "heading": "八、用同等预算比较收益，让稳定步骤逐渐固定下来"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "conversation-state-context",
+          "reason": "每个角色只接收完成当前子任务所需的材料。"
+        },
+        {
+          "concept": "task-recovery-cancel",
+          "reason": "父任务取消还要传播到具体执行端并核对终态。"
+        },
+        {
+          "concept": "approval-control-enforcement",
+          "reason": "多个角色达成一致不能替代服务端授权。"
+        }
+      ]
+    }
+  ]
+}

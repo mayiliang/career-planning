@@ -2,106 +2,195 @@
 
 ## AGENT-08 工具描述、Schema 与可发现性
 
-Agent 能否安全地选中并调用工具，首先取决于工具是否把能力边界表达成机器与人都能理解的合同。名称含糊、参数全可选、返回值只是一段自由文本时，即使模型很强，也只能靠猜测完成路由。成熟系统会同时治理工具的命名、描述、输入输出结构、副作用、错误、发现范围、缓存与资源上限，使“可以看见什么、为什么选择、能传什么、会改变什么、怎样确认结果”都可验证。
+用户想知道“这张发票还能退多少”，助手却选择了 `refund_invoice`。参数中的发票 ID 和金额都通过了校验，钱也确实退了，但用户原本只想查询。问题不在 JSON 是否正确，而在工具目录没有把“了解情况”和“改变情况”分开。
+
+本篇从这次误调用出发，沿着工具选择、参数校验、执行和结果消费建立合同。读完应能设计容易区分的工具，写出拒绝非法组合的 Schema，并解释为什么选对名称、参数有效、执行获准和业务成功是四件事。协议说明核对于 2026-10-06，主线为 MCP 2026-07-28；实验不连接真实支付服务。
 
 ### 学习前先确认
 
-- 直接前置：[MCP-01 Server、Tools、Resources、Prompts 与 Schema](../chinese-guides/mcp-01-server-tools-resources-prompts-schema.md#mcp-01)，用于理解 MCP 的能力协商、三类服务端原语和请求响应边界。它自己的前置会继续递归呈现，这里不重复列出。
+- 直接前置：[MCP-01 Server、Tools、Resources、Prompts 与 Schema](../chinese-guides/mcp-01-server-tools-resources-prompts-schema.md#mcp-01)，理解工具、资源、提示与调用结果的基本职责。
 
-### 一、从 Tool Contract 而不是函数签名出发
+### 一、先让查询、预览与执行可以被区分
 
-**工具契约（Tool Contract）**是调用者与执行器之间可验证的能力说明，包括稳定标识、面向选择的描述、输入和输出 Schema、副作用级别、授权要求、幂等语义、错误分类、资源预算与版本。普通函数签名只约束进程内调用，工具契约还要面对不可信模型、跨进程传输、旧客户端、重试和权限变化。
+**工具契约（Tool Contract）**说明调用者能做什么、要提供什么、会产生什么结果，以及失败后如何继续。它比函数签名多了副作用、授权、版本、预算和恢复条件；调用者可能是模型，也可能是普通程序，两者都需要同一条可执行边界。
 
-一个名为 `manage_data` 的工具即便参数类型正确，也没有告诉模型它管理哪类数据、是查询还是修改、失败是否可重试。更好的拆分是 `search_invoices`、`preview_invoice_refund` 与 `execute_invoice_refund`。名称先缩小动作和对象，描述再说明适用条件与禁止条件，Schema 负责拒绝无效形状，执行器最后根据当前身份和资源状态授权。
+在发票场景里，可以把能力分为三个入口：
 
-契约不能承诺执行器无法保证的事实。例如把“无副作用”写进注解，却在调用时刷新缓存或创建审计记录，仍会影响系统。客户端可把来自受信 Server 的注解用于界面提示和调度，但不应把第三方 Server 自报的安全属性当作授权结论。
+| 工具 | 适用问题 | 结果与副作用 |
+| --- | --- | --- |
+| `get_refund_capacity` | 现在最多还能退多少 | 返回可退金额与版本，不发起退款 |
+| `preview_refund` | 按这个金额退，会影响哪些记录 | 返回拟执行快照，不发起退款 |
+| `submit_refund` | 执行已经批准的具体退款 | 校验批准与当前对象，再创建业务操作 |
 
-### 二、描述服务于选择，不能代替规则
+名称说明动作与对象，描述再说明缺少信息时怎么办。例如读取工具的描述可以写：“按发票 ID 查询当前可退金额，单位为分；不查找发票、不创建退款。没有 ID 时先让用户选择发票。”这比“处理退款相关业务”更能缩小选择范围。
 
-描述应写清动作、对象、前置、影响、返回和不适用情形，使相似工具可以区分。`get_customer` 与 `find_customer` 若描述相同，模型会在同一意图间摆动；把前者定义为“按稳定 ID 读取单个客户，不执行搜索”，把后者定义为“按姓名或邮箱查找候选，可能返回多项”，选择边界才出现。
+Tool 也可以是只读计算或搜索，并非所有 Tool 都有写入。已有、可寻址的资料适合 Resource；用户选择的重复工作方法适合 Prompt。不要把三类原语简化成“Tool 写、Resource 读、Prompt 是系统命令”：Prompt 仍需宿主按来源处理，Resource 读取也要有权限。
 
-描述不应包含秘密、内部主机、绕过策略或长篇教程。模型需要的是做决定所必需的信息，而不是实现源代码。真正的权限、金额限制、租户归属和路径范围必须在服务端确定执行，不能写一句“只可访问自己的文件”就期待模型自律。
+工具名只在一个 Server 内要求区分。聚合两个服务的 `search` 时，宿主应使用自身绑定的服务标识消歧；Server 自报的显示名称不能证明身份。更多发现层面的判断见 [服务名称与身份](../chinese-guides/agent-04-mcp-client-discovery-compatibility.md#二服务名称和工具描述都不能证明身份)。
 
-修改描述等同修改路由行为，需要版本化评测。准备包含近义请求、无需调用、缺少信息、恶意指令和多工具组合的固定意图集，记录正确工具、允许的替代和不得调用的工具。观察误调用尤其是副作用误调用，而不只统计总体命中率。
+### 二、选择是否正确，要与参数是否有效分别评估
 
-### 三、JSON Schema 是输入边界的一层
+描述影响模型选择，但不是访问控制。“仅管理员使用”不能阻止非管理员手写请求；`readOnlyHint` 等注解也不能替代执行端事实。来自未信任服务的注解必须作为不可信声明处理，不能凭它跳过审批。
 
-**JSON Schema**把参数形状、必填项、枚举、范围、格式、数组长度、对象额外字段和组合关系转成可执行约束。MCP 2026-07-28 规格把 Tool 输入与输出对齐到 JSON Schema 2020-12；输入根仍是 object，组合、条件、`$defs` 与引用的能力更完整。实现必须按实际协商的协议版本处理，不能用草案页面替代已支持版本。
+先准备有明确意图的样本，再记录模型选了什么。样本应含“无需调用”“需要补充信息”和容易误选写工具的请求，不要强迫每条用户消息都映射到工具。下面是合成评估结果，用固定标签说明指标，不是真实模型准确率。保存为 `tool-selection.mjs`，运行 `node tool-selection.mjs`，需要 Node.js 22，无外部依赖。
 
-Schema 应尽量让非法状态不可表示。若退款只允许“全额”或“指定金额”，使用 `oneOf` 表达互斥形态，比同时放两个可选字段再让执行器猜更可靠。字符串还需长度和格式，整数要有单位与范围，数组要有限量，对象通常拒绝未知关键字段。默认值只影响解析，不代表用户同意或授权。
+```js example=agent08-selection-evidence
+const cases = [
+  { intent: '查看可退额度', expected: 'get_refund_capacity', picked: 'submit_refund' },
+  { intent: '预览退回 500 分', expected: 'preview_refund', picked: 'preview_refund' },
+  { intent: '解释什么是退款', expected: null, picked: 'get_refund_capacity' },
+  { intent: '缺少发票 ID', expected: null, picked: null },
+];
+const writes = new Set(['submit_refund']);
+let correct = 0, unnecessary = 0, unexpectedWrite = 0;
+const confusion = new Map();
+for (const item of cases) {
+  if (item.expected === item.picked) correct++;
+  if (item.expected === null && item.picked !== null) unnecessary++;
+  if (writes.has(item.picked) && !writes.has(item.expected)) unexpectedWrite++;
+  const key = `${item.expected ?? 'none'} -> ${item.picked ?? 'none'}`;
+  confusion.set(key, (confusion.get(key) ?? 0) + 1);
+}
+console.log(`${correct}/${cases.length}`, unnecessary, unexpectedWrite);
+// => 2/4 1 1
+console.log(confusion.get('get_refund_capacity -> submit_refund'));
+// => 1
+```
 
-Schema 校验成功只证明形状，不证明对象存在、金额正确、资源属于当前租户或动作获批。执行链仍要做规范化、领域校验、授权和并发版本检查。反过来，不能让“后面还会校验”成为宽松 Schema 的借口，因为越早拒绝越能减少模型修复、网络和审计噪声。
+总体命中 2/4 掩盖了最需要修复的一次写工具误选。若只把退款参数改成合法金额，这次选择仍然错误。修改描述后，应该对同一组意图重新取得候选，再比较误选类别；不能把手工改对 `picked` 的结果当成模型能力提升。
 
-### 四、组合与引用要设计算预算
+多个工具都可以合理完成任务时，标签可记录允许集合和禁止动作；缺少关键输入的样本记录应先追问什么。工具名称、描述、候选范围和模型版本一起保存，才能解释变化来自哪里。样本规模由真实混淆决定，不以凑满固定条数代替覆盖。
 
-复杂契约常用 `oneOf`、`anyOf`、`allOf`、条件与 `$ref`。组合能表达真实分支，也可能导致歧义和指数级验证成本。每个分支最好有稳定判别字段；若同一输入能同时匹配多个互斥分支，应在建模时消除，而不是依赖验证器选择顺序。
+### 三、Schema 表达合法形状，不替调用者作业务决定
 
-外部引用不能未经允许自动访问网络。服务端应预编译受信 Schema，限制引用来源、深度、节点数、正则复杂度、输入字节和验证时间。循环引用可以用于递归数据，但必须受最大深度与总节点限制。Schema 本身也是配置输入，需要代码审查和版本锁定。
+**JSON Schema**用规则描述 JSON 值能否被接受，例如字段类型、必填项、互斥分支与数组上限。MCP 2026-07-28 在省略 `$schema` 时使用 2020-12，允许显式声明其他方言；实现必须支持默认方言，并对不支持的方言明确报错，不能静默换一种解释。
 
-错误返回应包含稳定代码与可安全公开的字段路径，例如 `ARGUMENT_CONFLICT`、`LIMIT_EXCEEDED`，而不是把完整内部 Schema、堆栈和敏感实参回送给模型。这样客户端能决定补充输入、缩小请求或停止，而不会把所有失败都当作可重试的自然语言问题。
+退款的 `mode` 可以是 full 或 partial。partial 必须有正整数 `amountCents`，full 则不应再附金额。把二者写成两个判别分支，比同时放几个可选字段后猜意图清楚。`oneOf` 要求恰好匹配一个分支；`anyOf` 是至少一个；`allOf` 是全部约束同时成立，不是对象字段的覆盖合并。
 
-### 五、Structured Content 让下游按合同消费
+还有三个容易误判的词：`required` 要求字段存在，并不自动拒绝空字符串；`default` 是注解，不是校验时自动补值；`format` 是否作为断言校验与方言、词汇表及验证器配置有关。不能用一个 `format: "email"` 就声称邮箱存在或收件人获准。
 
-**结构化内容（Structured Content）**是 Tool 结果中供程序消费的 JSON 值。若声明 `outputSchema`，Server 应产生符合它的结果，Client 也应再次验证。兼容旧客户端时可以同时提供简短文本表示，但文本不是权威数据源，不能解析一段“看起来像 JSON”的说明来驱动副作用。
+对象校验也不是净化器。默认校验不会自动删除未知属性、把字符串转成数字或填补缺失字段。某些验证器提供会修改数据的选项，采用前要说明转换规则，并让展示、审批和执行使用同一份规范化数据。对这些层次的区分可补读 [Schema 与业务决定](../chinese-guides/aiapp-03-structured-output-schema-validation.md#二schema-约束形状不能替业务作决定)。
 
-输出合同要区分业务结果、分页元数据、警告和错误。查询结果可返回 `{items,nextCursor,snapshotVersion}`；修改结果应返回动作 ID、最终状态、资源版本和是否需要对账。不要把数据库整行或供应商原始响应直接暴露为公共合同，否则内部字段、隐私和供应商变更都会扩散到调用者。
+### 四、运行一份输入与输出共同受约束的合同
 
-服务端在返回前校验，客户端在消费前校验，二者的职责不同：前者防止实现违约，后者防止版本不兼容、代理篡改或第三方 Server 不可信。验证失败要停在展示或隔离区，不应继续执行后续工具。
+在新建的临时目录安装 `ajv@8.20.0`，把下列代码保存为 `refund-contract.mjs`。Node.js 22 下依次运行 `npm init -y`、`npm install --save-exact ajv@8.20.0`、`node refund-contract.mjs`。不要在业务仓库里为了实验改锁文件。Ajv 是验证器实现，本例显式使用它的 2020-12 入口；这不是一个 MCP SDK 项目。
 
-### 六、Tool、Resource 与 Prompt 各守边界
+```js example=agent08-contract-lab runtime=project file=refund-contract.mjs
+import Ajv2020 from 'ajv/dist/2020.js';
+const ajv = new Ajv2020({ allErrors: true, strict: true,
+  useDefaults: false, coerceTypes: false, removeAdditional: false });
+const inputSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  properties: {
+    invoiceId: { type: 'string', pattern: '^inv-[0-9]{1,8}$' },
+    mode: { enum: ['full', 'partial'] },
+    amountCents: { type: 'integer', minimum: 1, maximum: 100000 },
+    currency: { const: 'CNY', default: 'CNY' },
+  },
+  required: ['invoiceId', 'mode', 'currency'], additionalProperties: false,
+  oneOf: [
+    { properties: { mode: { const: 'full' }, amountCents: false } },
+    { properties: { mode: { const: 'partial' }, amountCents: {} }, required: ['amountCents'] },
+  ],
+};
+const outputSchema = {
+  type: 'object',
+  properties: {
+    status: { const: 'preview' }, invoiceId: { type: 'string' },
+    amountCents: { type: 'integer', minimum: 1, maximum: 100000 },
+    currency: { const: 'CNY' }, resourceVersion: { type: 'integer', minimum: 1 },
+  },
+  required: ['status', 'invoiceId', 'amountCents', 'currency', 'resourceVersion'],
+  additionalProperties: false,
+};
+const validInput = ajv.compile(inputSchema), validOutput = ajv.compile(outputSchema);
+const full = { invoiceId: 'inv-7', mode: 'full', currency: 'CNY' };
+const partial = { ...full, mode: 'partial', amountCents: 500 };
+console.log([full, partial, { ...full, amountCents: 500 },
+  { ...partial, amountCents: '500' }, { ...partial, admin: true }]
+  .map(value => validInput(value)).join(','));
+// => true,true,false,false,false
+const missingCurrency = { invoiceId: 'inv-7', mode: 'full' };
+console.log(validInput(missingCurrency), Object.hasOwn(missingCurrency, 'currency'));
+// => false false
+// 固定业务输入：发票属于 team-a，剩余可退 400 分。
+const invoice = { id: 'inv-7', tenant: 'team-a', remaining: 400, version: 3 };
+function preview(actor, args) {
+  if (!validInput(args)) return 'INPUT_INVALID';
+  if (actor.tenant !== invoice.tenant || args.invoiceId !== invoice.id) return 'NOT_ACCESSIBLE';
+  const amount = args.mode === 'full' ? invoice.remaining : args.amountCents;
+  if (amount < 1 || amount > invoice.remaining) return 'AMOUNT_UNAVAILABLE';
+  const result = { status: 'preview', invoiceId: invoice.id, amountCents: amount,
+    currency: 'CNY', resourceVersion: invoice.version };
+  if (!validOutput(result)) throw new Error('OUTPUT_INVALID');
+  return result;
+}
+console.log(validInput(partial), preview({ tenant: 'team-a' }, partial));
+// => true AMOUNT_UNAVAILABLE
+console.log(preview({ tenant: 'team-b' }, full));
+// => NOT_ACCESSIBLE
+const result = preview({ tenant: 'team-a' }, full);
+console.log(result.status, result.amountCents, result.resourceVersion);
+// => preview 400 3
+console.log(validOutput({ ...result, amountCents: '400' }));
+// => false
+```
 
-Tool 表达可执行动作，尤其是有计算、查询或副作用的动作；Resource 表达可寻址、可授权读取的上下文；Prompt 表达可复用、带参数的交互模板。把只读大文档包装成 Tool 会增加选择和调用噪声，把退款包装成 Resource 会掩盖副作用，把固定模板复制进每个描述会造成版本漂移。
+full 分支用 `amountCents: false` 禁止该属性；partial 分支的空子 Schema 表示这里不再追加约束，整数与范围仍由外层 properties 检查。分支里显式列出必填属性，也符合本例 Ajv 的严格编译配置。
 
-Resource URI 也不是天然安全。解析前限制 scheme，规范化路径，解析符号链接，核验租户、根目录、字节数、页数、内容类型和总耗时。Prompt 参数经过 Schema 与转义，模板版本进入日志；模板正文中的外部内容保持数据身份，不能升级为系统权限。
+前五个输入依次验证两个合法分支、full 多带金额、金额类型错误和额外属性。缺失 currency 的对象仍然缺失该字段，说明 `default` 没有替它补值。最关键的第三行输出是 `true AMOUNT_UNAVAILABLE`：500 分在结构上完全合法，但当前发票只剩 400 分可退。
 
-选择原语时先问消费者要做什么：需要获取稳定上下文，优先 Resource；需要复用用户可见的工作方法，使用 Prompt；需要执行或计算，使用 Tool。真实产品可能组合三者，但每一步的授权和失败语义仍分开。
+实验只预览，不创建退款；actor 是合成输入，不是认证服务。真实执行还要核对当前资源版本、批准、累计限制和幂等记录。审批机制复用 [批准绑定提议快照](../chinese-guides/agent-05-human-in-the-loop-risk-approval.md#三批准绑定一份不可变提议)，不在本篇重复实现。
 
-### 七、Capability Discovery 是带版本的会话过程
+### 五、结构化结果要让程序知道下一步能做什么
 
-**能力发现（Capability Discovery）**不是启动时列一次工具就永久缓存，而是 Client 根据 Server 能力、用户身份、租户、功能开关和会话状态获得当前可用集合。集合变化时，旧选择可能已失效，执行器必须再次授权。
+**结构化内容（Structured Content）**是 Server 在 `structuredContent` 中返回的 JSON 数据。它与模型的 Schema 约束生成不是同一种机制。2026-07-28 支持符合输出 Schema 的任意 JSON 值，不应继续把旧版“只能对象”的限制推广到所有版本。
 
-工具列表可分页，并用 `ttlMs` 与 `cacheScope` 表达缓存建议。缓存键至少包含 Server 身份、协议版本、认证主体、租户、能力版本和影响可见性的策略。公共只读元数据与用户私有工具不能共享缓存。TTL 到期、权限变化、通知或调用返回未知工具时，客户端重新发现，而不是无限重试旧名称。
+声明 outputSchema 后，Server 必须返回符合合同的结构化结果，Client 应验证后再消费。可以同时提供文本便于人读及兼容旧消费者，但业务程序不应从“已成功退款”这句话里推断金额与最终状态。上例故意把输出金额改为字符串，验证失败后就应停在错误处理，不把坏数据交给下一步工具。
 
-发现结果过大时，可先按命名空间、任务或资源范围过滤，再把候选交给模型。过滤器不能隐藏完成当前任务必需的工具，也不能让模型自行请求全量高权限目录。模型看到的候选越小、边界越清晰，选择准确率和成本通常越好。
+查询结果说明数据、快照与下一页游标；写入结果说明操作身份、确认状态与资源版本。预览结果不能冒充提交回执，已接收不能冒充已完成。一个完整工具结果可以在 `content` 中解释原因，并以 `isError: true` 表示可处理的工具执行错误；未知工具或不合协议结构的请求使用 JSON-RPC 错误。HTTP 成功、RPC 响应成功和领域动作成功需要分别判断。
 
-### 八、分页、取消和上限属于合同
+输出也可能携带不可信 URI、路径和文字。即使结构通过，下载链接仍需访问策略，下一动作仍需重新授权。不要把供应商完整响应当成本站公共输出，否则隐私、内部字段和版本变化都会泄漏到调用者。
 
-列表接口必须规定页面大小上限、cursor 的作用域与失效条件。Cursor 应是不透明值，绑定查询、排序、主体和快照；客户端不能自行拼接页码，也不能在权限变化后继续使用旧 cursor。重复页和数据变化要有去重或快照策略。
+### 六、发现与缓存只提供当前候选，调用时仍须核对
 
-取消表示调用者不再需要结果，不保证远端动作从未发生。只读搜索可尽快停止；副作用调用收到取消时要返回已执行、未执行或未知，并提供动作 ID 供对账。把网络断开等同“执行失败”会诱发重复退款或重复发送。
+**能力发现（Capability Discovery）**让 Client 知道可尝试哪些能力；具体工具合同来自 tools/list。2026 版工具集合可随请求授权和服务配置变化，但不能依赖连接上先前请求留下的隐式状态。分页、TTL 与 cacheScope 的完整机制见 [发现缓存的范围](../chinese-guides/agent-04-mcp-client-discovery-compatibility.md#四缓存的新鲜度和共享范围要分开判断)。
 
-每个 Tool 都应限制参数字节、数组元素、返回内容、执行时间、并发和下游调用。超限返回稳定错误与可行动建议，例如缩小时间范围或使用分页。不能先把 20MB 参数完整写入日志再报太大，也不能把结果全部生成后才截断。
+例如 Alice 看到了写工具，随后账号切换到 Bob；即使列表尚未到 TTL，Alice 的私有缓存也不能给 Bob 复用。工具执行端不能只因为名字曾出现在列表里就放行。未知工具需要刷新适用目录，权限不足则按授权流程处理，不能换一个别名继续撞。
 
-### 九、副作用需要预览、审批与幂等
+工具数量过多时，可以按当前任务提供相关候选，但筛选必须来自允许集合，并保留缺少能力时的解释。客户端自己给模型裁剪候选是应用行为，不等于 tools/list 天然支持任意搜索参数。缓存到期也不是必须立即后台轮询的命令，按实际使用重新核对即可。
 
-高风险动作最好拆成读取、预览和执行。预览返回规范化参数、影响对象、预计变化、风险与资源版本；执行请求携带预览摘要、版本、审批凭据和幂等键。若资源在预览后变化，服务端返回冲突并要求重新确认。
+### 七、资源上限与路径边界是执行合同的一部分
 
-幂等键的范围绑定主体、工具、规范化参数和业务操作，不是一个可永久复用的随机字符串。重复请求返回同一动作状态；相同键配不同参数必须拒绝。对于无法做到严格幂等的外部系统，记录发送前后的状态并提供对账流程。
+参数的元素数量、字符串长度与整数范围只是第一层。还需在解析前限制请求字节，执行期间限制时间、并发和下游次数，返回时限制大小；否则小输入也可能触发巨大扫描。分页游标要绑定授权和查询条件，客户端发现重复游标应停止，而不是永远取下一页。
 
-客户端界面明确区分“建议调用”“等待确认”“已提交”“结果未知”和“已验证”。模型生成一句“完成了”不能覆盖真实工具状态。审批也只授权展示过的动作，不是给后续任意调用开绿灯。
+Schema 本身也可能耗资源。受信合同尽量预编译，控制组合分支、递归深度与正则开销。MCP 禁止默认自动联网解析 `$ref`；未解析的引用不应当成“没有限制”。允许外部引用时，必须另行治理来源与网络边界。`x-mcp-header` 的合法位置、类型与编码同样有规则，HTTP 客户端不能忽略非法声明；详细机制沿用 [HTTP 头部镜像](../chinese-guides/agent-03-mcp-transport-stateless-state-versioning.md#三http-头部与正文必须描述同一件事)。
 
-### 十、错误模型帮助安全恢复
+Resource URI 或工具路径不能只查字符串前缀。`/workspace/reports-old` 以 `/workspace/reports` 开头，却在另一个目录；允许目录中的符号链接也可能指向外部。尽量把模型可选输入缩小为业务对象 ID，由受控存储解析；确需文件路径时，按真实目标、打开方式和竞争条件建立边界，见 [运行隔离中的文件访问](../chinese-guides/agent-10-identity-authorization-runtime-isolation.md#六文件路径检查之后还要守住打开的对象)。
 
-将错误分为输入无效、能力不可用、未认证、未授权、冲突、限流、暂态依赖、结果未知和内部故障。每类规定是否能自动重试、是否需重新发现、是否需用户补充，以及能公开哪些信息。仅凭 HTTP 状态或异常字符串无法可靠恢复。
+取消后，正在生成的只读结果可以停止消费；已经提交的写动作要查询原操作，不能把关闭连接当作回滚。临时流、定时器和句柄由创建者清理，清理不会抹去幂等与审计所需的业务事实。
 
-输入无效通常不重试同一参数；权限拒绝不能通过改写描述或换工具绕过；冲突要重新读取资源；限流尊重服务端窗口；未知结果先查状态。错误对象保留 correlation ID，但不包含 token、完整路径和隐私数据。
+### 八、合同变更要同时检查选择、执行与旧消费者
 
-把失败设计进合同后，Agent 才能在预算内停止。无限“修正参数再试”会掩盖 Schema 缺陷，也可能不断触发昂贵查询。客户端记录每次尝试与失败类别，达到上限后给出明确部分结果。
+把金额单位从元改成分，即使类型仍是 number，也是破坏性变化。新增必填字段、修改默认动作、改变错误语义或把预览改成执行，都需要迁移；不要只用 TypeScript 能编译判断兼容。保存带版本的真实序列化样本，并让旧消费者和新执行器的组合有明确结果。
 
-### 十一、以契约矩阵验证可发现性
+检查分三层：固定意图是否选到允许工具；边界输入是否在副作用前拒绝；输出和恢复路径是否能被消费者正确理解。描述改动重点检查选择，授权改动重点检查对象拒绝；无关模块不必因此重跑全面业务测试。
 
-为每个工具维护有效最小输入、典型输入、边界输入、无效输入和最大输入。再建立意图混淆矩阵，覆盖近义工具、无需调用、多个可组合工具、缺少确认和提示注入。指标至少包含正确选择、漏调用、无谓调用、副作用误调用、参数拒绝和越权阻断。
+每份合同有负责维护的人、支持版本与退场条件。旧工具下线时说明替代与失效时间；客户端错误中保留可关联的请求引用，不暴露秘密、完整路径或数据库细节。工具少而清楚通常比大量含糊入口更容易验证，但最终仍应以具体任务的选择与执行证据判断。
 
-契约变更要同时回放历史意图与参数。新增可选字段也可能改变模型选择；描述变短可能提高一类任务却损伤另一类；Schema 更严格可能暴露旧客户端。灰度时记录 Server、Client、协议和契约版本，才能定位退化。
+### 自检问题
 
-安全测试注入路径穿越、外部 `$ref`、超深对象、超大数组、未知字段、过期 cursor、跨租户 URI 和重复幂等键。通过标准不是“验证器没有崩”，而是请求在正确层被拒绝、没有副作用、日志已脱敏且客户端能解释下一步。
+1. 查询意图调用了写工具，参数全部合法，错误发生在哪一层？
+2. 为什么 full 模式仍带 amountCents 应被拒绝？default 又为什么没有补 currency？
+3. structuredContent 符合 Schema 后，还有哪些访问与业务判断没有完成？
+4. 工具列表缓存尚未过期，什么变化仍要求重新选择和授权？
 
-### 十二、把契约当作长期公共 API
+### 参考与延伸阅读
 
-名称、字段和错误码一旦被多个 Client、模型评测和工作流使用，就具有公共 API 的迁移成本。破坏性变化使用新版本或新工具名，旧版有弃用窗口和可观测使用量。不要静默改变单位、默认值、副作用或权限。
+- [MCP 2026-07-28 Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)：核对工具名、结果、注解与错误的协议合同。
+- [MCP Schema 规则](https://modelcontextprotocol.io/specification/2026-07-28/basic#json-schema-usage)：查默认方言、引用解析与资源约束。
+- [JSON Schema 注解](https://json-schema.org/understanding-json-schema/reference/annotations)：区分 default、examples 等说明与校验行为。
+- [Ajv 对 JSON Schema 的支持](https://ajv.js.org/json-schema.html)：查实验采用的 2020-12 入口与实现差异。
 
-工具目录要有所有者、数据分类、风险级别、支持版本、复查日期和删除条件。无人维护、无法解释副作用或没有消费者的工具应下线。Server 与 Client 的兼容测试保存真实序列化样本，而不只共享同一类型定义。
-
-截至 2026-09，可用 [MCP 2026-07-28 发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28/)、[MCP Tools 规范](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) 与 [JSON Schema 2020-12](https://json-schema.org/draft/2020-12) 核验协议和 Schema 细节。阅读规范时区分已发布版本、草案 SEP 与 SDK 实现状态，避免把计划中的能力写成生产保证。
-
-学完后，你应能从用户意图一路说明到候选发现、工具选择、输入校验、服务端授权、执行、输出校验和恢复，并能用混淆矩阵和负例证明契约真的减少误调用。工具体验的核心不是把更多函数塞给模型，而是让每个能力都有清楚、最小、可测试的边界。
+核对日期：2026-10-06。实验仅验证合成合同与本地校验，没有测量真实模型选择、支付权限或完整 MCP 互操作。

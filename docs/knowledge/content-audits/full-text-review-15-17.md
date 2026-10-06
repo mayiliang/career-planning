@@ -1,5 +1,7 @@
 # 领域 15–17 全文审计记录
 
+2026-10-06：B33 的 AIDEV-04 已重写，当前内容、实际验证与未验证范围见[学习资料系统的 B33 记录](../../development/11-learning-material-system.md#b33-的工具合同与执行证据)。后文保留历史审校记录。
+
 2026-09-23：B25 的 DEPLOY-01 已按知识点重写，补充中文情境、可观察例子、概念交叉引用与桌面核对；本地实验与尚未执行的 Nginx/TLS/CDN、真实发布和真实访问测量分别记录，见[学习资料系统的 B25 记录](../../development/11-learning-material-system.md#b25-的版本交付与用户体验)。后文保留历史审校记录。
 
 2026-09-22：B24 的 LINUX-02、LINUX-03、LINUX-04、DOCKER-01、DOCKER-02 已按知识点重写，补充命令解释、完整项目、交叉引用与桌面核对；原生程序、Shell 语义与尚未执行的 Linux/Docker 实验分别记录，见[学习资料系统的 B24 记录](../../development/11-learning-material-system.md#b24-的服务诊断与容器交付)。后文保留历史审校记录。

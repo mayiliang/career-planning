@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "batch": "B29",
+  "title": "从结构化候选到受控交互",
+  "reviewedOn": "2026-10-02",
+  "chapters": [
+    {
+      "id": "AIAPP-03",
+      "title": "把生成候选变成可检查的数据",
+      "question": "JSON 合法以后，还要检查什么？",
+      "summary": "从评审草稿解释结构、业务、修复与版本。",
+      "outcomes": [
+        "定位字段与业务错误",
+        "限制修复并保留原结论",
+        "区分结构有效和可执行"
+      ],
+      "prerequisites": [
+        "aiapp-01-model-interface-instructions-context-boundaries.md#aiapp-01",
+        "ts-07-runtime-contracts-validation-error-models.md#ts-07"
+      ],
+      "guide": "aiapp-03-structured-output-schema-validation.md",
+      "anchor": "aiapp-03",
+      "concepts": [
+        {
+          "id": "structured-result-consumer",
+          "heading": "一、先确定页面究竟需要什么"
+        },
+        {
+          "id": "structured-result-schema",
+          "heading": "二、Schema 约束形状，不能替业务作决定"
+        },
+        {
+          "id": "structured-result-gate",
+          "heading": "三、运行一次从候选到待复核的检查"
+        },
+        {
+          "id": "structured-result-zod",
+          "heading": "四、在 Zod 中保持同样的边界"
+        },
+        {
+          "id": "structured-result-recovery",
+          "heading": "五、错误不同，恢复动作也应不同"
+        },
+        {
+          "id": "structured-result-repair",
+          "heading": "六、修复预算只允许有限的新候选"
+        },
+        {
+          "id": "structured-result-versions",
+          "heading": "七、严格模式和版本都需要具体条件"
+        },
+        {
+          "id": "structured-result-commit",
+          "heading": "八、完整结构才有提交资格"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "contract-parser",
+          "reason": "静态类型不能替代对真实输入的检查。"
+        },
+        {
+          "concept": "output-boundary-evidence",
+          "reason": "引用存在仍不能证明主张被支持。"
+        },
+        {
+          "concept": "model-runtime-adapter",
+          "reason": "供应商的结构化能力必须显式协商。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-04",
+      "title": "让工具提议收敛为真实结果",
+      "question": "模型说已创建，页面能否显示成功？",
+      "summary": "沿调用轮次和内存账本解释确认、重复与未知。",
+      "outcomes": [
+        "区分提议、执行和结果",
+        "识别三个 ID 的用途",
+        "恢复未知与部分完成"
+      ],
+      "prerequisites": [
+        "aiapp-03-structured-output-schema-validation.md#aiapp-03"
+      ],
+      "guide": "aiapp-04-tool-calling-execution-result-ui.md",
+      "anchor": "aiapp-04",
+      "concepts": [
+        {
+          "id": "tool-operation-proposal",
+          "heading": "一、函数名和参数只是一份提议"
+        },
+        {
+          "id": "tool-operation-contract",
+          "heading": "二、工具合同应说明能力与后果"
+        },
+        {
+          "id": "tool-operation-approval",
+          "heading": "三、确认绑定的必须是将要执行的动作"
+        },
+        {
+          "id": "tool-operation-identity",
+          "heading": "四、三个 ID 分别回答三个问题"
+        },
+        {
+          "id": "tool-operation-unknown",
+          "heading": "五、未知结果和取消都不能伪装成失败"
+        },
+        {
+          "id": "tool-operation-dependencies",
+          "heading": "六、并行调用首先需要依赖关系"
+        },
+        {
+          "id": "tool-operation-result",
+          "heading": "七、回流模型的结果仍需要检查"
+        },
+        {
+          "id": "tool-operation-recovery",
+          "heading": "八、让诊断记录支持下一次恢复"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "structured-result-gate",
+          "reason": "执行器需要完整且有效的输入候选。"
+        },
+        {
+          "concept": "automation-control-snapshot",
+          "reason": "批准必须对应实际执行的参数和版本。"
+        },
+        {
+          "concept": "view-host-actions",
+          "reason": "生成按钮也只能表达待验证的用户意图。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-05",
+      "title": "生成界面时保留宿主控制",
+      "question": "新摘要到达时，怎样保住用户备注？",
+      "summary": "用受控组件和独立草稿说明更新、降级与宿主边界。",
+      "outcomes": [
+        "限制模型可描述的界面",
+        "保留版本与用户输入",
+        "区分渲染和执行权限"
+      ],
+      "prerequisites": [
+        "aiapp-04-tool-calling-execution-result-ui.md#aiapp-04",
+        "sec-04-cross-origin-isolation-embedding-permissions.md#sec-04"
+      ],
+      "guide": "aiapp-05-generative-ui-view-model-host-safety.md",
+      "anchor": "aiapp-05",
+      "concepts": [
+        {
+          "id": "view-host-grammar",
+          "heading": "一、先限制模型的表达方式"
+        },
+        {
+          "id": "view-host-model",
+          "heading": "二、视图模型把显示和业务事实分开"
+        },
+        {
+          "id": "view-host-registry",
+          "heading": "三、注册表决定哪些描述能变成组件"
+        },
+        {
+          "id": "view-host-lab",
+          "heading": "四、运行一个保留用户输入的桌面面板"
+        },
+        {
+          "id": "view-host-updates",
+          "heading": "五、增量更新保护的不只是字段值"
+        },
+        {
+          "id": "view-host-boundary",
+          "heading": "六、普通组件与隔离应用的边界不同"
+        },
+        {
+          "id": "view-host-actions",
+          "heading": "七、按钮返回意图，宿主决定动作"
+        },
+        {
+          "id": "view-host-fallback",
+          "heading": "八、降级后仍要保留任务的核心信息"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "tool-operation-unknown",
+          "reason": "卡片必须反映服务端操作证据。"
+        },
+        {
+          "concept": "response-stream-cancel",
+          "reason": "更新和卸载都要阻止旧尝试改写状态。"
+        },
+        {
+          "concept": "agent-ui-layers",
+          "reason": "组件描述和嵌入应用处于不同协议层。"
+        }
+      ]
+    },
+    {
+      "id": "AIUI-01",
+      "title": "按职责连接 Agent UI 协议",
+      "question": "同叫 UI，三种协议为何不能互换？",
+      "summary": "用具体消息和离线轨迹区分协议、适配与宿主能力。",
+      "outcomes": [
+        "辨别协议负责的层次",
+        "记录能力差异和降级",
+        "保护顺序与状态所有权"
+      ],
+      "prerequisites": [
+        "aiapp-05-generative-ui-view-model-host-safety.md#aiapp-05",
+        "aiapp-02-streaming-sse-incremental-rendering.md#aiapp-02"
+      ],
+      "guide": "aiui-01-agent-ui-protocol-interoperability.md",
+      "anchor": "aiui-01",
+      "concepts": [
+        {
+          "id": "agent-ui-layers",
+          "heading": "一、三个协议解决三个不同的问题"
+        },
+        {
+          "id": "agent-ui-events",
+          "heading": "二、事件结束要问结束了什么"
+        },
+        {
+          "id": "agent-ui-a2ui",
+          "heading": "三、A2UI 把组件结构与数据更新分开"
+        },
+        {
+          "id": "agent-ui-apps",
+          "heading": "四、MCP Apps 连接资源与宿主桥接"
+        },
+        {
+          "id": "agent-ui-capabilities",
+          "heading": "五、能力矩阵描述的是具体组合"
+        },
+        {
+          "id": "agent-ui-adapter",
+          "heading": "六、用适配器保护内部状态含义"
+        },
+        {
+          "id": "agent-ui-bridge",
+          "heading": "七、桥接安全要落到实例和方法"
+        },
+        {
+          "id": "agent-ui-ownership",
+          "heading": "八、恢复时区分五类状态的所有者"
+        },
+        {
+          "id": "agent-ui-evolution",
+          "heading": "九、升级与降级都应保留可解释的任务路径"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "view-host-boundary",
+          "reason": "宿主隔离取决于实际加载与桥接方式。"
+        },
+        {
+          "concept": "tool-operation-result",
+          "reason": "工具参数结束不代表业务执行成功。"
+        },
+        {
+          "concept": "response-stream-sequence",
+          "reason": "可靠恢复需要连续位置与明确终态。"
+        }
+      ]
+    }
+  ]
+}

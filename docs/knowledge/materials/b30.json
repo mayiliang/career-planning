@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "batch": "B30",
+  "title": "从可信证据到可运营的 AI 系统",
+  "reviewedOn": "2026-10-03",
+  "chapters": [
+    {
+      "id": "AIAPP-06",
+      "title": "让每个结论找到适用证据",
+      "question": "有出处的答案，为什么仍可能答错？",
+      "summary": "沿政策问答解释切分、授权、重排、引用和资料更新。",
+      "outcomes": [
+        "区分相似、适用和支持",
+        "设计可追踪的证据与引用",
+        "按召回、排序和生成定位失败"
+      ],
+      "prerequisites": [
+        "aiapp-01-model-interface-instructions-context-boundaries.md#aiapp-01"
+      ],
+      "guide": "aiapp-06-rag-citations-source-trust.md",
+      "anchor": "aiapp-06",
+      "concepts": [
+        {
+          "id": "rag-evidence-task",
+          "heading": "一、回答问题之前，先确定证据应该回答什么"
+        },
+        {
+          "id": "rag-evidence-chunk",
+          "heading": "二、切分时保留下来的条件，决定答案会不会变样"
+        },
+        {
+          "id": "rag-evidence-ranking",
+          "heading": "三、相似度负责找候选，不能决定谁有资格回答"
+        },
+        {
+          "id": "rag-evidence-selection",
+          "heading": "四、运行一次过滤与排序，观察高分资料如何退出"
+        },
+        {
+          "id": "rag-evidence-citation",
+          "heading": "五、引用存在与引用支持结论，是两次不同的检查"
+        },
+        {
+          "id": "rag-evidence-uncertainty",
+          "heading": "六、没有足够证据时，仍然可以给出有用回答"
+        },
+        {
+          "id": "rag-evidence-lifecycle",
+          "heading": "七、资料更新之后，旧答案也需要退出使用"
+        },
+        {
+          "id": "rag-evidence-evaluation",
+          "heading": "八、沿证据链定位失败，才能知道该改哪一步"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "output-boundary-evidence",
+          "reason": "引用检查需要区分可定位与真正支持。"
+        },
+        {
+          "concept": "ai-governance-lineage",
+          "reason": "来源撤回要影响索引和派生答案。"
+        },
+        {
+          "concept": "injection-boundary-origin",
+          "reason": "检索证据有参考价值，不因此获得指令权。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-07",
+      "title": "阻止外部文字取得执行权",
+      "question": "模型照读恶意资料时，系统怎样限制后果？",
+      "summary": "跟踪外部内容经过模型、工具、摘要与宿主的权限变化。",
+      "outcomes": [
+        "区分检测信号与授权边界",
+        "用错误候选检查执行入口",
+        "让来源限制贯穿派生数据"
+      ],
+      "prerequisites": [
+        "sec-01-xss-csrf-trust-boundaries.md#sec-01"
+      ],
+      "guide": "aiapp-07-prompt-injection-untrusted-content.md",
+      "anchor": "aiapp-07",
+      "concepts": [
+        {
+          "id": "injection-boundary-task",
+          "heading": "一、先观察任务是在哪一句话之后改变的"
+        },
+        {
+          "id": "injection-boundary-origin",
+          "heading": "二、可信来源也不能自动取得指令权"
+        },
+        {
+          "id": "injection-boundary-capability",
+          "heading": "三、限制能力，才能在模型判断错误时继续守住边界"
+        },
+        {
+          "id": "injection-boundary-executor",
+          "heading": "四、让模型故意提出错误动作，观察执行器的决定"
+        },
+        {
+          "id": "injection-boundary-lineage",
+          "heading": "五、摘要和记忆不能洗掉原来的数据身份"
+        },
+        {
+          "id": "injection-boundary-sinks",
+          "heading": "六、检测和输出处理分别限制不同后果"
+        },
+        {
+          "id": "injection-boundary-host",
+          "heading": "七、跨工具与 MCP 的能力来自宿主决策"
+        },
+        {
+          "id": "injection-boundary-recovery",
+          "heading": "八、把失败保存为可复现路径，再决定如何恢复"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "threat-path-loss",
+          "reason": "先明确损失，再判断哪条注入路径值得验证。"
+        },
+        {
+          "concept": "tool-operation-approval",
+          "reason": "参数变化后不能复用旧确认。"
+        },
+        {
+          "concept": "ai-evaluation-gate",
+          "reason": "边界失败应成为下一次发布的阻断证据。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-08",
+      "title": "用可复核证据决定是否发布",
+      "question": "平均答案更好了，为什么仍应拒绝上线？",
+      "summary": "从任务样本、评分校准和生产轨迹建立发布门禁。",
+      "outcomes": [
+        "分层评价结果与实际动作",
+        "识别评分偏差和样本限制",
+        "连接回归、灰度与恢复决定"
+      ],
+      "prerequisites": [
+        "aiprod-01-ai-task-model-selection-value-validation.md#aiprod-01",
+        "obs-01-frontend-observability-slo-alerting-privacy.md#obs-01"
+      ],
+      "guide": "aiapp-08-evaluation-observability-release-gates.md",
+      "anchor": "aiapp-08",
+      "concepts": [
+        {
+          "id": "ai-evaluation-layers",
+          "heading": "一、先把成功拆成能够检查的事实"
+        },
+        {
+          "id": "ai-evaluation-dataset",
+          "heading": "二、样本集保存的是任务条件，不是一串标准句子"
+        },
+        {
+          "id": "ai-evaluation-judge",
+          "heading": "三、先校准评分器，再相信它给出的分数"
+        },
+        {
+          "id": "ai-evaluation-comparison",
+          "heading": "四、比较两个版本时，把波动和退化一起留下"
+        },
+        {
+          "id": "ai-evaluation-trace",
+          "heading": "五、生产轨迹连接事实，不补写当时没有记录的版本"
+        },
+        {
+          "id": "ai-evaluation-gate",
+          "heading": "六、发布门禁先检查硬边界，再比较质量"
+        },
+        {
+          "id": "ai-evaluation-rollout",
+          "heading": "七、离线通过以后，用灰度观察真实任务"
+        },
+        {
+          "id": "ai-evaluation-integrity",
+          "heading": "八、评估系统自己也需要可解释的边界"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "rag-evidence-evaluation",
+          "reason": "检索与生成需要各自的失败证据。"
+        },
+        {
+          "concept": "user-observation-sampling",
+          "reason": "采样影响哪些生产问题能够被看见。"
+        },
+        {
+          "concept": "ai-governance-recovery",
+          "reason": "回滚配置不会自动撤销已生成产物和副作用。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-09",
+      "title": "让费用与重试服从任务边界",
+      "question": "请求最终成功了，为什么账单和旧答案仍会出错？",
+      "summary": "用账本、预留、缓存和重试时间线解释运行可靠性。",
+      "outcomes": [
+        "区分计量、预算与瞬时容量",
+        "检查缓存隔离与失效条件",
+        "在未知结果和期限前停止盲重试"
+      ],
+      "prerequisites": [
+        "aiapp-01-model-interface-instructions-context-boundaries.md#aiapp-01",
+        "net-01-browser-network-fetch-reliability.md#net-01"
+      ],
+      "guide": "aiapp-09-cost-quota-cache-reliability.md",
+      "anchor": "aiapp-09",
+      "concepts": [
+        {
+          "id": "ai-runtime-cost-ledger",
+          "heading": "一、先把一次任务的所有尝试记到同一本账"
+        },
+        {
+          "id": "ai-runtime-cost-reservation",
+          "heading": "二、预算预留先发生，后续请求才看得到额度已被占用"
+        },
+        {
+          "id": "ai-runtime-cost-capacity",
+          "heading": "三、限流处理瞬时容量，排队也必须有截止"
+        },
+        {
+          "id": "ai-runtime-cost-cache",
+          "heading": "四、三种缓存复用的是不同东西"
+        },
+        {
+          "id": "ai-runtime-cost-prefix",
+          "heading": "五、上下文命中不等于答案已经存在"
+        },
+        {
+          "id": "ai-runtime-cost-retry",
+          "heading": "六、重试先取得资格，再决定等待多久"
+        },
+        {
+          "id": "ai-runtime-cost-recovery",
+          "heading": "七、取消与降级要保留用户已经完成的工作"
+        },
+        {
+          "id": "ai-runtime-cost-breaker",
+          "heading": "八、熔断与容量隔离限制故障传播"
+        },
+        {
+          "id": "ai-runtime-cost-outcome",
+          "heading": "九、把成本放回有效完成的任务中判断"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "tool-operation-unknown",
+          "reason": "超时后的写入先查询，不用重试掩盖未知结果。"
+        },
+        {
+          "concept": "response-stream-cancel",
+          "reason": "取消要拒绝旧结果并释放上游资源。"
+        },
+        {
+          "concept": "rag-evidence-lifecycle",
+          "reason": "政策更新与权限撤销必须影响缓存读取。"
+        }
+      ]
+    }
+  ]
+}

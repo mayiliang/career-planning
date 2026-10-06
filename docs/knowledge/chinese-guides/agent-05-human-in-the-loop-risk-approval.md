@@ -2,152 +2,203 @@
 
 ## AGENT-05 Human-in-the-loop、风险分级与可验证审批
 
-“操作前弹一个确认框”不等于 Human-in-the-loop。有效的人类介入必须发生在用户仍能改变结果的时刻，提供足够而不过载的信息，并把同意绑定到准确动作、资源、参数、版本和有效期。若模型能改变确认文案、审批后还能替换参数，或者一个“始终允许”覆盖未来未知动作，人工只是在为自动化错误背书。
+助手准备把课程公告发到团队频道。你看过正文并批准，随后它为“扩大覆盖面”把目标换成公开频道，还沿用刚才的批准。确认框确实出现过，但用户确认的对象和最终执行的对象已经不同。
+
+有效审批要把人看到的内容、人的决定和执行器将做的动作连接起来。本篇先解释补充信息与批准动作的区别，再用范围额度和完整页面实验观察参数改变、拒绝、撤销与迟到决定。读完应能指出审批在哪一步失效，并让任务保留成果而停止未获准动作。
 
 ### 学习前先确认
 
-- 直接前置：[AGENT-01 Agent 循环、规划、停止与恢复](../chinese-guides/agent-01-loop-planning-stopping-recovery.md#agent-01)，用于理解任务状态与执行边界；[AGENT-04 MCP Client 发现、能力与兼容](../chinese-guides/agent-04-mcp-client-discovery-compatibility.md#agent-04)，用于理解服务身份、工具能力和宿主授权。间接前置不重复列出。
-
-### 一、Human in the Loop 是控制点
-
-**人工介入（Human in the Loop）**是在自动化决策或执行链中，由有权限的人审阅事实、补充判断、批准、修改、拒绝或接管，并让该决定成为系统可验证状态的控制机制。它不是观看 Agent 动画，也不是事后才收到通知。
-
-介入点可以是目标确认、缺失信息、计划选择、敏感数据访问、外部副作用、异常恢复和最终发布。不同点需要不同上下文与角色。低风险问题可由普通用户确认，高价值转账可能要求组织审批人或双人复核。
-
-系统应支持等待、过期、撤销、升级和取消。用户没回应不是默认同意；超时进入明确状态。
-
-### 二、Risk Tier 同时看影响与可恢复性
-
-**风险等级（Risk Tier）**是依据潜在损害、影响范围、可逆性、数据敏感度、金额、外部可见性和不确定性，把动作映射到不同自动化与审批要求。工具叫 `send` 还是 `update` 不足以判断风险。
-
-例如读取公开文档通常低风险，读取私人档案涉及机密性，保存草稿可恢复，正式发送邮件影响外部，删除数据库或转账高影响且可能不可逆。同一工具对测试环境与生产环境、对单条与批量，也应不同等级。
-
-风险策略由服务端版本化，模型只提供候选分类。未知工具、动态目标、来源不可信或参数无法完整展示时向更高等级保守提升，不静默降级。
-
-### 三、在执行前展示真实提议
-
-确认界面从经过验证的结构化 proposal 渲染，包括动作、服务身份、目标资源、关键参数、预计影响、数据外传、可逆性、费用、依赖和异常项。模型生成的自然语言摘要可以辅助，但不能隐藏或替换真实字段。
-
-敏感字段按最小必要遮罩，同时提供受控查看。大批量动作展示数量、采样、筛选条件和完整清单入口；不能用“处理这些项目”掩盖 10,000 个目标。将本次与既有状态的差异突出显示。
-
-确认按钮与不可信网页/MCP App 在视觉和 DOM/窗口边界上分离。外部内容不能伪装宿主按钮或覆盖风险说明。
-
-### 四、Approval Token 绑定不可变快照
-
-**审批令牌（Approval Token）**是服务端签发的短期、一次性或限次凭证，绑定主体、proposal 哈希、工具/服务身份、资源版本、风险策略版本、允许参数、到期和 nonce。执行器只接受与当前动作完全匹配的令牌。
-
-用户点击后若模型修改收件人、金额、文件或工具，哈希变化，需要重新审批。令牌不能由前端自报 `approved=true` 替代，也不能作为 bearer 长期保存在聊天记录。高风险审批可以绑定设备、二次认证或审批人角色。
-
-执行成功消费令牌；网络结果未知时按 operationId 对账，不重新签发并重复动作。拒绝与过期也是任务事件，Agent 不能换工具绕过。
-
-### 五、Scope of Authorization 必须最小
-
-**授权范围（Scope of Authorization）**是用户此次决定允许的主体、动作、对象、参数边界、次数和时间。它回答“同意了什么”，不等于对 Agent 的总体信任。
-
-“允许读取当前文件”不能扩展成整个磁盘，“发送这封邮件”不能扩展成以后自动发信，“批准最多 100 元”不能执行 101 元或拆成多笔绕过。范围由服务器策略求交集，任何超出都重新确认。
-
-“这次允许”“本会话允许”“长期允许”分开设计。长期授权只适合低风险、稳定且可撤销能力，并在工具/策略变化后失效；不能通过默认勾选诱导用户。
-
-### 六、风险随计划变化重新计算
-
-计划阶段风险只是预估。执行前读取实际资源、数量、权限和依赖，再计算最终等级。若从草稿变成公开发布、一个文件扩展成目录、普通数据混入敏感数据，应暂停并重新审批。
-
-审批后状态也可能变化：资源被他人编辑、汇率变化、权限撤销。使用乐观版本或条件写入；冲突不执行旧 proposal。用户确认的是当时可见快照，不是任意未来状态。
-
-对组合动作计算整体风险。十个分别低风险的调用可能构成批量爬取、骚扰或额度耗尽，不能逐个无提示通过。
-
-### 七、输入请求与审批不是一回事
-
-Agent 缺少城市、格式或排序偏好时是 input_required；要访问私密数据或产生副作用时是 approval_required。前者补充任务含义，后者授予有限权限。界面、事件和审计分别建模。
-
-一个回答可能同时包含信息和授权，但应拆成明确字段。用户说“用工作邮箱发给他”补全账号，不自动批准发送；系统展示最终收件人和正文后再确认。
-
-敏感凭据不通过普通聊天收集。使用宿主认证、OAuth 或安全输入组件，Server/模型只获得必要授权结果。
-
-### 八、拒绝与修改要成为新计划输入
-
-用户拒绝后记录范围和可选原因，Agent 可以提供无副作用替代、缩小范围或结束；不能反复用更具诱导性的措辞请求相同操作。设置同类拒绝次数与冷却。
-
-用户修改 proposal 时创建新版本，重新验证 Schema、风险与权限，再签发新审批。不要在确认后的 DOM 中直接改几个字段后沿用旧 token。
-
-组织审批被拒绝时，普通用户不能通过另一个 Server 或同义工具重试。策略对动作语义而不是工具名称生效。
-
-### 九、批量和多审批人需要工作流
-
-批量操作可用两阶段：先生成可下载/筛选的变更集，再整体批准；执行中记录每项状态，部分失败不自动重做全部。超过阈值采用抽样预览、分批额度和停止开关。
-
-双人审批要求不同主体、角色与独立认证，不能由同一 Agent 会话模拟两个批准。审批顺序、职责分离、超时和撤回进入状态机。后一审批看到前一审批后的同一 proposal 哈希。
-
-委托或代理审批需要显式委托范围和到期，审计展示实际操作者与代表主体。
-
-### 十、紧急停止与人工接管
-
-用户或管理员可暂停 run、撤销未消费审批、禁用工具和阻止新步骤。暂停不保证已经提交的外部动作回滚；界面列出完成、在途、未知和未开始。
-
-人工接管获得任务快照、原始证据、工具回执和未决选择，不需要猜模型思路。接管后 Agent 进入 suspended，除非明确恢复；两者不能同时写同一资源。
-
-恢复需要新的主体、状态版本和策略检查。旧审批若已过期或上下文变化，不自动复用。
-
-### 十一、可用性决定审批质量
-
-避免每一步都弹窗导致确认疲劳。低风险读操作可按清晰范围预授权，高风险动作合并为有意义的检查点。风险文案用具体后果和对象，不使用“可能有风险，请确认”空话。
-
-危险动作与取消按钮视觉可分辨，键盘焦点、屏幕阅读器标签和移动窄屏都要正确。倒计时不能制造不合理压力。默认焦点不放在不可逆确认，快捷键不绕过审阅。
-
-衡量用户是否真正发现异常：在测试中植入错误收件人、扩大范围或敏感附件，观察拦截率，而不只看点击速度。
-
-### 十二、可观测性与审计
-
-记录 proposal 版本、风险输入和策略版本、展示字段、审批主体、决定、令牌签发/消费、执行回执、冲突和接管。审计不可由模型修改，敏感正文按最小留存。
-
-指标包括不同等级数量、批准/拒绝/修改、异常发现、确认时长、重复提示、过期、审批后变化、越权阻止和未知结果。高批准率可能是疲劳，不一定代表设计好。
-
-向用户提供与其相关的历史和撤销入口；组织审计按角色隔离，不能成为额外数据泄露面。
-
-### 十三、用对抗样例测试审批边界
-
-测试模型在确认后替换金额、工具返回提示“无需确认”、MCP App 伪造按钮、批量数量变化、资源版本冲突、旧 token 重放、另一个用户使用 token、过期、网络响应丢失和管理员撤销。
-
-断言执行器拒绝不匹配 proposal，拒绝后不绕行，未知结果不重复，高风险无可信 UI 时停止。截图验证用户看到的字段，服务端记录验证真正执行的字段，两边缺一不可。
-
-评测按风险等级和用户群体分层，包含无障碍和小屏。模型/工具/策略升级都重跑。
-
-### 十四、自动化阈值需要由证据逐步调整
-
-新工具或新任务先采用较高人工介入，收集参数错误、拒绝、修改、恢复和后果数据。在限定低风险范围内证明稳定后，才能把某些重复确认升级为范围授权；范围、有效期和撤销始终保留。不能因为多数用户一直点击允许，就推断动作安全。
-
-阈值调整经过评测、风险负责人和灰度，记录 policyVersion。模型升级、工具 Schema 变化、目标域变化或事故后自动回到更严格层级。不同租户、角色和法规场景可有不同策略，但前端准确说明当前边界。
-
-衡量减少了多少无意义打扰，同时检查异常拦截率、越权阻止和高风险漏报。优化目标是更好的判断质量，不是更少弹窗本身。
-
-### 十五、审批服务的可用性不能成为绕过理由
-
-审批服务超时或离线时，高风险动作 fail closed，任务保留提议并稍后恢复；低风险、已明确预授权且策略允许的动作可按缓存策略继续。不能因为“确认系统坏了”就由 Agent 自行决定。缓存授权带签名、范围、版本和短期有效，撤销优先传播。
-
-多地区部署处理时间和身份一致性，避免一个地区已拒绝而另一区仍执行。审批记录与业务执行通过 proposal/operation 关联；跨系统无法原子提交时使用意图账本和对账，未知状态不重复。
-
-灾难恢复后旧 token 不应重新可用。演练审批库恢复、撤销重放、在途 proposal 过期和审计连续性。
-
-### 十六、领域专家与最终用户承担不同判断
-
-最终用户能确认意图和个人数据，领域专家能判断合规/专业风险，运维人员能判断生产影响。系统把问题交给有能力与责任的角色，不让普通用户用一次点击承担自己无法判断的模型安全。
-
-提供证据而不是模型思维：原始来源、规则命中、变更 diff、测试和不确定项。专家修改决定时留下依据，后续可回放与申诉。高风险领域还需明确 AI 只是建议、谁拥有最终责任以及无自动化路径。
-
-### 十七、人工负责判断，系统负责约束
-
-先为动作建立风险表和结构化 proposal，再做服务端审批对象、可信 UI、执行校验和审计。人工介入不应补救基础工程缺陷；参数验证、授权、幂等和完成证据仍由系统保证。
-
-上线前为每类动作准备最小、典型和最大影响样本，检查风险分级、proposal 字段、可信 UI、审批主体、token 绑定、执行校验和审计。注入确认后参数变化、资源版本冲突、旧 token 重放、另一用户使用、审批服务故障和响应丢失，证明没有任何路径把未授权动作变成成功。
-
-人工流程也要设置服务目标：谁会响应、等待多久、超时怎样处理、用户如何撤销和申诉。没有真正人员或职责承接的“转人工”是假入口。高风险系统定期抽查被批准动作的后果，发现确认疲劳或漏报后调整策略并回归。
-
-审批证据要让事后人员还原用户当时看见的提议，而不是只留 `approved=true`。保存 proposal 哈希、关键展示字段、策略版本和执行回执，在满足隐私最小化的前提下形成责任清晰的链路。
-
-审批界面必须用实际用户测试验证理解，而不是由开发者代替判断。让参与者指出目标、范围、不可逆后果和拒绝后的状态；若他们只能找到“继续”按钮却说不清动作，界面不合格。对专业审批人提供原始证据与差异，对普通用户使用具体对象和结果，避免术语堆砌。
-
-对于连续相似动作，系统可以生成批次 proposal，但每项仍有稳定 ID 与结果。执行过程中范围扩大、异常率升高或策略变化就暂停剩余项；已批准批次不应成为绕过未来风险检查的通行证。
-
-撤销长期授权后要清理客户端缓存和在途提议，后续动作重新走风险流程；仅在设置页变灰但执行端仍接受旧 token 属于严重越权。
-
-学完后，你应能区分补充输入、普通确认和正式审批，设计风险分级、不可变提议、审批令牌、最小授权范围与接管流程，并判断一个确认框是否真的能阻止错误，而不只是把责任推给用户。
+- 直接前置：[AGENT-01 Agent 循环、规划、停止与恢复](../chinese-guides/agent-01-loop-planning-stopping-recovery.md#agent-01)，理解等待与执行状态；[AGENT-04 MCP Client 发现、能力与兼容](../chinese-guides/agent-04-mcp-client-discovery-compatibility.md#agent-04)，理解宿主如何选择能力和确认服务身份。
+
+### 一、让人介入时，人必须仍能改变结果
+
+**人工介入（Human in the Loop）**是在自动化过程中，让有权限的人查看必要事实、补充判断、修改、批准、拒绝或接管，并让决定约束后续执行。动作已经不可撤回之后才通知用户，属于事后告知，不能算执行前审批。
+
+**风险等级（Risk Tier）**根据影响范围、可逆性、数据敏感度和不确定性决定控制强度。名称相同的工具可能产生不同风险：删除临时草稿与删除正式档案，向本人发送预览与向公众发布，都不能因为使用同一个函数就采用同样策略。
+
+| 动作情境 | 用户需要核对的事实 | 控制重点 |
+| --- | --- | --- |
+| 删除资料 | 哪些对象、是否共享、能否恢复 | 精确对象与恢复边界 |
+| 发送消息 | 收件人、正文、附件和数据去向 | 接收对象与外部影响 |
+| 支付申请 | 收款方、币种、金额及累计额度 | 独立授权与资金边界 |
+| 发布内容 | 环境、受众、内容版本和撤回条件 | 公开范围与最终制品 |
+
+这张表是教学比较，不是适用于所有组织的风险政策。正式规则应由业务负责人制定并版本化，模型可以提示风险，不能替自己降低等级。高风险自动化的整体产品决策复用 [AIPROD-02 的影响分级](../chinese-guides/aiprod-02-high-risk-automation-human-in-the-loop.md#一按后果和影响范围决定自动化程度)，本篇重点是把一次决定落到可执行边界。
+
+### 二、补充输入与授予权限走不同判断
+
+“请选一个频道”是在补全参数，“允许把这段正文发到此频道”是在批准外部动作。用户提供参数，不自动表示允许执行。登录成功也只说明认证完成，不能替代具体交易或发布授权。
+
+MCP 2026-07-28 的多轮请求用 `InputRequiredResult` 承载缺少的输入。Server 在支持该模式的方法上返回 `resultType: "input_required"`，用 `inputRequests` 映射描述请求，也可以返回不透明的 `requestState`。例如某个映射键对应 `elicitation/create` 表单，请用户补充发布范围；客户端先确认自身声明支持该能力，再决定如何呈现。
+
+用户回答之后，Client 对原请求发起新一轮调用：JSON-RPC id 必须不同，回应键对应原来的输入请求键，requestState 如有则原样回传，不能转用到并行的另一个请求。Server 把回传状态当作不可信输入；凡影响权限、资源访问或业务逻辑的状态，都需要验证完整性。短时效与主体绑定可以缩小重放风险，但要保证只能消费一次，仍需服务端记录。
+
+Elicitation 是输入交互机制，不是通用支付审批系统。表单的 accept/decline/cancel 要映射到应用自己的决定与状态；accept 也不代表工具的所有未来动作获准。口令、令牌等秘密应走合适的认证通道，不经普通文本表单交给模型。长期任务中的输入通过 Tasks 的更新流程提交，不能把普通 MRTR 继续调用与 `tasks/update` 混成同一个接口。
+
+### 三、批准绑定一份不可变提议
+
+提议应包含服务与工具身份、目标对象、关键参数、资源版本和预期影响。界面从这份结构化提议生成，模型的摘要只能帮助阅读；不能让摘要写“发到团队”，实际参数却是 public。
+
+**审批令牌（Approval Token）**是应用用来引用或证明有效审批的凭证。它可以是服务端审批记录的随机引用，也可以是受保护的声明；不是 MCP 统一规定的某个 token 字段。执行器核对主体、提议摘要、对象版本、策略版本、期限和消费状态，不能只信前端传来的 `approved: true`。
+
+用户编辑正文、收件人或金额后生成新提议版本，旧批准不再匹配。资源本身被别人修改时，也可能需要重新确认或条件写入。仅把 JSON 做哈希而不统一字段、默认值与规范化方式，容易产生比较歧义；生产实现要对验证后的结构使用稳定表示。
+
+范围明确后，再安排执行的原子边界。批准检查、额度预留和动作意图登记应避免并发穿透；外部响应丢失时按原操作对账，不能重新批准并重复执行。批准、业务幂等与回执是互补记录，参见 [工具提议的确认绑定](../chinese-guides/aiapp-04-tool-calling-execution-result-ui.md#三确认绑定的必须是将要执行的动作)。
+
+### 四、范围授权还要防止多次小动作绕过上限
+
+**授权范围（Scope of Authorization）**说明谁可以对哪些对象、用什么动作、在什么期限和次数或额度内执行。一次允许不意味着永久允许；金额上限也要说明是单笔还是累计，否则两笔看似都没越界的请求仍可能超过用户真正批准的总量。
+
+保存为 `approval-budget.mjs`，用 Node.js 22 执行。下方用合成金额“分”和固定时间演示累计范围，只有同步内存账本，不会转账，也不提供真实权限隔离。
+
+```js example=agent05-approval-budget
+const grant = { actor: 'user-a', tool: 'pay', recipient: 'vendor-a', currency: 'CNY',
+  remaining: 100000, expiresAt: 1000, revoked: false };
+const ledger = new Map();
+function reserve(action, now) {
+  if (grant.revoked || now >= grant.expiresAt) return 'inactive';
+  if (['actor', 'tool', 'recipient', 'currency'].some(key => action[key] !== grant[key])) return 'out-of-scope';
+  if (!Number.isSafeInteger(action.amount) || action.amount <= 0) return 'invalid-amount';
+  const previous = ledger.get(action.id);
+  if (previous) return previous.amount === action.amount ? 'replayed' : 'id-conflict';
+  if (action.amount > grant.remaining) return 'needs-new-approval';
+  grant.remaining -= action.amount;
+  ledger.set(action.id, { amount: action.amount });
+  return 'reserved';
+}
+const action = { id: 'a-1', actor: 'user-a', tool: 'pay', recipient: 'vendor-a', currency: 'CNY', amount: 60000 };
+console.log(reserve(action, 100), grant.remaining);
+// => reserved 40000
+console.log(reserve(action, 100), grant.remaining);
+// => replayed 40000
+console.log(reserve({ ...action, id: 'a-2' }, 100));
+// => needs-new-approval
+console.log(reserve({ ...action, id: 'a-3', tool: 'publish' }, 100));
+// => out-of-scope
+console.log(reserve({ ...action, amount: 50000 }, 100));
+// => id-conflict
+grant.revoked = true;
+console.log(reserve({ ...action, id: 'a-4', amount: 1000 }, 100));
+// => inactive
+```
+
+第一笔预留 600 元后只剩 400 元，相同逻辑动作重发不再扣减；另一笔 600 元需要新批准，换成发布动作也不在范围内。撤销后阻止新的预留。已经产生的业务回执仍应在有权查询的接口中保留，不因授权撤销就抹去历史。
+
+实际服务需要把比较与预留放入原子事务，避免两个执行者同时看到 1000 元余额。预留何时结算或释放取决于动作事实：结果未知时不能立即释放并重发；并发预算机制复用 [AI 运行成本的预留](../chinese-guides/aiapp-09-cost-quota-cache-reliability.md#二预算预留先发生后续请求才看得到额度已被占用)。
+
+### 五、运行一页提议修改与拒绝实验
+
+将完整页面保存为 `approval-review.html`，用现代桌面浏览器打开。所有状态只在本页内存，刷新即清空。“模拟执行”只增加本地计数，不发布任何内容。令牌、身份与服务端隔离没有在这个页面中实现；它用于看清用户操作与状态迁移。
+
+```html example=agent05-approval-review runtime=project file=approval-review.html
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>审批绑定实验</title>
+<style>
+body { max-width: 820px; margin: 36px auto; padding: 0 24px; font: 17px/1.65 system-ui; }
+textarea { display: block; box-sizing: border-box; width: 100%; min-height: 110px; font: inherit; }
+button, select { padding: 8px; margin: 8px 8px 8px 0; font: inherit; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #eef4f1; padding: 16px; }
+:focus-visible { outline: 3px solid #236b9a; outline-offset: 3px; }
+</style>
+<h1>发布前审阅</h1>
+<p>本地模拟，不会发出消息；刷新丢失内容。</p>
+<label for="audience">发布范围</label>
+<select id="audience"><option value="team">团队频道</option><option value="public">公开频道</option></select>
+<label for="draft">公告正文</label>
+<textarea id="draft">本周五更新学习资料。</textarea>
+<button id="prepare">生成待审提议</button>
+<h2>待审快照</h2><pre id="snapshot">尚无提议</pre>
+<button id="allow" disabled>允许一次</button><button id="deny" disabled>拒绝</button>
+<button id="revoke" disabled>撤销批准</button><button id="execute" disabled>模拟执行</button>
+<button id="late" disabled>模拟迟到批准</button>
+<p id="status" role="status" aria-atomic="true">请先准备提议。</p>
+<p>模拟执行次数：<output id="count">0</output></p>
+<script type="module">
+const el = id => document.getElementById(id);
+let revision = 0, sequence = 0, proposal = null, delayed = null, executions = 0;
+function render(message) {
+  el('status').textContent = message;
+  const current = proposal && proposal.revision === revision;
+  el('allow').disabled = !current || proposal.state !== 'pending';
+  el('deny').disabled = !current || proposal.state !== 'pending';
+  el('revoke').disabled = !current || proposal.state !== 'approved';
+  el('execute').disabled = !current || proposal.state !== 'approved';
+  el('late').disabled = delayed === null;
+  el('count').textContent = executions;
+  el('snapshot').textContent = proposal ? JSON.stringify(proposal, null, 2) : '尚无提议';
+}
+function changed() {
+  revision++;
+  if (proposal && ['pending', 'approved'].includes(proposal.state)) proposal.state = 'outdated';
+  render('内容或范围已改变，旧审批失效；草稿保留。');
+}
+el('draft').addEventListener('input', changed);
+el('audience').addEventListener('change', changed);
+el('prepare').onclick = () => {
+  if (!el('draft').value.trim()) { render('请填写正文。'); return; }
+  proposal = { id: ++sequence, revision, audience: el('audience').value,
+    text: el('draft').value, state: 'pending' };
+  delayed = { id: proposal.id, revision };
+  render('请核对快照中的正文与发布范围。');
+};
+function approve(decision) {
+  if (!proposal || decision.id !== proposal.id || decision.revision !== revision || proposal.state !== 'pending') {
+    render('已拒绝过期或不再适用的批准。'); return;
+  }
+  proposal.state = 'approved'; render('仅批准当前快照，尚未执行。');
+}
+el('allow').onclick = () => approve({ id: proposal.id, revision });
+el('late').onclick = () => approve(delayed);
+el('deny').onclick = () => { proposal.state = 'denied'; render('已拒绝；草稿保留，不会执行。'); };
+el('revoke').onclick = () => { proposal.state = 'revoked'; render('批准已撤销；尚未执行。'); };
+el('execute').onclick = () => {
+  if (!proposal || proposal.revision !== revision || proposal.state !== 'approved') {
+    render('当前没有适用的批准。'); return;
+  }
+  proposal.state = 'executed'; executions++; render('仅完成一次本地模拟；没有真实发布。');
+};
+render('请先准备提议。');
+</script>
+</html>
+```
+
+先生成提议并允许，再把团队频道改成公开频道：旧快照变为 outdated，执行按钮禁用，草稿仍在。点击“模拟迟到批准”也不能恢复旧授权。再生成一份提议后拒绝，重复迟到批准依然不能执行，因为 denied 没有回到 approved 的转换。
+
+另走一遍允许、撤销批准，确认计数不变；正常允许并执行只增加一次，执行后按钮禁用。页面没有自动重试，也不把没有回应当同意。它验证了可见状态，不能证明攻击者无法绕过前端；实际批准检查必须位于服务端执行路径。
+
+### 六、拒绝、撤销和接管都要保留任务连续性
+
+拒绝一个动作不等于删除整个会话。保留草稿和已完成的只读成果，说明被阻止的动作，提供修改、手动处理或结束任务的选择。不能改用同义工具重复申请，直到用户疲劳后点击同意。
+
+撤销阻止尚未提交的动作；已经发出的消息或发布内容可能无法完整收回。界面应区分已完成、在途、未知和未开始，补偿作为新的业务动作单独判断。审批服务不可用时保留提议并停止高影响执行，不用“系统繁忙”作为跳过检查的理由。
+
+人工接管需要实际接收者与回执，并移交当前目标、原始依据、提议版本、未决操作和权限限制。自动执行者进入暂停状态，避免人与 Agent 同时改同一对象。恢复时重新核对主体、资源与策略，旧审批不会因为页面仍开着就永久有效。
+
+旧版 MCP 客户端的交互由适配器处理。旧版 Server 发起请求与新版 input_required 返回的形态不同；缺少支持时，可以提供只读预览或手动路径，不能伪造 accept。协议允许某种交互，不代表每个宿主已经实现可信审批 UI。
+
+### 七、审核质量靠人看得懂，也靠执行端守得住
+
+审批界面首先展示目标、范围、内容差异和不可逆后果，再按需展开技术细节。批量操作应显示数量、筛选条件和完整清单入口，不能只展示一个示例就让用户批准所有对象。风险文案用具体后果，不用泛泛的“请注意安全”。
+
+减少确认疲劳可以通过清晰的低风险范围授权和合并有意义的检查点实现，但不能隐藏实际扩大后的范围。组织要求双人复核时，需要两个独立有权主体，不能让同一模型模拟两个角色。职责与角色设计继续参阅 [双人审批](../chinese-guides/aiprod-02-high-risk-automation-human-in-the-loop.md#五双人审批必须是两个独立决定)。
+
+审计至少能还原用户当时看见的版本、谁作出决定、依据哪版政策、执行的参数及最终回执，同时最小化敏感正文。批准率高不一定表示安全，可能是确认疲劳；用错误收件人、范围扩大等合成异常检查用户是否识别，再检查服务端是否确实拒绝不匹配动作。
+
+桌面键盘、焦点和状态播报也是判断的一部分。不要在生成新提议时抢走草稿焦点，不能只靠颜色区分拒绝与允许。浏览器实验未验证真实读屏或人员响应质量，这些需要相应环境；无需因此建立与本系统无关的移动产品界面。
+
+### 自检问题
+
+1. 用户填写频道为什么不等于批准发布？
+2. requestState 原样回传，为什么 Server 仍需校验它？
+3. 两笔金额分别低于上限，何时仍应重新审批？
+4. 审批撤销时远端动作结果未知，为什么不能直接显示“没有执行”？
+
+### 参考与延伸阅读
+
+- [MCP：Multi Round-Trip Requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr)：查输入请求映射、不同 JSON-RPC id、状态回传与防篡改要求。
+- [OWASP：Transaction Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html)：查服务端强制授权、交易数据绑定、时效和防止跳过状态步骤的原则。
+- [MCP：Tasks](https://modelcontextprotocol.io/extensions/tasks/overview)：对照长任务 input_required 与 tasks/update，避免混用两类继续流程。
+
+核对日期：2026-10-05。风险表、审批状态与额度是应用教学约定；本地模拟不构成真实审批、支付或权限隔离验证。

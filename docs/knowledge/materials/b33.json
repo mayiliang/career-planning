@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "batch": "B33",
+  "title": "工具合同、执行证据与评审责任",
+  "reviewedOn": "2026-10-06",
+  "chapters": [
+    {
+      "id": "AGENT-08",
+      "title": "让工具合同支持正确选择",
+      "question": "参数合法，为什么仍可能调用错工具？",
+      "summary": "连接意图、Schema、授权与结构化结果。",
+      "outcomes": [
+        "区分工具选择与输入校验",
+        "验证互斥参数及业务限制",
+        "解释结果与合同迁移"
+      ],
+      "prerequisites": [
+        "mcp-01-server-tools-resources-prompts-schema.md#mcp-01"
+      ],
+      "guide": "agent-08-tool-contract-schema-discoverability.md",
+      "anchor": "agent-08",
+      "concepts": [
+        {
+          "id": "tool-contract-scope",
+          "heading": "一、先让查询、预览与执行可以被区分"
+        },
+        {
+          "id": "tool-contract-selection",
+          "heading": "二、选择是否正确，要与参数是否有效分别评估"
+        },
+        {
+          "id": "tool-contract-schema",
+          "heading": "三、Schema 表达合法形状，不替调用者作业务决定"
+        },
+        {
+          "id": "tool-contract-lab",
+          "heading": "四、运行一份输入与输出共同受约束的合同"
+        },
+        {
+          "id": "tool-contract-result",
+          "heading": "五、结构化结果要让程序知道下一步能做什么"
+        },
+        {
+          "id": "tool-contract-discovery",
+          "heading": "六、发现与缓存只提供当前候选，调用时仍须核对"
+        },
+        {
+          "id": "tool-contract-limits",
+          "heading": "七、资源上限与路径边界是执行合同的一部分"
+        },
+        {
+          "id": "tool-contract-evolution",
+          "heading": "八、合同变更要同时检查选择、执行与旧消费者"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "discovery-cache-scope",
+          "reason": "候选缓存按授权范围分开。"
+        },
+        {
+          "concept": "approval-control-snapshot",
+          "reason": "预览结果须绑定具体批准。"
+        },
+        {
+          "concept": "agent-access-files",
+          "reason": "路径有效还需检查实际访问对象。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-09",
+      "title": "以最少证据解释一次运行",
+      "question": "请求超时后，怎样确认发生过什么？",
+      "summary": "用关联、采集前裁剪和录制件重建历史。",
+      "outcomes": [
+        "区分请求与业务动作",
+        "保留断链并处理重复事件",
+        "理解采样和只读回放边界"
+      ],
+      "prerequisites": [
+        "agent-01-loop-planning-stopping-recovery.md#agent-01",
+        "obs-01-frontend-observability-slo-alerting-privacy.md#obs-01"
+      ],
+      "guide": "agent-09-observability-read-only-replay.md",
+      "anchor": "agent-09",
+      "concepts": [
+        {
+          "id": "agent-trace-identity",
+          "heading": "一、先区分一次目标、一次尝试与一次业务动作"
+        },
+        {
+          "id": "agent-trace-propagation",
+          "heading": "二、跨服务传播的是关联信息，不是权限"
+        },
+        {
+          "id": "agent-trace-events",
+          "heading": "三、事件要说明发生了什么，并保留断链与重复的区别"
+        },
+        {
+          "id": "agent-trace-capture",
+          "heading": "四、先裁剪字段，再让事件进入存储"
+        },
+        {
+          "id": "agent-trace-replay",
+          "heading": "五、只读回放只解释历史，不重新执行历史"
+        },
+        {
+          "id": "agent-trace-sampling",
+          "heading": "六、采样能保留到达的证据，不能找回已丢弃的数据"
+        },
+        {
+          "id": "agent-trace-retention",
+          "heading": "七、版本、访问与留存让证据在之后仍可解释"
+        },
+        {
+          "id": "agent-trace-diagnosis",
+          "heading": "八、从用户结果反查首个语义缺口"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "task-recovery-idempotency",
+          "reason": "业务动作跨请求仍保持同一身份。"
+        },
+        {
+          "concept": "agent-access-isolation",
+          "reason": "回放环境应移除真实执行能力。"
+        },
+        {
+          "concept": "ai-review-evidence",
+          "reason": "结论需绑定当时的版本与证据。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-10",
+      "title": "让授权与执行范围一致",
+      "question": "允许读取一份资料，怎样阻止越权写入？",
+      "summary": "逐层解释主体、委派、对象权限和运行隔离。",
+      "outcomes": [
+        "核对令牌与授权来源",
+        "限制文件和网络目标",
+        "处理撤销与在途动作"
+      ],
+      "prerequisites": [
+        "mcp-01-server-tools-resources-prompts-schema.md#mcp-01",
+        "identity-02-oauth-oidc-pkce-security.md#identity-02"
+      ],
+      "guide": "agent-10-identity-authorization-runtime-isolation.md",
+      "anchor": "agent-10",
+      "concepts": [
+        {
+          "id": "agent-access-actors",
+          "heading": "一、把请求经过的主体逐个分开"
+        },
+        {
+          "id": "agent-access-delegation",
+          "heading": "二、委派交出一部分能力，不能顺便扩张权限"
+        },
+        {
+          "id": "agent-access-tokens",
+          "heading": "三、令牌必须属于当前服务，回调必须属于本次授权"
+        },
+        {
+          "id": "agent-access-policy",
+          "heading": "四、将最小权限落到每次工具调用和具体对象"
+        },
+        {
+          "id": "agent-access-isolation",
+          "heading": "五、授权允许做什么，隔离限制实际能碰到什么"
+        },
+        {
+          "id": "agent-access-files",
+          "heading": "六、文件路径检查之后，还要守住打开的对象"
+        },
+        {
+          "id": "agent-access-network",
+          "heading": "七、网络检查要一直覆盖到实际连接"
+        },
+        {
+          "id": "agent-access-revocation",
+          "heading": "八、撤销要阻断新工作，并对账已经在途的动作"
+        },
+        {
+          "id": "agent-access-verification",
+          "heading": "九、验证拒绝发生在哪一层，而不是只验证登录成功"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "approval-control-enforcement",
+          "reason": "批准不能替代执行端当前权限判断。"
+        },
+        {
+          "concept": "agent-coordination-isolation",
+          "reason": "子任务材料与能力必须同时收窄。"
+        },
+        {
+          "concept": "agent-trace-capture",
+          "reason": "审计记录也要避免泄露秘密。"
+        }
+      ]
+    },
+    {
+      "id": "AIDEV-04",
+      "title": "把 AI 评论变成可验证判断",
+      "question": "缺少取消代码就一定存在数据覆盖吗？",
+      "summary": "从触发路径取得证据，再决定修复与风险级别。",
+      "outcomes": [
+        "确认或推翻评审假设",
+        "复现旧结果覆盖与输入保留",
+        "按当前版本承担合入责任"
+      ],
+      "prerequisites": [
+        "aidev-03-ai-generated-code-verification.md#aidev-03",
+        "career-05-code-review-risk-communication.md#career-05"
+      ],
+      "guide": "aidev-04-ai-code-review-risk-evidence.md",
+      "anchor": "aidev-04",
+      "concepts": [
+        {
+          "id": "ai-review-hypothesis",
+          "heading": "一、把模型判断改成可以被推翻的假设"
+        },
+        {
+          "id": "ai-review-scope",
+          "heading": "二、先确定正在评审哪份变化，以及用户想完成什么"
+        },
+        {
+          "id": "ai-review-trigger",
+          "heading": "三、触发路径把安全关键词变成具体风险"
+        },
+        {
+          "id": "ai-review-severity",
+          "heading": "四、严重性、调查信心与处理优先级分别记录"
+        },
+        {
+          "id": "ai-review-race",
+          "heading": "五、用可控完成顺序复现旧结果覆盖"
+        },
+        {
+          "id": "ai-review-lifecycle",
+          "heading": "六、资源与错误路径要围绕所有权收集证据"
+        },
+        {
+          "id": "ai-review-evidence",
+          "heading": "七、评论应带证据，并明确哪些判断被驳回"
+        },
+        {
+          "id": "ai-review-responsibility",
+          "heading": "八、人工责任落实到版本、未决事项与合入决定"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "agent-trace-replay",
+          "reason": "查看历史证据不应重做业务动作。"
+        },
+        {
+          "concept": "interaction-recovery-versions",
+          "reason": "采用旧结果前需要核对当前意图。"
+        },
+        {
+          "concept": "tool-contract-result",
+          "reason": "结构化输出仍需要语义核验。"
+        }
+      ]
+    }
+  ]
+}

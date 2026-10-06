@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "batch": "B31",
+  "title": "可恢复的 AI 交互、记忆与执行",
+  "reviewedOn": "2026-10-04",
+  "chapters": [
+    {
+      "id": "AIAPP-10",
+      "title": "让生成结果服务于用户当前工作",
+      "question": "生成期间修改了草稿，旧结果回来后该怎么办？",
+      "summary": "从草稿与候选分离解释事实状态、采用、撤销和人工接管。",
+      "outcomes": [
+        "分清生成、采用与业务提交",
+        "保护编辑与取消后的状态连续性",
+        "用证据和恢复路径校准信任"
+      ],
+      "prerequisites": [
+        "ux-01-interaction-states-usability-validation.md#ux-01",
+        "aiapp-02-streaming-sse-incremental-rendering.md#aiapp-02"
+      ],
+      "guide": "aiapp-10-ai-interaction-trust-recovery.md",
+      "anchor": "aiapp-10",
+      "concepts": [
+        {
+          "id": "interaction-recovery-intent",
+          "heading": "一、先让用户知道这一按钮会改变什么"
+        },
+        {
+          "id": "interaction-recovery-state",
+          "heading": "二、状态来自事实，进度文字不能替系统猜测"
+        },
+        {
+          "id": "interaction-recovery-versions",
+          "heading": "三、取消、采用和撤销各有自己的版本条件"
+        },
+        {
+          "id": "interaction-recovery-lab",
+          "heading": "四、运行一页草稿与候选分离的实验"
+        },
+        {
+          "id": "interaction-recovery-evidence",
+          "heading": "五、依据和错误说明要靠近当前决定"
+        },
+        {
+          "id": "interaction-recovery-handoff",
+          "heading": "六、人工接管要带走任务，也要移交控制权"
+        },
+        {
+          "id": "interaction-recovery-evaluation",
+          "heading": "七、用可理解性和恢复结果检验体验"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "response-stream-cancel",
+          "reason": "取消机制与产品恢复要共同拒绝迟到结果。"
+        },
+        {
+          "concept": "conversation-state-layers",
+          "reason": "刷新恢复需要明确草稿与服务端事实的分工。"
+        },
+        {
+          "concept": "memory-personalization-controls",
+          "reason": "用户可在当前任务中选择忽略记忆。"
+        },
+        {
+          "concept": "tool-operation-unknown",
+          "reason": "没有回执时应查询原操作，避免重复提交。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-12",
+      "title": "让会话在并发与压缩之后仍可继续",
+      "question": "两个窗口继续同一任务时，怎样保住新约束？",
+      "summary": "沿消息追加、上下文选择和摘要校验建立会话事实与派生状态的边界。",
+      "outcomes": [
+        "解释去重与版本控制的不同作用",
+        "在有限预算中保留决定性材料",
+        "追踪摘要来源与数据删除范围"
+      ],
+      "prerequisites": [
+        "aiapp-02-streaming-sse-incremental-rendering.md#aiapp-02",
+        "identity-01-session-cookie-token-browser-boundaries.md#identity-01"
+      ],
+      "guide": "aiapp-12-conversation-state-context-compression-privacy.md",
+      "anchor": "aiapp-12",
+      "concepts": [
+        {
+          "id": "conversation-state-layers",
+          "heading": "一、聊天窗口只展示状态的一部分"
+        },
+        {
+          "id": "conversation-state-ownership",
+          "heading": "二、先确定记录属于谁，再讨论如何保存"
+        },
+        {
+          "id": "conversation-state-append",
+          "heading": "三、消息追加同时需要去重和版本比较"
+        },
+        {
+          "id": "conversation-state-branches",
+          "heading": "四、重新生成创建分支，不能重做已经发生的动作"
+        },
+        {
+          "id": "conversation-state-context",
+          "heading": "五、上下文是一份有预算的工作材料"
+        },
+        {
+          "id": "conversation-state-summary",
+          "heading": "六、压缩可以减少材料，不能重写约束"
+        },
+        {
+          "id": "conversation-state-privacy",
+          "heading": "七、本地恢复和删除必须沿着同一份数据地图"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "interaction-recovery-lab",
+          "reason": "候选与草稿分离在完整页面中可以直接观察。"
+        },
+        {
+          "concept": "tool-operation-identity",
+          "reason": "消息重发、重新生成和外部动作需要不同标识。"
+        },
+        {
+          "concept": "injection-boundary-lineage",
+          "reason": "压缩历史不能提高外部材料的指令权限。"
+        },
+        {
+          "concept": "ai-governance-lineage",
+          "reason": "来源撤回要传播到摘要与其他派生记录。"
+        }
+      ]
+    },
+    {
+      "id": "AIAPP-13",
+      "title": "让个性化记忆可解释也可遗忘",
+      "question": "为什么记住了原话，却可能误解用户以后想要什么？",
+      "summary": "用座位偏好展示候选确认、来源、当前任务覆盖与删除防复活。",
+      "outcomes": [
+        "区分临时选择与长期记忆类型",
+        "按用途、来源和有效期使用偏好",
+        "设计在线阻断与后台清理的删除流程"
+      ],
+      "prerequisites": [
+        "aiapp-06-rag-citations-source-trust.md#aiapp-06",
+        "aiapp-12-conversation-state-context-compression-privacy.md#aiapp-12"
+      ],
+      "guide": "aiapp-13-long-term-memory-personalization-forgetting.md",
+      "anchor": "aiapp-13",
+      "concepts": [
+        {
+          "id": "memory-personalization-scope",
+          "heading": "一、记住一句话之前，先问它适用于多久"
+        },
+        {
+          "id": "memory-personalization-candidate",
+          "heading": "二、候选是待判断的信息，不是已经确认的个人档案"
+        },
+        {
+          "id": "memory-personalization-provenance",
+          "heading": "三、来源让一条记忆能够被解释和纠正"
+        },
+        {
+          "id": "memory-personalization-selection",
+          "heading": "四、检索到旧偏好后，先比较范围与版本"
+        },
+        {
+          "id": "memory-personalization-explanation",
+          "heading": "五、让用户能看见记忆如何影响当前回答"
+        },
+        {
+          "id": "memory-personalization-controls",
+          "heading": "六、本次忽略、关闭与删除改变不同状态"
+        },
+        {
+          "id": "memory-personalization-lifecycle",
+          "heading": "七、遗忘还包括过期、撤回和恢复旧备份"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "conversation-state-append",
+          "reason": "多端更新偏好也需要版本冲突处理。"
+        },
+        {
+          "concept": "rag-evidence-lifecycle",
+          "reason": "检索索引和派生材料需要跟随来源失效。"
+        },
+        {
+          "concept": "injection-boundary-lineage",
+          "reason": "不可信文字不能经记忆系统变成正式规则。"
+        },
+        {
+          "concept": "interaction-recovery-evidence",
+          "reason": "解释个性化依据应靠近用户正在做的决定。"
+        }
+      ]
+    },
+    {
+      "id": "AGENT-01",
+      "title": "让 Agent 知道何时停止和怎样恢复",
+      "question": "循环没有新进展，或写入成功后丢了回执，下一步是什么？",
+      "summary": "通过有限循环与检查点对账建立目标、规划、执行、停止和恢复的关系。",
+      "outcomes": [
+        "区分规划提议与程序执行边界",
+        "用目标证据、预算和进展判定停止",
+        "恢复时先对账再核验后续权限"
+      ],
+      "prerequisites": [
+        "aiapp-04-tool-calling-execution-result-ui.md#aiapp-04"
+      ],
+      "guide": "agent-01-loop-planning-stopping-recovery.md",
+      "anchor": "agent-01",
+      "concepts": [
+        {
+          "id": "agent-control-loop",
+          "heading": "一、循环由应用推进，模型提供候选决定"
+        },
+        {
+          "id": "agent-control-goal",
+          "heading": "二、目标必须变成能够核验的完成条件"
+        },
+        {
+          "id": "agent-control-planner",
+          "heading": "三、规划器选择下一步，执行器决定能否做"
+        },
+        {
+          "id": "agent-control-bounded",
+          "heading": "四、运行一个会主动停止的整理循环"
+        },
+        {
+          "id": "agent-control-waiting",
+          "heading": "五、没有进展时，先分清等待、重试与重规划"
+        },
+        {
+          "id": "agent-control-checkpoint",
+          "heading": "六、检查点要能回答崩溃前正在做什么"
+        },
+        {
+          "id": "agent-control-recovery",
+          "heading": "七、恢复也有版本、预算和不能撤销的后果"
+        },
+        {
+          "id": "agent-control-evidence",
+          "heading": "八、用状态与证据解释运行，不记录无限的内部独白"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "tool-operation-unknown",
+          "reason": "回执丢失需要查询与对账，不能直接重放写入。"
+        },
+        {
+          "concept": "ai-runtime-cost-reservation",
+          "reason": "跨步骤和恢复的预算必须延续预留与结算。"
+        },
+        {
+          "concept": "interaction-recovery-state",
+          "reason": "运行状态要被界面忠实呈现为可操作的信息。"
+        },
+        {
+          "concept": "conversation-state-summary",
+          "reason": "压缩工作材料不能丢掉关键目标和约束。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "batch": "B27",
+  "title": "从输入控制到可信的 AI 任务",
+  "reviewedOn": "2026-09-26",
+  "chapters": [
+    {
+      "id": "H5-02",
+      "title": "让滚动、拖动与输入各有归属",
+      "question": "拖动与原生滚动冲突时，怎样结束预览并保留用户输入？",
+      "summary": "从滚动盒子、手势分工和指针生命周期进入可运行面板，解释焦点、软键盘与桌面证据边界。",
+      "outcomes": [
+        "找到真正的滚动容器并区分滚动链与事件传播",
+        "为拖动设计提交、取消与清理出口",
+        "在视口变化和关闭返回后保留输入与阅读位置"
+      ],
+      "prerequisites": [
+        "h5-01-viewport-responsive-safe-area-orientation.md#h5-01",
+        "browser-01-render-events-storage.md#browser-01"
+      ],
+      "guide": "h5-02-scroll-soft-keyboard-pointer-gestures.md",
+      "anchor": "h5-02",
+      "concepts": [
+        {
+          "id": "input-coordination-container",
+          "heading": "一、先找到真正发生滚动的盒子"
+        },
+        {
+          "id": "input-coordination-chain",
+          "heading": "二、滚动链与事件冒泡是两件事"
+        },
+        {
+          "id": "input-coordination-defaults",
+          "heading": "三、让浏览器在手势开始前知道分工"
+        },
+        {
+          "id": "input-coordination-pointer",
+          "heading": "四、一次拖动必须有提交和取消两个出口"
+        },
+        {
+          "id": "input-coordination-lab",
+          "heading": "五、运行一个能中断、关闭和重新打开的调整页"
+        },
+        {
+          "id": "input-coordination-keyboard",
+          "heading": "六、软键盘改变什么，先测可见边界"
+        },
+        {
+          "id": "input-coordination-focus",
+          "heading": "七、错误提示、焦点和自动滚动要指向同一任务"
+        },
+        {
+          "id": "input-coordination-performance",
+          "heading": "八、高频事件只做这次交互需要的工作"
+        },
+        {
+          "id": "input-coordination-evidence",
+          "heading": "九、把桌面证据与移动宿主证据分开"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "viewport-layout-visual",
+          "reason": "键盘遮挡要先区分布局空间与实际可见区域。"
+        },
+        {
+          "concept": "memory-lifetime-listeners",
+          "reason": "临时手势和视口监听必须随面板关闭而释放。"
+        },
+        {
+          "concept": "ux-task-focus",
+          "reason": "错误提示与焦点恢复决定键盘用户能否继续任务。"
+        }
+      ]
+    },
+    {
+      "id": "MCP-01",
+      "title": "看懂外部能力与消息合同",
+      "question": "助手发现一个工具后，谁决定调用，什么结果才代表真正执行？",
+      "summary": "用资料库贯穿工具、资源与提示模板，比较新旧协议版本，以内存消息实验区分结构、业务错误和授权。",
+      "outcomes": [
+        "按使用目的选择 Tool、Resource 或 Prompt",
+        "区分 2025-11-25 握手与 2026-07-28 逐请求版本声明",
+        "解释 Schema、错误包络与业务身份各自保证什么"
+      ],
+      "prerequisites": [
+        "biz-07-errors-idempotency-eventual-consistency.md#biz-07"
+      ],
+      "guide": "mcp-01-server-tools-resources-prompts-schema.md",
+      "anchor": "mcp-01",
+      "concepts": [
+        {
+          "id": "mcp-core-roles",
+          "heading": "一、先把助手、连接器和能力提供方分开"
+        },
+        {
+          "id": "mcp-core-versions",
+          "heading": "二、先认版本，再理解能力发现"
+        },
+        {
+          "id": "mcp-core-primitives",
+          "heading": "三、三类原语为什么值得分开"
+        },
+        {
+          "id": "mcp-core-discovery",
+          "heading": "四、发现条目之后，还需要读取和授权"
+        },
+        {
+          "id": "mcp-core-schema",
+          "heading": "五、Schema 检查形状，业务规则检查含义"
+        },
+        {
+          "id": "mcp-core-lab",
+          "heading": "六、沿完整输入观察两类失败与三种能力"
+        },
+        {
+          "id": "mcp-core-results",
+          "heading": "七、结构化结果让程序读取，不保证内容真实"
+        },
+        {
+          "id": "mcp-core-trust",
+          "heading": "八、声明只读和得到批准都不是安全边界"
+        },
+        {
+          "id": "mcp-core-identity",
+          "heading": "九、业务身份比一次请求活得更久"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "contract-normalization",
+          "reason": "Schema 的形状校验还需要归一化与业务规则补足。"
+        },
+        {
+          "concept": "business-recovery-unknown",
+          "reason": "工具超时不能证明动作未发生，须查询原业务意图。"
+        },
+        {
+          "concept": "automation-control-snapshot",
+          "reason": "宿主确认必须绑定服务端即将执行的具体参数与版本。"
+        }
+      ]
+    },
+    {
+      "id": "AIPROD-01",
+      "title": "证明 AI 帮用户完成了任务",
+      "question": "生成快了，为什么核对后的完整任务可能更慢、更贵？",
+      "summary": "以工单交接摘要建立任务卡、非 AI 基线、分层评测和完整成本，使用可复算数据决定试点或退出。",
+      "outcomes": [
+        "写出有事实依据与失败边界的任务卡",
+        "用独立样本和完整成本公平比较候选",
+        "让护栏、试点和停止条件共同决定是否采用 AI"
+      ],
+      "prerequisites": [
+        "privacy-01-data-minimization-consent-retention-rights.md#privacy-01",
+        "biz-08-requirement-acceptance-traceability.md#biz-08"
+      ],
+      "guide": "aiprod-01-ai-task-model-selection-value-validation.md",
+      "anchor": "aiprod-01",
+      "concepts": [
+        {
+          "id": "ai-product-value-task",
+          "heading": "一、把任务写成可以观察的完成条件"
+        },
+        {
+          "id": "ai-product-value-baseline",
+          "heading": "二、先比较规则、搜索和人工，再比较模型"
+        },
+        {
+          "id": "ai-product-value-dataset",
+          "heading": "三、先建立评分依据，再收集更多答案"
+        },
+        {
+          "id": "ai-product-value-slices",
+          "heading": "四、总体分数不能掩盖最需要帮助的人"
+        },
+        {
+          "id": "ai-product-value-metrics",
+          "heading": "五、成功指标与护栏分别决定什么"
+        },
+        {
+          "id": "ai-product-value-cost",
+          "heading": "六、把审核和失败放进成本账本"
+        },
+        {
+          "id": "ai-product-value-selection",
+          "heading": "七、模型选择要连同提示和工具一起冻结"
+        },
+        {
+          "id": "ai-product-value-pilot",
+          "heading": "八、试点要观察整个用户任务"
+        },
+        {
+          "id": "ai-product-value-stop",
+          "heading": "九、停止也是一种完整的产品结论"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "delivery-trace-criteria",
+          "reason": "任务价值必须转成输入、观察结果和不能发生的事。"
+        },
+        {
+          "concept": "mcp-core-schema",
+          "reason": "支持工具或结构化输出仍需要独立检查事实和业务规则。"
+        },
+        {
+          "concept": "automation-control-risk",
+          "reason": "价值通过后还要按后果与可逆性选择自动化程度。"
+        }
+      ]
+    },
+    {
+      "id": "AIPROD-02",
+      "title": "让批准仍能约束真正的执行",
+      "question": "两个人都批准以后，哪些变化仍然必须阻止执行？",
+      "summary": "从后果、可逆性和人的决定权进入审批快照，用本地模拟解释资格撤回、旧审批、未知结果、重复执行和恢复。",
+      "outcomes": [
+        "把风险与影响范围转为允许动作及控制条件",
+        "绑定审批快照并在执行时重新检查当前事实",
+        "区分取消、未知结果、补偿与申诉的恢复路径"
+      ],
+      "prerequisites": [
+        "aiprod-01-ai-task-model-selection-value-validation.md#aiprod-01",
+        "ux-01-interaction-states-usability-validation.md#ux-01",
+        "biz-07-errors-idempotency-eventual-consistency.md#biz-07"
+      ],
+      "guide": "aiprod-02-high-risk-automation-human-in-the-loop.md",
+      "anchor": "aiprod-02",
+      "concepts": [
+        {
+          "id": "automation-control-risk",
+          "heading": "一、按后果和影响范围决定自动化程度"
+        },
+        {
+          "id": "automation-control-reversal",
+          "heading": "二、可逆要看外部影响能否真的恢复"
+        },
+        {
+          "id": "automation-control-human",
+          "heading": "三、人在回路需要信息、时间与否决权"
+        },
+        {
+          "id": "automation-control-snapshot",
+          "heading": "四、确认必须绑定即将执行的具体版本"
+        },
+        {
+          "id": "automation-control-reviewers",
+          "heading": "五、双人审批必须是两个独立决定"
+        },
+        {
+          "id": "automation-control-lab",
+          "heading": "六、用内存实验观察旧审批为什么被拒绝"
+        },
+        {
+          "id": "automation-control-recovery",
+          "heading": "七、把失败状态翻译成用户下一步"
+        },
+        {
+          "id": "automation-control-capacity",
+          "heading": "八、审核队列不是无限容量的兜底"
+        },
+        {
+          "id": "automation-control-audit",
+          "heading": "九、审计与申诉让错误还能被纠正"
+        },
+        {
+          "id": "automation-control-evidence",
+          "heading": "十、验证控制时，主动改变批准之后的条件"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "ai-product-value-metrics",
+          "reason": "人工审批不能替代任务价值与护栏的事前判断。"
+        },
+        {
+          "concept": "business-recovery-version",
+          "reason": "对象版本变化使旧事实上的批准失效。"
+        },
+        {
+          "concept": "ux-task-recovery",
+          "reason": "失败文案必须对应能安全继续的具体动作。"
+        },
+        {
+          "concept": "mcp-core-trust",
+          "reason": "工具声明和模型建议都不能成为服务端授权凭据。"
+        }
+      ]
+    }
+  ]
+}

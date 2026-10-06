@@ -4,11 +4,13 @@ import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import { resolve } from 'path';
+import { compactLearningCatalogs } from './scripts/compact-learning-catalog';
 
 // Vite 配置：Vue 3 项目开发与构建
 export default defineConfig({
   plugins: [
     vue(),
+    compactLearningCatalogs(),
     // 自动导入 Vue、Vue Router、Pinia 等 API
     AutoImport({
       imports: ['vue', 'vue-router', 'pinia', '@vueuse/core'],
