@@ -4,7 +4,7 @@
 
 Career Atlas 把知识地图、中文讲义、笔记、站内练习、掌握挑战、学习路线和求职记录放进同一个可持续使用的闭环。当前知识体系包含 **20 个能力组、223 个知识点**；默认的“求职优先核心路线”从中选取 **149 个主干点**，编排为 **35 个连续批次**，其余 74 个专项点仍保留在完整知识体系中按目标选择。
 
-学习资料已完成 B01～B33 的内容重构（2026-10-06）。B33 围绕工具合同、运行证据、授权隔离与 AI 评审，补充 Schema 校验、只读回放、文件边界和旧响应实验。[本批目录](docs/knowledge/materials/b33.json)与[审校记录](docs/development/11-learning-material-system.md#b33-的工具合同与执行证据)。
+学习资料已完成 B01～B35 的内容重构（2026-10-08）。B35 围绕技术决定、渐进迁移、技术债、框架生命周期与责任交接，补充证据门槛、语义比较、幂等复制、成本估算和草稿保留实验。[本批目录](docs/knowledge/materials/b35.json)与[审校记录](docs/development/11-learning-material-system.md#b35-的架构演进与责任交接)。
 
 ## 核心能力
 
@@ -85,7 +85,7 @@ curl --fail http://127.0.0.1:41730/api/v1/system/health
 | 命令 | 用途 |
 | --- | --- |
 | `pnpm dev` | 同时启动 Web 与 API 开发服务 |
-| `pnpm content:check` | 检查知识内容、B01～B33 讲义结构和发音资源 |
+| `pnpm content:check` | 检查知识内容、B01～B35 讲义结构和发音资源 |
 | `pnpm content:links` | 检查本地链接并联网核对远程资料；只阻断本地失效和明确的远程 404/410 |
 | `pnpm content:links:strict` | 严格检查资料链接，网络环境下无法确认的远程地址也会失败 |
 | `pnpm test` | 顺序运行各工作区单元测试 |

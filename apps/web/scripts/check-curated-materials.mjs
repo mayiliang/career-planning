@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import { catalogUrl, guideRoot, readMaterialExamples, prepareMaterialExamples } from './learning-material-examples.mjs';
 
-const batchIds = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'b25', 'b26', 'b27', 'b28', 'b29', 'b30', 'b31', 'b32', 'b33'];
+const batchIds = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'b25', 'b26', 'b27', 'b28', 'b29', 'b30', 'b31', 'b32', 'b33', 'b34', 'b35'];
 const catalogs = await Promise.all(batchIds.map(async (batch) => JSON.parse(await readFile(new URL(`${batch}.json`, catalogUrl), 'utf8'))));
 const chapters = catalogs.flatMap((catalog) => catalog.chapters);
 const batches = JSON.parse(await readFile(new URL('./pronunciation-batches.json', import.meta.url), 'utf8'));
@@ -61,6 +61,8 @@ for (const [index, catalog] of catalogs.entries()) {
     ['AIAPP-10', 'AIAPP-12', 'AIAPP-13', 'AGENT-01'],
     ['AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07'],
     ['AGENT-08', 'AGENT-09', 'AGENT-10', 'AIDEV-04'],
+    ['AIDEV-07', 'AIDEV-10', 'COMPAT-01', 'ARCH-01'],
+    ['ARCH-02', 'ARCH-03', 'ARCH-04', 'ARCH-05', 'LEAD-01'],
   ][index]);
   assert.match(catalog.reviewedOn, /^\d{4}-\d{2}-\d{2}$/);
   assert(!Number.isNaN(Date.parse(catalog.reviewedOn)) && new Date(catalog.reviewedOn).toISOString().slice(0, 10) === catalog.reviewedOn);
@@ -122,6 +124,11 @@ for (const chapter of chapters) {
     'AGENT-07': 'https://www.anthropic.com/',
     'AGENT-08': 'https://modelcontextprotocol.io/', 'AGENT-09': 'https://opentelemetry.io/',
     'AGENT-10': 'https://modelcontextprotocol.io/', 'AIDEV-04': 'https://google.github.io/',
+    'AIDEV-07': 'https://docs.npmjs.com/', 'AIDEV-10': 'https://www.nist.gov/',
+    'COMPAT-01': 'https://developer.mozilla.org/', 'ARCH-01': 'https://www.sei.cmu.edu/',
+    'ARCH-02': 'https://learn.microsoft.com/', 'ARCH-03': 'https://learn.microsoft.com/',
+    'ARCH-04': 'https://www.sei.cmu.edu/', 'ARCH-05': 'https://react.dev/',
+    'LEAD-01': 'https://google.github.io/',
     'AIGOV-01': 'https://www.nist.gov/', 'AIAPP-01': 'https://api-docs.deepseek.com/',
     'AIPROD-01': 'https://www.nist.gov/', 'AIPROD-02': 'https://www.nist.gov/',
     'PERF-03': 'https://developer.chrome.com/', 'PERF-04': 'https://developer.chrome.com/',
@@ -180,4 +187,4 @@ await new Promise((resolve, reject) => {
   worker.once('error', (error) => { clearTimeout(timer); reject(error); });
   worker.once('exit', (code) => { clearTimeout(timer); if (code !== 0) reject(new Error(`示例进程退出 ${code}`)); });
 });
-console.log(`B01–B33 资料检查通过：${chapters.length} 篇主讲义，${concepts.size} 个唯一概念入口，${connections} 条知识连接，${links} 个正文内部引用，${examples.length} 个通用示例输出一致（${process.version}）；另登记 ${allExamples.filter(({ runtime }) => runtime === 'browser').length} 个浏览器示例、${allExamples.filter(({ runtime }) => runtime === 'project').length} 个页面、项目或终端片段，需按正文场景另行核对。`);
+console.log(`B01–B35 资料检查通过：${chapters.length} 篇主讲义，${concepts.size} 个唯一概念入口，${connections} 条知识连接，${links} 个正文内部引用，${examples.length} 个通用示例输出一致（${process.version}）；另登记 ${allExamples.filter(({ runtime }) => runtime === 'browser').length} 个浏览器示例、${allExamples.filter(({ runtime }) => runtime === 'project').length} 个页面、项目或终端片段，需按正文场景另行核对。`);

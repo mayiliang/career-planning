@@ -31,9 +31,11 @@ import b30 from '../../../../docs/knowledge/materials/b30.json';
 import b31 from '../../../../docs/knowledge/materials/b31.json';
 import b32 from '../../../../docs/knowledge/materials/b32.json';
 import b33 from '../../../../docs/knowledge/materials/b33.json';
+import b34 from '../../../../docs/knowledge/materials/b34.json';
+import b35 from '../../../../docs/knowledge/materials/b35.json';
 
 export const learningMaterialCatalog = catalog;
-export const learningMaterialCatalogs = [catalog, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33];
+export const learningMaterialCatalogs = [catalog, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35];
 export type LearningChapter = (typeof catalog.chapters)[number];
 const chapters = learningMaterialCatalogs.flatMap((batch) => batch.chapters);
 

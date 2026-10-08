@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "batch": "B34",
+  "title": "准入边界、兼容任务与架构证据",
+  "reviewedOn": "2026-10-07",
+  "chapters": [
+    {
+      "id": "AIDEV-07",
+      "title": "让依赖与生成代码有准入依据",
+      "question": "AI 给出的包名，怎样变成可复核的准入决定？",
+      "summary": "从必要性与解析路径走到安装行为、来源许可、构建和撤回。",
+      "outcomes": [
+        "区分来源、完整性与安全证据",
+        "沿传递路径判断影响",
+        "对拒绝和未知给出后续动作"
+      ],
+      "prerequisites": [
+        "eng-08-software-supply-chain-sbom-provenance.md#eng-08",
+        "aidev-03-ai-generated-code-verification.md#aidev-03"
+      ],
+      "guide": "aidev-07-dependency-source-security.md",
+      "anchor": "aidev-07",
+      "concepts": [
+        {
+          "id": "dependency-admission-need",
+          "heading": "一、先把包名还原成用户需要的能力"
+        },
+        {
+          "id": "dependency-admission-identity",
+          "heading": "二、版本范围、解析结果与来源证明各回答一件事"
+        },
+        {
+          "id": "dependency-admission-paths",
+          "heading": "三、沿依赖路径找问题，避免把漏洞安在错误的包上"
+        },
+        {
+          "id": "dependency-admission-scripts",
+          "heading": "四、安装过程已经在执行外部代码"
+        },
+        {
+          "id": "dependency-admission-decision",
+          "heading": "五、让准入决定保留拒绝与未知的区别"
+        },
+        {
+          "id": "dependency-admission-attribution",
+          "heading": "六、生成代码的出处与使用许可要单独核验"
+        },
+        {
+          "id": "dependency-admission-build",
+          "heading": "七、用真实构建观察权限、体积与行为变化"
+        },
+        {
+          "id": "dependency-admission-exit",
+          "heading": "八、准入结论要能随事件撤回"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "supply-trust-artifact",
+          "reason": "先辨认审查的是哪份制品。"
+        },
+        {
+          "concept": "tool-governance-flow",
+          "reason": "输出出处与输入外发需要分别控制。"
+        },
+        {
+          "concept": "architecture-choice-gates",
+          "reason": "体积和成本预算应源于使用约束。"
+        }
+      ]
+    },
+    {
+      "id": "AIDEV-10",
+      "title": "把工具批准落实到数据路径",
+      "question": "同名工具为什么会有不同的数据处理边界？",
+      "summary": "按数据流、配置组合与每次发送解释治理，连接例外、审计和事故响应。",
+      "outcomes": [
+        "定义可以发送的材料与配置",
+        "验证到期、撤销和硬性拒绝",
+        "收集最少审计证据并追踪副本"
+      ],
+      "prerequisites": [
+        "agent-10-identity-authorization-runtime-isolation.md#agent-10",
+        "aigov-01-data-model-change-audit-accountability.md#aigov-01"
+      ],
+      "guide": "aidev-10-ai-tool-data-team-governance.md",
+      "anchor": "aidev-10",
+      "concepts": [
+        {
+          "id": "tool-governance-flow",
+          "heading": "一、沿一次请求找出真正的数据接收者"
+        },
+        {
+          "id": "tool-governance-classification",
+          "heading": "二、把数据分类变成发送前能回答的问题"
+        },
+        {
+          "id": "tool-governance-profile",
+          "heading": "三、批准的是配置组合，不是一个产品名字"
+        },
+        {
+          "id": "tool-governance-enforcement",
+          "heading": "四、让策略在每一次发送时重新生效"
+        },
+        {
+          "id": "tool-governance-exception",
+          "heading": "五、临时例外需要完整的结束动作"
+        },
+        {
+          "id": "tool-governance-audit",
+          "heading": "六、日志要能解释决定，又不重复保存敏感正文"
+        },
+        {
+          "id": "tool-governance-workflow",
+          "heading": "七、让输出审核与团队日常工作衔接"
+        },
+        {
+          "id": "tool-governance-incident",
+          "heading": "八、事故演练验证控制是否真的连在一起"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "ai-governance-release",
+          "reason": "批准需要绑定整个配置版本。"
+        },
+        {
+          "concept": "agent-access-revocation",
+          "reason": "到期后还要处理在途动作与缓存。"
+        },
+        {
+          "concept": "dependency-admission-attribution",
+          "reason": "获批工具输出仍须核验来源。"
+        }
+      ]
+    },
+    {
+      "id": "COMPAT-01",
+      "title": "能力不同，任务仍可完成",
+      "question": "增强失败以后，怎样保留输入并提供可用降级？",
+      "summary": "由支持矩阵解释 Baseline 和能力检测，用完整页面观察初始化、清理与输入连续性。",
+      "outcomes": [
+        "区分平台信号与项目承诺",
+        "实现可观察的增强和降级",
+        "解释自动化与真机各自能证明什么"
+      ],
+      "prerequisites": [
+        "test-03-e2e-visual-regression-isolation-flakiness.md#test-03",
+        "web-03-modern-css-architecture-container-progressive.md#web-03"
+      ],
+      "guide": "compat-01-baseline-progressive-enhancement-device-testing.md",
+      "anchor": "compat-01",
+      "concepts": [
+        {
+          "id": "compatibility-task-matrix",
+          "heading": "一、先承诺任务，再确定支持范围"
+        },
+        {
+          "id": "compatibility-task-baseline",
+          "heading": "二、Baseline 提供平台信号，不代替项目验收"
+        },
+        {
+          "id": "compatibility-task-enhancement",
+          "heading": "三、先安排失败时仍能使用的路径"
+        },
+        {
+          "id": "compatibility-task-lab",
+          "heading": "四、运行一个可以关闭增强而不丢输入的页面"
+        },
+        {
+          "id": "compatibility-task-input",
+          "heading": "五、中文输入要区分选词过程与提交意图"
+        },
+        {
+          "id": "compatibility-task-conditions",
+          "heading": "六、布局与弱网差异要沿现象找原因"
+        },
+        {
+          "id": "compatibility-task-evidence",
+          "heading": "七、让每层验证只证明自己覆盖的条件"
+        },
+        {
+          "id": "compatibility-task-lifetime",
+          "heading": "八、修复之后还要知道何时可以删除兼容层"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "modern-container",
+          "reason": "布局问题先考虑容器和内容约束。"
+        },
+        {
+          "concept": "memory-lifetime-cycle",
+          "reason": "清理后在相同生命周期位置观察资源。"
+        },
+        {
+          "concept": "architecture-choice-scenario",
+          "reason": "兼容承诺需要写成可验收场景。"
+        }
+      ]
+    },
+    {
+      "id": "ARCH-01",
+      "title": "用场景和证据比较架构",
+      "question": "性能、恢复与成本冲突时，怎样判断候选是否可行？",
+      "summary": "区分质量愿望、硬约束和假设，用容量与预算推演解释权衡、变化和持续验证。",
+      "outcomes": [
+        "写出可被推翻的质量场景",
+        "解释容量与可用性模型的前提",
+        "按底线、成本和证据比较候选"
+      ],
+      "prerequisites": [
+        "biz-08-requirement-acceptance-traceability.md#biz-08",
+        "obs-01-frontend-observability-slo-alerting-privacy.md#obs-01"
+      ],
+      "guide": "arch-01-quality-attributes-constraints-tradeoffs.md",
+      "anchor": "arch-01",
+      "concepts": [
+        {
+          "id": "architecture-choice-attributes",
+          "heading": "一、功能说明做什么，质量属性说明怎样做到"
+        },
+        {
+          "id": "architecture-choice-scenario",
+          "heading": "二、把更快更稳定写成可以被推翻的场景"
+        },
+        {
+          "id": "architecture-choice-baseline",
+          "heading": "三、先记录基线，再选择值得比较的候选"
+        },
+        {
+          "id": "architecture-choice-capacity",
+          "heading": "四、把在线人数换算成负载，观察哪个假设最敏感"
+        },
+        {
+          "id": "architecture-choice-recovery",
+          "heading": "五、故障预算与恢复演练需要相同口径"
+        },
+        {
+          "id": "architecture-choice-gates",
+          "heading": "六、在通过底线的候选中比较成本"
+        },
+        {
+          "id": "architecture-choice-change",
+          "heading": "七、变化实验检验边界是否真的有用"
+        },
+        {
+          "id": "architecture-choice-fitness",
+          "heading": "八、把最高风险的假设转成持续检查"
+        },
+        {
+          "id": "architecture-choice-decision",
+          "heading": "九、让未来的人知道为什么作出这个决定"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "delivery-trace-baseline",
+          "reason": "证据需要对应当前场景和构建。"
+        },
+        {
+          "concept": "user-observation-slo",
+          "reason": "分母与统计窗口决定预算含义。"
+        },
+        {
+          "concept": "compatibility-task-evidence",
+          "reason": "桌面、引擎与真机证据不能互相冒充。"
+        }
+      ]
+    }
+  ]
+}

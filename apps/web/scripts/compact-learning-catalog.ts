@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { Plugin } from 'vite';
 
-// JSON remains the editable source. Only production modules omit repeated field names.
+// JSON remains the editable source. Production omits repeated keys and concept ID prefixes.
 const fields = [
   ['schemaVersion', 'batch', 'title', 'reviewedOn', 'chapters'],
   ['id', 'guide', 'anchor', 'title', 'question', 'summary', 'outcomes', 'prerequisites', 'concepts', 'connections'],
@@ -19,6 +19,14 @@ function pack(value: Record<string, unknown>, level = 0): unknown[] {
   }
   return columns.map(key => {
     const childLevel = children[key];
+    if (key === 'concepts') {
+      const rows = (value[key] as Record<string, unknown>[]).map(child => pack(child, childLevel));
+      let prefix = (rows[0]?.[0] as string | undefined) ?? '';
+      for (const row of rows) {
+        while (!(row[0] as string).startsWith(prefix)) prefix = prefix.slice(0, -1);
+      }
+      return [prefix, rows.map(([id, heading]) => [(id as string).slice(prefix.length), heading])];
+    }
     return childLevel === undefined ? value[key]
       : (value[key] as Record<string, unknown>[]).map(child => pack(child, childLevel));
   });
@@ -29,7 +37,8 @@ const fields = ${JSON.stringify(fields)};
 const children = ${JSON.stringify(children)};
 export function unpack(row, level = 0) {
   return Object.fromEntries(fields[level].map((key, index) => [key,
-    children[key] === undefined ? row[index] : row[index].map(child => unpack(child, children[key]))
+    key === 'concepts' ? row[index][1].map(([id, heading]) => ({ id: row[index][0] + id, heading }))
+      : children[key] === undefined ? row[index] : row[index].map(child => unpack(child, children[key]))
   ]));
 }`;
 

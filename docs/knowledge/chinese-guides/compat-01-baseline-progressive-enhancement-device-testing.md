@@ -1,129 +1,240 @@
-# Web Baseline、渐进增强与跨浏览器真机验证知识点讲义
+# 能力不同，用户仍要完成同一个任务
 
 ## COMPAT-01 Baseline、渐进增强与跨浏览器真机测试
 
-现代浏览器更新很快，但用户并不同时升级，WebView、辅助技术、输入法、低端设备和受限网络还会改变真实行为。看到某个 API 标为“广泛可用”，只能说明一部分浏览器版本的互操作成熟度，不能直接回答你的用户、设备和核心任务是否可用。可靠兼容工程从业务任务与用户分布出发，以基础路径兜底、能力检测选择增强，并用自动化和真机证据闭环。
+一个表单在开发者电脑上很好用，客户却说侧栏展开后内容被截断。团队查到 ResizeObserver 已经广泛可用，于是认定不是兼容问题。后来才发现，客户宿主关闭了这个 API，而页面把所有布局更新都放进了观察器回调。
+
+兼容工作要连接三个问题：承诺支持谁，没有增强时还能做什么，以及靠什么证据证明任务可用。本篇以能切换能力、保留输入的页面为主线，解释 Baseline、能力检测、渐进增强和验证分工。本站仍面向桌面；涉及移动设备的机制会讲清，但桌面实验不能代替移动真机结论。
 
 ### 学习前先确认
 
-- 直接前置：[TEST-03 端到端、视觉回归、隔离与稳定性](../chinese-guides/test-03-e2e-visual-regression-isolation-flakiness.md#test-03)用于理解跨浏览器自动化证据；[WEB-03 现代 CSS 架构、容器查询与渐进能力](../chinese-guides/web-03-modern-css-architecture-container-progressive.md#web-03)用于理解 CSS 能力和回退。两者分别承担测试与实现基础。
+- 直接前置：[TEST-03 端到端、视觉回归、隔离与稳定性](../chinese-guides/test-03-e2e-visual-regression-isolation-flakiness.md#test-03)。理解自动化结果需要对应具体环境与隔离数据。
+- 直接前置：[WEB-03 现代 CSS 架构、容器查询与渐进能力](../chinese-guides/web-03-modern-css-architecture-container-progressive.md#web-03)。理解基础样式、增强规则和容器空间。
 
-### 一、Baseline 是平台信号而不是项目合同
+### 一、先承诺任务，再确定支持范围
 
-**Baseline**由 WebDX Community Group 定义，用核心浏览器集合说明 Web 平台功能何时达到 Newly available 或 Widely available。Widely available 通常表示自跨核心浏览器可互操作起已过去 30 个月，适合降低一般站点的兼容顾虑。
+假设产品的核心任务是填写说明、查看预览、提交并获知结果。自动调整预览、动画和快捷键都可以增强体验，但它们失败时不能删掉输入或让提交永久无响应。先区分核心任务与附加体验，才知道哪些差异可以接受。
 
-Baseline 不知道你的用户是否使用企业冻结版本、嵌入式 WebView、旧设备、特定辅助技术或受监管环境，也不涵盖所有性能、权限和实现缺陷。一个功能进入 Baseline，不代表在你的输入法、内存和业务组合中没有问题。
+**支持矩阵（Support Matrix）**把任务与目标环境连在一起，说明必须通过、允许降级以及尚未验证的范围。浏览器名称只是其中一列，还需要版本、系统、设备、输入法、辅助技术、网络与关键能力。矩阵的依据可以是客户合同、受管设备清单和真实使用分布，不能只写开发团队手头有什么。
 
-使用 Baseline 做初筛和工具目标：判断是否需要额外回退、lint 或构建转换；最终支持承诺仍由项目矩阵、流量数据和任务验证决定。记录查询日期，因为功能状态会随时间变化。
+下面是桌面表单项目的教学矩阵，版本字段应在真实运行时填写，不把“最新”当作以后可复现的版本号。
 
-### 二、Support Matrix 从用户和任务生成
+| 目标环境 | 核心承诺 | 差异分支 | 需要留下的证据 |
+| --- | --- | --- | --- |
+| Windows 的受管 Chromium 浏览器 | 编辑、键盘操作、提交反馈 | 扩展或企业策略限制能力 | 系统与浏览器版本、任务结果 |
+| macOS Safari | 同一表单可完成 | 布局、权限和系统输入 | 实际 Safari 版本、截图与事件记录 |
+| Firefox 桌面版 | 同一表单可完成 | 样式与事件行为 | 构建版本、核心断言与错误 |
+| 目标环境禁用 ResizeObserver | 输入不丢，可手动更新 | 降级分支 | 禁用方式、提示和操作结果 |
 
-**支持矩阵（Support Matrix）**把浏览器/内核、版本范围、操作系统、设备、输入、辅助技术、网络与业务任务组合成明确承诺。它不是“Chrome、Safari、Firefox”三行清单，而要说明哪些核心任务必须完成、哪些增强可降级、哪些环境只尽力支持。
+这里没有承诺移动端。若一个 H5 产品确实面向 iOS Safari、Android Chrome 或 WebView，就要添加对应系统、浏览器与真实设备证据。不能从桌面缩放、UA 字符串或浏览器品牌推断设备上的具体引擎、系统策略和输入行为，应记录实测组合。
 
-先用真实分析数据、客户合同、市场和风险确定目标。支付、登录、保存、阅读等核心任务优先；动画、预取和高级编辑可作为增强。矩阵有 owner、数据来源、最小样本、复查日期和退出条件，避免十年前的浏览器永久拖累。
+### 二、Baseline 提供平台信号，不代替项目验收
 
-浏览器版本只是一维。iOS 上浏览器受系统 WebKit 约束，Android WebView 与厂商更新不同，企业策略可能关闭功能。设备内存、触摸、键盘、读屏、中文 IME、缩放和网络必须进入关键路径样本。
+**Baseline**描述 Web 平台功能在核心浏览器集合中的支持情况。按 2026-10-07 核对的官方定义，Newly available 表示核心集合均已支持；从这个时间点经过 30 个月，进入 Widely available。核心集合包含 Chrome 桌面与 Android、Edge、Firefox 桌面与 Android、Safari macOS 与 iOS。
 
-### 三、Progressive Enhancement 先交付核心能力
+因此“广泛可用”并不是“全世界所有设备都有”。嵌入式宿主、冻结旧版本、辅助技术、权限策略和已知实现缺陷都可能不被这一个标签解释。Baseline 是选技术和制定构建目标时的起点，项目矩阵才是对用户的承诺。
 
-**渐进增强（Progressive Enhancement）**先用语义 HTML、基础 CSS 和可靠请求完成核心任务，再在确认能力可用时增加体验。增强失败应回到可用基础路径，而不是白屏、死按钮或无限重试。
+例如某功能刚进入 Newly available，你可以根据用户分布决定暂时只用于增强；若核心流程必须依赖它，就需要相应最低版本、替代路径和验证。也不能把一个大 API 家族的标签扩张到所有方法、选项与组合行为。应查看具体特性、兼容表注释和查询日期。
 
-例如页面导航先用真实链接，支持 View Transition 时添加过渡；表单先能原生提交，再增加客户端校验与异步保存；图片先提供可读替代与合理尺寸，再启用新格式或高级解码。基础路径不是“低端版惩罚”，而是系统的恢复能力。
+构建工具使用的浏览器目标也不等于 Baseline 自动生效。语法转换、CSS 处理、API polyfill 是不同工作。选择一个目标后，应检查产物实际包含什么转换，不能只看到配置写了年份就认定全部运行时能力都被补齐。
 
-服务端与客户端渲染也需渐进。JavaScript 加载失败、缓存版本不匹配或 hydration 异常时，用户至少能阅读关键信息和重试。不能把所有核心动作只绑定在运行后才出现的空 div。
+### 三、先安排失败时仍能使用的路径
 
-### 四、Feature Detection 检测实际能力
+**渐进增强（Progressive Enhancement）**是先提供可用的基础任务，再在能力满足时增加体验。基础不一定意味着每个复杂应用都能无 JavaScript 工作，但应说明依赖和失败界限。例如真实链接不依赖动画完成导航，原生表单可以由服务端接收，再增加客户端异步反馈。
 
-**能力检测（Feature Detection）**在运行环境中检查某个语法、CSS 属性、API 或具体操作是否可用，再选择实现分支。常见方法有 `CSS.supports`、属性存在、`@supports`、安全构造和实际调用后的错误处理。
+ResizeObserver 观察元素尺寸变化，它比 window resize 更适合侧栏、字体或父容器变化。替代方式也不是简单把回调搬到窗口事件：侧栏变窄可能没有窗口 resize。若只需要排版，应优先让 CSS 自动布局；确实需要读尺寸时，可以提供手动更新，并说明什么变化不会自动检测。
 
-属性存在不等于完整可用。API 可能需要安全上下文、权限、硬件、用户手势或有容量限制；检测后调用仍需失败分支。检测不要产生不可逆副作用，也不要把一次权限拒绝永久缓存成浏览器不支持。
+**能力检测（Feature Detection）**检查当前环境提供的能力，例如构造器是否存在、CSS.supports 是否接受某声明。它比按 UA 猜测更接近实际条件，但属性存在仍不保证权限、配额、构造和后续调用成功。因此“检测存在”和“处理执行失败”要同时做。
 
-UA 字符串适合统计和极少数已知兼容修补，不适合作为主能力判断。版本伪装、WebView 和部分实现会让 UA 与能力不一致。若必须 UA 分支，范围最小、记录原因、配套能力/行为测试和删除条件。
+语法、CSS 和 API 还有不同失败阶段。新 JavaScript 语法若在解析时失败，写在同一脚本后面的 if 根本来不及运行；需要符合目标的构建产物或独立加载分支。未知 CSS 声明通常被忽略，可先写基础声明再增强。API 缺失适合运行时判断，权限拒绝则要在具体动作失败时解释。把三者混成一个 UA 分支会漏掉真正原因。
 
-### 五、语法、样式和 API 的失败方式不同
+### 四、运行一个可以关闭增强而不丢输入的页面
 
-浏览器无法解析新 JavaScript 语法时，代码在检测逻辑运行前就失败，需要差异构建或避免发送；未知 CSS 声明通常被忽略，可通过声明顺序与 `@supports` 回退；API 缺失可在运行时分支。把三者统一成一个 `if` 会漏掉解析阶段。
+保存下面完整页面为 `compat-lab.html`，使用现代桌面浏览器打开即可，无依赖、无网络请求。它只提供本地编辑和预览，**没有服务端保存**。若需要部署表单，应另接真实提交与结果确认；这里不会用一个本地提示冒充保存成功。
 
-HTML 未知元素一般仍存在 DOM，但默认语义和行为不一定可用。自定义控件尤其需要键盘、焦点和表单回退。Polyfill 只补某个接口，不会自动补性能、权限、布局与辅助技术语义。
+```html example=compat01-fallback-lab runtime=project file=compat-lab.html
+<!doctype html>
+<html lang='zh-CN'>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>兼容与输入保留实验</title>
+<style>
+  * { box-sizing: border-box; }
+  body { max-width: 850px; margin: 32px auto; padding: 0 20px;
+    font: 18px/1.65 system-ui; color: #17283a; background: #f4f7fb; }
+  label { display: block; margin: 12px 0; }
+  button, select, textarea { font: inherit; }
+  button { margin: 6px 8px 6px 0; }
+  textarea { width: 100%; min-height: 130px; }
+  #card { width: 620px; max-width: 100%; min-width: 0;
+    padding: 18px; background: white; border: 1px solid #8095ab; }
+  #preview { white-space: pre-wrap; overflow-wrap: anywhere; }
+  :focus-visible { outline: 3px solid #1263d6; outline-offset: 3px; }
+</style>
+<h1>能力变化，输入继续保留</h1>
+<p>本地模拟，不向服务端保存。尺寸增强失败时仍可编辑和手动更新。</p>
+<label>增强模式
+  <select id='mode'>
+    <option value='auto'>自动检测</option>
+    <option value='off'>模拟能力缺失</option>
+    <option value='fail'>模拟初始化失败</option>
+  </select>
+</label>
+<label>内容容器宽度
+  <select id='width'><option value='620'>620 像素</option><option value='360'>360 像素</option></select>
+</label>
+<button id='toggle' type='button'>关闭编辑区</button>
+<p id='status' role='status'>等待脚本初始化；仍可填写文本。</p>
+<p id='metrics'>活动观察器：0；本轮回调：0</p>
+<section id='panel'>
+  <form id='form'>
+    <div id='card'>
+      <label for='draft'>说明草稿</label>
+      <textarea id='draft' name='draft'>侧栏变化以后，这段输入应该保留。</textarea>
+      <p id='preview'>点击预览查看当前文本。</p>
+    </div>
+    <button id='show' type='submit' disabled>预览当前文本</button>
+    <button id='measure' type='button' disabled>手动更新尺寸</button>
+    <p id='size'>尚未测量</p>
+  </form>
+</section>
+<script>
+  const el = id => document.getElementById(id);
+  const mode = el('mode'), panel = el('panel'), card = el('card');
+  const draft = el('draft'), metrics = el('metrics');
+  let observer = null, generation = 0, calls = 0, composing = false;
+  function report() {
+    metrics.textContent = `活动观察器：${observer ? 1 : 0}；本轮回调：${calls}`;
+  }
+  function measure() {
+    if (!panel.hidden) el('size').textContent = `边框盒宽度：${Math.round(card.getBoundingClientRect().width)} 像素`;
+  }
+  function stop() {
+    generation++;
+    observer?.disconnect();
+    observer = null;
+    calls = 0;
+    report();
+  }
+  function start() {
+    stop();
+    if (panel.hidden) return;
+    measure();
+    const current = generation;
+    if (mode.value === 'off' || typeof window.ResizeObserver !== 'function') {
+      el('status').textContent = '手动模式：可以编辑，尺寸变化后请手动更新。';
+      return;
+    }
+    try {
+      if (mode.value === 'fail') throw new Error('synthetic-init-failure');
+      observer = new ResizeObserver(() => {
+        if (current !== generation || panel.hidden) return;
+        calls++;
+        measure();
+        report();
+      });
+      observer.observe(card);
+      el('status').textContent = '自动模式：观察内容容器的尺寸变化。';
+      report();
+    } catch {
+      stop();
+      el('status').textContent = '增强初始化失败，已转为手动模式；草稿仍然保留。';
+    }
+  }
+  draft.addEventListener('compositionstart', () => { composing = true; });
+  draft.addEventListener('compositionend', () => { composing = false; });
+  el('form').addEventListener('submit', event => {
+    event.preventDefault();
+    if (composing) {
+      el('status').textContent = '请先完成输入法选词，再预览。';
+      return;
+    }
+    el('preview').textContent = draft.value;
+  });
+  el('measure').addEventListener('click', measure);
+  mode.addEventListener('change', start);
+  el('width').addEventListener('change', event => {
+    card.style.width = `${event.target.value}px`;
+  });
+  el('toggle').addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    el('toggle').textContent = panel.hidden ? '重新打开编辑区' : '关闭编辑区';
+    if (panel.hidden) {
+      stop();
+      el('status').textContent = '编辑区已关闭，草稿保留在本页内存中。';
+    } else {
+      start();
+      draft.focus();
+    }
+  });
+  window.addEventListener('pagehide', stop);
+  window.addEventListener('pageshow', start);
+  el('show').disabled = false;
+  el('measure').disabled = false;
+  start();
+</script>
+</html>
+```
 
-构建目标应与支持矩阵一致。过度转译增加包体和运行成本，过少转译会让目标浏览器直接语法错误。生产产物需要在真实目标上执行，而不是只看编译成功。
+先填写一段独特文本并点击预览，再将容器从 620 改为 360 像素。自动模式下尺寸文字会更新，输入不会重置。回调次数可能受布局与浏览器调度影响，不应断言固定数值。测量结果写在容器之外，也没有在观察回调中修改被观察对象的宽度，避免用自身更新反复触发测量。
 
-### 六、CSS 回退依靠层叠与内容约束
+然后选择“模拟能力缺失”，再改变宽度。CSS 仍会重排，尺寸文字暂时保持旧值，点击“手动更新尺寸”后才更新。这个变化揭示了降级范围：阅读与编辑可用，自动测量被替换为明确的手动操作。模式开关只改变本示例分支，不删除浏览器全局 API，不能据此宣称所有 API 缺失问题都测过了。
 
-先写广泛支持、能完成阅读和操作的布局，再在后续声明或 `@supports` 中增强。逻辑属性、容器查询、新颜色和视图过渡都有明确回退。不要用特定浏览器 hack 堆叠出不可解释的层叠。
+再选择“模拟初始化失败”。这是合成异常，不代表发现真实浏览器缺陷。观察器会被断开，用户看到手动提示，草稿仍可预览。最后关闭、重新打开编辑区，确认文本与预览保留；关闭时活动观察器为 0，重新打开按当前模式建立新观察。generation 使旧回调失去更新资格，disconnect 负责停止观察，两者承担不同职责。
 
-兼容目标是功能与可读性，不是所有浏览器像素完全一致。文字不裁切、操作可见、焦点清楚、内容顺序正确比阴影和动画相同重要。动态字体、语言变长、200% 缩放和窄屏用于验证内容约束。
+这里保留的是同一页面中同一个 textarea 节点，并不保证刷新、进程终止或跨设备后恢复。pagehide 清理资源，pageshow 按当前状态恢复；这也适用于从往返缓存返回的恢复入口。计数归零仅说明本例登记的观察器已清理，完整内存审计仍需检查其他引用与资源，见 [PERF-04](../chinese-guides/perf-04-memory-listeners-resource-leaks.md#三比较相同生命周期位置才有意义)。
 
-Flex/Grid 常见问题来自默认最小内容宽度、滚动容器和逻辑尺寸，不一定是“某浏览器坏了”。用最小复现比较 computed style 和布局盒，再在共享合同修复，避免对 UA 打补丁。
+### 五、中文输入要区分选词过程与提交意图
 
-### 七、JavaScript 增强需要可恢复状态
+中文 IME 输入时，用户可能先输入拼音，再选择候选，最后才得到确认文字。compositionstart 到 compositionend 之间是组合过程；键盘上的一次 Enter 可能只是在确认候选，而不是要求提交表单。逐次 keydown 过滤字符、强制格式化或发请求，容易造成少字和重复操作。
 
-增强脚本加载、初始化或权限失败时，保留基础交互并显示明确状态。Service Worker、IndexedDB、Observer、Clipboard 等能力既可能不存在，也可能因策略、配额或生命周期失败。每类错误决定重试、降级或提示。
+本例使用原生 textarea 保留文本，不在每次输入时重建节点，也没有把 Enter 绑定成发送。预览只响应显式提交，并在组合状态中暂缓。这个选择让例子容易推理，但不等于覆盖所有受控组件、搜索框、快捷发送和浏览器事件差异。
 
-不要在功能检测阶段缓存永久结论。权限可被用户改变，WebView 可更新，内存压力会终止进程。对关键功能用会话或短期能力状态，实际操作仍处理失败。
+若产品确实需要“回车发送”，应结合组合状态、KeyboardEvent.isComposing 和目标环境的实测事件顺序设计。历史边界可能需要受限补丁，不能把 keyCode 数字或 UA 猜测当成通用 IME 模型。compositionend 后还可能有 input，搜索更新需按当前值去重；自动化派发组合事件只证明程序分支，不等于真实输入法体验。
 
-异步 polyfill 或动态 import 需要防重复初始化、竞态和旧 chunk。部署期间旧 HTML 与新资源混合时，显示刷新/恢复路径。兼容层有遥测和删除条件，不能永久存在却无人知道是否仍被使用。
+复现时记录系统、浏览器、输入法和步骤：输入拼音、切换候选、Enter 确认、继续编辑、粘贴、撤销及主动提交。若框架受控输入导致光标跳动，还应检查节点身份、值回写和批处理时序。不要看到某浏览器首先暴露问题，就跳过组件自己的状态模型。
 
-### 八、自动化浏览器提供稳定基线
+### 六、布局与弱网差异要沿现象找原因
 
-使用 Playwright projects 为 Chromium、Firefox、WebKit 和设备配置相同关键任务。固定测试数据、时区、语言、权限和网络依赖，保留 trace、截图与控制台错误。自动化适合回归导航、表单、布局不变量和能力关闭分支。
+内容溢出常来自 Flex/Grid 子项的最小内容尺寸、长文本和错误滚动容器，而不一定是浏览器缺陷。先比较 DOM、computed style 和实际盒子，再决定是否需要 `min-inline-size: 0`、换行或调整轨道。容器查询适合纯布局增强，已有解释见 [WEB-03](../chinese-guides/web-03-modern-css-architecture-container-progressive.md#容器查询读取的是哪一个祖先)。
 
-引擎模拟不等于目标真机。桌面 WebKit 无法覆盖 iOS 软键盘、内存、触摸滚动和系统分享，设备 viewport 也不改变主机输入设备。把自动化定义为一层证据，不夸大为全部兼容结论。
+可用目标是文字可读、操作可见、焦点清楚和任务连续。200% 缩放、长文本和字体变化能暴露内容约束；阴影和字形并不要求像素一致。未知 CSS 声明被忽略时，前面的基础样式应仍可用。API polyfill 也不会自动补上原生权限、系统交互或同样的性能。
 
-测试选择用户可见角色和名称，断言任务结果而不是内部类名。视觉回归允许经过评审的字体与渲染容差，但核心控件裁切、重叠和焦点不可被宽容掩盖。
+弱网则改变资源到达顺序。400 kbps 只是带宽条件，还需说明延迟、缓存、丢包、离线和请求类型。实验页面没有网络，因此不能证明网络降级。真实表单应在增强脚本慢到时保留输入，提交超时时区分未发送、处理中与结果未知；副作用操作不能因超时就盲目重试，先使用幂等标识或查询结果。
 
-### 九、真机覆盖自动化无法模拟的组合
+对于移动 H5，软键盘、视觉视口、触摸滚动、后台恢复和系统权限进一步改变行为。桌面 viewport 仿真不会产生真实软键盘、触摸硬件和内存压力。相关机制见 [H5-02](../chinese-guides/h5-02-scroll-soft-keyboard-pointer-gestures.md#六软键盘改变什么先测可见边界)。是否支持这些组合应由产品矩阵决定，不把知识讲解扩张成本站的移动界面承诺。
 
-选择真实 iOS/Android、低中端硬件和业务高占比设备，记录系统、浏览器/WebView、输入法、缩放、网络和电量模式。用同一核心任务执行触摸、键盘、中文 IME、旋转、后台恢复、权限拒绝和弱网。
+### 七、让每层验证只证明自己覆盖的条件
 
-真机证据包括复现步骤、录屏/截图、网络与控制台/远程调试信息、实际结果、版本和时间。单个同事手机“看起来正常”不是矩阵。云真机能扩大组合，但仍需要代表性与隐私控制。
+多引擎自动化可以使用 Playwright projects 在 Chromium、Firefox 和 WebKit 上执行同一任务，固定版本、数据、语言、权限和时区，保留失败 trace 与截图。优先断言用户结果，例如输入未丢、预览与当前文本一致、能力关闭后可手动完成；不要把内部 class 名当成业务承诺。
 
-选择测试集时按使用量、业务损失、差异风险和最近变更排序。无需穷举所有设备，但必须能解释未覆盖范围和监测措施。
+Playwright 的 WebKit 来自带测试补丁的 WebKit 构建，不直接运行品牌 Safari；系统媒体、输入和浏览器集成也可能不同。项目名叫 Desktop Safari 或 Mobile Safari 不会改变这一事实。它能提前发现引擎差异，但不能把一次通过写成 Safari 真机全部通过。
 
-### 十、输入法与组合事件需要状态模型
+真机补充自动化不易覆盖的真实输入法、软键盘、系统分享、辅助技术、设备资源与宿主策略。选择使用量高、失败损失大或变化风险高的组合，无需穷举设备。记录型号、系统、浏览器、输入法、构建、网络条件、操作步骤和结果，让别人可以解释证据的适用范围。
 
-中文、日文和韩文 IME 在 composition 期间会多次更新文本，`input`、`beforeinput`、compositionstart/end 和键盘事件顺序可能不同。若每次 keydown 都提交或过滤，会丢字、重复搜索或破坏候选。
+当前只有一个桌面浏览器时，可以先验证普通路径、禁用增强、初始化失败和输入保留，并明确其他引擎与设备待核对。模拟按钮和本地计数给出的结论应写成“本实验分支符合预期”，不能变成“跨浏览器兼容性已完成”。有实际差异时再增加针对性验证，避免无目标地扩展整套矩阵。
 
-组件区分 composing 与 committed value；业务校验通常在组合完成或明确提交时运行。不要用 keyCode 或 UA 猜输入法。测试真实输入、候选选择、回车提交、撤销、粘贴和读屏。
+### 八、修复之后还要知道何时可以删除兼容层
 
-受控组件和框架批处理可能进一步改变事件时序。在目标框架版本与真机上验证，不把桌面英文输入结果外推到移动中文键盘。
+发现差异先缩成最小页面，保存预期行为、实际行为、目标版本和输入。判断是项目假设、框架处理、规范允许差异还是引擎缺陷；优先修复共享逻辑，然后考虑能力分支。只有确实无法用能力或行为检测表达时，才使用范围很窄的 UA workaround。
 
-### 十一、触摸、软键盘与视口是动态系统
+临时补丁要有 owner、上游问题入口、影响版本与删除条件。未来引擎修复后，在相同场景关闭补丁比较结果，再删除；如果用户合同要求长期保留，就把它变成正式维护路径。没有触发条件的“暂时处理 Safari”会逐渐成为无法解释的全局规则。
 
-移动端同时存在布局视口、视觉视口、安全区和浏览器 UI。软键盘打开会改变可视空间，固定底部按钮可能遮住输入，100vh 也可能不等于可见高度。布局以内容、滚动和焦点可见为核心。
+发布后按支持范围观察核心任务成功、错误和回退使用，样本太少时保留不确定性。若增强导致故障，可以先关闭增强并保留基础任务。删除回退前则核对目标用户、合同和监测，不能因为 Baseline 标签变化就自动撤销支持承诺。兼容策略最终应与 [ARCH-01 的质量场景](../chinese-guides/arch-01-quality-attributes-constraints-tradeoffs.md#二把更快更稳定写成可以被推翻的场景)保持一致。
 
-触摸目标有足够尺寸与间距，pointer/touch 默认行为与滚动手势协调。不要依赖 hover 暴露必要信息。键盘和读屏仍能完成同一任务，缩放不被禁用。
+### 带着问题回看
 
-旋转、分屏、字体放大和返回前台后重新测量。Observer 缺失或被禁用时，使用基础布局、事件或手动刷新作为降级，不能静默停更。
+1. Baseline Widely available 为什么不能证明受管宿主一定提供该 API？
+2. 实验关闭自动观察以后，什么仍然成立，什么变成手动操作？
+3. disconnect 与 generation 各解决什么？活动计数归零还不能证明什么？
+4. WebKit 自动化、模拟组合事件和真实 Safari 中文输入分别提供什么证据？
 
-### 十二、弱网和离线验证时间顺序
+### 参考与延伸阅读
 
-低带宽、高延迟、丢包和连接切换会暴露资源优先级、超时、重试与缓存问题。只设置下载速度不够，还要观察首字节、请求并发、离线恢复和写入未知结果。核心内容优先，增强资源可延后或放弃。
+核验日期：2026-10-07。具体浏览器版本和实际测试日期应另行登记。
 
-GET 可按策略重试，副作用请求必须幂等或先对账。断网时明确未发送、已排队、同步中和冲突，不能显示虚假成功。Service Worker 更新和缓存失败有清理与刷新路径。
-
-弱网测试保存 HAR/trace 与用户结果。页面最终打开不代表任务可用，若按钮在一分钟内无反馈或重复提交，仍是兼容失败。
-
-### 十三、从差异定位到最小修复
-
-发现浏览器差异先缩小为最小页面，比较 DOM、样式、事件序列、网络、权限和 API 返回；确认是规范允许差异、实现缺陷、框架问题还是项目假设。不要一开始就添加浏览器专属分支。
-
-修复优先共享标准实现、能力分支和合理回退。临时 workaround 记录受影响版本、触发、测试、owner 和删除信号。向浏览器或库提交最小复现时去除业务数据。
-
-同一修复在完整矩阵回归，防止解决 WebKit 却破坏 Firefox 或辅助技术。保留基线失败与修复后证据，方便未来删除兼容层。
-
-### 十四、让兼容矩阵进入发布闭环
-
-CI 跑主流引擎关键路径和禁用能力测试；发布前/灰度跑代表真机；生产按浏览器、系统和版本观察核心任务成功、错误和性能。样本太少时不作武断结论，合并到合理类别并保留人工反馈。
-
-新增 Web 特性提交 Baseline 状态、项目覆盖、回退和测试。删除回退前确认目标用户占比、遥测和支持承诺。异常上升可按能力开关关闭增强，不必回滚全部页面。
-
-可用 [Web Platform Baseline](https://web.dev/baseline/)、[Playwright Projects](https://playwright.dev/docs/test-projects) 与 [MDN 特性检测](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Testing/Feature_detection) 核验当前平台与测试方法。Baseline 状态和浏览器实现会变化，项目矩阵应记录日期与版本。
-
-### 十五、浏览器缺陷与临时兼容层要有寿命
-
-遇到确定的引擎缺陷，保存最小复现、规范预期、受影响版本和上游 issue；workaround 只包围必要路径，配注释、测试、owner 与删除触发。不要把所有 Safari/Firefox 行为聚成一个全局 UA 分支，未来版本修复后它反而可能制造新问题。
-
-定期在修复版本关闭 workaround 跑同一用例，确认可以删除；删除后再跑目标矩阵。若上游不会修复且目标用户长期存在，应把兼容行为提升为正式产品合同并维护，而不是永远称临时。这样兼容成本可见，也不会让历史补丁悄悄决定新功能设计。
-
-学完后，你应能从用户和核心任务建立支持矩阵，选择基础路径与增强，说明语法/CSS/API 的不同检测方式，并组合自动化、真机、IME、触摸和弱网证据。兼容工程不是追逐所有浏览器像素一致，而是让目标用户在能力差异和失败条件下仍能可靠完成任务。
+- [Web Platform Baseline](https://web.dev/baseline/)与 [MDN 的适用边界](https://developer.mozilla.org/en-US/docs/Glossary/Baseline/Compatibility)：核对核心集合、阶段与未覆盖范围。
+- [MDN ResizeObserver](https://developer.mozilla.org/en-US/docs/Web/API/ResizeObserver)：查尺寸观察、循环问题、方法和兼容信息。
+- [MDN 特性检测](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Testing/Feature_detection)：区分能力检查和 UA 推断。
+- [MDN isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)：查询键盘事件中的组合状态含义，实际输入顺序仍须实测。
+- [Playwright 浏览器说明](https://playwright.dev/docs/browsers)：核对项目配置和 WebKit 与品牌 Safari 的区别。

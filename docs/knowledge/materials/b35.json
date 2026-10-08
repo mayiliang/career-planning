@@ -1,0 +1,333 @@
+{
+  "schemaVersion": 1,
+  "batch": "B35",
+  "title": "架构演进与责任交接",
+  "reviewedOn": "2026-10-08",
+  "chapters": [
+    {
+      "id": "ARCH-02",
+      "title": "让技术决定可追溯",
+      "question": "有分歧和未知时，怎样形成可以复查的技术决定？",
+      "summary": "把问题、候选、证据、异议与 ADR 连成一次有边界的决定。",
+      "outcomes": [
+        "区分事实、假设与硬性门槛",
+        "记录可追溯的选择和异议",
+        "用新证据触发复查"
+      ],
+      "prerequisites": [
+        "arch-01-quality-attributes-constraints-tradeoffs.md#arch-01"
+      ],
+      "guide": "arch-02-technical-proposal-adr-review.md",
+      "anchor": "arch-02",
+      "concepts": [
+        {
+          "id": "architecture-record-problem",
+          "heading": "一、把问题写成允许出现不同答案的句子"
+        },
+        {
+          "id": "architecture-record-drivers",
+          "heading": "二、用决策驱动因素区分候选"
+        },
+        {
+          "id": "architecture-record-evidence",
+          "heading": "三、证据矩阵记录比较依据，而不替人投票"
+        },
+        {
+          "id": "architecture-record-dissent",
+          "heading": "四、异议要变成场景、行动与决定边界"
+        },
+        {
+          "id": "architecture-record-adr",
+          "heading": "五、一份 ADR 只回答一个显著决定"
+        },
+        {
+          "id": "architecture-record-status",
+          "heading": "六、让记录状态与当前规则一致"
+        },
+        {
+          "id": "architecture-record-transition",
+          "heading": "七、把选择落实到安全的中间状态"
+        },
+        {
+          "id": "architecture-record-review",
+          "heading": "八、复查的是假设与结果，不是文档是否写完"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "architecture-choice-gates",
+          "reason": "先明确候选必须通过哪些底线。"
+        },
+        {
+          "concept": "migration-boundary-authority",
+          "reason": "方案需要落实到可运行的中间状态。"
+        },
+        {
+          "concept": "leadership-outcome-delegation",
+          "reason": "把决定权限与执行责任交接给负责人。"
+        }
+      ]
+    },
+    {
+      "id": "ARCH-03",
+      "title": "让旧系统有条件地退出",
+      "question": "新旧系统并行时，怎样保护已经确认的数据和用户任务？",
+      "summary": "由垂直切片走到语义比较、写入权、数据演进、回退和退役。",
+      "outcomes": [
+        "区分业务差异与数据版本错位",
+        "解释幂等、复制与写入权",
+        "按数据和在途动作判断回退边界"
+      ],
+      "prerequisites": [
+        "arch-02-technical-proposal-adr-review.md#arch-02"
+      ],
+      "guide": "arch-03-progressive-migration-strangler-compatibility.md",
+      "anchor": "arch-03",
+      "concepts": [
+        {
+          "id": "migration-boundary-slice",
+          "heading": "一、先找一个能够独立完成的用户任务"
+        },
+        {
+          "id": "migration-boundary-routing",
+          "heading": "二、稳定入口决定哪一次请求交给谁"
+        },
+        {
+          "id": "migration-boundary-semantics",
+          "heading": "三、先转换语义，再比较新旧结果"
+        },
+        {
+          "id": "migration-boundary-shadow",
+          "heading": "四、影子读取提供差异线索，不直接扩大生产能力"
+        },
+        {
+          "id": "migration-boundary-authority",
+          "heading": "五、写迁移先确定谁有权确认结果"
+        },
+        {
+          "id": "migration-boundary-backfill",
+          "heading": "六、数据回填、合同和缓存要按同一阶段推进"
+        },
+        {
+          "id": "migration-boundary-rollback",
+          "heading": "七、回滚窗口由数据和在途动作决定"
+        },
+        {
+          "id": "migration-boundary-frontend",
+          "heading": "八、前端切换时，草稿与资源需要自己的归属"
+        },
+        {
+          "id": "migration-boundary-retirement",
+          "heading": "九、以责任减少和旧路径退役判断完成"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "architecture-record-transition",
+          "reason": "迁移阶段落实方案中的停止条件。"
+        },
+        {
+          "concept": "framework-choice-state",
+          "reason": "前端也有需要连续保留的输入与资源。"
+        },
+        {
+          "concept": "debt-governance-strategy",
+          "reason": "暂时控制风险与偿还根因需要分别判断。"
+        }
+      ]
+    },
+    {
+      "id": "ARCH-04",
+      "title": "识别持续成本并验证偿还收益",
+      "question": "哪些技术问题值得现在处理，怎样知道成本真的下降？",
+      "summary": "从重复规则出发，辨认债务、估计利息、安排策略并核对退出证据。",
+      "outcomes": [
+        "把代码评价写成有后果的条目",
+        "解释估算范围和资源约束",
+        "区分控制、接受与真实关闭"
+      ],
+      "prerequisites": [
+        "arch-01-quality-attributes-constraints-tradeoffs.md#arch-01"
+      ],
+      "guide": "arch-04-technical-debt-prioritization-governance.md",
+      "anchor": "arch-04",
+      "concepts": [
+        {
+          "id": "debt-governance-statement",
+          "heading": "一、把代码评价改写成有后果的债务陈述"
+        },
+        {
+          "id": "debt-governance-triage",
+          "heading": "二、先分清今天必须修复什么"
+        },
+        {
+          "id": "debt-governance-interest",
+          "heading": "三、用范围估计利息，而不是制造精确数字"
+        },
+        {
+          "id": "debt-governance-register",
+          "heading": "四、台账让后续负责人能继续判断"
+        },
+        {
+          "id": "debt-governance-priority",
+          "heading": "五、排序先看底线，再比较值得投入的窗口"
+        },
+        {
+          "id": "debt-governance-strategy",
+          "heading": "六、偿还、控制、接受和退出各有完成条件"
+        },
+        {
+          "id": "debt-governance-closure",
+          "heading": "七、完成修复以后，仍要验证成本是否下降"
+        },
+        {
+          "id": "debt-governance-routine",
+          "heading": "八、把债务治理接回日常交付"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "dependency-admission-paths",
+          "reason": "漏洞与依赖债需要先核对实际受影响路径。"
+        },
+        {
+          "concept": "migration-boundary-rollback",
+          "reason": "偿还涉及数据时，回退受兼容窗口约束。"
+        },
+        {
+          "concept": "leadership-outcome-handoff",
+          "reason": "无人能独立维护也需要交接证据。"
+        }
+      ]
+    },
+    {
+      "id": "ARCH-05",
+      "title": "比较框架的整个使用周期",
+      "question": "一个候选怎样从演示可用走到可维护、可回退？",
+      "summary": "比较真实任务与支持组合，用本地页面观察草稿、取消和过期结果。",
+      "outcomes": [
+        "在同一层次比较候选与成本",
+        "明确宿主、实现和资源归属",
+        "定义双运行与退出条件"
+      ],
+      "prerequisites": [
+        "arch-03-progressive-migration-strangler-compatibility.md#arch-03",
+        "arch-04-technical-debt-prioritization-governance.md#arch-04"
+      ],
+      "guide": "arch-05-framework-selection-lifecycle-migration.md",
+      "anchor": "arch-05",
+      "concepts": [
+        {
+          "id": "framework-choice-layers",
+          "heading": "一、先说明究竟替换哪一层"
+        },
+        {
+          "id": "framework-choice-evidence",
+          "heading": "二、同一任务才能产生可比较的证据"
+        },
+        {
+          "id": "framework-choice-lifecycle",
+          "heading": "三、把支持组合与长期成本一起比较"
+        },
+        {
+          "id": "framework-choice-ownership",
+          "heading": "四、共存的关键是状态、DOM 和资源各有主人"
+        },
+        {
+          "id": "framework-choice-state",
+          "heading": "五、切换实现时保留草稿并拒绝过期结果"
+        },
+        {
+          "id": "framework-choice-dualrun",
+          "heading": "六、双运行需要预算，也需要结束日期"
+        },
+        {
+          "id": "framework-choice-reversibility",
+          "heading": "七、可逆性来自预留的边界"
+        },
+        {
+          "id": "framework-choice-review",
+          "heading": "八、让选择随证据更新，而不是变成身份认同"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "architecture-record-evidence",
+          "reason": "原型证据应进入可以追溯的选择记录。"
+        },
+        {
+          "concept": "migration-boundary-authority",
+          "reason": "框架共存不能混淆业务写入权。"
+        },
+        {
+          "concept": "debt-governance-closure",
+          "reason": "升级完成还需核对维护成本与关闭证据。"
+        }
+      ]
+    },
+    {
+      "id": "LEAD-01",
+      "title": "让团队能够独立继续工作",
+      "question": "怎样把个人判断转成别人也能承担的责任？",
+      "summary": "用结果路线、依赖约定、委派、校准和独立交接减少单人瓶颈。",
+      "outcomes": [
+        "区分工作产出与结果证据",
+        "交付上下文、资源和决定权限",
+        "以独立表现核对能力交接"
+      ],
+      "prerequisites": [
+        "arch-02-technical-proposal-adr-review.md#arch-02"
+      ],
+      "guide": "lead-01-technical-roadmap-delegation-influence.md",
+      "anchor": "lead-01",
+      "concepts": [
+        {
+          "id": "leadership-outcome-bottleneck",
+          "heading": "一、从大家反复等待的地方发现问题"
+        },
+        {
+          "id": "leadership-outcome-roadmap",
+          "heading": "二、用结果路线图安排逐步获得的证据"
+        },
+        {
+          "id": "leadership-outcome-dependencies",
+          "heading": "三、把跨团队依赖写成双方能执行的约定"
+        },
+        {
+          "id": "leadership-outcome-delegation",
+          "heading": "四、委派时把结果、权限和停止条件一起交出去"
+        },
+        {
+          "id": "leadership-outcome-calibration",
+          "heading": "五、校准分歧，先区分规则与偏好"
+        },
+        {
+          "id": "leadership-outcome-feedback",
+          "heading": "六、反馈需要指向可改变的行为"
+        },
+        {
+          "id": "leadership-outcome-handoff",
+          "heading": "七、用独立交接检查知识是否真的传开"
+        },
+        {
+          "id": "leadership-outcome-impact",
+          "heading": "八、影响力要同时看系统结果与组织能力"
+        }
+      ],
+      "connections": [
+        {
+          "concept": "architecture-record-dissent",
+          "reason": "评审分歧需要可讨论的场景与责任边界。"
+        },
+        {
+          "concept": "migration-boundary-retirement",
+          "reason": "路线应包括旧系统责任的实际退出。"
+        },
+        {
+          "concept": "debt-governance-priority",
+          "reason": "技术路线需要为维护与风险留出容量。"
+        }
+      ]
+    }
+  ]
+}

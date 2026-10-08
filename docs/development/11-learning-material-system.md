@@ -1,6 +1,6 @@
 # 学习资料的组织与写作
 
-本规范随 B01 首批重构落地，B02 于 2026-09-07 接入，B03、B04、B05 与 B06 于 2026-09-08 接入，B07、B08 与 B09 于 2026-09-09 接入，B10 与 B11 于 2026-09-10 接入，B12 于 2026-09-12 接入，B13、B14 与 B15 于 2026-09-14 接入，B16 于 2026-09-15 接入，B17、B18 与 B19 于 2026-09-19 接入，B20 与 B21 于 2026-09-20 接入，B22 于 2026-09-21 接入，B23 与 B24 于 2026-09-22 接入，B25 于 2026-09-23 接入，B26 于 2026-09-24 接入，B27 于 2026-09-26 接入，B28 于 2026-10-01 接入，B29 于 2026-10-02 接入，B30 于 2026-10-03 接入，B31 于 2026-10-04 接入，B32 于 2026-10-05 接入，B33 于 2026-10-06 接入。已审校范围为 B01 的 JS-01、JS-02、JS-03、JS-07，B02 的 CS-01、CS-02、CS-03、JS-04，B03 的 JS-05、JS-06、TS-01、TS-02，B04 的 TS-03、WEB-01、REACT-01、VUE-01、VUE-02，B05 的 REACT-02、VUE-03、VUE-04、REACT-03，B06 的 REACT-04、VUE-05、REACT-05、VUE-06，B07 的 REACT-06、VUE-08、REACT-08、REACT-10，B08 的 VUE-07、REACT-07、VUE-10、REACT-09、VUE-11，B09 的 GIT-01、GIT-02、GIT-03、DEBUG-01，B10 的 ENG-01、ENG-02、ENG-03、ENG-05，B11 的 TEST-01、TEST-02、TEST-03、CAREER-01，B12 的 CAREER-02、CAREER-04、CAREER-05、WEB-02、WEB-03，B13 的 A11Y-01、BROWSER-01、BROWSER-02、WEB-04，B14 的 WEB-05、NET-01、SEC-01、SEC-02，B15 的 SEC-04、SEC-03、SEC-05、TS-04，B16 的 TS-05、TS-06、TS-07、TS-08、TS-09，B17 的 IDENTITY-01、IDENTITY-02、PRIVACY-01、PRIVACY-02，B18 的 NODE-01、NODE-02、NODE-04、AIDEV-01，B19 的 AIDEV-02、AIDEV-03、BIZ-01、BIZ-02，B20 的 BIZ-03、BIZ-04、BIZ-05、BIZ-06、BIZ-07，B21 的 BIZ-08、TEST-04、RENDER-01、RENDER-02，B22 的 DATA-01、DATA-02、REALTIME-01、COMP-01，B23 的 COMP-02、UX-01、ENG-08、LINUX-01，B24 的 LINUX-02、LINUX-03、LINUX-04、DOCKER-01、DOCKER-02，B25 的 ENG-06、DEPLOY-01、OBS-01、PERF-01，B26 的 PERF-02、PERF-03、PERF-04、H5-01，B27 的 H5-02、MCP-01、AIPROD-01、AIPROD-02，B28 的 AISAFE-01、AISAFE-02、AIGOV-01、AIAPP-01、AIAPP-02，B29 的 AIAPP-03、AIAPP-04、AIAPP-05、AIUI-01，B30 的 AIAPP-06、AIAPP-07、AIAPP-08、AIAPP-09，B31 的 AIAPP-10、AIAPP-12、AIAPP-13、AGENT-01，B32 的 AGENT-03、AGENT-04、AGENT-05、AGENT-06、AGENT-07，以及 B33 的 AGENT-08、AGENT-09、AGENT-10、AIDEV-04 和必要前置资料；其他批次不能据此宣称已完成同样的内容审校。
+本规范随 B01 首批重构落地，B02 于 2026-09-07 接入，B03、B04、B05 与 B06 于 2026-09-08 接入，B07、B08 与 B09 于 2026-09-09 接入，B10 与 B11 于 2026-09-10 接入，B12 于 2026-09-12 接入，B13、B14 与 B15 于 2026-09-14 接入，B16 于 2026-09-15 接入，B17、B18 与 B19 于 2026-09-19 接入，B20 与 B21 于 2026-09-20 接入，B22 于 2026-09-21 接入，B23 与 B24 于 2026-09-22 接入，B25 于 2026-09-23 接入，B26 于 2026-09-24 接入，B27 于 2026-09-26 接入，B28 于 2026-10-01 接入，B29 于 2026-10-02 接入，B30 于 2026-10-03 接入，B31 于 2026-10-04 接入，B32 于 2026-10-05 接入，B33 于 2026-10-06 接入，B34 于 2026-10-07 接入，B35 于 2026-10-08 接入。已审校范围为 B01 的 JS-01、JS-02、JS-03、JS-07，B02 的 CS-01、CS-02、CS-03、JS-04，B03 的 JS-05、JS-06、TS-01、TS-02，B04 的 TS-03、WEB-01、REACT-01、VUE-01、VUE-02，B05 的 REACT-02、VUE-03、VUE-04、REACT-03，B06 的 REACT-04、VUE-05、REACT-05、VUE-06，B07 的 REACT-06、VUE-08、REACT-08、REACT-10，B08 的 VUE-07、REACT-07、VUE-10、REACT-09、VUE-11，B09 的 GIT-01、GIT-02、GIT-03、DEBUG-01，B10 的 ENG-01、ENG-02、ENG-03、ENG-05，B11 的 TEST-01、TEST-02、TEST-03、CAREER-01，B12 的 CAREER-02、CAREER-04、CAREER-05、WEB-02、WEB-03，B13 的 A11Y-01、BROWSER-01、BROWSER-02、WEB-04，B14 的 WEB-05、NET-01、SEC-01、SEC-02，B15 的 SEC-04、SEC-03、SEC-05、TS-04，B16 的 TS-05、TS-06、TS-07、TS-08、TS-09，B17 的 IDENTITY-01、IDENTITY-02、PRIVACY-01、PRIVACY-02，B18 的 NODE-01、NODE-02、NODE-04、AIDEV-01，B19 的 AIDEV-02、AIDEV-03、BIZ-01、BIZ-02，B20 的 BIZ-03、BIZ-04、BIZ-05、BIZ-06、BIZ-07，B21 的 BIZ-08、TEST-04、RENDER-01、RENDER-02，B22 的 DATA-01、DATA-02、REALTIME-01、COMP-01，B23 的 COMP-02、UX-01、ENG-08、LINUX-01，B24 的 LINUX-02、LINUX-03、LINUX-04、DOCKER-01、DOCKER-02，B25 的 ENG-06、DEPLOY-01、OBS-01、PERF-01，B26 的 PERF-02、PERF-03、PERF-04、H5-01，B27 的 H5-02、MCP-01、AIPROD-01、AIPROD-02，B28 的 AISAFE-01、AISAFE-02、AIGOV-01、AIAPP-01、AIAPP-02，B29 的 AIAPP-03、AIAPP-04、AIAPP-05、AIUI-01，B30 的 AIAPP-06、AIAPP-07、AIAPP-08、AIAPP-09，B31 的 AIAPP-10、AIAPP-12、AIAPP-13、AGENT-01，B32 的 AGENT-03、AGENT-04、AGENT-05、AGENT-06、AGENT-07，B33 的 AGENT-08、AGENT-09、AGENT-10、AIDEV-04，B34 的 AIDEV-07、AIDEV-10、COMPAT-01、ARCH-01，以及 B35 的 ARCH-02、ARCH-03、ARCH-04、ARCH-05、LEAD-01 和必要前置资料；其他批次不能据此宣称已完成同样的内容审校。
 
 ## 读者先得到什么
 
@@ -21,11 +21,11 @@ MDN 的 [学习内容写作指南](https://developer.mozilla.org/en-US/docs/MDN/
 ## 正文与目录怎样分工
 
 - 正文真源：`docs/knowledge/chinese-guides/*.md`。定义、解释、示例、输出和参考来源保存在正文。
-- 批次目录：[B01](../knowledge/materials/b01.json)、[B02](../knowledge/materials/b02.json)、[B03](../knowledge/materials/b03.json)、[B04](../knowledge/materials/b04.json)、[B05](../knowledge/materials/b05.json)、[B06](../knowledge/materials/b06.json)、[B07](../knowledge/materials/b07.json)、[B08](../knowledge/materials/b08.json)、[B09](../knowledge/materials/b09.json)、[B10](../knowledge/materials/b10.json)、[B11](../knowledge/materials/b11.json)、[B12](../knowledge/materials/b12.json)、[B13](../knowledge/materials/b13.json)、[B14](../knowledge/materials/b14.json)、[B15](../knowledge/materials/b15.json)、[B16](../knowledge/materials/b16.json)、[B17](../knowledge/materials/b17.json)、[B18](../knowledge/materials/b18.json)、[B19](../knowledge/materials/b19.json)、[B20](../knowledge/materials/b20.json)、[B21](../knowledge/materials/b21.json)、[B22](../knowledge/materials/b22.json)、[B23](../knowledge/materials/b23.json)、[B24](../knowledge/materials/b24.json)、[B25](../knowledge/materials/b25.json)、[B26](../knowledge/materials/b26.json)、[B27](../knowledge/materials/b27.json)、[B28](../knowledge/materials/b28.json)、[B29](../knowledge/materials/b29.json)、[B30](../knowledge/materials/b30.json)、[B31](../knowledge/materials/b31.json)、[B32](../knowledge/materials/b32.json)、[B33](../knowledge/materials/b33.json)。登记顺序、阅读问题、摘要、学习目标、直接前置、概念主要归属与跨文档关系。
+- 批次目录：[B01](../knowledge/materials/b01.json)、[B02](../knowledge/materials/b02.json)、[B03](../knowledge/materials/b03.json)、[B04](../knowledge/materials/b04.json)、[B05](../knowledge/materials/b05.json)、[B06](../knowledge/materials/b06.json)、[B07](../knowledge/materials/b07.json)、[B08](../knowledge/materials/b08.json)、[B09](../knowledge/materials/b09.json)、[B10](../knowledge/materials/b10.json)、[B11](../knowledge/materials/b11.json)、[B12](../knowledge/materials/b12.json)、[B13](../knowledge/materials/b13.json)、[B14](../knowledge/materials/b14.json)、[B15](../knowledge/materials/b15.json)、[B16](../knowledge/materials/b16.json)、[B17](../knowledge/materials/b17.json)、[B18](../knowledge/materials/b18.json)、[B19](../knowledge/materials/b19.json)、[B20](../knowledge/materials/b20.json)、[B21](../knowledge/materials/b21.json)、[B22](../knowledge/materials/b22.json)、[B23](../knowledge/materials/b23.json)、[B24](../knowledge/materials/b24.json)、[B25](../knowledge/materials/b25.json)、[B26](../knowledge/materials/b26.json)、[B27](../knowledge/materials/b27.json)、[B28](../knowledge/materials/b28.json)、[B29](../knowledge/materials/b29.json)、[B30](../knowledge/materials/b30.json)、[B31](../knowledge/materials/b31.json)、[B32](../knowledge/materials/b32.json)、[B33](../knowledge/materials/b33.json)、[B34](../knowledge/materials/b34.json)、[B35](../knowledge/materials/b35.json)。登记顺序、阅读问题、摘要、学习目标、直接前置、概念主要归属与跨文档关系。
 - 知识点入口：`docs/knowledge/knowledge-base/` 中 JavaScript/Web、TypeScript、React、Vue、工程质量与职业表达文件的对应学习资料记录。保留已有主讲义地址和名称，避免破坏既有入口与关联关系。
-- 前置与发音范围：`apps/web/scripts/pronunciation-batches.json` 的 `b01` 至 `b33`；B04、B08、B12、B16、B20、B24、B28 和 B32 各包含五篇主讲义，B05、B06、B07、B09、B10、B11、B13、B14、B15、B17、B18、B19、B21、B22、B23、B25、B26、B27、B29、B30、B31 和 B33 各包含四篇，均复用已有的独立前置入口。
+- 前置与发音范围：`apps/web/scripts/pronunciation-batches.json` 的 `b01` 至 `b35`；B04、B08、B12、B16、B20、B24、B28、B32 和 B35 各包含五篇主讲义，B05、B06、B07、B09、B10、B11、B13、B14、B15、B17、B18、B19、B21、B22、B23、B25、B26、B27、B29、B30、B31、B33 和 B34 各包含四篇，均复用已有的独立前置入口。
 
-生产构建通过 `compact-learning-catalog.ts` 去除目录对象里重复的字段名，并还原相同数据接口；开发与审校仍直接读取 JSON。增加目录字段时必须同步构建编码与还原规则并运行目录一致性检查，不能靠忽略新字段通过构建。
+生产构建通过 `compact-learning-catalog.ts` 去除目录对象里重复的字段名和同篇概念 ID 的共同前缀，并还原相同数据接口；开发与审校仍直接读取 JSON。增加目录字段时必须同步构建编码与还原规则并运行目录一致性检查，不能靠忽略新字段通过构建。
 
 目录中的 `concepts[].id` 是稳定概念标识；`heading` 对应正文中唯一的小节标题。`connections` 引用概念标识，并说明为什么值得交叉阅读。阅读器从同一份目录生成当前批次路线、阅读目标、知识连接和上一篇 / 下一篇，不另外维护一份页面标题表。
 
@@ -70,7 +70,7 @@ console.log(count + 1); // => 3
 
 标识只用于维护，阅读器的代码栏仍只显示语言。示例以现代浏览器为执行环境，异步示例显式等待完成。异常示例捕获并展示错误，不在后台留下未处理异常；涉及资源的例子优先使用内存模拟，不向读者的真实服务发请求。需要真实浏览器能力时标记 `runtime=browser`，例如 B02 的 Blob Worker 往返，并在 finally 中清理 Worker、定时器和临时 URL。带标识的 Nginx 配置以 `runtime=project` 登记，阅读器提供 Nginx 高亮；登记不代表已在 Nginx 实机执行。带标识的 Dockerfile 以 `runtime=project` 登记，只提取来源、不作为 JavaScript 执行；阅读器补充 Dockerfile 与 INI 高亮。带标识的 Bash 片段以 `runtime=project` 登记，和 PowerShell 一样不进入通用 JavaScript 执行器；没有标识的历史命令说明保持原有行为。需要展示平台差异时，单独声明前提和结果，不能让示例依赖某个未说明的控制台习惯。
 
-`learning-material-examples.mjs` 从实际正文提取代码和预期输出。`check-curated-materials.mjs` 复用有超时限制的独立 worker，核对 B01 至 B33 的通用示例；浏览器专用示例和框架项目按实际环境另行核对。这验证的是示例与标注是否一致，无法替代对概念、语言质量和知识覆盖的审校。
+`learning-material-examples.mjs` 从实际正文提取代码和预期输出。`check-curated-materials.mjs` 复用有超时限制的独立 worker，核对 B01 至 B35 的通用示例；浏览器专用示例和框架项目按实际环境另行核对。这验证的是示例与标注是否一致，无法替代对概念、语言质量和知识覆盖的审校。
 
 ## 修改后的核对顺序
 
@@ -83,7 +83,7 @@ console.log(count + 1); // => 3
 
 执行时先批量读取本批旧稿、范围与已有前置，只核对直接相关的官方变化；写完并自查后统一运行内容检查和必要构建。代表性桌面阅读与完整实验集中核对取消、状态、输入和导航；已有检查通过且没有新问题时不重复整套流程，不另写与正文脱节的测试副本。
 
-字符数下限只用于发现意外截断，不作为内容质量评分。完整检查同时包含可追溯的概念入口与实际运行结果，也需要编辑者通读中文。B01 至 B33 当前采用这种管理方式；推广到后续批次时，先逐批审校内容，再加入目录，不能批量套模板后就标记完成。
+字符数下限只用于发现意外截断，不作为内容质量评分。完整检查同时包含可追溯的概念入口与实际运行结果，也需要编辑者通读中文。B01 至 B35 当前采用这种管理方式；推广到后续批次时，先逐批审校内容，再加入目录，不能批量套模板后就标记完成。
 
 ## B01 这一版的审校重点
 
@@ -773,3 +773,45 @@ B33 于 2026-10-06 完成 AGENT-08、AGENT-09、AGENT-10、AIDEV-04 四篇重构
 桌面集中走查使用 `/private/tmp/career-b33-review/data` 隔离数据库和正文提取的 `review-race.html`：缺陷版在 B 先回、A 后回时退回 A；修复版保留 B，并拒绝继续编辑或取消后的迟到响应。编辑时草稿和焦点保留，没有真实网络保存。阅读器确认 B33 四篇路线、目录、代码显示、“已复制”反馈与代表性发音播放态。发现横向授权图文字偏小后改为纵向，重新加载确认清晰呈现；1470 px 桌面无页面横向溢出。从 AGENT-10 跳到 AGENT-09 只读回放小节时保留完整正文，标题距视口顶约 91 px，返回后恢复原 4808 px 滚动位置。查阅期间数据库仅有原 AGENT-10 记录，没有把 AGENT-09 小节位置存成整篇进度。
 
 16 个术语与本批原发音清单一致，复用现有生成脚本已生成的 WAV；macOS 环境缺少 PowerShell 与 Windows SAPI/Microsoft Zira，未重新合成或做听辨验证，未修改其他批次音频。浏览器剪贴板读取未返回内容，仅确认复制反馈。未验证真实模型评审质量、完整 MCP SDK 互操作、OAuth 服务、遥测持久化与权限、生产沙箱、DNS/重定向/并发文件竞争、服务端并发保存、移动端或读屏器。临时实验不改变正式学习记录，未部署或发布。
+
+## B34 的准入边界与架构证据
+
+2026-10-07：完成 AIDEV-07、AIDEV-10、COMPAT-01、ARCH-01 的重写与目录接入。原稿覆盖较全，但主要以原则清单展开；这一版改为从依赖建议、实际数据路径、增强失效和登录质量目标开始，逐步建立机制与证据。四篇直接前置保持不变，知识库仅更新覆盖说明，保留原学习入口、名称、考核、通过标准和耗时。
+
+| 知识点 | 新的解释与实验 | 明确的边界 |
+| --- | --- | --- |
+| AIDEV-07 | 离线依赖路径、拒绝与未知分支，连接来源、安装脚本、许可和撤回 | 摘要一致不等于选对包；pnpm 锁文件未必逐包记录 URL；安装脚本限制不等于通用沙箱 |
+| AIDEV-10 | 数据到配置的矩阵、按次判定、到期与撤销、审计字段允许列表 | 规则模拟不证明身份与网络隔离；本地模型、无训练、无保留与删除分别核验 |
+| COMPAT-01 | 独立页面观察能力缺失、初始化失败、手动测量、输入保留和资源恢复 | Baseline 不代替项目承诺；WebKit 自动化不等于 Safari 真机；合成失败不代表真实缺陷 |
+| ARCH-01 | 在线会话到回源量的敏感性、时间型错误预算、硬门槛筛选 | 所有容量、成本与故障时间线均为合成数据；未越模型预算不能证明实际 p95 达标 |
+
+B34 登记 33 个主要概念和 12 条有理由的跨篇关系。复用供应链、授权隔离、运行证据、需求追踪、观测和内存生命周期解释；关联不改成直接前置。正文登记 7 个通用 JavaScript 实验、1 个完整 HTML 页面和 1 个安装命令片段，均从实际 Markdown 提取。安装说明需要已经审查的临时项目与受控网络，不作为离线实验自动执行。
+
+官方来源于当日核对 npm、pnpm、NIST、MCP 安全资料、MDN、Web Platform Baseline、Playwright、SEI、Azure 架构原则和 Google SRE。具体协议入口固定到其版本；供应商数据条件使用教学配置，不编造真实产品的统一保证。pnpm 构建字段按适用版本说明；真实漏洞、许可结论、价格与浏览器支持仍需对应实际版本和环境。
+
+B33 构建的 JavaScript 总体积接近既有 8 MiB 预算。B34 沿用现有目录压缩插件，增加同篇概念 ID 公共前缀编码，解码后恢复原标识及全部字段；JSON 正文目录、前端读取接口与阅读器行为保持一致，不放宽预算。现有全部目录的深度一致性检查已通过。
+
+实际验证：`pnpm content:check` 通过，包含 B34 的 7 个通用示例真实输出、内部锚点、直接前置和术语资源一致性；`pnpm --filter @career-atlas/web build` 的类型检查、生产打包与原体积预算通过，全部 JavaScript 为 8,379,517 字节，小于 8 MiB。目录压缩一致性使用 `node --experimental-strip-types --test apps/web/scripts/compact-learning-catalog.test.mjs` 核对所有目录字段与关联，保持未知字段拒绝规则。内容检查期间开发 WebSocket 监听曾被环境拒绝，但全部 13 项内容测试通过且命令退出码为 0。
+
+桌面核对使用临时 SQLite 数据与正文提取的 HTML，在 macOS Chrome 1470 像素桌面视口完成。B34 四篇路线、目录、学习目标与概念入口正常；从 AIDEV-10 跳到 AIGOV-01 小节保留完整文章，返回滚动位置前后均为 3241.5；进入本批 AIDEV-07 来源小节也保留全文并处于查阅状态。临时数据库只存在正常打开的 AIDEV-10 主入口进度，没有为两次概念查阅创建目标进度。代码高亮、复制后的“已复制”反馈、Mermaid 图示和无横向整页溢出已核对。Policy Enforcement 发音按钮进入播放状态；未对系统剪贴板字节或发音听感作额外结论。
+
+兼容页面已实测自动尺寸更新、能力缺失后的手动更新、合成初始化异常、关闭清理和重新打开后的输入保留；测试文字与预览均保留。计数仅表示本例资源登记，不构成完整内存审计。没有进行 Firefox/WebKit/Safari 多引擎、移动真机、真实中文 IME、弱网请求、供应商删除与网络隔离、真实压测或区域故障演练，也未执行讲义中的外部依赖安装片段。未部署或写入正式学习记录。
+
+B34 的 16 个发音术语保持原拼写，复用原有清单和音频，资源检查通过；本环境不具备现有生成脚本所需的 Windows SAPI / Microsoft Zira，不重新合成无变化的音频。
+
+
+## B35 的架构演进与责任交接
+
+2026-10-08 完成本批内容重构与目录接入，覆盖 ARCH-02、ARCH-03、ARCH-04、ARCH-05、LEAD-01。围绕订单演进这一教学情境，将原则清单改为问题、可观察过程、变式和决定边界；五篇各自承担技术决定、迁移安全、债务治理、框架生命周期和团队责任交接的主要解释。保留既有直接前置与知识库入口、资料名称、考核、通过标准及耗时。
+
+目录登记 41 个主要概念与 15 条有阅读理由的跨篇关系，连接 B34 的架构底线、依赖核验，以及本批的写入权、草稿归属、退出证据和委派权限。正文包含 5 个通用 JavaScript 实验与 1 个完整 HTML 页面；全部由原有示例机制从 Markdown 提取。路线图、ADR、债务台账与交接记录均明确为模拟案例。
+
+官方资料核对 Azure 架构决策与迁移模式、AWS transactional outbox、SEI 技术债研究、React/Vue 应用生命周期、Google 工程评审与事件响应。区分项目自定门槛和平台保证：内存复制示例不提供数据库事务，DOM 切换页面不是真实框架集成，角色与演练约定也不等于已经获得系统权限。
+
+实际验证：`pnpm content:check` 通过，核对本批 5 个通用示例的真实输出、正文锚点、直接前置图与术语资源；`pnpm --filter @career-atlas/web build` 的类型检查、生产构建和既有体积预算通过，全部 JavaScript 为 8,386,033 字节，未提高 8 MiB 预算。现有目录压缩测试核对包含 B35 的全部目录字段、概念和关系，深度一致。未增加新的测试系统。内容检查仍出现环境限制导致的开发 WebSocket 监听提示，但内容测试通过，命令退出码为 0。
+
+桌面检查使用 macOS Chrome、1470 像素视口和隔离的临时 SQLite 数据。五篇阅读入口、目录与完整正文正常，无整页横向溢出；ARCH-03 Mermaid 图示可读，代码高亮与复制后“已复制”反馈正常。Strangler Fig 发音按钮进入播放状态，未额外核验系统剪贴板字节或音频听感。从 ARCH-03 第八节查阅 ARCH-05 第五节时保留完整讲义并定位到约 92 像素处；返回前后滚动位置均为 7530。查阅后临时数据库仅有原 ARCH-03 主入口的阅读记录，未为 ARCH-05 查阅创建进度。
+
+从正文提取的 `framework-switch.html` 实测：加载中继续编辑后完成切换仍保留最新中文备注；新请求先完成、旧请求后返回时不覆盖当前视图；取消后返回被忽略；加载失败保留原视图与草稿。登记的活动视图计数保持为一，只验证示例生命周期配对。未验证真实 React/Vue 混合项目、真实网络与数据库迁移、生产发布、目标输入法组合、移动设备或完整内存审计；组织案例未进行真实授权与交接。
+
+B35 的 20 个术语保持原有拼写，清单与音频资源一致并继续复用；修正 ADR 的双语标记，使 Architecture Decision Record 正常关联原音频。现有生成脚本依赖 Windows SAPI / Microsoft Zira，本环境不具备该运行条件，未对无变化的术语重新合成。工作区原有 B34 四篇正文和批次目录经初始散列对照保持不变，正式学习数据未修改。
