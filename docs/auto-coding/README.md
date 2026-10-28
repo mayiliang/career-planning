@@ -16,6 +16,7 @@ GitHub Issue 使用 `auto-coding` 标签，状态标签为 `auto:ready`、`auto:
 
 - 服务标识：`com.careeratlas.auto-coding`
 - 运行目录：`~/Library/Application Support/CareerPlanningAutoCoding`
+- 独立执行仓库：运行目录中的 `repository/`，检出 `auto_coding`；原项目目录继续用于日常工作。
 - 配置：`config.json`（工作目录、仓库、Codex 路径）
 - 检查点：`state.json`
 - 阶段输入/结果与事件：`runs/`
@@ -24,6 +25,8 @@ GitHub Issue 使用 `auto-coding` 标签，状态标签为 `auto:ready`、`auto:
 - 状态事件：`events.jsonl`
 
 执行器和角色规范安装为独立副本，产品开发不自动重部署执行器。GitHub 凭据通过 Git 已配置的 credential helper 在内存使用，不写入源码、运行配置或日志。配置和运行记录仅本机用户可读。
+
+本机验证发现，引用 `Documents` 中原仓库 Git 元数据的 worktree 在后台进程中会超时。因此实际运行采用完整独立克隆，Git 元数据与工作文件均位于应用支持目录。自动化使用独立 `bin/` 中的 Codex 与 pnpm 路径，不依赖存在问题的全局启动包装脚本。
 
 ## 查看、暂停、恢复
 
