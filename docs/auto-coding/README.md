@@ -28,6 +28,8 @@ GitHub Issue 使用 `auto-coding` 标签，状态标签为 `auto:ready`、`auto:
 
 本机验证发现，引用 `Documents` 中原仓库 Git 元数据的 worktree 在后台进程中会超时。因此实际运行采用完整独立克隆，Git 元数据与工作文件均位于应用支持目录。自动化使用独立 `bin/` 中的 Codex 与 pnpm 路径，不依赖存在问题的全局启动包装脚本。
 
+GitHub API 会读取 `git config --get-urlmatch http.proxy` 并沿用该仓库的 HTTP/HTTPS 代理；没有配置时使用系统默认代理发现。这样后台环境不依赖终端临时代理变量，也不关闭 TLS 证书验证。
+
 ## 查看、暂停、恢复
 
 在项目目录运行：

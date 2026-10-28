@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 SPEC = importlib.util.spec_from_file_location('auto_coding', Path(__file__).with_name('auto_coding.py'))
 m = importlib.util.module_from_spec(SPEC)
@@ -81,6 +81,21 @@ class IdempotencyTests(unittest.TestCase):
         body = github.writes[0][2]
         self.assertEqual(body['labels'], ['auto-coding', 'user-label', 'auto:done'])
         self.assertEqual(body['state'], 'closed')
+
+    def test_github_api_reuses_git_proxy_without_shell_environment(self):
+        github = m.GitHub('owner/repo', '/tmp')
+        result = subprocess.CompletedProcess([], 0, 'http://127.0.0.1:7890\n', '')
+        with patch.object(m.subprocess, 'run', return_value=result), patch.object(m.urllib.request, 'build_opener') as build:
+            github.opener()
+            handler = build.call_args.args[0]
+            self.assertEqual(handler.proxies, {'http': 'http://127.0.0.1:7890', 'https': 'http://127.0.0.1:7890'})
+
+    def test_no_git_proxy_preserves_system_proxy_discovery(self):
+        github = m.GitHub('owner/repo', '/tmp')
+        result = subprocess.CompletedProcess([], 1, '', '')
+        with patch.object(m.subprocess, 'run', return_value=result), patch.object(m.urllib.request, 'build_opener') as build:
+            github.opener()
+            build.assert_called_once_with()
 
 
 class RepositoryTests(unittest.TestCase):

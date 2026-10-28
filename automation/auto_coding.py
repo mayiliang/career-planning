@@ -148,6 +148,21 @@ class GitHub:
             raise ValueError('Invalid repository')
         self.repo, self.cwd = repo, cwd
 
+    def opener(self):
+        # launchd does not inherit a shell's proxy environment. Respect the same
+        # repository-scoped HTTP proxy that makes authenticated Git work here.
+        result = subprocess.run(['git', 'config', '--get-urlmatch', 'http.proxy',
+                                 'https://github.com/' + self.repo], cwd=self.cwd,
+                                capture_output=True, text=True, timeout=10)
+        if result.returncode not in (0, 1):
+            raise RuntimeError('无法读取 Git 的 GitHub 代理配置')
+        proxy = result.stdout.strip()
+        if not proxy:
+            return urllib.request.build_opener()
+        if urllib.parse.urlsplit(proxy).scheme not in ('http', 'https'):
+            raise Attention('GitHub API 需要 HTTP/HTTPS 代理；当前 Git 代理协议不受 urllib 支持')
+        return urllib.request.build_opener(urllib.request.ProxyHandler({'http': proxy, 'https': proxy}))
+
     def token(self):
         # Reuse Git's credential helper in memory; never store or print credentials.
         result = subprocess.run(['git', '-c', 'credential.interactive=never', 'credential', 'fill'],
@@ -167,7 +182,7 @@ class GitHub:
                        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'career-auto-coding',
                        'Content-Type': 'application/json'})
         try:
-            with urllib.request.urlopen(req, timeout=45) as response:
+            with self.opener().open(req, timeout=45) as response:
                 return json.load(response) if response.status != 204 else None
         except urllib.error.HTTPError as error:
             if error.code == 401:
