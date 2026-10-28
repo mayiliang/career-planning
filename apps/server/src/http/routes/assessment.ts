@@ -1,10 +1,13 @@
 /**
- * 考核 API 路由
- * 
- * Phase 5 实现：考核会话的创建、查询、提交、评分接口
- * Phase 7 实现：代码题执行接口
+ * 考核 API：请求校验、业务调用与公开 DTO 投影。
+ * 流式评分的最终结果与普通 JSON 接口遵循同一合同。
  */
 import type { FastifyPluginCallback } from 'fastify';
+import {
+  toAssessmentSessionDto, toAssessmentQuestionDto, toAssessmentAnswerDto,
+  toAssessmentResultDto, toAssessmentGradeDto, toAssessmentRegradeDto,
+} from '../dto/assessment.js';
+import { openEventStream } from '../sse.js';
 import { db } from '../../db/index.js';
 import { assessmentResults } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
@@ -18,7 +21,7 @@ import {
   revealAssessmentHint,
   revealAssessmentHintStream,
 } from '../../services/assessment.service.js';
-import { gradeAssessment, regradeAssessment } from '../../services/grading.service.js';
+import { GradingStateError, gradeAssessment, regradeAssessment } from '../../services/grading.service.js';
 import {
   executeCodeQuestion,
   getExecutorStatusInfo,
@@ -26,7 +29,7 @@ import {
 import { getAIStatus } from '../../ai/index.js';
 import {
   CreateAssessmentRequestSchema,
-  AssessmentSessionSchema,
+  AssessmentCreationResponseSchema,
 } from '@career-atlas/shared';
 import { z } from 'zod';
 
@@ -58,7 +61,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     schema: {
       body: CreateAssessmentRequestSchema,
       response: {
-        200: AssessmentSessionSchema,
+        200: AssessmentCreationResponseSchema,
       },
     },
   }, async (request, reply) => {
@@ -75,27 +78,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       });
       
       const session = creation.session;
-      return reply.ok({
-        id: session.id,
-        knowledgePointCode: session.knowledgePointCode,
-        assessmentType: session.assessmentType,
-        status: session.status,
-        durationMinutes: session.durationMinutes,
-        masteryStage: session.masteryStage,
-        challengeMode: session.challengeMode,
-        challengeProfile: session.challengeProfile,
-        assistanceLevel: session.assistanceLevel,
-        startedAt: session.startedAt,
-        submittedAt: session.submittedAt,
-        gradedAt: session.gradedAt,
-        resultId: session.resultId,
-        provider: session.provider,
-        model: session.model,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-        resumedExisting: creation.resumedExisting,
-        resumeMessage: creation.resumeMessage,
-      });
+      return reply.ok({ ...toAssessmentSessionDto(session), resumedExisting: creation.resumedExisting, resumeMessage: creation.resumeMessage });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.error('VALIDATION_ERROR', message);
@@ -110,45 +93,9 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       const { session, questions, answers } = await getAssessmentSession(id);
       
       return reply.ok({
-        session: {
-          id: session.id,
-          knowledgePointCode: session.knowledgePointCode,
-          assessmentType: session.assessmentType,
-          status: session.status,
-          durationMinutes: session.durationMinutes,
-          masteryStage: session.masteryStage,
-          challengeMode: session.challengeMode,
-          challengeProfile: session.challengeProfile,
-          assistanceLevel: session.assistanceLevel,
-          startedAt: session.startedAt,
-          submittedAt: session.submittedAt,
-          gradedAt: session.gradedAt,
-          resultId: session.resultId,
-          provider: session.provider,
-          model: session.model,
-          createdAt: session.createdAt,
-          updatedAt: session.updatedAt,
-        },
-        questions: questions.map(q => ({
-          id: q.id,
-          sessionId: q.sessionId,
-          questionType: q.questionType,
-          dimension: q.dimension,
-          questionContent: q.questionContent,
-          maxScore: q.maxScore,
-          orderIndex: q.orderIndex,
-          createdAt: q.createdAt,
-        })),
-        answers: answers.map(a => ({
-          id: a.id,
-          sessionId: a.sessionId,
-          questionId: a.questionId,
-          answerContent: a.answerContent,
-          deterministicResult: a.deterministicResult,
-          answeredAt: a.answeredAt,
-          createdAt: a.createdAt,
-          updatedAt: a.updatedAt,
-        })),
+        session: toAssessmentSessionDto(session),
+        questions: questions.map(toAssessmentQuestionDto),
+        answers: answers.map(toAssessmentAnswerDto),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -163,25 +110,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     try {
       const session = await startAssessmentSession(id);
       
-      return reply.ok({
-        id: session.id,
-        knowledgePointCode: session.knowledgePointCode,
-        assessmentType: session.assessmentType,
-        status: session.status,
-        durationMinutes: session.durationMinutes,
-        masteryStage: session.masteryStage,
-        challengeMode: session.challengeMode,
-        challengeProfile: session.challengeProfile,
-        assistanceLevel: session.assistanceLevel,
-        startedAt: session.startedAt,
-        submittedAt: session.submittedAt,
-        gradedAt: session.gradedAt,
-        resultId: session.resultId,
-        provider: session.provider,
-        model: session.model,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-      });
+      return reply.ok(toAssessmentSessionDto(session));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.error('STATE_TRANSITION_INVALID', message);
@@ -195,16 +124,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       const body = SaveAssessmentAnswerSchema.parse(request.body);
       const answer = await saveAnswer(id, questionId, body.answerContent, body.deterministicResult);
       
-      return reply.ok({
-        id: answer.id,
-        sessionId: answer.sessionId,
-        questionId: answer.questionId,
-        answerContent: answer.answerContent,
-        deterministicResult: answer.deterministicResult,
-        answeredAt: answer.answeredAt,
-        createdAt: answer.createdAt,
-        updatedAt: answer.updatedAt,
-      });
+      return reply.ok(toAssessmentAnswerDto(answer));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.error('VALIDATION_ERROR', message);
@@ -218,25 +138,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     try {
       const session = await submitAssessmentSession(id);
       
-      return reply.ok({
-        id: session.id,
-        knowledgePointCode: session.knowledgePointCode,
-        assessmentType: session.assessmentType,
-        status: session.status,
-        durationMinutes: session.durationMinutes,
-        masteryStage: session.masteryStage,
-        challengeMode: session.challengeMode,
-        challengeProfile: session.challengeProfile,
-        assistanceLevel: session.assistanceLevel,
-        startedAt: session.startedAt,
-        submittedAt: session.submittedAt,
-        gradedAt: session.gradedAt,
-        resultId: session.resultId,
-        provider: session.provider,
-        model: session.model,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-      });
+      return reply.ok(toAssessmentSessionDto(session));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.error('STATE_TRANSITION_INVALID', message);
@@ -254,65 +156,18 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         provider: body?.provider,
       });
       
-      return reply.ok({
-        session: {
-          id: result.session.id,
-          knowledgePointCode: result.session.knowledgePointCode,
-          assessmentType: result.session.assessmentType,
-          status: result.session.status,
-          durationMinutes: result.session.durationMinutes,
-          masteryStage: result.session.masteryStage,
-          challengeMode: result.session.challengeMode,
-          challengeProfile: result.session.challengeProfile,
-          assistanceLevel: result.session.assistanceLevel,
-          startedAt: result.session.startedAt,
-          submittedAt: result.session.submittedAt,
-          gradedAt: result.session.gradedAt,
-          resultId: result.session.resultId,
-          provider: result.session.provider,
-          model: result.session.model,
-          createdAt: result.session.createdAt,
-          updatedAt: result.session.updatedAt,
-        },
-        result: {
-          id: result.result.id,
-          sessionId: result.result.sessionId,
-          principlesScore: result.result.principlesScore,
-          practiceScore: result.result.practiceScore,
-          troubleshootingScore: result.result.troubleshootingScore,
-          communicationScore: result.result.communicationScore,
-          totalScore: result.result.totalScore,
-          verdict: result.result.verdict,
-          confidence: result.result.confidence,
-          criticalFailures: result.result.criticalFailures,
-          weaknesses: result.result.weaknesses,
-          feedback: result.result.feedback,
-          createdAt: result.result.createdAt,
-        },
-        knowledgePointUpdated: result.knowledgePointUpdated,
-        retestEventCreated: result.retestEventCreated,
-        reviewEventCreated: result.reviewEventCreated,
-      });
+      return reply.ok(toAssessmentGradeDto(result));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       const code = message.includes('DEEPSEEK_API_KEY') ? 'AI_NOT_CONFIGURED' : 'AI_GRADING_FAILED';
+      if (error instanceof GradingStateError) return reply.error('STATE_TRANSITION_INVALID', message, error.statusCode);
       return reply.error(code, message, code === 'AI_NOT_CONFIGURED' ? 400 : 502);
     }
   });
 
   app.post('/api/v1/assessments/:id/grade/stream', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const controller = new AbortController();
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
-    });
-    reply.raw.flushHeaders();
-    const send = (event: string, data: unknown) => {
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    const { signal, send, close } = openEventStream(reply);
     try {
       send('start', { id });
       const grade = await gradeAssessment(
@@ -320,13 +175,13 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         (message, receivedChars, thinkingDelta) => thinkingDelta
           ? send('thinking', { delta: thinkingDelta })
           : send('progress', { message, receivedChars }),
-        controller.signal,
+        signal,
       );
-      send('done', { grade });
+      send('done', { grade: toAssessmentGradeDto(grade) });
     } catch (reason) {
-      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 判题失败' });
+      if (!signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 判题失败' });
     } finally {
-      if (!reply.raw.writableEnded) reply.raw.end();
+      close();
     }
   });
 
@@ -334,46 +189,18 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     const { id } = request.params as { id: string };
     try {
       const result = await regradeAssessment(id);
-      return reply.ok({
-        result: {
-          id: result.result.id,
-          sessionId: result.result.sessionId,
-          principlesScore: result.result.principlesScore,
-          practiceScore: result.result.practiceScore,
-          troubleshootingScore: result.result.troubleshootingScore,
-          communicationScore: result.result.communicationScore,
-          totalScore: result.result.totalScore,
-          verdict: result.result.verdict,
-          confidence: result.result.confidence,
-          criticalFailures: result.result.criticalFailures,
-          weaknesses: result.result.weaknesses,
-          feedback: result.result.feedback,
-          createdAt: result.result.createdAt,
-        },
-        knowledgePointUpdated: result.knowledgePointUpdated,
-        retestEventCreated: result.retestEventCreated,
-        reviewEventCreated: result.reviewEventCreated,
-      });
+      return reply.ok(toAssessmentRegradeDto(result));
     } catch (error) {
       const message = error instanceof Error ? error.message : '重新判题失败';
       const code = message.includes('DEEPSEEK_API_KEY') ? 'AI_NOT_CONFIGURED' : 'AI_GRADING_FAILED';
+      if (error instanceof GradingStateError) return reply.error('STATE_TRANSITION_INVALID', message, error.statusCode);
       return reply.error(code, message, code === 'AI_NOT_CONFIGURED' ? 400 : 502);
     }
   });
 
   app.post('/api/v1/assessments/:id/regrade/stream', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const controller = new AbortController();
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
-    });
-    reply.raw.flushHeaders();
-    const send = (event: string, data: unknown) => {
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    const { signal, send, close } = openEventStream(reply);
     try {
       send('start', { id });
       const grade = await regradeAssessment(
@@ -381,13 +208,13 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         (message, receivedChars, thinkingDelta) => thinkingDelta
           ? send('thinking', { delta: thinkingDelta })
           : send('progress', { message, receivedChars }),
-        controller.signal,
+        signal,
       );
-      send('done', { grade });
+      send('done', { grade: toAssessmentRegradeDto(grade) });
     } catch (reason) {
-      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '重新判题失败' });
+      if (!signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '重新判题失败' });
     } finally {
-      if (!reply.raw.writableEnded) reply.raw.end();
+      close();
     }
   });
 
@@ -404,19 +231,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
   app.post('/api/v1/assessments/:id/questions/:questionId/hints/stream', async (request, reply) => {
     const { id, questionId } = request.params as { id: string; questionId: string };
     const body = z.object({ kind: z.enum(['EXPLAIN', 'HINT', 'DECOMPOSE', 'OUTLINE', 'STARTER', 'SIMILAR_EXAMPLE', 'FULL_ANSWER']) }).parse(request.body);
-    const controller = new AbortController();
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    });
-    reply.raw.flushHeaders();
-    const send = (event: string, data: unknown) => {
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    const { signal, send, close } = openEventStream(reply);
     try {
       send('start', { questionId, kind: body.kind });
       const hint = await revealAssessmentHintStream(
@@ -424,14 +239,14 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
         questionId,
         body.kind,
         (delta) => send('delta', { delta }),
-        controller.signal,
+        signal,
         (delta) => send('thinking', { delta }),
       );
       send('done', { hint });
     } catch (reason) {
-      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '无法提供提示' });
+      if (!signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '无法提供提示' });
     } finally {
-      if (!reply.raw.writableEnded) reply.raw.end();
+      close();
     }
   });
   
@@ -453,21 +268,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
       return reply.error('NOT_FOUND', 'Result not found');
     }
     
-    return reply.ok({
-      id: result.id,
-      sessionId: result.sessionId,
-      principlesScore: result.principlesScore,
-      practiceScore: result.practiceScore,
-      troubleshootingScore: result.troubleshootingScore,
-      communicationScore: result.communicationScore,
-      totalScore: result.totalScore,
-      verdict: result.verdict,
-      confidence: result.confidence,
-      criticalFailures: result.criticalFailures,
-      weaknesses: result.weaknesses,
-      feedback: result.feedback,
-      createdAt: result.createdAt,
-    });
+    return reply.ok(toAssessmentResultDto(result));
   });
   
   // ===== POST /api/v1/assessments/:id/cancel - 取消考核 =====
@@ -477,25 +278,7 @@ export const assessmentRoutes: FastifyPluginCallback = (app, _options, done) => 
     try {
       const session = await cancelAssessmentSession(id);
       
-      return reply.ok({
-        id: session.id,
-        knowledgePointCode: session.knowledgePointCode,
-        assessmentType: session.assessmentType,
-        status: session.status,
-        durationMinutes: session.durationMinutes,
-        masteryStage: session.masteryStage,
-        challengeMode: session.challengeMode,
-        challengeProfile: session.challengeProfile,
-        assistanceLevel: session.assistanceLevel,
-        startedAt: session.startedAt,
-        submittedAt: session.submittedAt,
-        gradedAt: session.gradedAt,
-        resultId: session.resultId,
-        provider: session.provider,
-        model: session.model,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
-      });
+      return reply.ok(toAssessmentSessionDto(session));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.error('STATE_TRANSITION_INVALID', message);

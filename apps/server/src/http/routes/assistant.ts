@@ -1,3 +1,4 @@
+import { openEventStream } from '../sse.js';
 import type { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
 import {
@@ -58,29 +59,9 @@ export const assistantRoutes: FastifyPluginCallback = (app, _options, done) => {
     let webSearchUsed = false;
     let firstTokenMs: number | undefined;
     let completed = false;
-    let clientDisconnected = false;
     let errorCode: string | undefined;
     let errorMessage: string | undefined;
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    });
-    reply.raw.flushHeaders?.();
-    const controller = new AbortController();
-    const abortFromRequest = () => {
-      clientDisconnected = true;
-      controller.abort();
-    };
-    const abortFromReply = () => {
-      if (reply.raw.writableEnded) return;
-      clientDisconnected = true;
-      controller.abort();
-    };
-    request.raw.once('aborted', abortFromRequest);
-    reply.raw.once('close', abortFromReply);
+    const stream = openEventStream(reply);
     const send = (event: string, data: Record<string, unknown>) => {
       if (event === 'diagnostic') {
         if (typeof data.stage === 'string') stage = data.stage;
@@ -101,24 +82,24 @@ export const assistantRoutes: FastifyPluginCallback = (app, _options, done) => {
         stage = 'COMPLETE';
         if (typeof data.contextCharacterCount === 'number') contextCharacterCount = data.contextCharacterCount;
       }
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify({ incidentId, ...data })}\n\n`);
+      stream.send(event, { incidentId, ...data });
     };
     send('diagnostic', { stage, elapsedMs: 0 });
     const heartbeat = setInterval(() => {
       send('heartbeat', { stage, elapsedMs: Date.now() - startedAtMs });
     }, 5_000);
     try {
-      await runAssistant(body, send, controller.signal);
+      await runAssistant(body, send, stream.signal);
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'AI 助手暂时无法完成回答';
-      errorCode = clientDisconnected
+      errorCode = stream.signal.aborted
         ? 'CLIENT_DISCONNECTED'
         : /超时/u.test(errorMessage)
           ? 'AI_TIMEOUT'
           : /AI 服务/u.test(errorMessage)
             ? 'AI_PROVIDER_ERROR'
             : 'ASSISTANT_ERROR';
-      if (!clientDisconnected) {
+      if (!stream.signal.aborted) {
         send('error', {
           message: errorMessage,
           code: errorCode,
@@ -130,13 +111,11 @@ export const assistantRoutes: FastifyPluginCallback = (app, _options, done) => {
       request.log.error({ err: error, incidentId, stage, errorCode }, 'Atlas AI request failed');
     } finally {
       clearInterval(heartbeat);
-      request.raw.off('aborted', abortFromRequest);
-      reply.raw.off('close', abortFromReply);
       const diagnostic: AssistantDiagnosticRecord = {
         incidentId,
         startedAt,
         finishedAt: new Date().toISOString(),
-        outcome: completed ? 'SUCCESS' : clientDisconnected ? 'ABORTED' : 'ERROR',
+        outcome: completed ? 'SUCCESS' : stream.signal.aborted ? 'ABORTED' : 'ERROR',
         mode: body.mode,
         route: body.page.route,
         stage,
@@ -153,7 +132,7 @@ export const assistantRoutes: FastifyPluginCallback = (app, _options, done) => {
         ...(errorMessage ? { errorMessage } : {}),
       };
       recordAssistantDiagnostic(diagnostic);
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
+      stream.close();
     }
   });
   done();

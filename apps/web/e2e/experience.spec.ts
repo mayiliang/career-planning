@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { expectMaterialPronunciations, playFirstPronunciation } from './helpers/pronunciation';
+
 async function mockAIReady(page: Page) {
   await page.route('**/api/v1/system/ai/status', async (route) => {
     await route.fulfill({
@@ -132,7 +134,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(materialLink).toHaveAttribute('href', '/knowledge/materials/js-04-async-promise-browser-event-loop.md/js-04');
     await materialLink.click();
     await expect(page).toHaveURL(/\/knowledge\/materials\/js-04-async-promise-browser-event-loop\.md\/js-04$/);
-    await expect(page.getByText(/站内中文讲义.*JS-04/)).toBeVisible();
+    await expect(page.locator('.material-hero')).toContainText(/B02.*第 4 \/ 4 篇.*JS-04/);
     await expect(page.getByRole('heading', { name: /JS-04/ }).first()).toBeVisible();
     await expect(page.getByText(/任务、微任务|事件循环/).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: '学习前先确认' })).toBeVisible();
@@ -215,26 +217,7 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
+      await expectMaterialPronunciations(page, materialPath);
     }
   });
 
@@ -250,33 +233,11 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/cs-01-complexity-scale-engineering-cost.md/cs-01');
-    const pronunciation = page.getByRole('button', { name: '播放“time complexity”的美式发音' }).first();
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b02\/[a-f0-9]+\.wav$/.test(response.url()));
-    await pronunciation.click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b02');
   });
 
   test('B03 四份独立主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -288,33 +249,11 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05');
-    const pronunciation = page.getByRole('button', { name: '播放“rejection propagation”的美式发音' }).first();
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b03\/[a-f0-9]+\.wav$/.test(response.url()));
-    await pronunciation.click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b03');
   });
 
   test('B04～B08 二十二份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -344,27 +283,7 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.setViewportSize({ width: 1280, height: 720 });
@@ -385,10 +304,7 @@ test.describe.serial('核心使用体验', () => {
     expect(mediumLayout.hasOverflow).toBe(false);
 
     await page.goto('/knowledge/materials/vue-11-nuxt-rendering-data-performance.md/vue-11');
-    const pronunciation = page.getByRole('button', { name: '播放“server-side rendering”的美式发音' }).first();
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b08\/[a-f0-9]+\.wav$/.test(response.url()));
-    await pronunciation.click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b08');
   });
 
   test('B09～B12 十七份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -413,34 +329,11 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/career-02-architecture-diagrams-boundaries-adrs.md/career-02');
-    const pronunciation = page.getByRole('button', { name: '播放“architecture decision record”的美式发音' }).first();
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b12\/[a-f0-9]+\.wav$/.test(response.url()));
-    await pronunciation.click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b12');
   });
 
   test('B13～B16 十七份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -465,34 +358,11 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/sec-03-webauthn-passkeys-authentication.md/sec-03');
-    const pronunciation = page.getByRole('button', { name: '播放“passkey”的美式发音' }).first();
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b15\/[a-f0-9]+\.wav$/.test(response.url()));
-    await pronunciation.click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b15');
   });
 
   test('B17 四份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -504,34 +374,11 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      expect(await page.locator('.pronunciation-button').count(), materialPath).toBeGreaterThan(0);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/identity-02-oauth-oidc-pkce-security.md/identity-02');
-    const pronunciation = page.getByRole('button', { name: '播放“Authorization Code”的美式发音' }).first();
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b17\/[a-f0-9]+\.wav$/.test(response.url()));
-    await pronunciation.click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b17');
   });
 
   test('B18～B19 八份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -547,40 +394,14 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      await expect(page.locator('.pronunciation-button')).toHaveCount(4);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/node-01-runtime-event-loop-nonblocking-io.md/node-01');
-    const b18Pronunciation = page.getByRole('button', { name: '播放“Event Loop”的美式发音' }).first();
-    const b18Audio = page.waitForResponse((response) => /\/pronunciation\/b18\/[a-f0-9]+\.wav$/.test(response.url()));
-    await b18Pronunciation.click();
-    expect([200, 206]).toContain((await b18Audio).status());
+    await playFirstPronunciation(page, 'b18');
 
     await page.goto('/knowledge/materials/aidev-02-context-engineering-repository-instructions.md/aidev-02');
-    const b19Pronunciation = page.getByRole('button', { name: '播放“Context Engineering”的美式发音' }).first();
-    const b19Audio = page.waitForResponse((response) => /\/pronunciation\/b19\/[a-f0-9]+\.wav$/.test(response.url()));
-    await b19Pronunciation.click();
-    expect([200, 206]).toContain((await b19Audio).status());
+    await playFirstPronunciation(page, 'b19');
   });
 
   test('B20～B24 二十二份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -610,41 +431,19 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      await expect(page.locator('.pronunciation-button')).toHaveCount(4);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     const samples = [
-      ['/knowledge/materials/biz-03-rbac-abac-data-permissions.md/biz-03', 'Role Based Access Control', 'b20'],
-      ['/knowledge/materials/biz-08-requirement-acceptance-traceability.md/biz-08', 'Traceability', 'b21'],
-      ['/knowledge/materials/data-01-server-state-cache-keys-invalidation-deduplication.md/data-01', 'Server State', 'b22'],
-      ['/knowledge/materials/comp-02-controlled-uncontrolled-state-imperative.md/comp-02', 'Single Source of Truth', 'b23'],
-      ['/knowledge/materials/linux-02-process-port-log-network-diagnostics.md/linux-02', 'Process', 'b24'],
+      ['/knowledge/materials/biz-03-rbac-abac-data-permissions.md/biz-03', 'b20'],
+      ['/knowledge/materials/biz-08-requirement-acceptance-traceability.md/biz-08', 'b21'],
+      ['/knowledge/materials/data-01-server-state-cache-keys-invalidation-deduplication.md/data-01', 'b22'],
+      ['/knowledge/materials/comp-02-controlled-uncontrolled-state-imperative.md/comp-02', 'b23'],
+      ['/knowledge/materials/linux-02-process-port-log-network-diagnostics.md/linux-02', 'b24'],
     ] as const;
-    for (const [materialPath, term, batch] of samples) {
+    for (const [materialPath, batch] of samples) {
       await page.goto(materialPath);
-      const audioResponse = page.waitForResponse((response) => new RegExp(`/pronunciation/${batch}/[a-f0-9]+\\.wav$`).test(response.url()));
-      await page.getByRole('button', { name: `播放“${term}”的美式发音` }).first().click();
-      expect([200, 206]).toContain((await audioResponse).status());
+      await playFirstPronunciation(page, batch);
     }
   });
 
@@ -665,39 +464,17 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      await expect(page.locator('.pronunciation-button')).toHaveCount(4);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     const samples = [
-      ['/knowledge/materials/eng-06-ci-cd-artifact-promotion-release-rollback.md/eng-06', 'Continuous Integration', 'b25'],
-      ['/knowledge/materials/perf-02-network-resource-loading-cache-optimization.md/perf-02', 'Critical Rendering Path', 'b26'],
-      ['/knowledge/materials/mcp-01-server-tools-resources-prompts-schema.md/mcp-01', 'Model Context Protocol', 'b27'],
+      ['/knowledge/materials/eng-06-ci-cd-artifact-promotion-release-rollback.md/eng-06', 'b25'],
+      ['/knowledge/materials/perf-02-network-resource-loading-cache-optimization.md/perf-02', 'b26'],
+      ['/knowledge/materials/mcp-01-server-tools-resources-prompts-schema.md/mcp-01', 'b27'],
     ] as const;
-    for (const [materialPath, term, batch] of samples) {
+    for (const [materialPath, batch] of samples) {
       await page.goto(materialPath);
-      const audioResponse = page.waitForResponse((response) => new RegExp(`/pronunciation/${batch}/[a-f0-9]+\\.wav$`).test(response.url()));
-      await page.getByRole('button', { name: `播放“${term}”的美式发音` }).first().click();
-      expect([200, 206]).toContain((await audioResponse).status());
+      await playFirstPronunciation(page, batch);
     }
   });
 
@@ -711,33 +488,11 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      await expect(page.locator('.pronunciation-button')).toHaveCount(4);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     await page.goto('/knowledge/materials/aisafe-01-output-validation-content-safety-guardrails.md/aisafe-01');
-    const audioResponse = page.waitForResponse((response) => /\/pronunciation\/b28\/[a-f0-9]+\.wav$/.test(response.url()));
-    await page.getByRole('button', { name: '播放“Guardrail”的美式发音' }).first().click();
-    expect([200, 206]).toContain((await audioResponse).status());
+    await playFirstPronunciation(page, 'b28');
   });
 
   test('B29～B32 十七份主讲义只为关键名词提供英文发音', async ({ page }) => {
@@ -762,40 +517,18 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      await expect(page.locator('.pronunciation-button')).toHaveCount(4);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     const samples = [
-      ['/knowledge/materials/aiapp-03-structured-output-schema-validation.md/aiapp-03', 'Structured Output', 'b29'],
-      ['/knowledge/materials/aiapp-06-rag-citations-source-trust.md/aiapp-06', 'Retrieval-Augmented Generation', 'b30'],
-      ['/knowledge/materials/agent-01-loop-planning-stopping-recovery.md/agent-01', 'Agent Loop', 'b31'],
-      ['/knowledge/materials/agent-03-mcp-transport-stateless-state-versioning.md/agent-03', 'Streamable HTTP', 'b32'],
+      ['/knowledge/materials/aiapp-03-structured-output-schema-validation.md/aiapp-03', 'b29'],
+      ['/knowledge/materials/aiapp-06-rag-citations-source-trust.md/aiapp-06', 'b30'],
+      ['/knowledge/materials/agent-01-loop-planning-stopping-recovery.md/agent-01', 'b31'],
+      ['/knowledge/materials/agent-03-mcp-transport-stateless-state-versioning.md/agent-03', 'b32'],
     ] as const;
-    for (const [materialPath, term, batch] of samples) {
+    for (const [materialPath, batch] of samples) {
       await page.goto(materialPath);
-      const audioResponse = page.waitForResponse((response) => new RegExp(`/pronunciation/${batch}/[a-f0-9]+\\.wav$`).test(response.url()));
-      await page.getByRole('button', { name: `播放“${term}”的美式发音` }).first().click();
-      expect([200, 206]).toContain((await audioResponse).status());
+      await playFirstPronunciation(page, batch);
     }
   });
 
@@ -817,39 +550,17 @@ test.describe.serial('核心使用体验', () => {
     ];
 
     for (const materialPath of materials) {
-      await page.goto(materialPath);
-      await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
-      await expect(page.locator('.pronunciation-button')).toHaveCount(4);
-      await expect(page.locator('pre .pronunciation-button')).toHaveCount(0);
-      const coverage = await page.evaluate(() => {
-        const root = document.querySelector<HTMLElement>('.markdown-body')!;
-        const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-        const expected = Array.from(root.querySelectorAll<HTMLElement>('strong')).flatMap((strong) => {
-          const copy = strong.cloneNode(true) as HTMLElement;
-          copy.querySelectorAll('.pronunciation-button').forEach((button) => button.remove());
-          const value = copy.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-          const parenthetical = Array.from(value.matchAll(/[（(]([A-Za-z][A-Za-z0-9.' -]*)[）)]/g), (match) => match[1]);
-          return parenthetical.length ? parenthetical : /^[A-Za-z][A-Za-z0-9.' -]*$/.test(value) ? [value] : [];
-        }).map(normalize).sort();
-        const actual = Array.from(root.querySelectorAll<HTMLButtonElement>('.pronunciation-button'))
-          .map((button) => normalize(button.dataset.pronunciationTerm ?? ''))
-          .sort();
-        return { expected, actual };
-      });
-      expect(coverage.actual, materialPath).toEqual(coverage.expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), materialPath).toBe(true);
+      await expectMaterialPronunciations(page, materialPath);
     }
 
     const samples = [
-      ['/knowledge/materials/agent-08-tool-contract-schema-discoverability.md/agent-08', 'Tool Contract', 'b33'],
-      ['/knowledge/materials/compat-01-baseline-progressive-enhancement-device-testing.md/compat-01', 'Baseline', 'b34'],
-      ['/knowledge/materials/arch-02-technical-proposal-adr-review.md/arch-02', 'Architecture Decision Record', 'b35'],
+      ['/knowledge/materials/agent-08-tool-contract-schema-discoverability.md/agent-08', 'b33'],
+      ['/knowledge/materials/compat-01-baseline-progressive-enhancement-device-testing.md/compat-01', 'b34'],
+      ['/knowledge/materials/arch-02-technical-proposal-adr-review.md/arch-02', 'b35'],
     ] as const;
-    for (const [materialPath, term, batch] of samples) {
+    for (const [materialPath, batch] of samples) {
       await page.goto(materialPath);
-      const audioResponse = page.waitForResponse((response) => new RegExp(`/pronunciation/${batch}/[a-f0-9]+\\.wav$`).test(response.url()));
-      await page.getByRole('button', { name: `播放“${term}”的美式发音` }).first().click();
-      expect([200, 206]).toContain((await audioResponse).status());
+      await playFirstPronunciation(page, batch);
     }
   });
 
@@ -970,19 +681,21 @@ test.describe.serial('核心使用体验', () => {
     await page.goto('/knowledge/JS-01?tab=mastery');
     await expect(page.getByRole('button', { name: /M4.*稳定掌握.*至少 7 天后通过变式挑战/ })).toBeVisible();
 
-    await page.route('**/api/v1/assessments/m4-variant-session', async (route) => {
+    const sessionId = '00000000-0000-4000-8000-000000000004';
+    const questionId = '00000000-0000-4000-8000-000000000003';
+    await page.route(`**/api/v1/assessments/${sessionId}`, async (route) => {
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
           data: {
             session: {
-              id: 'm4-variant-session', knowledgePointCode: 'JS-01', assessmentType: 'RETEST', status: 'IN_PROGRESS',
+              id: sessionId, knowledgePointCode: 'JS-01', assessmentType: 'RETEST', status: 'IN_PROGRESS',
               durationMinutes: 60, masteryStage: 4, challengeMode: 'MIXED', challengeProfile: 'CODING', assistanceLevel: 0,
               startedAt: '2026-08-16T00:00:00.000Z', submittedAt: null, gradedAt: null, resultId: null,
               provider: 'fake', model: 'fake', createdAt: '2026-08-16T00:00:00.000Z', updatedAt: '2026-08-16T00:00:00.000Z',
             },
             questions: [{
-              id: 'm4-q3', sessionId: 'm4-variant-session', questionType: 'CODE_WRITE', dimension: 'practice', maxScore: 35, orderIndex: 2,
+              id: questionId, sessionId, questionType: 'CODE_WRITE', dimension: 'practice', maxScore: 35, orderIndex: 2,
               createdAt: '2026-08-16T00:00:00.000Z',
               questionContent: JSON.stringify({
                 level: '最小产出', sourceQuestion: '首考题 3（最小产出）',
@@ -1007,7 +720,7 @@ test.describe.serial('核心使用体验', () => {
       });
     });
 
-    await page.goto('/assessment/m4-variant-session');
+    await page.goto(`/assessment/${sessionId}`);
     await expect(page.getByText('M4 稳定掌握：独立完成该点已配置的延迟复测变式，不提供题目帮助。')).toBeVisible();
     await expect(page.getByText(/仅将循环声明从 `var` 改为 `let`/).first()).toBeVisible();
     await expect(page.locator('.challenge-contract')).toContainText('M4 变式故障夹具');

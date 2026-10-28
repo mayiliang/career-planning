@@ -1,3 +1,4 @@
+import { openEventStream } from '../sse.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
@@ -79,17 +80,7 @@ export async function learningRoutes(app: FastifyInstance) {
   app.post('/api/v1/learning/points/:code/practice-attempts/:activityId/validate/stream', async (request, reply) => {
     const { code, activityId } = z.object({ code: z.string().min(1), activityId: z.string().min(1) }).parse(request.params);
     const input = practiceInput.parse(request.body);
-    const controller = new AbortController();
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
-    });
-    reply.raw.flushHeaders();
-    const send = (event: string, data: unknown) => {
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-    reply.raw.on('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    const { signal, send, close } = openEventStream(reply);
     try {
       send('start', { code, activityId });
       const attempt = await validatePracticeAttempt(
@@ -99,13 +90,13 @@ export async function learningRoutes(app: FastifyInstance) {
         (message, receivedChars, thinkingDelta) => thinkingDelta
           ? send('thinking', { delta: thinkingDelta })
           : send('progress', { message, receivedChars }),
-        controller.signal,
+        signal,
       );
       send('done', { attempt });
     } catch (reason) {
-      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '练习验证失败' });
+      if (!signal.aborted) send('error', { message: reason instanceof Error ? reason.message : '练习验证失败' });
     } finally {
-      if (!reply.raw.writableEnded) reply.raw.end();
+      close();
     }
   });
 
@@ -144,21 +135,7 @@ export async function learningRoutes(app: FastifyInstance) {
 
   app.post('/api/v1/notes/:code/organize/stream', async (request, reply) => {
     const { code } = codeParams.parse(request.params);
-    const controller = new AbortController();
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    });
-    reply.raw.flushHeaders();
-    const send = (event: string, data: unknown) => {
-      if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-    reply.raw.on('close', () => {
-      if (!reply.raw.writableEnded) controller.abort();
-    });
+    const { signal, send, close } = openEventStream(reply);
     const startedAt = Date.now();
     const heartbeat = setInterval(() => {
       send('progress', { message: 'AI 仍在处理，连接保持正常', elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) });
@@ -168,23 +145,24 @@ export async function learningRoutes(app: FastifyInstance) {
       const note = await organizePointNoteStream(
         code,
         (delta) => send('delta', { delta }),
-        controller.signal,
+        signal,
         (message) => send('progress', { message, elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) }),
         (delta) => send('thinking', { delta }),
         () => send('reset', { reason: 'RETRY_FINAL_ANSWER' }),
       );
       send('done', { note });
     } catch (reason) {
-      if (!controller.signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 整理失败' });
+      if (!signal.aborted) send('error', { message: reason instanceof Error ? reason.message : 'AI 整理失败' });
     } finally {
       clearInterval(heartbeat);
-      if (!reply.raw.writableEnded) reply.raw.end();
+      close();
     }
   });
 
   app.post('/api/v1/notes/:code/accept-organized', async (request, reply) => {
     const { code } = codeParams.parse(request.params);
-    return reply.ok(acceptOrganizedNote(code));
+    const body = z.object({ expectedDraftVersionId: z.string().optional() }).parse(request.body ?? {});
+    return reply.ok(acceptOrganizedNote(code, body.expectedDraftVersionId));
   });
 
   app.put('/api/v1/learning/checkins/:date', async (request, reply) => {

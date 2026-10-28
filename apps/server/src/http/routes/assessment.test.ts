@@ -1,3 +1,4 @@
+import { configureHttpContract } from '../contract.js';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { rawDb } from '../../db/index.js';
@@ -18,27 +19,7 @@ type AssessmentDetailPayload = {
 
 function buildTestApp() {
   const app = Fastify({ logger: false });
-
-  app.setValidatorCompiler(({ schema: routeSchema }) => (data) => {
-    const schema = routeSchema as {
-      safeParse?: (input: unknown) =>
-        | { success: true; data: unknown }
-        | { success: false; error: Error };
-    };
-    if (typeof schema.safeParse !== 'function') return { value: data };
-    const result = schema.safeParse(data);
-    return result.success ? { value: result.data } : { error: result.error };
-  });
-  app.setSerializerCompiler(() => (data) => JSON.stringify(data));
-  app.decorateReply('ok', function (data: unknown) {
-    return this.send({ data, meta: { requestId: this.request.id } });
-  });
-  app.decorateReply('error', function (code: string, message: string, statusCode = 400, details?: unknown) {
-    return this.code(statusCode).send({
-      error: { code, message, retryable: false, ...(details === undefined ? {} : { details }) },
-      meta: { requestId: this.request.id },
-    });
-  });
+  configureHttpContract(app);
   app.register(assessmentRoutes);
   return app;
 }
@@ -130,6 +111,16 @@ describe('掌握挑战 HTTP 自检信任边界', () => {
     });
     expect(response.statusCode, response.body).toBe(400);
     expect(response.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+  });
+
+  it('评分状态冲突返回 409，缺失会话返回 404，不误报为模型故障', async () => {
+    const detail = await createStartedCodingSession(app);
+    const conflict = await app.inject({ method: 'POST', url: `/api/v1/assessments/${detail.session.id}/grade` });
+    expect(conflict.statusCode).toBe(409);
+    expect(conflict.json()).toMatchObject({ error: { code: 'STATE_TRANSITION_INVALID' } });
+    const missing = await app.inject({ method: 'POST', url: '/api/v1/assessments/not-a-session/grade' });
+    expect(missing.statusCode).toBe(404);
+    await app.inject({ method: 'POST', url: `/api/v1/assessments/${detail.session.id}/cancel` });
   });
 
   it('非法 JSON 被丢弃且不会阻止提交，伪造 passed 只保存为不可信记录且不会硬通过', async () => {

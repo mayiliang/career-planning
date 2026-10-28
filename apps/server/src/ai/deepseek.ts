@@ -1,3 +1,4 @@
+import { consumeSseData } from './sse.js';
 /**
  * DeepSeek Provider 实现
  * 
@@ -233,15 +234,10 @@ export class DeepSeekProvider implements AIProvider {
     response: Response,
     onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void,
   ): Promise<DeepSeekResponse> {
-    const reader = response.body!.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
     let content = '';
     let finishReason = 'stop';
     let usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-    const consume = (frame: string) => {
-      const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
-      if (!data || data === '[DONE]') return;
+    const consume = (data: string) => {
       try {
         const chunk = JSON.parse(data) as {
           choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string }; finish_reason?: string | null }>;
@@ -259,15 +255,7 @@ export class DeepSeekProvider implements AIProvider {
         if (chunk.usage) usage = chunk.usage;
       } catch { /* 忽略供应商心跳帧 */ }
     };
-    while (true) {
-      const { value, done } = await reader.read();
-      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-      const frames = buffer.split(/\r?\n\r?\n/);
-      buffer = frames.pop() ?? '';
-      for (const frame of frames) consume(frame);
-      if (done) break;
-    }
-    if (buffer.trim()) consume(buffer);
+    await consumeSseData(response.body!, consume);
     return {
       id: '', object: 'chat.completion', created: Math.floor(Date.now() / 1000), model: this.model,
       choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: finishReason }], usage,

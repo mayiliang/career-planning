@@ -102,11 +102,15 @@ test.describe('Atlas AI 可读交互', () => {
           const stream = new ReadableStream({
             start(controller) {
               controller.enqueue(encoder.encode('event: progress\ndata: {"incidentId":"req-delayed-stream","message":"上下文已就绪，正在回答"}\n\n'));
-              window.setTimeout(() => controller.enqueue(encoder.encode('event: delta\ndata: {"incidentId":"req-delayed-stream","delta":"延迟到达的回答已显示。"}\n\n')), 350);
-              window.setTimeout(() => {
-                controller.enqueue(encoder.encode('event: done\ndata: {"incidentId":"req-delayed-stream","provider":"test","model":"test","pageCharacterCount":100,"contextCharacterCount":40,"webSearchUsed":false,"elapsedMs":500}\n\n'));
-                controller.close();
-              }, 500);
+              const controls = window as Window & { releaseAssistantChunk?: (phase: 'answer' | 'done') => void };
+              controls.releaseAssistantChunk = (phase) => {
+                if (phase === 'answer') controller.enqueue(encoder.encode('event: delta\ndata: {"incidentId":"req-delayed-stream","delta":"延迟到达的回答已显示。"}\n\n'));
+                else {
+                  controller.enqueue(encoder.encode('event: done\ndata: {"incidentId":"req-delayed-stream","provider":"test","model":"test","pageCharacterCount":100,"contextCharacterCount":40,"webSearchUsed":false,"elapsedMs":500}\n\n'));
+                  controller.close();
+                  delete controls.releaseAssistantChunk;
+                }
+              };
             },
           });
           return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8' } });
@@ -120,7 +124,9 @@ test.describe('Atlas AI 可读交互', () => {
     await panel.getByRole('button', { name: '总结当前页' }).click();
 
     await expect(panel.getByText('上下文已就绪，正在回答')).toBeVisible();
+    await page.evaluate(() => (window as Window & { releaseAssistantChunk: (phase: string) => void }).releaseAssistantChunk('answer'));
     await expect(panel.getByText('延迟到达的回答已显示。')).toBeVisible({ timeout: 2_000 });
+    await page.evaluate(() => (window as Window & { releaseAssistantChunk: (phase: string) => void }).releaseAssistantChunk('done'));
     await expect(panel.getByText('使用 40 / 100 字')).toBeVisible();
     const answerFont = await panel.getByLabel('AI 助手回答').evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
     expect(answerFont).toBeGreaterThanOrEqual(15);

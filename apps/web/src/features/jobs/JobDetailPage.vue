@@ -4,14 +4,16 @@
  * 
  * Phase 6 实现：岗位信息、求职活动时间线、技能缺口管理
  */
-import { ref, onMounted } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { apiClient, type JobDetailResponse } from '../../api/client';
+import { apiClient, type JobDetailResponse, type SkillGap } from '../../api/client';
 import BaseDialog from '@/components/BaseDialog.vue';
+import { createLatestRequest } from '@/utils/latest-request';
 
 const route = useRoute();
 const router = useRouter();
-const jobId = route.params.id as string;
+const jobId = computed(() => String(route.params.id ?? ''));
+const latestLoad = createLatestRequest();
 
 // 数据
 const detail = ref<JobDetailResponse | null>(null);
@@ -43,15 +45,17 @@ const gapForm = ref({
 
 // 加载数据
 async function loadDetail() {
+  const request = latestLoad.start();
   loading.value = true;
   error.value = null;
   
   try {
-    detail.value = await apiClient.getJobDetail(jobId);
+    const result = await apiClient.getJobDetail(jobId.value, request.signal);
+    if (request.isCurrent()) detail.value = result;
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '加载失败';
+    if (request.isCurrent()) error.value = e instanceof Error ? e.message : '加载失败';
   } finally {
-    loading.value = false;
+    if (request.isCurrent()) loading.value = false;
   }
 }
 
@@ -82,10 +86,11 @@ const activityTypeLabels: Record<string, string> = {
 // 创建活动
 async function createActivity() {
   if (!activityForm.value.title) return;
+  const id = jobId.value;
   actionSaving.value = true;
   actionError.value = '';
   try {
-    await apiClient.createJobActivity(jobId, {
+    await apiClient.createJobActivity(id, {
       activityType: activityForm.value.activityType,
       title: activityForm.value.title,
       description: activityForm.value.description || undefined,
@@ -93,6 +98,7 @@ async function createActivity() {
       interviewRound: activityForm.value.interviewRound || undefined,
       interviewType: activityForm.value.interviewType || undefined,
     });
+    if (jobId.value !== id) return;
     
     showActivityForm.value = false;
     activityForm.value = {
@@ -105,24 +111,26 @@ async function createActivity() {
     };
     
     await loadDetail();
-    message.value = '求职活动已保存。';
+    if (jobId.value === id) message.value = '求职活动已保存。';
   } catch (e) {
-    actionError.value = '创建失败：' + (e instanceof Error ? e.message : '未知错误');
-  } finally { actionSaving.value = false; }
+    if (jobId.value === id) actionError.value = '创建失败：' + (e instanceof Error ? e.message : '未知错误');
+  } finally { if (jobId.value === id) actionSaving.value = false; }
 }
 
 // 创建技能缺口
 async function createGap() {
   if (!gapForm.value.knowledgePointCode) return;
+  const id = jobId.value;
   actionSaving.value = true;
   actionError.value = '';
   try {
-    await apiClient.createSkillGap(jobId, {
+    await apiClient.createSkillGap(id, {
       knowledgePointCode: gapForm.value.knowledgePointCode,
       gapLevel: gapForm.value.gapLevel,
       sourceType: gapForm.value.sourceType,
       learningAction: gapForm.value.learningAction || undefined,
     });
+    if (jobId.value !== id) return;
     
     showGapForm.value = false;
     gapForm.value = {
@@ -133,19 +141,20 @@ async function createGap() {
     };
     
     await loadDetail();
-    message.value = '技能缺口已保存。';
+    if (jobId.value === id) message.value = '技能缺口已保存。';
   } catch (e) {
-    actionError.value = '创建失败：' + (e instanceof Error ? e.message : '未知错误');
-  } finally { actionSaving.value = false; }
+    if (jobId.value === id) actionError.value = '创建失败：' + (e instanceof Error ? e.message : '未知错误');
+  } finally { if (jobId.value === id) actionSaving.value = false; }
 }
 
 // 更新技能缺口状态
-async function updateGapStatus(gapId: string, status: 'IDENTIFIED' | 'LEARNING' | 'MASTERED' | 'CLOSED') {
+async function updateGapStatus(gapId: string, status: SkillGap['status']) {
+  const id = jobId.value;
   try {
-    await apiClient.updateSkillGapStatus(jobId, gapId, status);
-    await loadDetail();
+    await apiClient.updateSkillGapStatus(id, gapId, status);
+    if (jobId.value === id) await loadDetail();
   } catch (e) {
-    actionError.value = '更新失败：' + (e instanceof Error ? e.message : '未知错误');
+    if (jobId.value === id) actionError.value = '更新失败：' + (e instanceof Error ? e.message : '未知错误');
   }
 }
 
@@ -154,7 +163,25 @@ function goBack() {
   router.push('/jobs');
 }
 
-onMounted(loadDetail);
+function changeGapStatus(gapId: string, event: Event) {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  const status = target.value;
+  if (status === 'IDENTIFIED' || status === 'LEARNING' || status === 'MASTERED' || status === 'CLOSED') {
+    void updateGapStatus(gapId, status);
+  }
+}
+
+watch(jobId, () => {
+  detail.value = null;
+  showActivityForm.value = false;
+  showGapForm.value = false;
+  actionError.value = '';
+  actionSaving.value = false;
+  message.value = '';
+  void loadDetail();
+}, { immediate: true });
+onBeforeUnmount(() => latestLoad.cancel());
 </script>
 
 <template>
@@ -262,7 +289,7 @@ onMounted(loadDetail);
             <div class="gap-status">
               <select
                 :value="gap.status"
-                @change="(e) => updateGapStatus(gap.id, (e.target as HTMLSelectElement).value as any)"
+                @change="changeGapStatus(gap.id, $event)"
               >
                 <option value="IDENTIFIED">已识别</option>
                 <option value="LEARNING">学习中</option>

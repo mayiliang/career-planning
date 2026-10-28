@@ -1,6 +1,6 @@
 # Career Atlas 开发文档
 
-更新时间：2026-08-20
+更新时间：2026-10-13
 
 Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdown 文档是知识内容真源，SQLite 保存用户状态、笔记、练习、挑战、打卡和求职数据；浏览器不持有 AI 密钥。
 
@@ -35,7 +35,8 @@ Career Atlas 是单用户、自主节奏的高级前端学习工作台。Markdow
 11. [商用品质发布检查表](commercial-release-checklist.md)
 12. [隐私与数据说明](../../PRIVACY.md)
 13. [实施状态](implementation-status.md)
-14. [学习资料的组织与写作（B01–B03）](11-learning-material-system.md)
+14. [学习资料的组织与写作（B01–B35）](11-learning-material-system.md)
+15. [代码质量审查与模块边界](12-code-quality-review.md)
 
 早期的阶段实施路线、生成提示词、固定周历任务模板和重复职业路线已经移除。Git 历史可用于追溯，当前文档只维护实际产品口径。
 

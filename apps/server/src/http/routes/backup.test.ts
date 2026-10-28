@@ -1,3 +1,4 @@
+import { configureHttpContract } from '../contract.js';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { executeImport } from '../../services/import.service.js';
@@ -8,12 +9,7 @@ type Envelope<T> = { data: T };
 
 function buildTestApp() {
   const app = Fastify({ logger: false });
-  app.decorateReply('ok', function (data: unknown) {
-    return this.send({ data, meta: { requestId: this.request.id } });
-  });
-  app.decorateReply('error', function (code: string, message: string, statusCode = 400, details?: unknown) {
-    return this.code(statusCode).send({ error: { code, message, retryable: false, details }, meta: { requestId: this.request.id } });
-  });
+  configureHttpContract(app);
   app.register(backupRoutes);
   return app;
 }

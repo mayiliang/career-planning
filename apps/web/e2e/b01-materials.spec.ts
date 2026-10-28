@@ -84,7 +84,11 @@ test('B01 桌面与手机阅读、目录和代码复制可用', async ({ page })
   await page.getByRole('button', { name: '打开本页目录' }).click();
   await page.locator('.toc-rail').getByRole('button', { name: '从一次函数调用看起', exact: true }).click();
   await expect(page.locator('.toc-rail')).not.toBeVisible();
-  await expect.poll(async () => (await page.locator('.markdown-body h3').filter({ hasText: /^从一次函数调用看起$/ }).boundingBox())?.y).toBeCloseTo(96, 0);
+  // 浏览器允许半像素布局；定位到目标顶部 1px 内即可验证滚动行为。
+  await expect.poll(async () => {
+    const box = await page.locator('.markdown-body h3').filter({ hasText: /^从一次函数调用看起$/ }).boundingBox();
+    return box ? Math.abs(box.y - 96) : Infinity;
+  }).toBeLessThanOrEqual(1);
   const code = page.locator('.code-block').first();
   await code.getByRole('button', { name: '复制代码' }).click();
   await expect(code.getByRole('button', { name: '已复制' })).toBeVisible();

@@ -51,7 +51,7 @@ windows\Install-Career-Atlas.cmd
 
 ### 本地开发
 
-需要 Node.js 20+ 和 pnpm 11+；推荐 Node.js 22 LTS，并使用仓库声明的 pnpm 11.15.1。
+需要 Node.js 20+ 和 pnpm 11+；推荐 Node.js 22 LTS，并使用根目录 `package.json` 的 `packageManager` 所声明的 pnpm 版本。
 
 ```bash
 pnpm install --frozen-lockfile
@@ -90,6 +90,7 @@ curl --fail http://127.0.0.1:41730/api/v1/system/health
 | `pnpm content:links:strict` | 严格检查资料链接，网络环境下无法确认的远程地址也会失败 |
 | `pnpm test` | 顺序运行各工作区单元测试 |
 | `pnpm lint` | 运行全工作区静态检查 |
+| `pnpm architecture:check` | 检查模块依赖方向与运行时循环依赖（也包含在 lint 中） |
 | `pnpm build` | 构建共享包、Web 和 Server，并执行前端资源预算门禁 |
 | `pnpm test:e2e` | 运行 Playwright 端到端测试 |
 | `pnpm backup:create` | 创建一致性的 SQLite 数据备份 |

@@ -25,7 +25,9 @@ export async function bootstrapLocalData(): Promise<BootstrapResult> {
 }
 
 /** 启动时检查当天备份，此后按固定间隔自动检查。 */
-export async function startAutomaticBackups(): Promise<() => void> {
+export async function startAutomaticBackups(
+  onError: (error: unknown) => void = (error) => console.error('自动备份失败', error),
+): Promise<() => Promise<void>> {
   const service = getBackupService();
   const createIfNeeded = async () => {
     const latest = (await service.listBackups())[0];
@@ -36,8 +38,20 @@ export async function startAutomaticBackups(): Promise<() => void> {
   };
 
   await createIfNeeded();
-  const intervalHours = Math.max(1, Number(process.env.AUTO_BACKUP_INTERVAL_HOURS ?? 24));
-  const timer = setInterval(() => void createIfNeeded(), intervalHours * 60 * 60 * 1000);
+  const configuredHours = Number(process.env.AUTO_BACKUP_INTERVAL_HOURS ?? 24);
+  // Node 超过 32 位上限的延时会回退为 1ms，不能把过大配置直接交给定时器。
+  const maximumHours = 2_147_483_647 / (60 * 60 * 1000);
+  const intervalHours = Number.isFinite(configuredHours) && configuredHours <= maximumHours
+    ? Math.max(1, configuredHours)
+    : 24;
+  let pending: Promise<void> | undefined;
+  const timer = setInterval(() => {
+    if (pending) return;
+    pending = createIfNeeded().catch(onError).finally(() => { pending = undefined; });
+  }, intervalHours * 60 * 60 * 1000);
   timer.unref();
-  return () => clearInterval(timer);
+  return async () => {
+    clearInterval(timer);
+    await pending;
+  };
 }

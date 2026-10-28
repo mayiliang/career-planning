@@ -1,130 +1,45 @@
-/**
- * 评分服务
- * 
- * Phase 5 实现：确定性评分 + AI 评分 + 服务端重算
- */
+/** 评分流程编排：模型请求、逐题归一化、服务端重算和原子提交。 */
+import { prepareGrading, commitGrading, failGrading } from './grading/persistence.js';
 import { eq } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
-import { db, rawDb } from '../db/index.js';
+import { randomUUID } from 'node:crypto';
+import { db } from '../db/index.js';
 import {
-  assessmentSessions,
   assessmentQuestions,
   assessmentAnswers,
-  assessmentResults,
   knowledgePoints,
-  masteryEvents,
 } from '../db/schema.js';
-import type {
-  AssessmentSessionRecord,
-  AssessmentResultRecord,
-  NewAssessmentResult,
-  NewMasteryEvent,
-} from '../db/schema.js';
+import type { NewAssessmentResult } from '../db/schema.js';
 import { createProvider } from '../ai/index.js';
 import {
   calculateVerdict,
   type DimensionScores,
 } from '@career-atlas/shared';
 import { extractLocalMaterialContext } from './learning-material-context.service.js';
-import { validateCodingSelfCheckEvidence } from './assessment.service.js';
+import { parseUntrustedLocalSelfCheck } from './assessment/self-check.js';
+import { normalizeFeedbackAndDimensionScores, referenceAnswerFromQuestion, sourceBasisFromQuestion, type GradingFeedback } from './grading/feedback.js';
+export { collectDeterministicContractFailures } from './assessment/self-check.js';
+export { normalizeFeedbackAndDimensionScores } from './grading/feedback.js';
 
-type QuestionReview = {
-  questionId: string;
-  score: number;
-  maxScore: number;
-  correctParts: string[];
-  incorrectParts: string[];
-  missingParts: string[];
-  referenceAnswer: string;
-  sourceBasis: string[];
-  nextAction: string;
-};
-
-type GradingFeedback = {
-  summary: string;
-  whatWasStrong: string[];
-  whatMustImprove: string[];
-  suggestedRetestFocus: string[];
-  questionReviews: QuestionReview[];
-};
-
-type QuestionForReview = {
-  id: string;
-  dimension: string;
-  maxScore: number;
-  questionContent: string;
-};
-
-type DeterministicContractFailure = {
-  questionId: string;
-  evidence: string;
-  reason: string;
-};
-
-// ===== 评分请求 =====
-
-export interface GradeRequest {
-  sessionId: string;
-  provider?: 'deepseek' | 'fake';
-}
-
-// ===== 评分结果 =====
-
-export interface GradeResult {
-  session: AssessmentSessionRecord;
-  result: AssessmentResultRecord;
-  knowledgePointUpdated: boolean;
-  retestEventCreated: boolean;
-  reviewEventCreated: boolean;
-}
+import type { GradeRequest, GradeResult } from './grading/types.js';
+export type { GradeRequest, GradeResult } from './grading/types.js';
+export { GradingStateError } from './grading/types.js';
+export { recoverInterruptedGradings } from './grading/persistence.js';
 
 // ===== 执行评分 =====
 
-export async function gradeAssessment(
+async function executeGrading(
   request: GradeRequest,
   onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
   signal?: AbortSignal,
+  regrade = false,
 ): Promise<GradeResult> {
+  signal?.throwIfAborted();
   onProgress('正在读取答卷、题目要求和对应学习资料');
-  // 获取会话和答案
-  const session = await db.query.assessmentSessions.findFirst({
-    where: eq(assessmentSessions.id, request.sessionId),
-  });
-  
-  if (!session) {
-    throw new Error(`Session not found: ${request.sessionId}`);
-  }
-  
-  if (!['SUBMITTED', 'ERROR'].includes(session.status)) {
-    throw new Error(`Cannot grade session with status: ${session.status}`);
-  }
-  
-  // 检查是否已有结果
-  const existingResult = await db.query.assessmentResults.findFirst({
-    where: eq(assessmentResults.sessionId, request.sessionId),
-  });
-  
-  if (existingResult) {
-    // 幂等：返回已有结果
-    const knowledgePoint = await db.query.knowledgePoints.findFirst({
-      where: eq(knowledgePoints.code, session.knowledgePointCode),
-    });
-    
-    return {
-      session,
-      result: existingResult,
-      knowledgePointUpdated: knowledgePoint?.status !== 'SELF_MASTERED',
-      retestEventCreated: false,
-      reviewEventCreated: false,
-    };
-  }
-  
-  // 更新状态为 GRADING
-  await db
-    .update(assessmentSessions)
-    .set({ status: 'GRADING', updatedAt: new Date().toISOString() })
-    .where(eq(assessmentSessions.id, request.sessionId));
-  
+  const preparation = prepareGrading(request.sessionId, regrade);
+  if (preparation.kind === 'cached') return preparation.result;
+  const { attempt } = preparation;
+  const { session } = attempt;
+
   try {
     // 获取题目和答案
     const questions = await db.query.assessmentQuestions.findMany({
@@ -239,7 +154,7 @@ export async function gradeAssessment(
     const deterministicTestsPassed = true;
     
     // 服务端重算判定结果
-    let serverCalculatedVerdict = calculateVerdict(
+    const serverCalculatedVerdict = calculateVerdict(
       dimensionScores,
       confidence,
       criticalFailures.length > 0,
@@ -276,418 +191,27 @@ export async function gradeAssessment(
       createdAt: now,
     };
     
-    const [createdResult] = await db.insert(assessmentResults).values(result).returning();
-    const savedResult = requireRecord(createdResult, '保存评分结果');
-    
-    // 更新会话状态
-    const [updatedSession] = await db
-      .update(assessmentSessions)
-      .set({
-        status: 'GRADED',
-        resultId: savedResult.id,
-        gradedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(assessmentSessions.id, request.sessionId))
-      .returning();
-    
-    // 更新知识点状态（如果通过）
-    let knowledgePointUpdated = false;
-    let retestEventCreated = false;
-    let reviewEventCreated = false;
-    
-    if (serverCalculatedVerdict === 'PASS') {
-      knowledgePointUpdated = await updateKnowledgePointStatus(
-        session.knowledgePointCode,
-        session.assessmentType,
-        request.sessionId,
-        session.masteryStage,
-        session.assistanceLevel
-      );
-      // M4 只是 7 天后解锁的可选稳定性挑战，不再自动塞入日历制造“逾期”。
-    } else if (serverCalculatedVerdict === 'FAIL') {
-      // 失败，回退到 LEARNING 状态
-      await handleAssessmentFailure(
-        session.knowledgePointCode,
-        session.assessmentType,
-        request.sessionId
-      );
-    }
-    
-    return {
-      session: requireRecord(updatedSession, '更新考核会话'),
-      result: savedResult,
-      knowledgePointUpdated,
-      retestEventCreated,
-      reviewEventCreated,
-    };
+    signal?.throwIfAborted();
+    return commitGrading(attempt, result);
   } catch (error) {
-    // 评分失败，更新状态为 ERROR
-    await db
-      .update(assessmentSessions)
-      .set({
-        status: 'ERROR',
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(assessmentSessions.id, request.sessionId));
-    
+    failGrading(attempt);
     throw error;
   }
 }
 
-/**
- * 对已经进入人工复核或错误状态的会话重新调用评分器。
- * 原始答卷保持不变，只替换当前会话的机器评分结果。
- */
-export async function regradeAssessment(
+export function gradeAssessment(
+  request: GradeRequest,
+  onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
+  signal?: AbortSignal,
+): Promise<GradeResult> {
+  return executeGrading(request, onProgress, signal);
+}
+
+/** 保留原始答卷和旧结果，只有新评分成功后才原子替换。 */
+export function regradeAssessment(
   sessionId: string,
   onProgress: (message: string, receivedChars?: number, thinkingDelta?: string) => void = () => {},
   signal?: AbortSignal,
 ): Promise<GradeResult> {
-  const session = await db.query.assessmentSessions.findFirst({
-    where: eq(assessmentSessions.id, sessionId),
-  });
-
-  if (!session || !['GRADED', 'ERROR'].includes(session.status)) {
-    throw new Error('只有判题完成或判题错误的考核才能重新判题');
-  }
-
-  rawDb.transaction(() => {
-    db.delete(assessmentResults)
-      .where(eq(assessmentResults.sessionId, sessionId))
-      .run();
-    db.update(assessmentSessions)
-      .set({
-        status: 'SUBMITTED',
-        resultId: null,
-        gradedAt: null,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(assessmentSessions.id, sessionId))
-      .run();
-  })();
-
-  return gradeAssessment({ sessionId, provider: 'deepseek' }, onProgress, signal);
-}
-
-// ===== 更新知识点状态 =====
-
-async function updateKnowledgePointStatus(
-  knowledgePointCode: string,
-  assessmentType: string,
-  sessionId: string,
-  masteryStage: number,
-  assistanceLevel: number
-): Promise<boolean> {
-  const knowledgePoint = await db.query.knowledgePoints.findFirst({
-    where: eq(knowledgePoints.code, knowledgePointCode),
-  });
-  
-  if (!knowledgePoint) {
-    return false;
-  }
-  
-  const now = new Date().toISOString();
-  // 解释题/轻提示不惩罚；拆解、提纲、开头或完整答案意味着本次最高认证 M2。
-  const certifiedStage = assistanceLevel >= 3 ? Math.min(masteryStage, 2) : masteryStage;
-  const newLevel = Math.max(knowledgePoint.masteryLevel, certifiedStage);
-  const newStatus: typeof knowledgePoints.$inferSelect.status = newLevel >= 3
-    ? 'MASTERED'
-    : 'FIRST_PASS_PENDING_RETEST';
-  const action: NewMasteryEvent['action'] = certifiedStage >= 4
-    ? 'reviewPass'
-    : certifiedStage >= 3 ? 'retestPass' : 'firstPass';
-  
-  // 更新知识点状态
-  await db
-    .update(knowledgePoints)
-    .set({
-      status: newStatus,
-      learningState: 'LEARNED',
-      masteryLevel: newLevel,
-      firstPassedAt: knowledgePoint.firstPassedAt ?? now,
-      masteredAt: newLevel >= 3 ? (knowledgePoint.masteredAt ?? now) : knowledgePoint.masteredAt,
-      nextReviewAt: newLevel >= 3 && newLevel < 4 ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null,
-      updatedAt: now,
-    })
-    .where(eq(knowledgePoints.code, knowledgePointCode));
-  
-  // 追加审计事件
-  const event: NewMasteryEvent = {
-    id: randomUUID(),
-    knowledgePointCode,
-    action,
-    fromStatus: knowledgePoint.status,
-    toStatus: newStatus,
-    assessmentSessionId: sessionId,
-    evidenceSummary: `掌握挑战 M${masteryStage} 通过；帮助等级 ${assistanceLevel}；认证为 M${certifiedStage}`,
-    createdAt: now,
-  };
-  
-  await db.insert(masteryEvents).values(event);
-  
-  return true;
-}
-
-// ===== 处理考核失败 =====
-
-async function handleAssessmentFailure(
-  knowledgePointCode: string,
-  assessmentType: string,
-  sessionId: string
-): Promise<void> {
-  const knowledgePoint = await db.query.knowledgePoints.findFirst({
-    where: eq(knowledgePoints.code, knowledgePointCode),
-  });
-  
-  if (!knowledgePoint) {
-    return;
-  }
-  
-  const now = new Date().toISOString();
-  const newStatus: typeof knowledgePoints.$inferSelect.status = knowledgePoint.status;
-  let action: NewMasteryEvent['action'];
-  
-  if (assessmentType === 'FIRST') {
-    action = 'firstFail';
-  } else if (assessmentType === 'RETEST') {
-    action = 'retestFail';
-  } else {
-    action = 'reviewFail';
-  }
-  
-  // 掌握挑战完全可选：失败只形成诊断证据，不撤销“已学完”，也不降低既有掌握等级。
-  await db
-    .update(knowledgePoints)
-    .set({
-      updatedAt: now,
-    })
-    .where(eq(knowledgePoints.code, knowledgePointCode));
-  
-  // 追加审计事件
-  const event: NewMasteryEvent = {
-    id: randomUUID(),
-    knowledgePointCode,
-    action,
-    fromStatus: knowledgePoint.status,
-    toStatus: newStatus,
-    assessmentSessionId: sessionId,
-    createdAt: now,
-  };
-  
-  await db.insert(masteryEvents).values(event);
-}
-
-export function normalizeFeedbackAndDimensionScores(
-  feedback: GradingFeedback,
-  fallbackDimensionScores: DimensionScores,
-  questions: QuestionForReview[]
-): { feedback: GradingFeedback; dimensionScores: DimensionScores } {
-  const usedReviewIndexes = new Set<number>();
-
-  const normalizedReviews = questions.map((question, index) => {
-    const reviewIndex = findReviewIndexForQuestion(feedback.questionReviews, question.id, index, usedReviewIndexes);
-    if (reviewIndex >= 0) {
-      usedReviewIndexes.add(reviewIndex);
-      return normalizeQuestionReview(feedback.questionReviews[reviewIndex]!, question);
-    }
-
-    return {
-      questionId: question.id,
-      score: 0,
-      maxScore: question.maxScore,
-      correctParts: [],
-      incorrectParts: ['DeepSeek 未返回可匹配到本题的逐题评审。'],
-      missingParts: [],
-      referenceAnswer: referenceAnswerFromQuestion(question.questionContent),
-      sourceBasis: sourceBasisFromQuestion(question.questionContent),
-      nextAction: '重新调用 DeepSeek 判题；若仍无法匹配，按本题资料依据人工复核。',
-    };
-  });
-
-  const canUseQuestionScores = normalizedReviews.length === questions.length
-    && normalizedReviews.every(review => Number.isFinite(review.score) && Number.isFinite(review.maxScore));
-
-  return {
-    feedback: {
-      ...feedback,
-      questionReviews: normalizedReviews,
-    },
-    dimensionScores: canUseQuestionScores
-      ? buildDimensionScoresFromReviews(normalizedReviews, questions)
-      : fallbackDimensionScores,
-  };
-}
-
-function findReviewIndexForQuestion(
-  reviews: QuestionReview[],
-  questionId: string,
-  questionIndex: number,
-  usedIndexes: Set<number>
-): number {
-  const exact = reviews.findIndex((review, index) => !usedIndexes.has(index) && review.questionId === questionId);
-  if (exact >= 0) return exact;
-
-  const ordinalAliases = new Set([
-    String(questionIndex + 1),
-    `q${questionIndex + 1}`,
-    `Q${questionIndex + 1}`,
-    `question-${questionIndex + 1}`,
-    `Question-${questionIndex + 1}`,
-  ]);
-  const ordinal = reviews.findIndex((review, index) => !usedIndexes.has(index) && ordinalAliases.has(review.questionId));
-  if (ordinal >= 0) return ordinal;
-
-  return !usedIndexes.has(questionIndex) && reviews[questionIndex] ? questionIndex : -1;
-}
-
-function normalizeQuestionReview(review: QuestionReview, question: QuestionForReview): QuestionReview {
-  const sourceMaxScore = Number.isFinite(review.maxScore) && review.maxScore > 0 ? review.maxScore : question.maxScore;
-  const scaledScore = sourceMaxScore > 0 ? (review.score / sourceMaxScore) * question.maxScore : 0;
-
-  return {
-    questionId: question.id,
-    score: clampScore(Math.round(scaledScore), question.maxScore),
-    maxScore: question.maxScore,
-    correctParts: Array.isArray(review.correctParts) ? review.correctParts : [],
-    incorrectParts: Array.isArray(review.incorrectParts) ? review.incorrectParts : [],
-    missingParts: Array.isArray(review.missingParts) ? review.missingParts : [],
-    referenceAnswer: review.referenceAnswer?.trim() || referenceAnswerFromQuestion(question.questionContent),
-    sourceBasis: Array.isArray(review.sourceBasis) && review.sourceBasis.length > 0
-      ? review.sourceBasis
-      : sourceBasisFromQuestion(question.questionContent),
-    nextAction: review.nextAction?.trim() || '按本题资料依据复盘答案。',
-  };
-}
-
-function buildDimensionScoresFromReviews(reviews: QuestionReview[], questions: QuestionForReview[]): DimensionScores {
-  const scores: DimensionScores = {
-    principlesAndBoundaries: 0,
-    practice: 0,
-    troubleshootingAndDesign: 0,
-    projectCommunication: 0,
-  };
-
-  questions.forEach((question) => {
-    const review = reviews.find(item => item.questionId === question.id);
-    if (!review) return;
-
-    if (question.dimension === 'principlesAndBoundaries') {
-      scores.principlesAndBoundaries += review.score;
-    } else if (question.dimension === 'practice') {
-      scores.practice += review.score;
-    } else if (question.dimension === 'troubleshootingAndDesign') {
-      scores.troubleshootingAndDesign += review.score;
-    } else if (question.dimension === 'projectCommunication') {
-      scores.projectCommunication += review.score;
-    }
-  });
-
-  return {
-    principlesAndBoundaries: clampScore(scores.principlesAndBoundaries, 25),
-    practice: clampScore(scores.practice, 35),
-    troubleshootingAndDesign: clampScore(scores.troubleshootingAndDesign, 25),
-    projectCommunication: clampScore(scores.projectCommunication, 15),
-  };
-}
-
-function clampScore(score: number, maxScore: number): number {
-  if (!Number.isFinite(score)) return 0;
-  return Math.max(0, Math.min(maxScore, score));
-}
-
-function referenceAnswerFromQuestion(questionContent: string): string {
-  try {
-    const parsed = JSON.parse(questionContent) as { referenceAnswer?: string };
-    return parsed.referenceAnswer ?? '请按题目要求和学习资料整理参考答案。';
-  } catch {
-    return '请按题目要求和学习资料整理参考答案。';
-  }
-}
-
-function sourceBasisFromQuestion(questionContent: string): string[] {
-  try {
-    const parsed = JSON.parse(questionContent) as { sourceBasis?: unknown };
-    return Array.isArray(parsed.sourceBasis)
-      ? parsed.sourceBasis.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * 兼容旧导出，供历史结果展示/诊断使用。它只报告本地自检格式或可见断言缺失，
- * 不再被 gradeAssessment 当作服务端确定性失败，也不能推导 PASS。
- */
-export function collectDeterministicContractFailures(
-  questions: QuestionForReview[],
-  answers: Array<{ questionId: string; answerContent: string; deterministicResult: string | null }>,
-): DeterministicContractFailure[] {
-  const failures: DeterministicContractFailure[] = [];
-  for (const question of questions) {
-    const contract = parseQuestionContract(question.questionContent);
-    if (!contract.deterministicRequired) continue;
-    const answer = answers.find((item) => item.questionId === question.id);
-    const validation = validateCodingSelfCheckEvidence(answer?.answerContent ?? '', answer?.deterministicResult, contract.testCases);
-    if (!validation.passed) {
-      const result = parseDeterministicEvidence(answer?.deterministicResult);
-      failures.push({
-        questionId: question.id,
-        evidence: result.raw || '未提交浏览器隔离执行证据。',
-        reason: `未经服务端认证的本地 Worker 自检记录不完整：${validation.failures.join('；')}。仅供 AI 复核上下文，不能单独决定结果。`,
-      });
-    }
-  }
-  return failures;
-}
-
-function parseUntrustedLocalSelfCheck(value: string) {
-  if (value.length > 16_000) return null;
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    if (parsed.kind !== 'LOCAL_WORKER_SELF_CHECK_UNTRUSTED' || typeof parsed.passed !== 'boolean') return null;
-    return {
-      passed: parsed.passed,
-      output: typeof parsed.output === 'string' ? parsed.output.slice(0, 12_000) : '',
-      error: typeof parsed.error === 'string' ? parsed.error.slice(0, 2_000) : undefined,
-    };
-  } catch { return null; }
-}
-
-function parseQuestionContract(content: string) {
-  try {
-    const parsed = JSON.parse(content) as {
-      deterministicRequired?: boolean;
-      selfCheckEvidenceRequired?: boolean;
-      testCases?: Array<{ id?: string }>;
-    };
-    return {
-      deterministicRequired: parsed.deterministicRequired === true || parsed.selfCheckEvidenceRequired === true,
-      testCases: (parsed.testCases ?? []).filter((item): item is { id: string } => typeof item?.id === 'string' && item.id.length > 0),
-    };
-  } catch {
-    return { deterministicRequired: false, testCases: [] as Array<{ id: string }> };
-  }
-}
-
-function parseDeterministicEvidence(value: string | null | undefined) {
-  if (!value) return { passed: false, output: '', raw: '' };
-  try {
-    const parsed = JSON.parse(value) as { passed?: boolean; output?: string; error?: string };
-    return {
-      passed: parsed.passed === true,
-      output: typeof parsed.output === 'string' ? parsed.output : '',
-      raw: typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed),
-    };
-  } catch {
-    return { passed: false, output: '', raw: value };
-  }
-}
-
-function requireRecord<T>(record: T | undefined, action: string): T {
-  if (!record) {
-    throw new Error(`${action}失败：数据库未返回记录`);
-  }
-  return record;
+  return executeGrading({ sessionId, provider: 'deepseek' }, onProgress, signal, true);
 }

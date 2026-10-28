@@ -241,12 +241,12 @@ export const AssessmentSessionSchema = z.object({
   challengeMode: z.enum(['THEORY', 'PRACTICE', 'MIXED']),
   challengeProfile: z.enum(['AUTO', 'THEORY_ONLY', 'EXAMPLE_DRIVEN', 'CODING', 'DEBUGGING', 'TOOL_OPERATION', 'DESIGN_CASE']),
   assistanceLevel: z.number().int().min(0).max(7),
-  startedAt: z.string().optional(),
-  submittedAt: z.string().optional(),
-  gradedAt: z.string().optional(),
-  resultId: z.string().uuid().optional(),
-  provider: z.string().optional(),
-  model: z.string().optional(),
+  startedAt: z.string().nullable(),
+  submittedAt: z.string().nullable(),
+  gradedAt: z.string().nullable(),
+  resultId: z.string().uuid().nullable(),
+  provider: z.string().nullable(),
+  model: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -273,7 +273,7 @@ export const AssessmentAnswerSchema = z.object({
   sessionId: z.string().uuid(),
   questionId: z.string().uuid(),
   answerContent: z.string(), // JSON string
-  deterministicResult: z.string().optional(), // JSON string
+  deterministicResult: z.string().nullable(), // JSON string
   answeredAt: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -292,14 +292,43 @@ export const AssessmentResultSchema = z.object({
   totalScore: z.number().int().min(0).max(100),
   verdict: AssessmentVerdictSchema,
   confidence: z.string(),
-  criticalFailures: z.string().optional(), // JSON string
-  weaknesses: z.string().optional(), // JSON string
-  feedback: z.string().optional(), // JSON string
-  aiRawResponse: z.string().optional(), // JSON string
+  criticalFailures: z.string().nullable(), // JSON string
+  weaknesses: z.string().nullable(), // JSON string
+  feedback: z.string().nullable(), // JSON string
   createdAt: z.string(),
 });
 
 export type AssessmentResult = z.infer<typeof AssessmentResultSchema>;
+
+// 公开响应合同：普通 JSON 与 SSE 的最终结果使用同一组字段。
+// 原始模型响应、内部计分字段和提示版本仅属于服务端持久化记录。
+export const AssessmentCreationResponseSchema = AssessmentSessionSchema.extend({
+  resumedExisting: z.boolean(),
+  resumeMessage: z.string().nullable(),
+});
+
+export const AssessmentDetailSchema = z.object({
+  session: AssessmentSessionSchema,
+  questions: z.array(AssessmentQuestionSchema),
+  answers: z.array(AssessmentAnswerSchema),
+});
+
+export type AssessmentDetail = z.infer<typeof AssessmentDetailSchema>;
+
+export const AssessmentRegradeResponseSchema = z.object({
+  result: AssessmentResultSchema,
+  knowledgePointUpdated: z.boolean(),
+  retestEventCreated: z.boolean(),
+  reviewEventCreated: z.boolean(),
+});
+
+export type AssessmentRegradeResponse = z.infer<typeof AssessmentRegradeResponseSchema>;
+
+export const AssessmentGradeResponseSchema = AssessmentRegradeResponseSchema.extend({
+  session: AssessmentSessionSchema,
+});
+
+export type AssessmentGradeResponse = z.infer<typeof AssessmentGradeResponseSchema>;
 
 // ===== 通过条件验证 =====
 

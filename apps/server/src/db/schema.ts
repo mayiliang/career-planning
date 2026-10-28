@@ -386,7 +386,7 @@ export const assessmentAnswers = sqliteTable('assessment_answers', {
 }, (table) => ({
   sessionIdx: index('aa_session_idx').on(table.sessionId),
   questionIdx: index('aa_question_idx').on(table.questionId),
-  // 唯一约束：每个题目的答案唯一
+  // 会话/题目查询索引；它不是 UNIQUE 约束，服务写入另以事务避免重复。
   sessionQuestionUIdx: index('aa_session_question_uidx').on(table.sessionId, table.questionId),
 }));
 

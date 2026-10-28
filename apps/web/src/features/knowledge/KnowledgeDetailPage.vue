@@ -1,33 +1,25 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
-import { apiClient, type KnowledgePointDetail, type KnowledgeNote, type LearningBranch } from '@/api/client';
+import { apiClient, type KnowledgePointDetail, type LearningBranch } from '@/api/client';
 import BaseDialog from '@/components/BaseDialog.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import PracticeWorkspace from '@/components/PracticeWorkspace.vue';
+import { createLatestRequest } from '@/utils/latest-request';
+import { scopedMainKnowledgePointCodes } from '@/content/material-metadata';
+import { usePointNoteEditor } from './usePointNoteEditor';
 
 const route = useRoute();
 const router = useRouter();
+const latestLoad = createLatestRequest();
+let pageGeneration = 0;
+let disposed = false;
 const point = ref<KnowledgePointDetail | null>(null);
 type MaterialReading = Awaited<ReturnType<typeof apiClient.getMaterialReadingProgress>>[number];
 const materialReadingByKey = ref<Record<string, MaterialReading>>({});
 const materialsRoot = ref<HTMLElement | null>(null);
-const note = ref<KnowledgeNote | null>(null);
 const branches = ref<LearningBranch[]>([]);
-const noteDraft = ref('');
-const loadedCode = ref('');
-const noteSavedSnapshot = ref('');
-const noteSaveState = ref<'SAVED' | 'UNSAVED' | 'SAVING' | 'ERROR'>('SAVED');
-let noteSaveTimer: ReturnType<typeof setTimeout> | null = null;
 const loading = ref(true);
-const saving = ref(false);
-const organizing = ref(false);
-const streamingOrganizedMd = ref('');
-const streamingThinking = ref('');
-const organizeProgress = ref('');
-const organizeElapsedSeconds = ref(0);
-const notePreviewMode = ref<'edit' | 'preview'>('edit');
-let organizeController: AbortController | null = null;
 const message = ref('');
 const error = ref('');
 const activeTab = ref<'materials' | 'notes' | 'mastery'>('materials');
@@ -47,32 +39,14 @@ const aiRelationLabels = { NONE: '非 AI 专属', AI_ASSISTED: 'AI 辅助', AI_N
 const portabilityLabels = { PORTABLE: '可迁移', FRAMEWORK_SPECIFIC: '框架特定', VENDOR_SPECIFIC: '厂商特定', PLATFORM_SPECIFIC: '平台特定', JURISDICTION_SPECIFIC: '地区规则' } as const;
 
 const code = computed(() => String(route.params.code));
-const usesLinkedPrerequisites = computed(() => [
-  'JS-01', 'JS-02', 'JS-03', 'JS-07', 'CS-01', 'CS-02', 'CS-03', 'JS-04', 'JS-05', 'JS-06',
-  'TS-01', 'TS-02', 'TS-03', 'WEB-01',
-  'REACT-01', 'REACT-02', 'REACT-03', 'REACT-04', 'REACT-05', 'REACT-06', 'REACT-07', 'REACT-08', 'REACT-09', 'REACT-10',
-  'VUE-01', 'VUE-02', 'VUE-03', 'VUE-04', 'VUE-05', 'VUE-06', 'VUE-07', 'VUE-08', 'VUE-10', 'VUE-11',
-  'GIT-01', 'GIT-02', 'GIT-03', 'DEBUG-01',
-  'ENG-01', 'ENG-02', 'ENG-03', 'ENG-05',
-  'TEST-01', 'TEST-02', 'TEST-03',
-  'CAREER-01', 'CAREER-02', 'CAREER-04', 'CAREER-05', 'WEB-02', 'WEB-03',
-  'A11Y-01', 'BROWSER-01', 'BROWSER-02', 'WEB-04', 'WEB-05', 'NET-01',
-  'SEC-01', 'SEC-02', 'SEC-04', 'SEC-03', 'SEC-05',
-  'TS-04', 'TS-05', 'TS-06', 'TS-07', 'TS-08', 'TS-09',
-  'IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02',
-  'NODE-01', 'NODE-02', 'NODE-04', 'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
-  'BIZ-01', 'BIZ-02', 'BIZ-03', 'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08',
-  'TEST-04', 'RENDER-01', 'RENDER-02', 'DATA-01', 'DATA-02', 'REALTIME-01',
-  'COMP-01', 'COMP-02', 'UX-01', 'ENG-08', 'LINUX-01', 'LINUX-02', 'LINUX-03', 'LINUX-04', 'DOCKER-01', 'DOCKER-02',
-  'ENG-06', 'DEPLOY-01', 'OBS-01', 'PERF-01', 'PERF-02', 'PERF-03', 'PERF-04',
-  'H5-01', 'H5-02', 'MCP-01', 'AIPROD-01', 'AIPROD-02',
-  'AISAFE-01', 'AISAFE-02', 'AIGOV-01', 'AIAPP-01', 'AIAPP-02',
-  'AIAPP-03', 'AIAPP-04', 'AIAPP-05', 'AIUI-01', 'AIAPP-06', 'AIAPP-07', 'AIAPP-08', 'AIAPP-09',
-  'AIAPP-10', 'AIAPP-12', 'AIAPP-13', 'AGENT-01', 'AGENT-03', 'AGENT-04', 'AGENT-05', 'AGENT-06', 'AGENT-07',
-  'AGENT-08', 'AGENT-09', 'AGENT-10', 'AIDEV-04', 'AIDEV-07', 'AIDEV-10',
-  'COMPAT-01', 'ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'ARCH-05', 'LEAD-01',
-].includes(point.value?.code ?? ''));
-const organizedDisplayMd = computed(() => organizing.value ? streamingOrganizedMd.value : note.value?.organizedMd || '');
+const noteEditor = usePointNoteEditor({ code, loading, message, error });
+const {
+  note, noteDraft, loadedCode, noteSaveState, saving, organizing, accepting, canAcceptOrganized,
+  streamingOrganizedMd, streamingThinking, organizeProgress, organizeElapsedSeconds,
+  notePreviewMode, organizedDisplayMd, saveNote, ensureNoteSaved, organizeNote,
+  cancelOrganization, acceptOrganized, flushNoteBeforeNavigation,
+} = noteEditor;
+const usesLinkedPrerequisites = computed(() => scopedMainKnowledgePointCodes.has(point.value?.code ?? ''));
 const masteryCopy = computed(() => [
   ['M0', '未评估', '还没有系统证据，不代表没有学过'],
   ['M1', '初步理解', '能解释核心概念与边界'],
@@ -101,36 +75,38 @@ function recommendedChallengeMode(profile: KnowledgePointDetail['challengeProfil
 }
 
 async function load() {
-  if (noteSaveTimer) clearTimeout(noteSaveTimer);
+  const request = latestLoad.start();
+  const targetCode = code.value;
+  pageGeneration += 1;
+  noteEditor.invalidate();
+  message.value = '';
   loading.value = true;
   error.value = '';
   try {
     const [pointData, noteData, branchData, materialReading] = await Promise.all([
-      apiClient.getKnowledgePoint(code.value), apiClient.getNote(code.value), apiClient.getNextBranches(code.value), apiClient.getMaterialReadingProgress(),
+      apiClient.getKnowledgePoint(targetCode, request.signal), apiClient.getNote(targetCode, request.signal), apiClient.getNextBranches(targetCode, request.signal), apiClient.getMaterialReadingProgress(request.signal),
     ]);
+    if (!request.isCurrent()) return;
     point.value = pointData;
-    note.value = noteData;
-    loadedCode.value = pointData.code;
-    const serverDraft = noteData?.originalMd ?? pointData.summary ?? '';
-    noteSavedSnapshot.value = serverDraft;
-    let localDraft: string | null = null;
-    try { localDraft = window.localStorage.getItem(`career-atlas:note-draft:${pointData.code}`); } catch { /* 存储不可用时仍可手动保存 */ }
-    noteDraft.value = localDraft !== null && localDraft !== serverDraft ? localDraft : serverDraft;
-    noteSaveState.value = noteDraft.value === serverDraft ? 'SAVED' : 'UNSAVED';
-    if (noteSaveState.value === 'UNSAVED') {
-      message.value = '已恢复上次未写入服务端的本地草稿，系统会自动重试保存';
-      scheduleNoteSave();
-    }
+    noteEditor.initialize(pointData.code, noteData, pointData.summary ?? '');
     branches.value = branchData;
     materialReadingByKey.value = Object.fromEntries(materialReading.map((record) => [`${record.guide}#${record.anchor}`, record]));
     selectedStage.value = Math.min(4, Math.max(1, pointData.masteryLevel + 1));
     challengeMode.value = recommendedChallengeMode(pointData.challengeProfile);
     if (['materials', 'notes', 'mastery'].includes(String(route.query.tab))) activeTab.value = String(route.query.tab) as typeof activeTab.value;
   } catch (reason) {
+    if (!request.isCurrent()) return;
+    point.value = null;
     error.value = reason instanceof Error ? reason.message : '知识点加载失败';
   } finally {
-    loading.value = false;
+    if (request.isCurrent()) loading.value = false;
   }
+}
+
+/** 写入保留持久化语义，晚到反馈只能更新发起操作时的页面实例。 */
+function captureNotePage(targetCode = loadedCode.value) {
+  const generation = pageGeneration;
+  return () => !disposed && generation === pageGeneration && loadedCode.value === targetCode && code.value === targetCode;
 }
 
 function decorateMaterialReadingStatuses() {
@@ -158,91 +134,6 @@ function decorateMaterialReadingStatuses() {
   });
 }
 
-function storeLocalDraft(content: string, targetCode = loadedCode.value) {
-  try { window.localStorage.setItem(`career-atlas:note-draft:${targetCode}`, content); return true; }
-  catch { return false; }
-}
-
-function clearLocalDraft(targetCode = loadedCode.value) {
-  try { window.localStorage.removeItem(`career-atlas:note-draft:${targetCode}`); } catch { /* 无需阻断服务端保存 */ }
-}
-
-function scheduleNoteSave() {
-  if (noteSaveTimer) clearTimeout(noteSaveTimer);
-  noteSaveTimer = setTimeout(() => { void saveNote(false); }, 1200);
-}
-
-async function saveNote(showMessage = true, targetCode = loadedCode.value): Promise<boolean> {
-  if (saving.value || !targetCode) return false;
-  if (noteSaveTimer) { clearTimeout(noteSaveTimer); noteSaveTimer = null; }
-  const contentToSave = noteDraft.value;
-  let savedSuccessfully = false;
-  saving.value = true;
-  noteSaveState.value = 'SAVING';
-  try {
-    const saved = await apiClient.saveNote(targetCode, contentToSave);
-    if (loadedCode.value === targetCode) {
-      note.value = saved;
-      noteSavedSnapshot.value = contentToSave;
-      if (noteDraft.value === contentToSave) {
-        clearLocalDraft(targetCode);
-        noteSaveState.value = 'SAVED';
-      } else {
-        noteSaveState.value = 'UNSAVED';
-      }
-    }
-    if (showMessage) message.value = '原始笔记已保存，并写入版本历史';
-    savedSuccessfully = true;
-    return true;
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '笔记保存失败';
-    noteSaveState.value = 'ERROR';
-    storeLocalDraft(noteDraft.value, targetCode);
-    return false;
-  } finally {
-    saving.value = false;
-    if (savedSuccessfully && loadedCode.value === targetCode && noteDraft.value !== noteSavedSnapshot.value) scheduleNoteSave();
-  }
-}
-
-async function organizeNote() {
-  if (!noteDraft.value.trim()) { message.value = '请先写下一些原始笔记'; return; }
-  await saveNote(false);
-  organizing.value = true;
-  streamingOrganizedMd.value = '';
-  streamingThinking.value = '';
-  organizeProgress.value = '正在保存原始笔记并准备整理';
-  organizeElapsedSeconds.value = 0;
-  organizeController = new AbortController();
-  error.value = '';
-  try {
-    note.value = await apiClient.organizeNoteStream(code.value, (_delta, accumulated) => {
-      streamingOrganizedMd.value = accumulated;
-    }, organizeController.signal, (progress, elapsedSeconds) => {
-      organizeProgress.value = progress;
-      organizeElapsedSeconds.value = elapsedSeconds;
-    }, (_delta, accumulated) => {
-      streamingThinking.value = accumulated;
-    });
-    streamingOrganizedMd.value = '';
-    message.value = note.value.generationMode === 'LOCAL_FALLBACK'
-      ? `已生成安全排版稿；${note.value.generationNotice ?? '尚未执行 AI 事实核验'}`
-      : 'AI 候选稿已生成。原始笔记未被覆盖，请核对后再接受';
-  } catch (reason) {
-    if ((reason instanceof DOMException && reason.name === 'AbortError') || (reason instanceof Error && /abort|中止|停止/i.test(reason.message))) message.value = '已停止本次整理，尚未完成的内容没有保存';
-    else error.value = reason instanceof Error ? reason.message : 'AI 整理失败';
-  } finally { organizing.value = false; organizeController = null; }
-}
-
-function cancelOrganization() { organizeController?.abort(); }
-
-async function acceptOrganized() {
-  try {
-    note.value = await apiClient.acceptOrganizedNote(code.value);
-    message.value = '已将整理稿设为阅读版本；原始笔记和全部版本仍然保留';
-  } catch (reason) { error.value = reason instanceof Error ? reason.message : '接受整理稿失败'; }
-}
-
 async function focusCurrent() {
   await apiClient.focusLearningPoint(code.value);
   await load();
@@ -251,8 +142,11 @@ async function focusCurrent() {
 
 async function completeLearning() {
   if (!noteDraft.value.trim()) { activeTab.value = 'notes'; message.value = '请先留下学习笔记，再确认已学完'; return; }
-  await saveNote(false);
-  await apiClient.completeLearningPoint(code.value);
+  const targetCode = loadedCode.value;
+  const isCurrentPage = captureNotePage(targetCode);
+  if (!await ensureNoteSaved(targetCode) || !isCurrentPage()) return;
+  await apiClient.completeLearningPoint(targetCode);
+  if (!isCurrentPage()) return;
   await load();
   message.value = '已记录“阅读资料并完成笔记”。掌握等级仍由可选挑战判定';
 }
@@ -320,42 +214,13 @@ function openBeginnerGuide() {
   void router.push('/knowledge/materials/beginner-prerequisites-and-glossary.md/primer-00');
 }
 
-watch(noteDraft, (content) => {
-  if (loading.value || !loadedCode.value) return;
-  if (content === noteSavedSnapshot.value) {
-    if (noteSaveTimer) { clearTimeout(noteSaveTimer); noteSaveTimer = null; }
-    clearLocalDraft();
-    noteSaveState.value = 'SAVED';
-    return;
-  }
-  storeLocalDraft(content);
-  noteSaveState.value = 'UNSAVED';
-  scheduleNoteSave();
-});
-watch(notePreviewMode, (mode) => {
-  try { window.localStorage.setItem('career-atlas:note-view-mode', mode); } catch { /* 视图偏好不可用不影响笔记 */ }
-});
-
-async function flushNoteBeforeNavigation() {
-  if (!loadedCode.value || noteDraft.value === noteSavedSnapshot.value) return true;
-  const storedLocally = storeLocalDraft(noteDraft.value);
-  const saved = await saveNote(false);
-  return saved || storedLocally;
-}
-
 onBeforeRouteLeave(flushNoteBeforeNavigation);
 onBeforeRouteUpdate(flushNoteBeforeNavigation);
 watch(code, load);
-onMounted(() => {
-  try {
-    const savedMode = window.localStorage.getItem('career-atlas:note-view-mode');
-    if (savedMode === 'edit' || savedMode === 'preview') notePreviewMode.value = savedMode;
-  } catch { /* 默认只编辑 */ }
-  void load();
-});
+onMounted(() => { void load(); });
 onBeforeUnmount(() => {
-  if (noteSaveTimer) clearTimeout(noteSaveTimer);
-  organizeController?.abort();
+  disposed = true;
+  latestLoad.cancel();
 });
 </script>
 
@@ -441,7 +306,7 @@ onBeforeUnmount(() => {
           <footer><span>支持标题、列表、任务清单、表格、引用、链接、粗体、行内代码和代码块 <b class="note-save-state" :data-state="noteSaveState" aria-live="polite">{{ { SAVED: '已自动保存', UNSAVED: '等待自动保存', SAVING: '自动保存中…', ERROR: '本地草稿已保留，服务端保存失败' }[noteSaveState] }}</b></span><button :disabled="saving" @click="saveNote()">{{ saving ? '保存中…' : '立即保存' }}</button><button v-if="organizing" @click="cancelOrganization">停止生成</button><button class="primary" :disabled="organizing" @click="organizeNote">{{ organizing ? `AI 整理中 · ${organizeElapsedSeconds} 秒 · ${streamingOrganizedMd.length} 字` : '用 AI 整理并核对' }}</button></footer>
         </section>
         <section class="content-card organized">
-          <header><div><small>AI 整理候选稿</small><h2>{{ organizing ? '正在生成可核对的最终正文' : note?.generationMode === 'LOCAL_FALLBACK' ? 'AI 未完成：这是安全排版稿' : '核对后由你决定是否采用' }}</h2></div><button v-if="note?.organizedMd && !organizing" @click="acceptOrganized">采用为阅读版本</button></header>
+          <header><div><small>AI 整理候选稿</small><h2>{{ organizing ? '正在生成可核对的最终正文' : note?.generationMode === 'LOCAL_FALLBACK' ? 'AI 未完成：这是安全排版稿' : '核对后由你决定是否采用' }}</h2></div><button v-if="note?.organizedMd && !organizing" :disabled="!canAcceptOrganized" @click="acceptOrganized">{{ accepting ? '正在采用…' : '采用为阅读版本' }}</button></header>
           <div v-if="organizing" class="stream-state" aria-live="polite"><i></i><span><b>{{ organizeProgress }}</b><small>{{ organizeElapsedSeconds }} 秒 · 正文 {{ streamingOrganizedMd.length }} 字 · 思考 {{ streamingThinking.length }} 字；两条内容严格分离</small></span></div>
           <MarkdownRenderer v-if="organizedDisplayMd || streamingThinking" class="markdown-content streaming-markdown" :class="{ live: organizing }" :source="organizedDisplayMd" :thinking="streamingThinking" :streaming="organizing" aria-label="AI 整理候选稿" />
           <p v-if="organizing && !streamingOrganizedMd" class="awaiting-final">AI 正在核对资料。最终整理正文尚未开始输出，不会用原始笔记冒充整理结果。</p>

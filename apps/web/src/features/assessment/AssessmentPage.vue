@@ -1,68 +1,27 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { apiClient, type AssessmentDetail, type AssessmentResult } from '@/api/client';
+import type { AssessmentDetail } from '@/api/client';
 import BaseDialog from '@/components/BaseDialog.vue';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
-import { runBrowserCode, type BrowserExecutionStatus } from '@/utils/browser-code-runner';
+import { useAssessmentSession } from './useAssessmentSession';
+import { hintOptions } from './model';
 
 const route = useRoute();
 const router = useRouter();
 const sessionId = route.params.id as string;
-const detail = ref<AssessmentDetail | null>(null);
-const result = ref<AssessmentResult | null>(null);
-const answers = ref<Record<string, string>>({});
-const loading = ref(true);
-const busy = ref(false);
-const error = ref<string | null>(null);
-const savedQuestionId = ref<string | null>(null);
-const revealedHints = ref<Record<string, Array<{ kind: string; level: number; text: string; source: 'AI' | 'RULE'; independenceImpact: string; thinking?: string }>>>({});
-const hintBusy = ref<string | null>(null);
-const streamingHints = ref<Record<string, { kind: string; text: string; thinking: string } | undefined>>({});
-const aiProgress = ref('');
-const aiReceivedChars = ref(0);
-const gradingThinking = ref('');
-const pendingConfirmation = ref<'SUBMIT' | 'REGRADE' | 'CANCEL' | null>(null);
-const codeExecutions = ref<Record<string, { status: 'NOT_RUN' | BrowserExecutionStatus; output: string; durationMs: number; passed: boolean; missingCaseIds: string[] }>>({});
-const runningQuestionId = ref<string | null>(null);
+const session = useAssessmentSession(sessionId);
+const {
+  detail, result, answers, loading, busy, error, savedQuestionId, revealedHints, hintBusy,
+  streamingHints, aiProgress, aiReceivedChars, gradingThinking, pendingConfirmation,
+  codeExecutions, runningQuestionId, questions, load, start, save, runQuestionCode,
+  revealHint, confirmPendingAction,
+} = session;
 const resumedMessage = computed(() => route.query.resumed === '1'
   ? String(route.query.message || '已继续打开上次未完成的掌握挑战，原题目和答案均已保留。')
   : '');
 const now = ref(Date.now());
 let timer: number | undefined;
-let hintController: AbortController | null = null;
-let gradingController: AbortController | null = null;
-
-const questions = computed(() => (detail.value?.questions ?? []).map((question) => {
-  try {
-    return { ...question, content: JSON.parse(question.questionContent) as {
-      question?: string;
-      prompt?: string;
-      wordLimit?: number;
-      level?: string;
-      sourceHint?: string;
-      starterCode?: string;
-      language?: 'javascript' | 'typescript';
-      knowledgeTags?: string[];
-      givenInput?: string;
-      expectedOutput?: string;
-      answerRequirements?: string[];
-      answerFormat?: string;
-      materialReferences?: Array<{ title: string; url: string | null; locator: string; focus: string }>;
-      derivationGuide?: { required: boolean; basis: string; steps: string[] };
-      sourceQuestion?: string;
-      stageContract?: string | { stage?: string; goal?: string; requirement?: string; retest?: string; [key: string]: unknown };
-      retestVariant?: string | boolean | { description?: string; [key: string]: unknown };
-      failureFixture?: string;
-      verificationChecklist?: string[];
-      vetoItems?: string[];
-      deterministicRequired?: boolean;
-      testCases?: Array<{ id: string; input?: string; expectedOutput?: string; isHidden?: boolean }>;
-    } };
-  } catch {
-    return { ...question, content: { question: question.questionContent } };
-  }
-}));
 
 const totalScore = computed(() => questions.value.reduce((sum, question) => sum + question.maxScore, 0));
 const answeredCount = computed(() => questions.value.filter((question) => answers.value[question.id]?.trim()).length);
@@ -78,11 +37,6 @@ const certifiedLevel = computed(() => {
   if (!session) return 0;
   return session.assistanceLevel >= 3 ? Math.min(session.masteryStage, 2) : session.masteryStage;
 });
-const hintOptions = [
-  ['EXPLAIN', '解释题意'], ['HINT', '给一个提示'], ['DECOMPOSE', '拆解步骤'], ['OUTLINE', '给回答提纲'],
-  ['STARTER', '帮我起个头'], ['SIMILAR_EXAMPLE', '看相似示例'], ['FULL_ANSWER', '查看完整思路'],
-] as const;
-
 function sourceQuestion(question: typeof questions.value[number]) {
   return question.content.question || question.content.prompt || question.content.sourceQuestion || '题目内容未能读取';
 }
@@ -106,32 +60,6 @@ function visibleTestCases(question: typeof questions.value[number]) {
   return (question.content.testCases ?? []).filter((item) => !item.isHidden);
 }
 
-function parseStoredExecution(value: string | null) {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as { passed?: boolean; output?: string; error?: string; runtimeMs?: number; status?: BrowserExecutionStatus; missingCaseIds?: string[] };
-    if (typeof parsed.passed !== 'boolean') return null;
-    return {
-      status: parsed.status ?? (parsed.passed ? 'SUCCESS' : 'ERROR') as BrowserExecutionStatus,
-      output: parsed.output || parsed.error || '', durationMs: parsed.runtimeMs ?? 0,
-      passed: parsed.passed, missingCaseIds: parsed.missingCaseIds ?? [],
-    };
-  } catch { return null; }
-}
-
-function executionPayload(questionId: string) {
-  const execution = codeExecutions.value[questionId];
-  if (!execution) return undefined;
-  return JSON.stringify({
-    passed: execution.passed,
-    output: execution.output,
-    error: execution.status === 'SUCCESS' ? undefined : execution.output,
-    runtimeMs: execution.durationMs,
-    status: execution.status,
-    missingCaseIds: execution.missingCaseIds,
-  });
-}
-
 function deterministicStatus(question: typeof questions.value[number]) {
   const execution = codeExecutions.value[question.id];
   if (!question.content.deterministicRequired && !visibleTestCases(question).length) return '本题不启用本地自检；将按题目合同和语义评分复核。';
@@ -141,176 +69,8 @@ function deterministicStatus(question: typeof questions.value[number]) {
   return '本地自检未通过；请根据执行输出修正后重新运行。';
 }
 
-async function load() {
-  loading.value = true;
-  error.value = null;
-  try {
-    detail.value = await apiClient.getAssessment(sessionId);
-    for (const answer of detail.value.answers) {
-      answers.value[answer.questionId] = answer.answerContent;
-      const execution = parseStoredExecution(answer.deterministicResult);
-      if (execution) codeExecutions.value[answer.questionId] = execution;
-    }
-    for (const question of detail.value.questions) {
-      if (answers.value[question.id]) continue;
-      try {
-        const content = JSON.parse(question.questionContent) as { starterCode?: string };
-        if (content.starterCode) answers.value[question.id] = content.starterCode;
-      } catch { /* 保持空答案 */ }
-    }
-    if (detail.value.session.status === 'GRADED') result.value = await apiClient.getAssessmentResult(sessionId);
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '加载考核失败';
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function start() {
-  busy.value = true;
-  error.value = null;
-  try {
-    await apiClient.startAssessment(sessionId);
-    await load();
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '开始考核失败';
-  } finally {
-    busy.value = false;
-  }
-}
-
-async function save(questionId: string) {
-  const content = answers.value[questionId]?.trim();
-  if (!content || detail.value?.session.status !== 'IN_PROGRESS') return;
-  try {
-    await apiClient.saveAssessmentAnswer(sessionId, questionId, content, executionPayload(questionId));
-    savedQuestionId.value = questionId;
-    window.setTimeout(() => { if (savedQuestionId.value === questionId) savedQuestionId.value = null; }, 1600);
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '答案保存失败';
-  }
-}
-
-async function runQuestionCode(question: typeof questions.value[number]) {
-  const source = answers.value[question.id]?.trim();
-  if (!source) {
-    error.value = '请先填写代码，再运行本地 Worker 自检。';
-    return;
-  }
-  runningQuestionId.value = question.id;
-  error.value = null;
-  try {
-    const language = question.content.language === 'javascript' ? 'javascript' : 'typescript';
-    const result = await runBrowserCode(source, language);
-    const caseIds = visibleTestCases(question).map((item) => item.id);
-    const missingCaseIds = result.status === 'SUCCESS'
-      ? caseIds.filter((id) => !result.output.includes(`[ASSERT PASS] ${id}`))
-      : caseIds;
-    const fixtureRequired = question.content.deterministicRequired || caseIds.length > 0;
-    codeExecutions.value[question.id] = {
-      status: result.status,
-      output: result.output,
-      durationMs: result.durationMs,
-      passed: result.status === 'SUCCESS' && (!fixtureRequired || (caseIds.length > 0 && missingCaseIds.length === 0)),
-      missingCaseIds,
-    };
-    await save(question.id);
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '代码夹具运行失败';
-  } finally {
-    runningQuestionId.value = null;
-  }
-}
-
-async function revealHint(questionId: string, kind: typeof hintOptions[number][0]) {
-  hintBusy.value = `${questionId}:${kind}`;
-  hintController = new AbortController();
-  streamingHints.value[questionId] = { kind, text: '', thinking: '' };
-  try {
-    const hint = await apiClient.revealAssessmentHintStream(sessionId, questionId, kind, (_delta, accumulated) => {
-      streamingHints.value[questionId] = { kind, text: accumulated, thinking: streamingHints.value[questionId]?.thinking ?? '' };
-    }, hintController.signal, (_delta, accumulated) => {
-      streamingHints.value[questionId] = { kind, text: streamingHints.value[questionId]?.text ?? '', thinking: accumulated };
-    });
-    revealedHints.value[questionId] = [...(revealedHints.value[questionId] ?? []), { ...hint, thinking: streamingHints.value[questionId]?.thinking }];
-    if (detail.value) detail.value.session.assistanceLevel = Math.max(detail.value.session.assistanceLevel, hint.level);
-  } catch (reason) { error.value = reason instanceof Error ? reason.message : '暂时无法提供提示'; }
-  finally { hintBusy.value = null; hintController = null; delete streamingHints.value[questionId]; }
-}
-
-async function performSubmit() {
-  busy.value = true;
-  error.value = null;
-  aiProgress.value = '正在保存全部答案';
-  aiReceivedChars.value = 0;
-  gradingThinking.value = '';
-  gradingController = new AbortController();
-  try {
-    await Promise.all(questions.value.map((question) => save(question.id)));
-    await apiClient.submitAssessment(sessionId);
-    const graded = await apiClient.gradeAssessmentStream(sessionId, (progress, receivedChars) => {
-      aiProgress.value = progress;
-      aiReceivedChars.value = receivedChars ?? aiReceivedChars.value;
-    }, gradingController.signal, (_delta, accumulated) => { gradingThinking.value = accumulated; });
-    result.value = graded.result;
-    await load();
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '提交或评分失败，请在设置页检查 DeepSeek 配置';
-    await load();
-  } finally {
-    busy.value = false;
-    gradingController = null;
-  }
-}
-
-async function performRegrade() {
-  busy.value = true;
-  error.value = null;
-  aiProgress.value = '正在准备重新判题';
-  aiReceivedChars.value = 0;
-  gradingThinking.value = '';
-  gradingController = new AbortController();
-  try {
-    const graded = await apiClient.regradeAssessmentStream(sessionId, (progress, receivedChars) => {
-      aiProgress.value = progress;
-      aiReceivedChars.value = receivedChars ?? aiReceivedChars.value;
-    }, gradingController.signal, (_delta, accumulated) => { gradingThinking.value = accumulated; });
-    result.value = graded.result;
-    await load();
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '重新判题失败';
-  } finally {
-    busy.value = false;
-    gradingController = null;
-  }
-}
-
 function requestSubmit() {
-  if (answeredCount.value !== questions.value.length) {
-    error.value = `还有 ${questions.value.length - answeredCount.value} 道题未作答，请完成后再提交`;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-  pendingConfirmation.value = 'SUBMIT';
-}
-
-async function performCancel() {
-  busy.value = true;
-  error.value = null;
-  try {
-    await apiClient.cancelAssessment(sessionId);
-    await load();
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '取消挑战失败';
-  } finally { busy.value = false; }
-}
-
-async function confirmPendingAction() {
-  const action = pendingConfirmation.value;
-  pendingConfirmation.value = null;
-  if (action === 'SUBMIT') await performSubmit();
-  if (action === 'REGRADE') await performRegrade();
-  if (action === 'CANCEL') await performCancel();
+  if (!session.requestSubmit()) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function parseFeedback(value: string | null) {
@@ -361,8 +121,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   if (timer) window.clearInterval(timer);
-  hintController?.abort();
-  gradingController?.abort();
 });
 </script>
 
@@ -389,6 +147,7 @@ onBeforeUnmount(() => {
 
       <p v-if="resumedMessage" class="resume-banner">↻ {{ resumedMessage }}</p>
       <p v-if="error" class="error-banner" role="alert">{{ error }}</p>
+      <div v-if="busy && aiProgress" class="submit-progress" aria-live="polite"><span>{{ aiProgress }}<small v-if="aiReceivedChars"> · 已接收 {{ aiReceivedChars }} 字符</small></span><MarkdownRenderer v-if="gradingThinking" source="" :thinking="gradingThinking" :streaming="true" :thinking-open="false" aria-label="AI 判题思考过程" /></div>
 
       <section v-if="detail.session.status === 'DRAFT'" class="briefing">
         <p class="briefing-number">01</p>
@@ -498,15 +257,15 @@ onBeforeUnmount(() => {
             </details>
             <div class="assistance-ladder">
               <span>卡住了？选择恰好够用的帮助</span>
-              <div><button v-for="option in hintOptions" :key="option[0]" :disabled="hintBusy === `${question.id}:${option[0]}`" @click="revealHint(question.id, option[0])">{{ option[1] }}</button></div>
+              <div><button v-for="option in hintOptions" :key="option[0]" :disabled="busy || Boolean(hintBusy) || detail.session.status !== 'IN_PROGRESS'" @click="revealHint(question.id, option[0])">{{ option[1] }}</button></div>
               <article v-if="streamingHints[question.id]" class="streaming-hint" aria-live="polite"><header><strong>{{ hintOptions.find(item => item[0] === streamingHints[question.id]?.kind)?.[1] }}</strong><em>AI 正在针对本题生成</em></header><MarkdownRenderer :source="streamingHints[question.id]?.text || '正在读取题目与对应资料…'" :thinking="streamingHints[question.id]?.thinking" :streaming="true" :thinking-open="false" aria-label="正在生成的题目提示" /></article>
               <article v-for="hint in revealedHints[question.id] ?? []" :key="`${hint.kind}-${hint.level}`"><header><strong>{{ hintOptions.find(item => item[0] === hint.kind)?.[1] }}</strong><em>{{ hint.source === 'AI' ? 'AI 针对本题生成' : '题目规则提示' }}</em></header><MarkdownRenderer :source="hint.text" :thinking="hint.thinking" :thinking-open="false" aria-label="题目提示" /><small>{{ hint.independenceImpact }}</small></article>
             </div>
             <section v-if="question.questionType === 'CODE_WRITE'" class="challenge-code-lab">
-              <header><div><span>本地 Worker 自检区</span><small>非安全沙箱；结果可辅助排查，只作为 AI 上下文，不能成为服务端证明或单独决定通过。</small></div><button type="button" :disabled="runningQuestionId === question.id || detail.session.status !== 'IN_PROGRESS'" @click="runQuestionCode(question)">{{ runningQuestionId === question.id ? '本地自检运行中…' : '运行本地自检并保存记录' }}</button></header>
+              <header><div><span>本地 Worker 自检区</span><small>非安全沙箱；结果可辅助排查，只作为 AI 上下文，不能成为服务端证明或单独决定通过。</small></div><button type="button" :disabled="busy || Boolean(runningQuestionId) || detail.session.status !== 'IN_PROGRESS'" @click="runQuestionCode(question)">{{ runningQuestionId === question.id ? '本地自检运行中…' : '运行本地自检并保存记录' }}</button></header>
               <textarea
                 v-model="answers[question.id]"
-                :disabled="detail.session.status !== 'IN_PROGRESS'"
+                :disabled="busy || runningQuestionId === question.id || detail.session.status !== 'IN_PROGRESS'"
                 rows="13"
                 :aria-label="`代码答案：第 ${index + 1} 题`"
                 placeholder="编写可在本地 Worker 自检区运行的代码；可为每个给定场景添加真实条件的 console.assert。"
@@ -517,7 +276,7 @@ onBeforeUnmount(() => {
             <textarea
               v-else
               v-model="answers[question.id]"
-              :disabled="detail.session.status !== 'IN_PROGRESS'"
+              :disabled="busy || runningQuestionId === question.id || detail.session.status !== 'IN_PROGRESS'"
               rows="10"
               placeholder="写下可以被追问、验证和复现的答案..."
               @blur="save(question.id)"
@@ -527,13 +286,12 @@ onBeforeUnmount(() => {
         </article>
 
         <footer v-if="detail.session.status === 'IN_PROGRESS'" class="submit-bar">
-          <div v-if="busy" class="submit-progress" aria-live="polite"><span>{{ aiProgress }}<small v-if="aiReceivedChars"> · 已接收 {{ aiReceivedChars }} 字符</small></span><MarkdownRenderer v-if="gradingThinking" source="" :thinking="gradingThinking" :streaming="true" :thinking-open="false" aria-label="AI 判题思考过程" /></div>
-          <span v-else>已完成 {{ answeredCount }} / {{ questions.length }}</span>
-          <button class="primary-action" :disabled="busy" @click="requestSubmit">{{ busy ? '正在生成反馈…' : '提交并查看掌握反馈' }}</button>
+          <span>已完成 {{ answeredCount }} / {{ questions.length }}</span>
+          <button class="primary-action" :disabled="busy || Boolean(runningQuestionId) || Boolean(hintBusy)" @click="requestSubmit">{{ busy ? '正在生成反馈…' : '提交并查看掌握反馈' }}</button>
         </footer>
         <div v-else-if="['SUBMITTED', 'GRADING', 'ERROR'].includes(detail.session.status)" class="state-panel">
           当前状态：{{ detail.session.status }}。若评分失败，请检查设置页中的 DeepSeek 配置后重试。
-          <button v-if="detail.session.status === 'ERROR'" class="primary-action" :disabled="busy" @click="pendingConfirmation = 'REGRADE'">
+          <button v-if="['SUBMITTED', 'ERROR'].includes(detail.session.status)" class="primary-action" :disabled="busy" @click="pendingConfirmation = 'REGRADE'">
             {{ busy ? '重新判题中...' : '重新调用 DeepSeek 判题' }}
           </button>
         </div>

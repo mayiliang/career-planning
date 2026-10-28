@@ -1,3 +1,4 @@
+import { consumeSseData } from '../ai/sse.js';
 import { randomUUID } from 'node:crypto';
 import { rawDb } from '../db/index.js';
 import { aiThinkingRequestOption, config } from '../config/index.js';
@@ -230,13 +231,8 @@ async function requestAiPracticeReview(
       }),
     });
     if (!response.ok || !response.body) return null;
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
     let content = '';
-    const consume = (frame: string) => {
-      const data = frame.split(/\r?\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
-      if (!data || data === '[DONE]') return;
+    const consume = (data: string) => {
       try {
         const payload = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning?: string } }> };
         const packetDelta = payload.choices?.[0]?.delta;
@@ -249,15 +245,7 @@ async function requestAiPracticeReview(
         }
       } catch { /* 忽略心跳帧 */ }
     };
-    while (true) {
-      const { value, done } = await reader.read();
-      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-      const frames = buffer.split(/\r?\n\r?\n/);
-      buffer = frames.pop() ?? '';
-      for (const frame of frames) consume(frame);
-      if (done) break;
-    }
-    if (buffer.trim()) consume(buffer);
+    await consumeSseData(response.body!, consume, { signal: controller.signal });
     content = content.trim();
     if (!content) return null;
     const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, '')) as {

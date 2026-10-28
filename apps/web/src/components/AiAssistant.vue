@@ -688,7 +688,7 @@ onBeforeUnmount(() => {
           <div class="answer-card">
             <div class="answer-meta"><span class="ai-label"><i>✦</i> Atlas AI</span><span>{{ contextUsageLabel(turn) }}</span></div>
             <div v-if="turn.streaming && !turn.content" class="assistant-working"><i></i><span>{{ turn.status }}<small v-if="turn.elapsedMs >= 1_000">已等待 {{ Math.ceil(turn.elapsedMs / 1_000) }} 秒</small></span></div>
-            <MarkdownRenderer v-if="turn.content || turn.thinking" :source="linkedAnswer(turn)" :thinking="turn.thinking" :streaming="turn.streaming" :thinking-open="false" aria-label="AI 助手回答" />
+            <component :is="MarkdownRenderer" v-if="turn.content || turn.thinking" :source="linkedAnswer(turn)" :thinking="turn.thinking" :streaming="turn.streaming" :thinking-open="false" aria-label="AI 助手回答" />
             <div v-if="turn.stalled" class="assistant-stalled"><strong>这个步骤比预期慢</strong><span>请求仍在运行；你可以停止，或先复制当前诊断信息。</span><button @click="copyDiagnosticReport(turn)">{{ turn.reportCopied ? '已复制' : '复制当前诊断' }}</button></div>
             <div v-if="turn.error" class="assistant-error"><p>{{ turn.error }}</p><small>{{ turn.errorCode || 'ASSISTANT_ERROR' }} · {{ turn.stage }}<span v-if="turn.incidentId"> · {{ turn.incidentId }}</span></small><button @click="copyDiagnosticReport(turn)">{{ turn.reportCopied ? '报告已复制' : '复制错误报告' }}</button></div>
             <p v-if="turn.warning" class="assistant-warning">{{ turn.warning }}</p>

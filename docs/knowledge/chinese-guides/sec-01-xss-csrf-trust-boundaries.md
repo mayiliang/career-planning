@@ -167,7 +167,7 @@ for (const value of ['/notes/7', 'https://notes.example/notes/8', '//other.examp
 
 ### 八、原型污染要看写入发生在哪里
 
-**原型污染（Prototype Pollution）**与对象属性查找链有关。JSON.parse 得到名为 __proto__ 的自有键，本身不等于已经修改了 Object.prototype；危险可能在之后的合并或路径写入时发生。
+**原型污染（Prototype Pollution）**与对象属性查找链有关。JSON.parse 得到名为 `__proto__` 的自有键，本身不等于已经修改了 Object.prototype；危险可能在之后的合并或路径写入时发生。
 
 下面的错误示范只改变一个新建目标对象的原型，不修改全局 Object.prototype。随后用字段允许集合构造安全结果，让两者的差别可见。
 
@@ -192,7 +192,7 @@ console.log(safe.theme, safe.pageSize, Object.hasOwn(safe, 'approved'));
 
 merged 读到了 inherited approved，并不代表它真的有自己的授权字段。业务权限应来自服务端，不应从任意合并对象的默认值推导。
 
-对必须支持嵌套配置的工具，要在每层限制字段与路径，关注 __proto__、constructor、prototype 等危险路径。Map 或 null-prototype object 适合字典，但不能替代业务 schema；也不要把冻结 Object.prototype 当成没有代价的通用补丁。
+对必须支持嵌套配置的工具，要在每层限制字段与路径，关注 `__proto__`、`constructor`、`prototype` 等危险路径。Map 或 null-prototype object 适合字典，但不能替代业务 schema；也不要把冻结 Object.prototype 当成没有代价的通用补丁。
 
 ### 九、CSRF 为什么不需要读取响应
 

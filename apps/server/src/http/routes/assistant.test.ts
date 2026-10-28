@@ -1,3 +1,4 @@
+import { configureHttpContract } from '../contract.js';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { config } from '../../config/index.js';
@@ -6,18 +7,7 @@ import { assistantRoutes } from './assistant.js';
 
 function buildTestApp() {
   const app = Fastify({ logger: false });
-  app.setValidatorCompiler(({ schema }) => (data) => {
-    const validator = schema as { safeParse?: (input: unknown) => { success: boolean; data?: unknown; error?: Error } };
-    if (!validator.safeParse) return { value: data };
-    const result = validator.safeParse(data);
-    return result.success ? { value: result.data } : { error: result.error };
-  });
-  app.decorateReply('ok', function (data: unknown) {
-    return this.send({ data, meta: { requestId: this.request.id } });
-  });
-  app.decorateReply('error', function (code: string, message: string, statusCode = 400) {
-    return this.code(statusCode).send({ error: { code, message, retryable: false }, meta: { requestId: this.request.id } });
-  });
+  configureHttpContract(app);
   app.register(assistantRoutes);
   return app;
 }

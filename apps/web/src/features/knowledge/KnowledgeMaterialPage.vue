@@ -5,6 +5,8 @@ import { apiClient } from '@/api/client';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 import { extractMarkdownHeadings } from '@/utils/markdown';
 import { chapterConnections, chapterHref, findLearningBatch, findLearningChapter, learningMaterialCatalogs } from '@/content/learning-material-catalog';
+import { scopedMainGuides, pronunciationBatchByGuide, atomicPrerequisiteGuides } from '@/content/material-metadata';
+import { createLatestRequest } from '@/utils/latest-request';
 import { announceMaterialReady } from '@/utils/material-navigation';
 
 const route = useRoute();
@@ -28,6 +30,8 @@ const pronunciationFeedback = ref('');
 type MaterialReading = Awaited<ReturnType<typeof apiClient.getMaterialReadingProgress>>[number];
 const materialReadingByKey = ref<Record<string, MaterialReading>>({});
 const readingSaveFeedback = ref('');
+const latestLoad = createLatestRequest();
+let disposed = false;
 let headingObserver: IntersectionObserver | null = null;
 let pronunciationAudio: HTMLAudioElement | null = null;
 let activePronunciationButton: HTMLButtonElement | null = null;
@@ -49,402 +53,6 @@ const headings = computed(() => {
 const characterCount = computed(() => (material.value?.markdown ?? '').replace(/\s/g, '').length);
 const readingMinutes = computed(() => Math.max(1, Math.ceil(characterCount.value / 450)));
 const isBeginnerGuide = computed(() => material.value?.guide === 'beginner-prerequisites-and-glossary.md');
-const scopedMainGuides = new Set([
-  'js-01-execution-context-scope-closure.md',
-  'js-02-prototype-object-model-this.md',
-  'js-03-types-equality-copy-immutability.md',
-  'js-07-iteration-metaprogramming-resources.md',
-  'cs-01-complexity-scale-engineering-cost.md',
-  'cs-02-data-structures-algorithms-correctness.md',
-  'cs-03-large-data-workers-incremental-memory.md',
-  'js-04-async-promise-browser-event-loop.md',
-  'js-05-promise-errors-async-control-flow.md',
-  'js-06-es-modules-module-boundaries.md',
-  'ts-01-type-system-structural-strict-mode.md',
-  'ts-02-unions-narrowing-never-exhaustiveness.md',
-  'ts-03-generics-constraints-keyof-indexed-access.md',
-  'web-01-html-semantics-forms-accessibility.md',
-  'react-01-render-purity-state-snapshot.md',
-  'vue-01-vite-sfc-project-structure.md',
-  'vue-02-ref-reactive-computed-boundaries.md',
-  'react-02-component-boundaries-data-flow-composition.md',
-  'vue-03-template-directives-events-forms.md',
-  'vue-04-typed-components-slots-model-teleport.md',
-  'react-03-state-model-derived-controlled.md',
-  'react-04-effects-external-sync-cleanup.md',
-  'vue-05-lifecycle-effects-async-recovery.md',
-  'react-05-hooks-rules-custom-hooks.md',
-  'vue-06-composables-injection-reuse.md',
-  'react-06-reducer-context-state-domains.md',
-  'vue-08-pinia-state-layers.md',
-  'react-08-error-boundaries-suspense-recovery.md',
-  'react-10-router-data-framework-modes.md',
-  'vue-07-router-navigation-boundaries.md',
-  'react-07-performance-memo-large-lists.md',
-  'vue-10-testing-performance-production-build.md',
-  'react-09-compiler-rsc-security-upgrades.md',
-  'vue-11-nuxt-rendering-data-performance.md',
-  'git-01-object-index-references-recovery.md',
-  'git-02-branches-merge-rebase-conflicts.md',
-  'git-03-commits-remotes-pr-worktrees-collaboration.md',
-  'debug-01-systematic-debugging-evidence-causality.md',
-  'eng-01-module-graph-build-output-source-maps.md',
-  'eng-02-dev-production-environments-assets-cache.md',
-  'eng-03-dependencies-lockfile-workspaces-peer.md',
-  'eng-05-quality-gates-lint-types-tests-ci.md',
-  'test-01-test-design-oracles-properties-mutation.md',
-  'test-02-component-testing-user-behavior-accessibility.md',
-  'test-03-e2e-visual-regression-isolation-flakiness.md',
-  'career-01-project-evidence-causal-storytelling.md',
-  'career-02-architecture-diagrams-boundaries-adrs.md',
-  'career-04-incident-response-postmortem-learning.md',
-  'career-05-code-review-risk-communication.md',
-  'web-02-layout-cascade-responsive-logical-properties.md',
-  'web-03-modern-css-architecture-container-progressive.md',
-  'a11y-01-wcag-testing-governance.md',
-  'browser-01-render-events-storage.md',
-  'browser-02-observers-scheduling-lifecycle-coordination.md',
-  'web-04-native-layered-ui-view-transitions.md',
-  'web-05-web-components-shadow-dom-interoperability.md',
-  'net-01-browser-network-fetch-reliability.md',
-  'sec-01-xss-csrf-trust-boundaries.md',
-  'sec-02-csp-trusted-types-reporting.md',
-  'sec-04-cross-origin-isolation-embedding-permissions.md',
-  'sec-03-webauthn-passkeys-authentication.md',
-  'sec-05-web-crypto-key-lifecycle.md',
-  'ts-04-mapped-utility-template-literal-types.md',
-  'ts-05-conditional-infer-distribution.md',
-  'ts-06-functions-overloads-variance-component-apis.md',
-  'ts-07-runtime-contracts-validation-error-models.md',
-  'ts-08-domain-state-permission-modeling.md',
-  'ts-09-version-migration-module-governance.md',
-  'identity-01-session-cookie-token-browser-boundaries.md',
-  'identity-02-oauth-oidc-pkce-security.md',
-  'privacy-01-data-minimization-consent-retention-rights.md',
-  'privacy-02-cross-region-classification-engineering-controls.md',
-  'node-01-runtime-event-loop-nonblocking-io.md',
-  'node-02-files-streams-buffers-errors.md',
-  'node-04-http-bff-production-engineering.md',
-  'aidev-01-specification-controlled-agent-loop.md',
-  'aidev-02-context-engineering-repository-instructions.md',
-  'aidev-03-ai-generated-code-verification.md',
-  'biz-01-domain-objects-relations-ubiquitous-language.md',
-  'biz-02-state-machines-business-invariants.md',
-  'biz-03-rbac-abac-data-permissions.md',
-  'biz-04-api-contract-dto-frontend-model.md',
-  'biz-05-form-table-detail-state-consistency.md',
-  'biz-06-async-jobs-import-export-progress.md',
-  'biz-07-errors-idempotency-eventual-consistency.md',
-  'biz-08-requirement-acceptance-traceability.md',
-  'test-04-api-contract-consumer-driven-testing.md',
-  'render-01-spa-ssr-ssg-isr-hybrid-decisions.md',
-  'render-02-streaming-ssr-hydration-islands.md',
-  'data-01-server-state-cache-keys-invalidation-deduplication.md',
-  'data-02-optimistic-updates-conflicts-offline-mutations.md',
-  'realtime-01-sse-websocket-webtransport-reliability.md',
-  'comp-01-component-responsibility-api-composition.md',
-  'comp-02-controlled-uncontrolled-state-imperative.md',
-  'ux-01-interaction-states-usability-validation.md',
-  'eng-08-software-supply-chain-sbom-provenance.md',
-  'linux-01-filesystem-permissions-safe-commands.md',
-  'linux-02-process-port-log-network-diagnostics.md',
-  'linux-03-shell-environment-automation.md',
-  'linux-04-server-security-ssh-users-firewall.md',
-  'docker-01-images-containers-dockerfile-cache.md',
-  'docker-02-compose-network-volumes-environments.md',
-  'eng-06-ci-cd-artifact-promotion-release-rollback.md',
-  'deploy-01-nginx-static-assets-reverse-proxy-https-cdn.md',
-  'obs-01-frontend-observability-slo-alerting-privacy.md',
-  'perf-01-core-web-vitals-performance-budgets.md',
-  'perf-02-network-resource-loading-cache-optimization.md',
-  'perf-03-main-thread-rendering-long-tasks-inp.md',
-  'perf-04-memory-listeners-resource-leaks.md',
-  'h5-01-viewport-responsive-safe-area-orientation.md',
-  'h5-02-scroll-soft-keyboard-pointer-gestures.md',
-  'mcp-01-server-tools-resources-prompts-schema.md',
-  'aiprod-01-ai-task-model-selection-value-validation.md',
-  'aiprod-02-high-risk-automation-human-in-the-loop.md',
-  'aisafe-01-output-validation-content-safety-guardrails.md',
-  'aisafe-02-threat-modeling-red-teaming-abuse-defense.md',
-  'aigov-01-data-model-change-audit-accountability.md',
-  'aiapp-01-model-interface-instructions-context-boundaries.md',
-  'aiapp-02-streaming-sse-incremental-rendering.md',
-  'aiapp-03-structured-output-schema-validation.md',
-  'aiapp-04-tool-calling-execution-result-ui.md',
-  'aiapp-05-generative-ui-view-model-host-safety.md',
-  'aiui-01-agent-ui-protocol-interoperability.md',
-  'aiapp-06-rag-citations-source-trust.md',
-  'aiapp-07-prompt-injection-untrusted-content.md',
-  'aiapp-08-evaluation-observability-release-gates.md',
-  'aiapp-09-cost-quota-cache-reliability.md',
-  'aiapp-10-ai-interaction-trust-recovery.md',
-  'aiapp-12-conversation-state-context-compression-privacy.md',
-  'aiapp-13-long-term-memory-personalization-forgetting.md',
-  'agent-01-loop-planning-stopping-recovery.md',
-  'agent-03-mcp-transport-stateless-state-versioning.md',
-  'agent-04-mcp-client-discovery-compatibility.md',
-  'agent-05-human-in-the-loop-risk-approval.md',
-  'agent-06-tasks-long-running-recovery-idempotency.md',
-  'agent-07-multi-agent-coordination-context-isolation.md',
-  'agent-08-tool-contract-schema-discoverability.md',
-  'agent-09-observability-read-only-replay.md',
-  'agent-10-identity-authorization-runtime-isolation.md',
-  'aidev-04-ai-code-review-risk-evidence.md',
-  'aidev-07-dependency-source-security.md',
-  'aidev-10-ai-tool-data-team-governance.md',
-  'compat-01-baseline-progressive-enhancement-device-testing.md',
-  'arch-01-quality-attributes-constraints-tradeoffs.md',
-  'arch-02-technical-proposal-adr-review.md',
-  'arch-03-progressive-migration-strangler-compatibility.md',
-  'arch-04-technical-debt-prioritization-governance.md',
-  'arch-05-framework-selection-lifecycle-migration.md',
-  'lead-01-technical-roadmap-delegation-influence.md',
-]);
-const atomicPrerequisiteGuides = new Set([
-  'javascript-variables-and-bindings.md',
-  'javascript-functions-and-callbacks.md',
-  'javascript-objects-properties-methods.md',
-  'javascript-scheduled-callbacks.md',
-  'javascript-strict-mode.md',
-  'javascript-exceptions-and-finally.md',
-  'javascript-promises-and-cancellation.md',
-  'javascript-property-descriptors.md',
-  'algorithm-input-size-and-growth.md',
-  'javascript-collections-keys-membership.md',
-  'browser-main-thread-messages-memory.md',
-]);
-const pronunciationBatchByGuide = new Map<string, string>([
-  ...[
-    'js-01-execution-context-scope-closure.md',
-    'js-02-prototype-object-model-this.md',
-    'js-03-types-equality-copy-immutability.md',
-    'js-07-iteration-metaprogramming-resources.md',
-    'javascript-variables-and-bindings.md',
-    'javascript-functions-and-callbacks.md',
-    'javascript-objects-properties-methods.md',
-    'javascript-scheduled-callbacks.md',
-    'javascript-strict-mode.md',
-    'javascript-exceptions-and-finally.md',
-    'javascript-promises-and-cancellation.md',
-    'javascript-property-descriptors.md',
-  ].map((guide) => [guide, 'b01'] as const),
-  ...[
-    'cs-01-complexity-scale-engineering-cost.md',
-    'cs-02-data-structures-algorithms-correctness.md',
-    'cs-03-large-data-workers-incremental-memory.md',
-    'js-04-async-promise-browser-event-loop.md',
-    'algorithm-input-size-and-growth.md',
-    'javascript-collections-keys-membership.md',
-    'browser-main-thread-messages-memory.md',
-  ].map((guide) => [guide, 'b02'] as const),
-  ...[
-    'js-05-promise-errors-async-control-flow.md',
-    'js-06-es-modules-module-boundaries.md',
-    'ts-01-type-system-structural-strict-mode.md',
-    'ts-02-unions-narrowing-never-exhaustiveness.md',
-  ].map((guide) => [guide, 'b03'] as const),
-  ...[
-    'ts-03-generics-constraints-keyof-indexed-access.md',
-    'web-01-html-semantics-forms-accessibility.md',
-    'react-01-render-purity-state-snapshot.md',
-    'vue-01-vite-sfc-project-structure.md',
-    'vue-02-ref-reactive-computed-boundaries.md',
-  ].map((guide) => [guide, 'b04'] as const),
-  ...[
-    'react-02-component-boundaries-data-flow-composition.md',
-    'vue-03-template-directives-events-forms.md',
-    'vue-04-typed-components-slots-model-teleport.md',
-    'react-03-state-model-derived-controlled.md',
-  ].map((guide) => [guide, 'b05'] as const),
-  ...[
-    'react-04-effects-external-sync-cleanup.md',
-    'vue-05-lifecycle-effects-async-recovery.md',
-    'react-05-hooks-rules-custom-hooks.md',
-    'vue-06-composables-injection-reuse.md',
-  ].map((guide) => [guide, 'b06'] as const),
-  ...[
-    'react-06-reducer-context-state-domains.md',
-    'vue-08-pinia-state-layers.md',
-    'react-08-error-boundaries-suspense-recovery.md',
-    'react-10-router-data-framework-modes.md',
-  ].map((guide) => [guide, 'b07'] as const),
-  ...[
-    'vue-07-router-navigation-boundaries.md',
-    'react-07-performance-memo-large-lists.md',
-    'vue-10-testing-performance-production-build.md',
-    'react-09-compiler-rsc-security-upgrades.md',
-    'vue-11-nuxt-rendering-data-performance.md',
-  ].map((guide) => [guide, 'b08'] as const),
-  ...[
-    'git-01-object-index-references-recovery.md',
-    'git-02-branches-merge-rebase-conflicts.md',
-    'git-03-commits-remotes-pr-worktrees-collaboration.md',
-    'debug-01-systematic-debugging-evidence-causality.md',
-  ].map((guide) => [guide, 'b09'] as const),
-  ...[
-    'eng-01-module-graph-build-output-source-maps.md',
-    'eng-02-dev-production-environments-assets-cache.md',
-    'eng-03-dependencies-lockfile-workspaces-peer.md',
-    'eng-05-quality-gates-lint-types-tests-ci.md',
-  ].map((guide) => [guide, 'b10'] as const),
-  ...[
-    'test-01-test-design-oracles-properties-mutation.md',
-    'test-02-component-testing-user-behavior-accessibility.md',
-    'test-03-e2e-visual-regression-isolation-flakiness.md',
-    'career-01-project-evidence-causal-storytelling.md',
-  ].map((guide) => [guide, 'b11'] as const),
-  ...[
-    'career-02-architecture-diagrams-boundaries-adrs.md',
-    'career-04-incident-response-postmortem-learning.md',
-    'career-05-code-review-risk-communication.md',
-    'web-02-layout-cascade-responsive-logical-properties.md',
-    'web-03-modern-css-architecture-container-progressive.md',
-  ].map((guide) => [guide, 'b12'] as const),
-  ...[
-    'a11y-01-wcag-testing-governance.md',
-    'browser-01-render-events-storage.md',
-    'browser-02-observers-scheduling-lifecycle-coordination.md',
-    'web-04-native-layered-ui-view-transitions.md',
-  ].map((guide) => [guide, 'b13'] as const),
-  ...[
-    'web-05-web-components-shadow-dom-interoperability.md',
-    'net-01-browser-network-fetch-reliability.md',
-    'sec-01-xss-csrf-trust-boundaries.md',
-    'sec-02-csp-trusted-types-reporting.md',
-  ].map((guide) => [guide, 'b14'] as const),
-  ...[
-    'sec-04-cross-origin-isolation-embedding-permissions.md',
-    'sec-03-webauthn-passkeys-authentication.md',
-    'sec-05-web-crypto-key-lifecycle.md',
-    'ts-04-mapped-utility-template-literal-types.md',
-  ].map((guide) => [guide, 'b15'] as const),
-  ...[
-    'ts-05-conditional-infer-distribution.md',
-    'ts-06-functions-overloads-variance-component-apis.md',
-    'ts-07-runtime-contracts-validation-error-models.md',
-    'ts-08-domain-state-permission-modeling.md',
-    'ts-09-version-migration-module-governance.md',
-  ].map((guide) => [guide, 'b16'] as const),
-  ...[
-    'identity-01-session-cookie-token-browser-boundaries.md',
-    'identity-02-oauth-oidc-pkce-security.md',
-    'privacy-01-data-minimization-consent-retention-rights.md',
-    'privacy-02-cross-region-classification-engineering-controls.md',
-  ].map((guide) => [guide, 'b17'] as const),
-  ...[
-    'node-01-runtime-event-loop-nonblocking-io.md',
-    'node-02-files-streams-buffers-errors.md',
-    'node-04-http-bff-production-engineering.md',
-    'aidev-01-specification-controlled-agent-loop.md',
-  ].map((guide) => [guide, 'b18'] as const),
-  ...[
-    'aidev-02-context-engineering-repository-instructions.md',
-    'aidev-03-ai-generated-code-verification.md',
-    'biz-01-domain-objects-relations-ubiquitous-language.md',
-    'biz-02-state-machines-business-invariants.md',
-  ].map((guide) => [guide, 'b19'] as const),
-  ...[
-    'biz-03-rbac-abac-data-permissions.md',
-    'biz-04-api-contract-dto-frontend-model.md',
-    'biz-05-form-table-detail-state-consistency.md',
-    'biz-06-async-jobs-import-export-progress.md',
-    'biz-07-errors-idempotency-eventual-consistency.md',
-  ].map((guide) => [guide, 'b20'] as const),
-  ...[
-    'biz-08-requirement-acceptance-traceability.md',
-    'test-04-api-contract-consumer-driven-testing.md',
-    'render-01-spa-ssr-ssg-isr-hybrid-decisions.md',
-    'render-02-streaming-ssr-hydration-islands.md',
-  ].map((guide) => [guide, 'b21'] as const),
-  ...[
-    'data-01-server-state-cache-keys-invalidation-deduplication.md',
-    'data-02-optimistic-updates-conflicts-offline-mutations.md',
-    'realtime-01-sse-websocket-webtransport-reliability.md',
-    'comp-01-component-responsibility-api-composition.md',
-  ].map((guide) => [guide, 'b22'] as const),
-  ...[
-    'comp-02-controlled-uncontrolled-state-imperative.md',
-    'ux-01-interaction-states-usability-validation.md',
-    'eng-08-software-supply-chain-sbom-provenance.md',
-    'linux-01-filesystem-permissions-safe-commands.md',
-  ].map((guide) => [guide, 'b23'] as const),
-  ...[
-    'linux-02-process-port-log-network-diagnostics.md',
-    'linux-03-shell-environment-automation.md',
-    'linux-04-server-security-ssh-users-firewall.md',
-    'docker-01-images-containers-dockerfile-cache.md',
-    'docker-02-compose-network-volumes-environments.md',
-  ].map((guide) => [guide, 'b24'] as const),
-  ...[
-    'eng-06-ci-cd-artifact-promotion-release-rollback.md',
-    'deploy-01-nginx-static-assets-reverse-proxy-https-cdn.md',
-    'obs-01-frontend-observability-slo-alerting-privacy.md',
-    'perf-01-core-web-vitals-performance-budgets.md',
-  ].map((guide) => [guide, 'b25'] as const),
-  ...[
-    'perf-02-network-resource-loading-cache-optimization.md',
-    'perf-03-main-thread-rendering-long-tasks-inp.md',
-    'perf-04-memory-listeners-resource-leaks.md',
-    'h5-01-viewport-responsive-safe-area-orientation.md',
-  ].map((guide) => [guide, 'b26'] as const),
-  ...[
-    'h5-02-scroll-soft-keyboard-pointer-gestures.md',
-    'mcp-01-server-tools-resources-prompts-schema.md',
-    'aiprod-01-ai-task-model-selection-value-validation.md',
-    'aiprod-02-high-risk-automation-human-in-the-loop.md',
-  ].map((guide) => [guide, 'b27'] as const),
-  ...[
-    'aisafe-01-output-validation-content-safety-guardrails.md',
-    'aisafe-02-threat-modeling-red-teaming-abuse-defense.md',
-    'aigov-01-data-model-change-audit-accountability.md',
-    'aiapp-01-model-interface-instructions-context-boundaries.md',
-    'aiapp-02-streaming-sse-incremental-rendering.md',
-  ].map((guide) => [guide, 'b28'] as const),
-  ...[
-    'aiapp-03-structured-output-schema-validation.md',
-    'aiapp-04-tool-calling-execution-result-ui.md',
-    'aiapp-05-generative-ui-view-model-host-safety.md',
-    'aiui-01-agent-ui-protocol-interoperability.md',
-  ].map((guide) => [guide, 'b29'] as const),
-  ...[
-    'aiapp-06-rag-citations-source-trust.md',
-    'aiapp-07-prompt-injection-untrusted-content.md',
-    'aiapp-08-evaluation-observability-release-gates.md',
-    'aiapp-09-cost-quota-cache-reliability.md',
-  ].map((guide) => [guide, 'b30'] as const),
-  ...[
-    'aiapp-10-ai-interaction-trust-recovery.md',
-    'aiapp-12-conversation-state-context-compression-privacy.md',
-    'aiapp-13-long-term-memory-personalization-forgetting.md',
-    'agent-01-loop-planning-stopping-recovery.md',
-  ].map((guide) => [guide, 'b31'] as const),
-  ...[
-    'agent-03-mcp-transport-stateless-state-versioning.md',
-    'agent-04-mcp-client-discovery-compatibility.md',
-    'agent-05-human-in-the-loop-risk-approval.md',
-    'agent-06-tasks-long-running-recovery-idempotency.md',
-    'agent-07-multi-agent-coordination-context-isolation.md',
-  ].map((guide) => [guide, 'b32'] as const),
-  ...[
-    'agent-08-tool-contract-schema-discoverability.md',
-    'agent-09-observability-read-only-replay.md',
-    'agent-10-identity-authorization-runtime-isolation.md',
-    'aidev-04-ai-code-review-risk-evidence.md',
-  ].map((guide) => [guide, 'b33'] as const),
-  ...[
-    'aidev-07-dependency-source-security.md',
-    'aidev-10-ai-tool-data-team-governance.md',
-    'compat-01-baseline-progressive-enhancement-device-testing.md',
-    'arch-01-quality-attributes-constraints-tradeoffs.md',
-  ].map((guide) => [guide, 'b34'] as const),
-  ...[
-    'arch-02-technical-proposal-adr-review.md',
-    'arch-03-progressive-migration-strangler-compatibility.md',
-    'arch-04-technical-debt-prioritization-governance.md',
-    'arch-05-framework-selection-lifecycle-migration.md',
-    'lead-01-technical-roadmap-delegation-influence.md',
-  ].map((guide) => [guide, 'b35'] as const),
-]);
 const isScopedMainGuide = computed(() => scopedMainGuides.has(material.value?.guide ?? ''));
 const isAtomicPrerequisite = computed(() => atomicPrerequisiteGuides.has(material.value?.guide ?? ''));
 const usesLinkedPrerequisites = computed(() => isScopedMainGuide.value || isAtomicPrerequisite.value);
@@ -476,6 +84,10 @@ const materialDescription = computed(() => chapter.value?.summary ?? (isAtomicPr
 const materialKind = computed(() => isBeginnerGuide.value ? '阅读辅助' : isAtomicPrerequisite.value ? '前置知识短文' : '知识点主讲义');
 
 async function load() {
+  const request = latestLoad.start();
+  void flushReadingProgressSave();
+  headingObserver?.disconnect();
+  pronunciationAudio?.pause();
   loading.value = true;
   error.value = '';
   activeHeading.value = '';
@@ -485,26 +97,33 @@ async function load() {
     const anchor = String(route.params.anchor ?? '');
     sectionVisit.value = Boolean(findLearningChapter(guide) && route.hash);
     const [materialData, readingRecords] = await Promise.all([
-      apiClient.getKnowledgeMaterial(guide, anchor),
-      pronunciationBatchByGuide.has(guide) ? apiClient.getMaterialReadingProgress() : Promise.resolve([]),
+      apiClient.getKnowledgeMaterial(guide, anchor, request.signal),
+      pronunciationBatchByGuide.has(guide) ? apiClient.getMaterialReadingProgress(request.signal) : Promise.resolve([]),
     ]);
-    materialReadingByKey.value = Object.fromEntries(readingRecords.map((record) => [`${record.guide}#${record.anchor}`, record]));
+    if (!request.isCurrent()) return;
+    for (const record of readingRecords) {
+      const key = `${record.guide}#${record.anchor}`;
+      if ((materialReadingByKey.value[key]?.progressPercent ?? -1) <= record.progressPercent) {
+        materialReadingByKey.value[key] = record;
+      }
+    }
     material.value = materialData;
     readingProgress.value = materialReadingByKey.value[`${materialData.guide}#${materialData.anchor}`]?.progressPercent ?? 0;
   } catch (reason) {
+    if (!request.isCurrent()) return;
     material.value = null;
     error.value = reason instanceof Error ? reason.message : '学习资料加载失败';
   } finally {
-    loading.value = false;
-    if (error.value) {
+    if (request.isCurrent()) loading.value = false;
+    if (request.isCurrent() && error.value) {
       await nextTick();
-      announceMaterialReady(route.path);
+      if (request.isCurrent()) announceMaterialReady(route.path);
     }
   }
 }
 
 function updateReadingProgress() {
-  if (sectionVisit.value) return;
+  if (loading.value || sectionVisit.value) return;
   const root = readerRoot.value;
   const markdownRoot = root?.querySelector<HTMLElement>('.markdown-body');
   if (!root || !markdownRoot) return;
@@ -520,6 +139,9 @@ function updateReadingProgress() {
 function scheduleReadingProgressSave(progressPercent: number) {
   if (!tracksReadingProgress.value || !material.value || currentReading.value.completed) return;
   if (progressPercent <= currentReading.value.progressPercent) return;
+  if (pendingReadingSave && (pendingReadingSave.guide !== material.value.guide || pendingReadingSave.anchor !== material.value.anchor)) {
+    void flushReadingProgressSave();
+  }
   pendingReadingSave = {
     guide: material.value.guide,
     anchor: material.value.anchor,
@@ -541,12 +163,18 @@ async function flushReadingProgressSave() {
   if (!pending) return;
   try {
     const saved = await apiClient.updateMaterialReadingProgress(pending.guide, pending.anchor, pending.progressPercent);
-    materialReadingByKey.value = { ...materialReadingByKey.value, [`${saved.guide}#${saved.anchor}`]: saved };
+    if (disposed) return;
+    const key = `${saved.guide}#${saved.anchor}`;
+    if ((materialReadingByKey.value[key]?.progressPercent ?? 0) > saved.progressPercent) return;
+    materialReadingByKey.value = { ...materialReadingByKey.value, [key]: saved };
+    if (material.value?.guide !== saved.guide || material.value.anchor !== saved.anchor) return;
     readingProgress.value = Math.max(readingProgress.value, saved.progressPercent);
     readingSaveFeedback.value = saved.completed ? '阅读超过 80%，已自动标记为看完' : `阅读进度已保存到 ${saved.progressPercent}%`;
     decorateMaterialReadingStatuses();
   } catch {
-    readingSaveFeedback.value = '阅读进度暂时没有保存，继续阅读时会重试';
+    if (!disposed && material.value?.guide === pending.guide && material.value.anchor === pending.anchor) {
+      readingSaveFeedback.value = '阅读进度暂时没有保存，继续阅读时会重试';
+    }
   }
 }
 
@@ -799,6 +427,8 @@ onMounted(() => {
 });
 watch(() => [route.params.guide, route.params.anchor], load);
 onBeforeUnmount(() => {
+  disposed = true;
+  latestLoad.cancel();
   void flushReadingProgressSave();
   headingObserver?.disconnect();
   pronunciationAudio?.pause();

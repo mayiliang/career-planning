@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiClient, type KnowledgeNote, type NoteSortMode } from '@/api/client';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
+import { createLatestRequest } from '@/utils/latest-request';
 
 const router = useRouter();
 const notes = ref<KnowledgeNote[]>([]);
@@ -13,12 +14,15 @@ const error = ref('');
 const view = ref<'active' | 'original' | 'organized'>('active');
 const sortMode = ref<NoteSortMode>('knowledge');
 let timer: number | undefined;
+const latestLoad = createLatestRequest();
 
 const grouped = computed(() => {
   const map = new Map<string, KnowledgeNote[]>();
   for (const note of notes.value) {
     const key = `${note.domainCode ?? '—'} · ${note.domainTitle ?? '未分类'}`;
-    map.set(key, [...(map.get(key) ?? []), note]);
+    const items = map.get(key) ?? [];
+    items.push(note);
+    map.set(key, items);
   }
   return [...map.entries()];
 });
@@ -40,21 +44,32 @@ const currentViewLabel = computed(() => ({
 })[view.value]);
 
 async function load() {
+  window.clearTimeout(timer);
+  const request = latestLoad.start();
   loading.value = true;
   error.value = '';
   try {
-    notes.value = await apiClient.listNotes({ search: search.value || undefined, sort: sortMode.value });
+    const result = await apiClient.listNotes({ search: search.value || undefined, sort: sortMode.value }, request.signal);
+    if (!request.isCurrent()) return;
+    notes.value = result;
     if (selected.value) selected.value = notes.value.find((item) => item.id === selected.value?.id) ?? notes.value[0] ?? null;
     else selected.value = notes.value[0] ?? null;
-  } catch (reason) { error.value = reason instanceof Error ? reason.message : '笔记加载失败'; }
-  finally { loading.value = false; }
+  } catch (reason) {
+    if (request.isCurrent()) error.value = reason instanceof Error ? reason.message : '笔记加载失败';
+  } finally {
+    if (request.isCurrent()) loading.value = false;
+  }
 }
 
 function choose(note: KnowledgeNote) { selected.value = note; view.value = 'active'; }
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
-watch(search, () => { window.clearTimeout(timer); timer = window.setTimeout(load, 250); });
+watch(search, () => {
+  latestLoad.cancel();
+  window.clearTimeout(timer);
+  timer = window.setTimeout(load, 250);
+});
 watch(sortMode, () => {
   try { window.localStorage.setItem('career-atlas-note-sort', sortMode.value); } catch { /* 排序偏好不可用不影响笔记 */ }
   void load();
@@ -65,7 +80,10 @@ onMounted(() => {
   if (['knowledge', 'updated_desc', 'updated_asc', 'title_asc', 'code_asc'].includes(saved ?? '') && saved !== sortMode.value) sortMode.value = saved as NoteSortMode;
   else void load();
 });
-onBeforeUnmount(() => window.clearTimeout(timer));
+onBeforeUnmount(() => {
+  window.clearTimeout(timer);
+  latestLoad.cancel();
+});
 </script>
 
 <template>
