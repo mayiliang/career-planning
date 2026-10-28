@@ -44,3 +44,7 @@ temp/
 
 # Drizzle
 drizzle/meta/
+
+# Local automation Python cache
+__pycache__/
+*.pyc
