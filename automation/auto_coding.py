@@ -23,6 +23,8 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from team import TEAM, LIVE_STATES, WORKER_MODELS, codex_config, track_children
+
 APP_NAME = 'CareerPlanningAutoCoding'
 LABEL = 'com.careeratlas.auto-coding'
 DEFAULT_HOME = Path.home() / 'Library' / 'Application Support' / APP_NAME
@@ -249,7 +251,7 @@ class AppServer:
         self.error_log = open(runtime / 'app-server.stderr.log', 'a')
         self.process = subprocess.Popen([config['codex'], 'app-server'], cwd=config['workspace'],
                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.error_log,
-                  text=True, bufsize=1)
+                  text=True, bufsize=1, start_new_session=True)
         threading.Thread(target=self._reader, daemon=True).start()
         try:
             self.request('initialize', {'clientInfo': {'name': 'career_autocoding',
@@ -273,8 +275,8 @@ class AppServer:
         self.process.stdin.write(json.dumps(value, ensure_ascii=False) + '\n')
         self.process.stdin.flush()
 
-    def receive(self, timeout=1):
-        if STOP.is_set() or (self.runtime / 'paused').exists():
+    def receive(self, timeout=1, ignore_pause=False):
+        if not ignore_pause and (STOP.is_set() or (self.runtime / 'paused').exists()):
             raise Paused()
         try:
             message = self.inbox.get(timeout=timeout)
@@ -289,13 +291,13 @@ class AppServer:
             return None
         return message
 
-    def request(self, method, params=None, timeout=90):
+    def request(self, method, params=None, timeout=90, ignore_pause=False):
         self.sequence += 1
         request_id = self.sequence
         self.send({'id': request_id, 'method': method, 'params': params or {}})
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            message = self.receive()
+            message = self.receive(ignore_pause=ignore_pause)
             if message is None:
                 continue
             if message.get('id') == request_id:
@@ -309,11 +311,13 @@ class AppServer:
         raise TimeoutError(f'Codex {method} timeout')
 
     def close(self):
-        self.process.terminate()
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(self.process.pid, signal.SIGTERM)
         try:
             self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            self.process.kill()
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(self.process.pid, signal.SIGKILL)
             self.process.wait(timeout=5)
         self.error_log.close()
 
@@ -333,6 +337,7 @@ class Runner:
         self.rpc = None
 
     def save(self):
+        self.state['team'] = TEAM
         self.state['updated_at'] = now()
         atomic_json(self.state_path, self.state)
 
@@ -366,6 +371,16 @@ class Runner:
             self.rpc = AppServer(self.config, self.runtime)
         return self.rpc
 
+    def close_server(self):
+        if self.rpc:
+            self.rpc.close()
+            self.rpc = None
+            for child in (self.state.get('active') or {}).get('children', []):
+                if child.get('status') in LIVE_STATES | {'stopping'}:
+                    child['status'] = 'cancelled'
+                    child['updated_at'] = now()
+            self.save()
+
     def check_quota(self):
         response = self.server().request('account/rateLimits/read')
         # Retain only operational fields, not account identifiers or reset-credit IDs.
@@ -398,18 +413,28 @@ class Runner:
         run_dir = self.runtime / 'runs' / active['run_id']
         result = read_json(run_dir / 'result.json')
         if result:
+            if any(c.get('status') in LIVE_STATES | {'stopping'} for c in active.get('children', [])):
+                raise TurnFailure('缓存结果仍有未确认结束的子代理，不能交付')
             return validate_result(result, SCHEMAS[phase])
         self.check_quota()
         rpc = self.server()
         instructions = read_json(run_dir / 'input.json')
+        # Use the deployed policy when resuming an older checkpoint as well.
+        role = {'plan': 'product-manager', 'develop': 'developer', 'review': 'acceptance'}[phase]
+        current_rules = (self.runtime / 'roles' / 'common.md').read_text() + '\n' + (self.runtime / 'roles' / (role + '.md')).read_text()
         params = {'cwd': str(self.workspace), 'approvalPolicy': 'on-request',
                   'approvalsReviewer': 'auto_review', 'sandbox': 'workspace-write',
-                  'developerInstructions': instructions['instructions']}
+                  'model': TEAM['commander']['model'], 'config': codex_config(self.runtime),
+                  'developerInstructions': current_rules}
         if active.get('thread_id'):
             thread = rpc.request('thread/resume', {**params, 'threadId': active['thread_id']})['thread']
             # A process may have died after the turn completed but before local result fsync.
             turns = thread.get('turns', [])
             if turns and turns[-1].get('status') == 'completed' and not active.get('correction'):
+                if any(c.get('status') in LIVE_STATES | {'stopping'} for c in active.get('children', [])):
+                    self.interrupt_team(rpc, active)
+                    self.checkpoint()
+                    raise TurnFailure('恢复父回合结果时发现未结束的子代理，已保留现场，恢复后重新核对')
                 messages = [i.get('text', '') for i in turns[-1].get('items', []) if i.get('type') == 'agentMessage']
                 for message in reversed(messages):
                     try:
@@ -423,16 +448,19 @@ class Runner:
             if active.get('correction'):
                 prompt += '\n上次输出被调度器拒绝，请修正：' + active['correction']
         else:
-            thread = rpc.request('thread/start', {**params, 'serviceName': 'career_auto_coding',
-                       'config': {'web_search': 'live'}})['thread']
+            thread = rpc.request('thread/start', {**params, 'serviceName': 'career_auto_coding'})['thread']
             active['thread_id'] = thread['id']
             self.save()
             prompt = instructions['prompt']
         turn = rpc.request('turn/start', {'threadId': active['thread_id'],
+                   'model': TEAM['commander']['model'], 'effort': TEAM['commander']['reasoning_effort'],
                    'input': [{'type': 'text', 'text': prompt}], 'outputSchema': SCHEMAS[phase],
                    'sandboxPolicy': {'type': 'workspaceWrite', 'networkAccess': True,
                                      'writableRoots': [str(self.workspace)]}})['turn']
         active['turn_id'] = turn['id']
+        active['model'] = TEAM['commander']['model']
+        active['reasoning_effort'] = TEAM['commander']['reasoning_effort']
+        active.setdefault('children', [])
         active['started_at'] = now()
         self.state['status'] = f'running:{phase}'
         self.save()
@@ -448,6 +476,24 @@ class Runner:
                         events.write(json.dumps(event, ensure_ascii=False) + '\n')
                         events.flush()
                         method, data = event.get('method'), event.get('params', {})
+                        previous_children = {c['id']: c.get('status') for c in active.get('children', [])}
+                        if track_children(active, event, now()):
+                            self.save()
+                            if any(c.get('model') and c['model'] not in WORKER_MODELS for c in active['children']):
+                                raise Attention('子代理使用了团队约定之外的模型，已停止并保留检查点')
+                        child_turn_failed = (method == 'turn/completed' and data.get('threadId') in
+                                             {c['id'] for c in active.get('children', [])} and
+                                             data.get('turn', {}).get('status') == 'failed' and is_quota_error(data['turn']))
+                        item = data.get('item') or {}
+                        child_quota_report = (item.get('type') == 'collabAgentToolCall' and
+                                              item.get('senderThreadId') == active['thread_id'] and
+                                              any(previous_children.get(key) != 'failed' and value.get('status') == 'errored' and is_quota_error(value)
+                                                  for key, value in item.get('agentsStates', {}).items()))
+                        if child_turn_failed or child_quota_report:
+                            snapshot = rpc.request('account/rateLimits/read')
+                            self.state['quota'] = {k: snapshot.get(k) for k in ('ordinaryUsageAllowed', 'rateLimits', 'rateLimitsByLimitId')}
+                            self.state['quota_checked_at'] = time.time()
+                            raise QuotaWait(quota_deadline(snapshot, forced=True), '子代理额度耗尽，团队统一等待恢复')
                         if data.get('threadId') not in (None, active['thread_id']):
                             continue
                         if data.get('turnId') not in (None, turn['id']):
@@ -463,6 +509,8 @@ class Runner:
                                     self.state['quota_checked_at'] = time.time()
                                     raise QuotaWait(quota_deadline(snapshot, forced=True), 'Codex 额度耗尽')
                                 raise TurnFailure(json.dumps(completed.get('error') or completed['status'], ensure_ascii=False))
+                            if any(c.get('status') in LIVE_STATES | {'stopping'} for c in active.get('children', [])):
+                                raise TurnFailure('总指挥返回结果时仍有子代理运行；恢复后检查子代理与文件，等待或结束全部子代理再交付')
                             try:
                                 result = validate_result(json.loads(final_text), SCHEMAS[phase])
                             except ValueError as error:
@@ -475,10 +523,29 @@ class Runner:
                 raise TurnFailure('单轮超过两小时，保存进度后重试')
             finally:
                 if not (run_dir / 'result.json').exists():
-                    with contextlib.suppress(Exception):
-                        rpc.send({'id': 999999, 'method': 'turn/interrupt',
-                                  'params': {'threadId': active['thread_id'], 'turnId': turn['id']}})
+                    self.interrupt_team(rpc, active)
                     self.checkpoint()
+
+    def interrupt_team(self, rpc, active):
+        targets = [(active.get('thread_id'), active.get('turn_id'))]
+        for child in active.get('children', []):
+            if child.get('status') in LIVE_STATES:
+                turn_id = child.get('turn_id')
+                if not turn_id:
+                    with contextlib.suppress(Exception):
+                        thread = rpc.request('thread/read', {'threadId': child['id'], 'includeTurns': True},
+                                             timeout=5, ignore_pause=True)['thread']
+                        turns = thread.get('turns') or []
+                        if turns and turns[-1].get('status') == 'inProgress':
+                            turn_id = turns[-1]['id']
+                targets.append((child['id'], turn_id))
+                child['status'] = 'stopping'
+                child['updated_at'] = now()
+        for index, (thread_id, turn_id) in enumerate(targets):
+            if thread_id and turn_id:
+                with contextlib.suppress(Exception):
+                    rpc.send({'id': 990000 + index, 'method': 'turn/interrupt',
+                              'params': {'threadId': thread_id, 'turnId': turn_id}})
 
     def finish_agent(self):
         self.state['last_run'] = self.state.pop('active', None)
@@ -815,9 +882,7 @@ class Runner:
                 self.state.update(status='waiting:quota', next_run_at=error.until, last_error=str(error))
                 self.checkpoint()
                 self.log('quota_wait', until=error.until, detail=str(error))
-                if self.rpc:
-                    self.rpc.close()
-                    self.rpc = None
+                self.close_server()
             except Attention as error:
                 self.state.update(status='needs_attention', last_error=str(error))
                 (self.runtime / 'paused').write_text(str(error) + '\n')
@@ -836,9 +901,7 @@ class Runner:
                                   next_run_at=time.time() + min(1800, 60 * 2 ** min(count - 1, 5)))
                 self.checkpoint()
                 self.log('turn_failed', failure=count, detail=str(error))
-                if self.rpc:
-                    self.rpc.close()
-                    self.rpc = None
+                self.close_server()
             except Exception as error:
                 count = self.state.get('failures', 0) + 1
                 delay = min(3600, 60 * 2 ** min(count - 1, 6))
@@ -846,9 +909,7 @@ class Runner:
                                   next_run_at=time.time() + delay, last_error=str(error)[-4000:])
                 self.checkpoint()
                 self.log('retry', failure=count, detail=str(error)[-4000:])
-                if self.rpc:
-                    self.rpc.close()
-                    self.rpc = None
+                self.close_server()
             if once:
                 return
         if self.state.get('status') != 'needs_attention':
@@ -870,7 +931,9 @@ def install(args):
     command(['git', 'rev-parse', '--show-toplevel'], workspace)
     command([codex, '--version'])
     shutil.copy2(Path(__file__), runtime / 'auto_coding.py')
+    shutil.copy2(Path(__file__).with_name('team.py'), runtime / 'team.py')
     shutil.copytree(Path(__file__).parent / 'roles', runtime / 'roles')
+    shutil.copytree(Path(__file__).parent / 'agents', runtime / 'agents')
     pnpm = str(Path(args.pnpm).resolve())
     command([pnpm, '--version'])
     bin_dir = runtime / 'bin'
@@ -958,8 +1021,7 @@ def main():
                 runner.log('startup_failure', detail=str(error)[-4000:])
                 STOP.wait(30)
             finally:
-                if runner.rpc:
-                    runner.rpc.close()
+                runner.close_server()
             if args.action == 'once':
                 return
 

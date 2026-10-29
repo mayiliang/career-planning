@@ -118,10 +118,30 @@ function renderQuota(s) {
 }
 
 function renderRoles(s) {
-  for (const [id, owns] of [['role-pm', ['plan','publish','review','accept']], ['role-dev', ['develop','validate']]]) {
-    const current = owns.includes(s.phase); const running = current && s.runner_online && !s.paused && !s.status.startsWith('waiting:');
-    $(id).classList.toggle('current', running); $(id).querySelector('.role-state').textContent = current ? s.paused ? '已暂停' : !s.runner_online ? '待恢复' : s.status.startsWith('waiting:') ? '等待中' : '进行中' : '待命';
+  const team = s.team || {}, active = s.active || {};
+  const renderRole = (id, config, status, task) => {
+    const row = $(id);
+    row.querySelector('.role-model').textContent = config?.model
+      ? `${config.model}${config.reasoning_effort ? ` · ${config.reasoning_effort}` : ''}（配置）`
+      : '等待调度器报告';
+    row.querySelector('.role-state').textContent = status;
+    row.querySelector('.role-task').textContent = task ? `子任务：${task.slice(0, 120)}` : '';
+    row.classList.toggle('current', status === '执行中');
+  };
+  const commanderStatus = !team.commander?.model ? '等待调度器报告'
+    : !s.runner_online ? '待恢复' : s.paused ? '已暂停' : s.status.startsWith('waiting:') ? '等待中'
+    : active.model ? (active.model === team.commander.model && s.status.startsWith('running:') ? '执行中' : '待命') : '尚未开始';
+  renderRole('role-astra', team.commander, commanderStatus, '');
+  const statuses = {running:'执行中', in_progress:'执行中', completed:'已完成', complete:'已完成', failed:'出错', error:'出错', cancelled:'已结束', pending:'正在启动', queued:'等待执行', stopping:'正在结束'};
+  for (const role of ['sol', 'terra']) {
+    const config = team.workers?.find(x => x.role === role);
+    const children = active.children;
+    const child = Array.isArray(children) ? [...children].reverse().find(x => x.role === role) : null;
+    const status = !config?.model || !Array.isArray(children) ? '等待调度器报告'
+      : child ? (statuses[child.status] || '等待调度器报告') : '尚未派遣';
+    renderRole(`role-${role}`, config, status, child?.task || '');
   }
+  text('business-stage', `业务阶段：${phaseName(s.phase)} · ${roleName(s.phase)}`);
 }
 
 const eventTitles = {turn_started:'开始执行', quota_wait:'等待额度恢复', retry:'等待重试', startup_failure:'启动检查未通过', needs_attention:'需要处理', turn_failed:'本轮未完成', task_completed:'任务已验收', task_deferred:'任务已暂缓', research_wait:'进入定期研究', operator_control:'控制操作'};

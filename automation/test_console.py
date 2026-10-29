@@ -56,6 +56,36 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(state['status'], 'waiting:retry')
         self.assertNotIn('config', state)
 
+    def test_team_snapshot_exposes_only_redacted_public_fields(self):
+        state = runner.read_json(self.root / 'state.json')
+        state['team'] = {'commander': {'model': 'gpt-6-astra', 'reasoning_effort': 'medium', 'secret': 'hidden'},
+                         'workers': [{'role': 'sol', 'model': 'gpt-6.1-sol', 'reasoning_effort': 'medium', 'secret': 'hidden'}],
+                         'max_workers': 2, 'secret': 'hidden'}
+        state['active'] = {'model': 'gpt-6-astra', 'reasoning_effort': 'medium', 'run_id': 'private',
+                           'children': [{'id': 'child1', 'role': 'sol', 'model': 'gpt-6.1-sol',
+                                         'status': 'running', 'task': '检查 Bearer abc.def.ghi',
+                                         'updated_at': 123, 'secret': 'hidden'}]}
+        runner.atomic_json(self.root / 'state.json', state)
+        result = self.request('/api/status')[1]
+        self.assertEqual(result['team']['commander']['model'], 'gpt-6-astra')
+        self.assertEqual(result['team']['max_workers'], 2)
+        self.assertEqual(result['active']['children'][0]['status'], 'running')
+        self.assertIn('[已隐藏]', result['active']['children'][0]['task'])
+        output = json.dumps({'team': result['team'], 'active': result['active']})
+        self.assertNotIn('secret', output)
+        self.assertNotIn('abc.def.ghi', output)
+        self.assertNotIn('run_id', output)
+
+    def test_legacy_state_distinguishes_missing_from_empty_children(self):
+        result = self.request('/api/status')[1]
+        self.assertIsNone(result['team']['commander'])
+        self.assertIsNone(result['team']['workers'])
+        self.assertIsNone(result['active']['children'])
+        state = runner.read_json(self.root / 'state.json')
+        state['active'] = {'children': []}
+        runner.atomic_json(self.root / 'state.json', state)
+        self.assertEqual(self.request('/api/status')[1]['active']['children'], [])
+
     def test_cross_origin_control_is_rejected(self):
         headers = self.auth(); headers['Origin'] = 'https://unrelated.example'
         self.assertEqual(self.request('/api/control', 'pause', headers)[0], 403)

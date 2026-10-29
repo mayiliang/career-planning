@@ -96,6 +96,33 @@ def summarize_task(task, repo):
     }
 
 
+def team_snapshot(state):
+    """Expose only the scheduler's public team and child activity fields."""
+    team = state.get('team') if isinstance(state.get('team'), dict) else {}
+    active = state.get('active') if isinstance(state.get('active'), dict) else {}
+
+    def fields(value, names):
+        if not isinstance(value, dict):
+            return None
+        return {key: redact(value[key])[:500] if isinstance(value.get(key), str) else value.get(key)
+                for key in names if key in value}
+
+    workers = team.get('workers')
+    children = active.get('children')
+    return {
+        'team': {'commander': fields(team.get('commander'), ('model', 'reasoning_effort')),
+                 'workers': [fields(x, ('role', 'model', 'reasoning_effort')) for x in workers if isinstance(x, dict)]
+                            if isinstance(workers, list) else None,
+                 'max_workers': team.get('max_workers') if isinstance(team.get('max_workers'), int) else None},
+        'active': {'phase': active.get('phase'), 'started_at': active.get('started_at'),
+                   'thread_id': redact(active.get('thread_id')) if active.get('thread_id') else None,
+                   'model': redact(active.get('model')) if active.get('model') else None,
+                   'reasoning_effort': redact(active.get('reasoning_effort')) if active.get('reasoning_effort') else None,
+                   'children': [fields(x, ('id', 'role', 'model', 'status', 'task', 'updated_at'))
+                                for x in children if isinstance(x, dict)] if isinstance(children, list) else None},
+    }
+
+
 class ControlStore:
     def __init__(self, runtime):
         self.runtime = Path(runtime)
@@ -122,6 +149,7 @@ class ControlStore:
                 if task:
                     task['recorded_at'] = path.stat().st_mtime
                     history.append(task)
+        team_data = team_snapshot(state)
         return {
             'server_time': time.time(), 'status': state.get('status', 'starting'),
             'phase': state.get('phase', 'plan'), 'paused': (self.runtime / 'paused').exists(),
@@ -133,8 +161,7 @@ class ControlStore:
             'task': summarize_task(state.get('task'), repo), 'history': history,
             'quota': {'primary': bucket.get('primary'), 'secondary': bucket.get('secondary'),
                        'allowed': quota.get('ordinaryUsageAllowed'), 'checked_at': state.get('quota_checked_at')},
-            'active': {'phase': active.get('phase'), 'started_at': active.get('started_at'),
-                       'thread_id': active.get('thread_id')},
+            'team': team_data['team'], 'active': team_data['active'],
             'activity': self.agent_activity(state)[-12:],
             'events': [self.event(x) for x in json_lines(self.runtime / 'events.jsonl', 80)][-20:],
             'controls': controls,

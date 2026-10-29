@@ -6,7 +6,23 @@
 
 产品经理研究并输出需求 → 调度器发布 GitHub Issue → 开发者实现 → 独立命令检查 → 提交并推送 `auto_coding` → 产品经理在独立会话中验收 → 关闭 Issue 或返工。
 
-产品经理拥有项目内的最终产品决策权。日常决策无需逐项请示。执行器串行处理任务，每个阶段使用独立会话；额度中断时恢复对应会话。模型沿用本机 Codex 配置，不自动切换付费 API。
+产品经理拥有项目内的最终产品决策权。日常决策无需逐项请示。执行器串行处理 Issue，每个阶段使用独立会话；阶段内部可由总指挥派遣子代理。额度中断时恢复对应会话，不自动切换付费 API。
+
+## 模型分工
+
+| 模型 | 职责 |
+| --- | --- |
+| `gpt-6-astra` | 总指挥：目标理解、产品规则、任务拆分与调度、整合、疑难兜底、最终验收 |
+| `gpt-6.1-sol` | 子代理：技术研究、代码实现、依赖分析与测试 |
+| `gpt-6.1-terra` | 子代理：中文学习资料、页面体验、有明确范围的实现与复核 |
+
+三个模型默认使用 `medium` 推理强度。调度器在每次新建及恢复会话时显式固定 Astra；原生 `sol`、`terra` 角色各有模型配置文件。配置仅作用于这个自动化，不改本机全局模型偏好。
+
+每个主会话最多同时运行两个子代理，不递归派遣。独立研究或文件范围互不重叠的实现可并行，共享接口和交叉修改由 Astra 协调。子代理接收必要上下文与清晰的完成条件；小任务可直接处理，避免重复扫描和不必要的派遣。子代理连续两次无法解决同一问题，由 Astra 重新拆分或接管；最终验收仍在独立 Astra 会话中进行。
+
+控制台把配置模型与实际派遣状态分开显示。调度器保存原生子代理的标识、模型、任务摘要及状态；父回合和恢复结果都必须确认子代理已结束，才会进入交付。暂停或额度中断会向父子回合发出中断，并关闭所属 app-server；已保存文件和会话供下次恢复。任何子代理报告额度耗尽时，团队统一等待并重新核验额度，不通过更换模型绕过。
+
+此分工旨在减少重复上下文和让具体工作使用较合适的模型，不承诺固定的 token 或额度节省比例。实际效率取决于任务、返工和推理强度。实现字段以本机生成的 app-server schema 为准；本机版本使用 `agents.<role>.config_file`。
 
 GitHub Issue 使用 `auto-coding` 标签，状态标签为 `auto:ready`、`auto:in-progress`、`auto:review`、`auto:blocked`、`auto:done`。Issue、交付和验收评论含持久化标识，重试时先查已有结果，避免重复发布。提交含 Issue 编号与执行标识。
 
@@ -45,7 +61,7 @@ python3 automation/console_server.py --install
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.careeratlas.auto-coding.console.plist"
 ```
 
-更新已加载的控制台时，先 `bootout` 对应服务，部署后再次 `bootstrap`。更新 `auto_coding.py` 必须先暂停并停止调度服务，将新执行器复制到运行目录，再加载原服务。不要覆盖 `config.json`、`state.json` 或运行历史。控制台静态页面必须通过上述 HTTP 地址打开，直接打开 HTML 文件无法连接服务。
+更新已加载的控制台时，先 `bootout` 对应服务，部署后再次 `bootstrap`。更新执行器必须先暂停并停止调度服务，将 `auto_coding.py`、`team.py`、`roles/` 和 `agents/` 同步到运行目录，再加载原服务。不要覆盖 `config.json`、`state.json` 或运行历史。控制台静态页面必须通过上述 HTTP 地址打开，直接打开 HTML 文件无法连接服务。
 
 在项目目录运行：
 
@@ -97,4 +113,4 @@ python3 -m unittest discover -s automation -p 'test_*.py' -v
 
 测试涵盖额度窗口、未知恢复状态、Issue/评论幂等、分支约束、失败检查阻断交付、提交恢复、版本验收、暂缓成果保存、完整状态流转，以及控制台 HTTP 接口、跨站请求拦截、日志路径限制、操作回执丢失后的去重和额度等待保护。额度真正耗尽后的恢复仍需在实际发生时观察，不能用模拟测试替代长期运行证据。
 
-接口参考：[Codex App Server](https://learn.chatgpt.com/docs/app-server)、[macOS LaunchAgent](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)。
+接口参考：[Codex App Server](https://learn.chatgpt.com/docs/app-server)、[原生子代理](https://learn.chatgpt.com/docs/agent-configuration/subagents)、[模型分工参考](https://learn.chatgpt.com/docs/model-selection)、[macOS LaunchAgent](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)。
