@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>自动迭代工作台 · Career Atlas</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">跳到主要内容</a>
+  <header class="topbar">
+    <div class="brand"><img src="/icon.svg" alt="" width="34" height="34"><span>Career Atlas</span><span class="brand-divider"></span><span class="brand-sub">自动迭代</span></div>
+    <div class="top-actions"><span class="connection" id="connection"><i></i><span>正在连接</span></span><a id="repo-link" class="repo-link" href="https://github.com/mayiliang/career-planning/tree/auto_coding" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <div class="page">
+    <div class="page-heading"><div><h1>自动迭代工作台</h1><p>跟进产品与开发，掌握每一次推进。</p></div><div class="heading-tools"><time id="clock"></time><button class="button quiet" id="refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 18 17"/></svg>刷新状态</button></div></div>
+    <nav class="tabs" aria-label="控制台页面"><button class="tab active" data-view="overview" aria-current="page">运行概览</button><button class="tab" data-view="history">任务历史 <span id="history-count">0</span></button><button class="tab" data-view="logs">运行日志</button><span class="branch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="5" r="2"/><circle cx="17" cy="6" r="2"/><circle cx="7" cy="19" r="2"/><path d="M7 7v10M17 8c0 6-10 2-10 7"/></svg>auto_coding</span></nav>
+    <div class="disconnect hidden" id="disconnect" role="alert">暂时无法连接控制台，正在自动重连。下方显示上一次读取的状态。</div>
+    <main id="main" tabindex="-1">
+      <section id="view-overview" class="view" aria-label="运行概览">
+        <div class="workspace">
+          <div class="main-column">
+            <section class="work-sheet">
+              <div class="status-strip" id="status-strip"><span class="state-dot"></span><strong id="status-title">正在读取状态</strong><span id="status-meta">连接本机调度器</span></div>
+              <div class="task-content"><div class="section-kicker"><span>当前任务</span><a id="issue-link" class="issue-link hidden" target="_blank" rel="noopener noreferrer"></a><span id="priority" class="priority hidden"></span></div><h2 id="task-title">正在读取当前任务…</h2><p id="task-description" class="task-description"></p>
+                <ol id="pipeline" class="pipeline" aria-label="任务执行阶段"></ol>
+                <div class="next-step"><span class="next-label">接下来</span><p id="next-step"></p></div>
+                <div id="error-box" class="error-box hidden"><div class="error-heading"><span aria-hidden="true">!</span><strong>本轮遇到的问题</strong></div><p id="error-summary"></p><details><summary>查看错误详情</summary><pre id="error-detail"></pre></details></div>
+                <details class="task-details" id="task-details"><summary>任务范围与验收要求 <span aria-hidden="true">＋</span></summary><article id="task-body" class="prose"></article></details>
+              </div>
+              <footer class="task-footer"><span id="task-attempt">尚未开始开发</span><span id="state-updated"></span></footer>
+            </section>
+            <section class="activity-section"><div class="section-title"><h2>最近动态</h2><button class="text-button" data-view="logs">查看完整日志 <span aria-hidden="true">↗</span></button></div><div id="activity" class="activity-list"></div></section>
+          </div>
+          <aside class="sidebar" aria-label="运行控制与用量">
+            <section class="side-block control-block"><div class="section-title"><h2>运行控制</h2><span class="local-label">本机</span></div><p id="control-description">正在确认调度服务状态。</p><button id="primary-action" class="button primary full" disabled>正在连接</button><button id="retry-action" class="button secondary full hidden">立即重试</button><p class="control-hint" id="control-hint">操作会保留当前任务和已有进度。</p><div id="control-feedback" class="control-feedback hidden" role="status" aria-live="polite"></div></section>
+            <section class="side-block"><div class="section-title"><h2>Codex 用量</h2><span class="snapshot-label">最近快照</span></div><div id="quota"></div><p class="subtle" id="quota-time">用量在调度器检查时更新。</p></section>
+            <section class="side-block role-block"><div class="section-title"><h2>角色协作</h2></div><div class="role" id="role-pm"><span class="role-avatar pm">产</span><div><strong>产品经理</strong><small>研究、决策与验收</small></div><span class="role-state">待命</span></div><div class="role" id="role-dev"><span class="role-avatar dev">研</span><div><strong>开发者</strong><small>实现、验证与修复</small></div><span class="role-state">待命</span></div><p class="subtle">两个独立会话，通过 Issue 交接工作。</p></section>
+            <div class="sidebar-foot"><span class="service-led" id="service-led"></span><span id="service-state">正在确认服务</span><span id="completed-count"></span></div>
+          </aside>
+        </div>
+      </section>
+      <section id="view-history" class="view hidden" aria-label="任务历史"><div class="view-heading"><div><h2>每一次交付，都有据可查</h2><p>查看已验收或暂缓的任务、交付提交与验证结果。</p></div></div><div id="history-list"></div></section>
+      <section id="view-logs" class="view hidden" aria-label="运行日志"><div class="view-heading"><div><h2>运行日志</h2><p>按执行流程查看发生了什么，以及为什么等待。</p></div><button class="button quiet" id="copy-logs">复制当前日志</button></div><div class="log-toolbar"><div class="log-filters" role="group" aria-label="日志类型"><button class="log-filter active" data-source="events" aria-pressed="true">流程事件</button><button class="log-filter" data-source="agent" aria-pressed="false">角色动态</button><button class="log-filter" data-source="checks" aria-pressed="false">验证结果</button><button class="log-filter" data-source="service" aria-pressed="false">服务日志</button></div><label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="log-search" type="search" placeholder="搜索日志内容" aria-label="搜索日志内容"></label></div><div id="log-list" class="log-list"></div><p class="log-note">仅展示公开进度、执行记录和验证输出，不展示模型内部推理。</p></section>
+    </main>
+    <footer class="page-footer"><span>Career Atlas 自动化控制台</span><span>状态每 5 秒更新 · 时间均为北京时间</span></footer>
+  </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</body>
+</html>

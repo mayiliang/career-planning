@@ -32,6 +32,21 @@ GitHub API 会读取 `git config --get-urlmatch http.proxy` 并沿用该仓库�
 
 ## 查看、暂停、恢复
 
+打开本机控制台：<http://127.0.0.1:42880>。页面每 5 秒读取一次真实状态，显示当前 Issue、六个执行阶段、两个角色、Codex 额度快照及重置时间。任务历史包含验收结果、依据与提交；运行日志可以按流程、角色、验证和服务分类查看、搜索与复制。
+
+控制台提供暂停、恢复、启动调度服务，以及网络重试或研究待命时的立即重试。每次操作先进入持久化队列，由调度器串行执行并回传结果；页面不直接改写检查点。暂停会保留当前任务、会话和工作文件。额度等待期间不提供提前重试，恢复运行仍会核验真实额度。
+
+控制台由独立 LaunchAgent `com.careeratlas.auto-coding.console` 管理，关闭网页不影响自动迭代。默认只监听本机回环地址，不对局域网开放。请求校验 Host、Origin 和操作令牌；只返回必要的状态字段及有界日志，不提供配置文件和模型内部推理日志，已知凭据格式会脱敏。日志仍是本机运行资料，不应直接作为公开报告。
+
+已有调度器安装完成后，可在执行仓库部署控制台：
+
+```sh
+python3 automation/console_server.py --install
+launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.careeratlas.auto-coding.console.plist"
+```
+
+更新已加载的控制台时，先 `bootout` 对应服务，部署后再次 `bootstrap`。更新 `auto_coding.py` 必须先暂停并停止调度服务，将新执行器复制到运行目录，再加载原服务。不要覆盖 `config.json`、`state.json` 或运行历史。控制台静态页面必须通过上述 HTTP 地址打开，直接打开 HTML 文件无法连接服务。
+
 在项目目录运行：
 
 ```sh
@@ -80,6 +95,6 @@ launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.careeratlas.a
 python3 -m unittest discover -s automation -p 'test_*.py' -v
 ```
 
-测试涵盖额度窗口、未知恢复状态、Issue/评论幂等、分支约束、失败检查阻断交付、提交恢复、版本验收、暂缓成果保存以及完整状态流转。额度真正耗尽后的恢复仍需在实际发生时观察，不能用模拟测试替代长期运行证据。
+测试涵盖额度窗口、未知恢复状态、Issue/评论幂等、分支约束、失败检查阻断交付、提交恢复、版本验收、暂缓成果保存、完整状态流转，以及控制台 HTTP 接口、跨站请求拦截、日志路径限制、操作回执丢失后的去重和额度等待保护。额度真正耗尽后的恢复仍需在实际发生时观察，不能用模拟测试替代长期运行证据。
 
 接口参考：[Codex App Server](https://learn.chatgpt.com/docs/app-server)、[macOS LaunchAgent](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)。

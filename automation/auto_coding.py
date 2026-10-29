@@ -325,7 +325,7 @@ class Runner:
         if not self.config:
             raise Attention('尚未安装，请先运行 install')
         self.workspace = Path(self.config['workspace'])
-        if (runtime / 'bin').is_dir():
+        if (runtime / 'bin').is_dir() and str(runtime / 'bin') not in os.environ.get('PATH', '').split(os.pathsep):
             os.environ['PATH'] = str(runtime / 'bin') + os.pathsep + os.environ.get('PATH', '')
         self.state_path = runtime / 'state.json'
         self.state = read_json(self.state_path, {'version': 1, 'phase': 'plan', 'cycle': 0})
@@ -371,6 +371,7 @@ class Runner:
         # Retain only operational fields, not account identifiers or reset-credit IDs.
         snapshot = {k: response.get(k) for k in ('ordinaryUsageAllowed', 'rateLimits', 'rateLimitsByLimitId')}
         self.state['quota'] = snapshot
+        self.state['quota_checked_at'] = time.time()
         self.save()
         until = quota_deadline(snapshot)
         if until:
@@ -418,6 +419,7 @@ class Runner:
                     except (ValueError, TurnFailure):
                         continue
             prompt = instructions['prompt'] + '\n恢复提示：上一轮可能中断。先检查已有工作和文件，继续未完成部分；不要重复实现。'
+            prompt += '\n恢复时的最新任务上下文（以当前基准和反馈为准）：\n' + json.dumps(payload, ensure_ascii=False, indent=2)
             if active.get('correction'):
                 prompt += '\n上次输出被调度器拒绝，请修正：' + active['correction']
         else:
@@ -457,6 +459,8 @@ class Runner:
                             if completed['status'] != 'completed':
                                 if is_quota_error(completed):
                                     snapshot = rpc.request('account/rateLimits/read')
+                                    self.state['quota'] = {k: snapshot.get(k) for k in ('ordinaryUsageAllowed', 'rateLimits', 'rateLimitsByLimitId')}
+                                    self.state['quota_checked_at'] = time.time()
                                     raise QuotaWait(quota_deadline(snapshot, forced=True), 'Codex 额度耗尽')
                                 raise TurnFailure(json.dumps(completed.get('error') or completed['status'], ensure_ascii=False))
                             try:
@@ -729,14 +733,73 @@ class Runner:
                      '`。没有将未通过验证的改动推送到远端。后续可读取或恢复这些成果。')
                 return
 
+    def process_controls(self):
+        """Only the scheduler mutates state.json; the web UI writes an inbox."""
+        pending = self.runtime / 'controls' / 'pending'
+        for path in sorted(pending.glob('*.json'))[:100]:
+            match = re.fullmatch(r'\d+-([a-f0-9]{32})\.json', path.name)
+            if not match:
+                continue
+            request_id = match.group(1)
+            processed = self.runtime / 'controls' / 'processed' / f'{request_id}.json'
+            if processed.exists():
+                path.unlink(missing_ok=True)
+                continue
+            last = self.state.get('last_control') or {}
+            if last.get('id') == request_id:
+                atomic_json(processed, last)
+                path.unlink(missing_ok=True)
+                continue
+            result = {'id': request_id, 'action': None, 'status': 'rejected', 'applied_at': now()}
+            try:
+                request = read_json(path, {})
+                action = request.get('action')
+                result['action'] = action
+                if request.get('id') != request_id or action not in ('pause', 'resume', 'retry', 'start'):
+                    raise ValueError('无效的操作请求')
+                if action == 'pause':
+                    if self.state.get('status') not in ('paused', 'stopped'):
+                        self.state['resume_status'] = self.state.get('status')
+                    (self.runtime / 'paused').write_text('用户通过控制台暂停\n')
+                    self.state['status'] = 'paused'
+                    message = '流程已暂停，已有进度已保留。'
+                elif action == 'resume':
+                    (self.runtime / 'paused').unlink(missing_ok=True)
+                    previous = self.state.pop('resume_status', '') or ''
+                    if self.state.get('next_run_at', 0) > time.time():
+                        self.state['status'] = previous if previous.startswith('waiting:') else 'waiting:retry'
+                    else:
+                        self.state['status'] = 'ready:' + self.state['phase']
+                    message = '流程已恢复，将继续当前阶段。'
+                elif action == 'retry':
+                    if (self.runtime / 'paused').exists() or self.state.get('status') not in (
+                            'waiting:retry', 'waiting:startup', 'waiting:research'):
+                        raise ValueError('运行状态已变化；当前不允许提前重试。')
+                    self.state.pop('next_run_at', None)
+                    self.state['status'] = 'ready:' + self.state['phase']
+                    message = '已安排立即重试，仍会核验额度与执行条件。'
+                else:
+                    message = '调度服务已启动。'
+                result.update(status='applied', message=message)
+            except (ValueError, TypeError, AttributeError) as error:
+                result['message'] = str(error)
+            self.state['last_control'] = result
+            self.save()
+            atomic_json(processed, result)
+            path.unlink(missing_ok=True)
+            self.log('operator_control', detail=result['message'])
+
     def run(self, once=False):
         self.github.ensure_labels()
         while not STOP.is_set() and not (self.runtime / 'paused').exists():
+            self.process_controls()
+            if (self.runtime / 'paused').exists():
+                break
             delay = self.state.get('next_run_at', 0) - time.time()
             if delay > 0:
                 if once:
                     return
-                STOP.wait(min(30, delay))
+                STOP.wait(min(2, delay))
                 continue
             self.state.pop('next_run_at', None)
             try:
@@ -789,6 +852,8 @@ class Runner:
             if once:
                 return
         if self.state.get('status') != 'needs_attention':
+            if self.state.get('status') not in ('paused', 'stopped'):
+                self.state['resume_status'] = self.state.get('status')
             self.state['status'] = 'paused' if (self.runtime / 'paused').exists() else 'stopped'
             self.save()
 
@@ -877,12 +942,13 @@ def main():
         signal.signal(signal.SIGTERM, lambda *_: STOP.set())
         signal.signal(signal.SIGINT, lambda *_: STOP.set())
         while not STOP.is_set():
+            runner = Runner(args.runtime)
+            runner.process_controls()
             if (args.runtime / 'paused').exists():
                 if args.action == 'once':
                     return
-                STOP.wait(10)
+                STOP.wait(2)
                 continue
-            runner = Runner(args.runtime)
             try:
                 runner.run(once=args.action == 'once')
             except Exception as error:
