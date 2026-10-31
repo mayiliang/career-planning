@@ -857,7 +857,7 @@ class Runner:
             self.log('operator_control', detail=result['message'])
 
     def run(self, once=False):
-        self.github.ensure_labels()
+        labels_ready = False
         while not STOP.is_set() and not (self.runtime / 'paused').exists():
             self.process_controls()
             if (self.runtime / 'paused').exists():
@@ -870,6 +870,11 @@ class Runner:
                 continue
             self.state.pop('next_run_at', None)
             try:
+                # Startup I/O obeys the same backoff and authentication policy
+                # as regular steps. Never retry invalid credentials every 30s.
+                if not labels_ready:
+                    self.github.ensure_labels()
+                    labels_ready = True
                 self.step()
                 self.state['failures'] = 0
                 self.state.pop('last_error', None)

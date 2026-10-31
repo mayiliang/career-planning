@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
 import fcntl
 import json
 import mimetypes
@@ -21,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 import uuid
 
-from auto_coding import DEFAULT_HOME, LABEL, atomic_json, now, read_json
+from auto_coding import DEFAULT_HOME, LABEL, GitHub, atomic_json, now, read_json
 
 CONSOLE_LABEL = LABEL + '.console'
 PORT = 42880
@@ -91,9 +92,131 @@ def summarize_task(task, repo):
                    'evidence': [redact(x) for x in review.get('acceptance_evidence', [])]},
         'validation': {'passed': validation.get('passed'), 'at': validation.get('at'),
                        'reason': redact(validation.get('reason')),
-                       'checks': [{'command': redact(' '.join(x.get('command', []))),
-                                   'exit_code': x.get('exit_code')} for x in validation.get('checks', [])]},
+                       'checks': [{'command': redact(' '.join(x.get('command', [])) if isinstance(x.get('command'), list) else x.get('command')),
+                                   'exit_code': x.get('exit_code'), 'at': x.get('at') or validation.get('at'),
+                                   'result': redact(x.get('result') or x.get('tail') or ('通过' if x.get('exit_code') == 0 else '未通过' if x.get('exit_code') is not None else '尚无结果'))[-1200:]}
+                                  for x in validation.get('checks', [])]},
     }
+
+
+def diagnostics(state):
+    status = state.get('status', 'starting')
+    effective = state.get('resume_status') if status == 'paused' else status
+    effective = effective or status
+    error = redact(state.get('last_error'))
+    blocked = effective in ('needs_attention', 'waiting:retry', 'waiting:startup', 'waiting:quota', 'waiting:auth', 'waiting:network')
+    category, reason, suggestion = 'none', '当前没有需要处理的故障', '可在此查看任务进度与验证结果。'
+    if blocked:
+        text = error.lower()
+        quota = state.get('quota') or {}
+        bucket = (quota.get('rateLimitsByLimitId') or {}).get('codex') or quota.get('rateLimits') or {}
+        exhausted = quota.get('ordinaryUsageAllowed') is False or any(
+            isinstance(bucket.get(key), dict) and isinstance(bucket[key].get('usedPercent'), (int, float))
+            and bucket[key]['usedPercent'] >= 100 for key in ('primary', 'secondary'))
+        if any(word in text for word in ('登录', '凭据', 'credential', 'unauthorized', 'http 401', 'authentication', 'bad credentials')):
+            category = 'auth'
+            if 'github' in text:
+                reason, suggestion = 'GitHub 登录凭据不可用或已失效', '恢复本机 GitHub 登录后，刷新连接诊断，再继续或重试任务。'
+            elif 'codex' in text:
+                reason, suggestion = 'Codex 登录凭据不可用或已失效', '恢复本机 Codex 登录后，再继续或重试任务。'
+            else:
+                reason, suggestion = '服务登录凭据不可用或已失效', '查看当前错误以确认服务，恢复对应登录后，再继续或重试任务。'
+        elif effective == 'waiting:quota' or (not error and exhausted) or any(word in text for word in ('额度', 'quota', 'usage limit', 'rate limit')):
+            category, reason, suggestion = 'quota', '服务额度或请求频率达到限制', '等待重置时间后，调度器会重新检查；暂停不会清除等待时间。'
+        elif any(word in text for word in ('network', 'tls', 'ssl', 'timeout', 'timed out', 'connection', 'urlopen', '网络', '代理', '连接', 'http 502', 'http 503', 'http 504')):
+            category, reason, suggestion = 'network', '连接 GitHub 或模型服务暂时失败', '检查网络与代理，恢复后使用重试；任务进度会保留。'
+        else:
+            category, reason, suggestion = 'attention', '任务需要人工检查后继续', '查看当前错误、任务反馈和验证日志，处理后再继续。'
+    return {'category': category, 'reason': reason, 'suggestion': suggestion,
+            'status': effective, 'updated_at': state.get('updated_at')}
+
+
+def grouped_events(items):
+    result = []
+    for item in items:
+        # Event timestamps and changing retry counters do not create new groups.
+        key = (item.get('event'), item.get('detail'))
+        if result and key == (result[-1].get('event'), result[-1].get('detail')):
+            result[-1].update(item)
+            result[-1]['count'] += 1
+            result[-1]['last_at'] = item.get('at')
+        else:
+            result.append({**item, 'count': 1, 'first_at': item.get('at'), 'last_at': item.get('at')})
+    return result
+
+
+class GitHubDiagnostic:
+    """A single background GET refresh per runtime, with bounded polling frequency."""
+    ttl = 60
+    refresh_interval = 10
+
+    def __init__(self, runtime):
+        self.runtime = runtime
+        self.lock = threading.Lock()
+        self.last_started = None
+        self.inflight = False
+        self.cache = {'status': 'unknown', 'checking': False, 'checked_at': None,
+                      'repository': None, 'repository_url': None, 'reason': '尚未检查 GitHub 连接',
+                      'suggestion': '点击刷新连接诊断。',
+                      'permissions': {'pull': None, 'push': None, 'admin': None},
+                      'issue_counts': {'total': 0, 'open': 0, 'closed': 0},
+                      'issue_counts_scope': '最近 40 条自动迭代 Issue', 'issues': []}
+
+    def get(self, refresh=False):
+        with self.lock:
+            elapsed = float('inf') if self.last_started is None else time.monotonic() - self.last_started
+            due = elapsed >= (self.refresh_interval if refresh else self.ttl)
+            if not self.inflight and due:
+                self.inflight = True
+                self.last_started = time.monotonic()
+                self.cache['checking'] = True
+                if self.cache['status'] == 'unknown':
+                    self.cache['status'] = 'checking'
+                threading.Thread(target=self.update, daemon=True, name='github-diagnostic').start()
+            return copy.deepcopy(self.cache)
+
+    def update(self):
+        with self.lock:
+            result = copy.deepcopy(self.cache)
+        try:
+            config = read_json(self.runtime / 'config.json', {})
+            repo = config.get('repository', '')
+            # GitHub validates this unique, configured repository; URL/query input is never accepted.
+            github = GitHub(repo, Path(config['workspace']))
+            result.update(repository=repo, repository_url='https://github.com/' + repo)
+            repository = github.request('GET', '')
+            batch = github.request('GET', '/issues?state=all&labels=auto-coding&sort=updated&direction=desc&per_page=40')
+            permissions = repository.get('permissions') or {}
+            result['permissions'] = {key: permissions.get(key) if isinstance(permissions.get(key), bool) else None
+                                     for key in ('pull', 'push', 'admin')}
+            issues = []
+            for issue in batch:
+                labels = [redact(x.get('name')) for x in issue.get('labels', []) if isinstance(x, dict)]
+                if 'pull_request' in issue or 'auto-coding' not in labels:
+                    continue
+                issues.append({'number': issue.get('number'), 'title': redact(issue.get('title')),
+                               'state': issue.get('state'), 'labels': labels,
+                               'url': 'https://github.com/' + repo + '/issues/' + str(issue.get('number')),
+                               'updated_at': issue.get('updated_at')})
+            result.update(status='connected', reason='GitHub 连接正常', suggestion='可查看自动迭代 Issue 队列。',
+                          issues=issues[:40], issue_counts={'total': len(issues[:40]),
+                          'open': sum(x['state'] == 'open' for x in issues[:40]),
+                          'closed': sum(x['state'] == 'closed' for x in issues[:40])})
+        except Exception as error:
+            text = str(error).lower()
+            if any(x in text for x in ('401', '登录', '凭据', 'credential', 'unauthorized', 'authentication')):
+                result.update(status='auth_error', reason='GitHub 登录凭据不可用或已失效', suggestion='请恢复本机 GitHub 登录，再刷新诊断。')
+            elif any(x in text for x in ('403', '404', '429', 'forbidden')):
+                result.update(status='forbidden', reason='仓库访问被拒绝或 GitHub 请求受限', suggestion='确认账号可访问此仓库，并检查仓库权限或请求限制。')
+            else:
+                result.update(status='network_error', reason='暂时无法连接 GitHub', suggestion='检查网络与 Git 代理，稍后刷新诊断。')
+            # Do not present earlier permission claims as current verification.
+            result['permissions'] = {'pull': None, 'push': None, 'admin': None}
+        finally:
+            result.update(checking=False, checked_at=now())
+            with self.lock:
+                self.cache = result
+                self.inflight = False
 
 
 def team_snapshot(state):
@@ -127,6 +250,7 @@ class ControlStore:
     def __init__(self, runtime):
         self.runtime = Path(runtime)
         self.lock = threading.RLock()
+        self.github = GitHubDiagnostic(self.runtime)
 
     def snapshot(self):
         state = read_json(self.runtime / 'state.json', {})
@@ -155,6 +279,7 @@ class ControlStore:
             'phase': state.get('phase', 'plan'), 'paused': (self.runtime / 'paused').exists(),
             'runner_online': runner_online(self.runtime), 'cycle': state.get('cycle', 0),
             'updated_at': state.get('updated_at'), 'next_run_at': state.get('next_run_at'),
+            'diagnostics': diagnostics(state), 'resume_status': state.get('resume_status'),
             'last_error': redact(state.get('last_error')), 'failures': state.get('failures', 0),
             'repository': repo, 'branch': 'auto_coding',
             'repository_url': f'https://github.com/{repo}/tree/auto_coding' if repo else None,
@@ -163,7 +288,7 @@ class ControlStore:
                        'allowed': quota.get('ordinaryUsageAllowed'), 'checked_at': state.get('quota_checked_at')},
             'team': team_data['team'], 'active': team_data['active'],
             'activity': self.agent_activity(state)[-12:],
-            'events': [self.event(x) for x in json_lines(self.runtime / 'events.jsonl', 80)][-20:],
+            'events': grouped_events([self.event(x) for x in json_lines(self.runtime / 'events.jsonl', 160)])[-20:],
             'controls': controls,
             'pending_controls': len(list((self.runtime / 'controls' / 'pending').glob('*.json'))),
         }
@@ -197,7 +322,7 @@ class ControlStore:
     def logs(self, source):
         state = read_json(self.runtime / 'state.json', {})
         if source == 'events':
-            return {'source': source, 'entries': [self.event(x) for x in json_lines(self.runtime / 'events.jsonl', 160)]}
+            return {'source': source, 'entries': grouped_events([self.event(x) for x in json_lines(self.runtime / 'events.jsonl', 160)])}
         if source == 'agent':
             return {'source': source, 'entries': self.agent_activity(state)}
         if source == 'checks':
@@ -307,6 +432,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, {'token': self.server.token})
             if url.path == '/api/status':
                 return self.reply(200, self.server.store.snapshot())
+            if url.path == '/api/github':
+                return self.reply(200, self.server.store.github.get(parse_qs(url.query).get('refresh') == ['1']))
             if url.path == '/api/logs':
                 source = parse_qs(url.query).get('source', ['events'])[0]
                 return self.reply(200, self.server.store.logs(source))

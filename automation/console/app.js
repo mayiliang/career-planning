@@ -46,9 +46,11 @@ function renderMarkdown(container, source) {
 function render(s) {
   state = s;
   const info = describeStatus(s), task = s.task;
-  text('status-title', info.title); text('status-meta', info.meta); $('status-strip').className = 'status-strip ' + info.tone;
+  text('bar-status', info.title); text('status-title', info.title); text('status-meta', info.meta); $('status-strip').className = 'status-strip ' + info.tone;
   text('task-title', task?.title || '产品经理正在寻找下一项值得推进的改进');
-  text('task-description', task ? task.decision : '围绕知识体系、中文学习资料与学习路线，研究真实问题并形成可验收的任务。');
+  const decision = task ? (task.decision || '') : '围绕知识体系、中文学习资料与学习路线，研究真实问题并形成可验收的任务。';
+  text('task-description', decision.length > 180 ? decision.slice(0, 180).trimEnd() + '…' : decision);
+  text('decision-full', decision); visible('decision-details', decision.length > 180);
   if (task?.url) { $('issue-link').href = task.url; text('issue-link', `Issue #${task.issue_number} ↗`); }
   visible('issue-link', !!task?.url);
   if (task?.priority) text('priority', task.priority); visible('priority', !!task?.priority);
@@ -61,16 +63,20 @@ function render(s) {
     li.append(element('span', 'step-dot', i < index ? '✓' : String(i + 1))); return li;
   }));
   updateCountdown();
-  visible('error-box', !!s.last_error);
-  if (s.last_error) {
-    const summary = /SSL|TLS|urlopen|connect|timed out/i.test(s.last_error) ? '外部连接暂时未完成。已有进度已保留，恢复连接后可以继续。' : s.last_error.includes('额度') ? '当前可用额度不足，调度器会在重置后再次检查。' : '本轮暂时无法继续，请查看详情并处理对应条件。';
-    text('error-summary', summary); text('error-detail', s.last_error);
+  const diagnostic = s.diagnostics;
+  const hasDiagnostic = diagnostic && diagnostic.category && diagnostic.category !== 'none';
+  const showError = !!hasDiagnostic || (!diagnostic && !!s.last_error);
+  visible('error-box', showError);
+  if (showError) {
+    text('error-summary', diagnostic?.reason || '本轮暂时无法继续，请查看详情并处理对应条件。');
+    text('error-suggestion', diagnostic?.suggestion || '');
+    text('error-detail', s.last_error || '调度器未提供更多错误详情。');
   }
   visible('task-details', !!task?.body);
   if (task?.body !== lastBody) { renderMarkdown($('task-body'), task?.body || ''); lastBody = task?.body; }
   text('task-attempt', task?.attempt ? `已完成 ${task.attempt} 轮实现检查` : s.phase === 'develop' ? '当前为第 1 轮开发' : '尚未开始开发');
   text('state-updated', s.updated_at ? `进度记录于 ${date(s.updated_at)}` : '尚无进度记录');
-  renderControls(s); renderQuota(s); renderRoles(s); renderActivity(s); renderHistory(s);
+  renderControls(s); renderQuota(s); renderRoles(s); renderActivity(s); renderHistory(s); renderDiagnostics(s.diagnostics);
   text('history-count', s.history.length); text('completed-count', `已归档 ${s.cycle} 项任务`);
   text('service-state', s.runner_online ? '调度器在线' : '调度器离线'); $('service-led').classList.toggle('online', s.runner_online);
   if (pendingId) {
@@ -108,13 +114,14 @@ function renderQuota(s) {
   for (const [key, fallback] of [['primary', '短期额度'], ['secondary', '周期额度']]) {
     const window = s.quota[key]; const value = window?.usedPercent;
     const title = window?.windowDurationMins === 300 ? '5 小时额度' : window?.windowDurationMins === 10080 ? '每周额度' : fallback;
-    const box = element('div', 'quota-item' + (value >= 100 ? ' exhausted' : ''));
-    const row = element('div', 'quota-row'); row.append(element('span', '', title), element('strong', '', value == null ? '—' : `已用 ${value}%`));
+    const expired = !!window?.resetsAt && window.resetsAt * 1000 <= Date.now();
+    const box = element('div', 'quota-item' + (value >= 100 && !expired ? ' exhausted' : '') + (expired ? ' stale' : ''));
+    const row = element('div', 'quota-row'); row.append(element('span', '', title), element('strong', '', value == null ? '—' : `上次已用 ${value}%`));
     const progress = element('progress'); progress.max = 100; progress.value = value == null ? 0 : Math.min(100, Math.max(0, value)); progress.setAttribute('aria-label', `${title}：${value == null ? '暂无数据' : `已用 ${value}%`}`);
-    box.append(row, progress, element('p', 'quota-reset', window?.resetsAt ? `${date(window.resetsAt)} 重置` : '等待下一次用量检查'));
+    box.append(row, progress, element('p', 'quota-reset', window?.resetsAt ? (expired ? `${date(window.resetsAt)} 已过重置时间，待复查` : `预计 ${date(window.resetsAt)} 重置`) : '等待下一次用量检查'));
     $('quota').append(box);
   }
-  text('quota-time', `账户共享额度。${s.quota.checked_at ? `检查于 ${date(s.quota.checked_at)}。` : '当前为最近一次保存的快照。'}`);
+  text('quota-time', `账户共享额度，上次快照。${s.quota.checked_at ? `检查于 ${date(s.quota.checked_at)}。` : '检查时间未报告。'}`);
 }
 
 function renderRoles(s) {
@@ -148,11 +155,11 @@ const eventTitles = {turn_started:'开始执行', quota_wait:'等待额度恢复
 function eventText(e) { return e.detail || e.summary || (e.phase ? `${roleName(e.phase)}开始${phaseName(e.phase)}。` : e.until ? `计划于 ${date(e.until)}重新检查。` : e.issue ? `Issue #${e.issue}` : '状态已记录。'); }
 function renderActivity(s) {
   const messages = s.activity.filter(x => x.kind === 'message').slice(-3).reverse().map(x => ({title:`${roleName(s.active.phase || s.phase)}的进展`, message:x.text}));
-  const events = [...s.events].reverse().slice(0, Math.max(2, 5-messages.length)).map(x => ({title:eventTitles[x.event] || '流程更新', message:eventText(x), at:x.at}));
+  const events = [...s.events].reverse().slice(0, Math.max(2, 5-messages.length)).map(x => ({title:(eventTitles[x.event] || '流程更新') + (x.count > 1 ? `（重复 ${x.count} 次）` : ''), message:eventText(x), at:x.last_at || x.at, first:x.count > 1 ? x.first_at : null}));
   const data = [...messages,...events]; const signature = JSON.stringify(data); if (signature === lastActivity) return; lastActivity = signature;
   $('activity').replaceChildren();
   if (!data.length) return $('activity').append(empty('运行记录即将出现在这里', '调度器开始工作后，会自动记录每个阶段的变化。'));
-  for (const item of data) { const row = element('div','activity-entry'); const content = element('div'); content.append(element('strong','',item.title),element('p','',item.message)); if(item.at) content.append(element('time','',date(item.at))); row.append(element('span','event-dot'),content); $('activity').append(row); }
+  for (const item of data) { const row = element('div','activity-entry'); const content = element('div'); content.append(element('strong','',item.title),element('p','',item.message)); if(item.at) content.append(element('time','',`记录于 ${date(item.at)}${item.first ? `，首次 ${date(item.first)}` : ''}`)); row.append(element('span','event-dot'),content); $('activity').append(row); }
 }
 
 function renderHistory(s) {
@@ -165,9 +172,86 @@ function renderHistory(s) {
     const accepted = task.review.verdict === 'accept'; summary.append(title,element('span','history-badge'+(!accepted?' deferred':''),accepted?'已验收':'已暂缓'));
     const body = element('div','history-body'); body.append(element('p','',task.review.summary || task.development_summary));
     if(task.review.evidence.length){const list=element('ul');for(const e of task.review.evidence)list.append(element('li','',e));body.append(list);}
+    if(task.validation?.checks?.length){const section=element('div','history-checks');section.append(element('strong','','实际检查'));for(const check of task.validation.checks){section.append(element('p','',`${check.exit_code === 0 ? '通过' : '未通过'} · ${check.command || '检查命令未报告'}`));}body.append(section);}
     if(task.delivery_sha){const p=element('p','','交付提交：');p.append(element('code','',task.delivery_sha.slice(0,12)));body.append(p);}
     if(task.url){const a=element('a','','在 GitHub 查看完整任务 ↗');a.href=task.url;a.target='_blank';a.rel='noopener noreferrer';body.append(a);}
     details.append(summary,body);$('history-list').append(details);
+  }
+}
+
+
+function renderDiagnostics(d) {
+  const labels = {auth:'后台身份验证需要处理',network:'网络连接需要处理',quota:'等待额度恢复',attention:'需要处理',none:'调度器未报告连接问题'};
+  text('diagnostic-title', d ? (labels[d.category] || '调度器诊断') : '等待调度器报告');
+  text('diagnostic-message', [d?.reason, d?.category === 'auth' ? '浏览器登录与后台凭据不同。' : ''].filter(Boolean).join(' '));
+  text('diagnostic-suggestion', d?.suggestion || '');
+  text('diagnostic-time', d?.updated_at ? `更新于 ${date(d.updated_at)}` : '');
+}
+let githubTimer = null, githubController = null, githubGeneration = 0;
+function stopGithubPolling() {
+  githubGeneration++; clearTimeout(githubTimer); githubTimer = null;
+  if (githubController) githubController.abort();
+  githubController = null;
+}
+function refreshGithub(force) {
+  stopGithubPolling();
+  const generation = githubGeneration, deadline = Date.now() + 60000;
+  async function read(refresh) {
+    if (generation !== githubGeneration || !['queue','connection'].includes(currentView)) return;
+    const controller = new AbortController(); githubController = controller;
+    const timeout = setTimeout(() => controller.abort(), Math.max(0, deadline - Date.now()));
+    try {
+      const response = await fetch('/api/github' + (refresh ? '?refresh=1' : ''), {cache:'no-store', signal:controller.signal});
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      if (generation !== githubGeneration) return;
+      renderGithub(data);
+      if (data.checking) {
+        if (Date.now() < deadline) githubTimer = setTimeout(() => read(false), 2000);
+        else { text('github-status','检查仍在进行，请稍后重新检查'); text('queue-summary','检查仍在进行，请稍后重新检查连接。'); }
+      }
+    } catch (error) {
+      if (generation !== githubGeneration) return;
+      if (error.name === 'AbortError') { text('github-status','检查超时，请稍后重新检查'); text('queue-summary','检查超时，请稍后重新检查连接。'); return; }
+      text('github-status','无法读取后台连接状态');
+      text('queue-summary','无法读取任务队列，请重新检查连接。');
+    } finally { clearTimeout(timeout); if (githubController === controller) githubController = null; }
+  }
+  read(force);
+}
+function renderGithub(data) {
+  const labels = {unknown:'尚未检查',checking:'正在检查',connected:'连接正常',auth_error:'后台身份验证失败',network_error:'网络连接失败',forbidden:'后台权限不足'};
+  text('github-status', data.checking ? '正在检查后台连接' : (labels[data.status] || '等待检查'));
+  const authHint = data.status === 'auth_error' ? '浏览器登录与后台凭据不同。' : '';
+  text('github-detail', [data.reason, authHint, data.suggestion].filter(Boolean).join(' '));
+  const permissions = data.permissions;
+  const permissionText = permissions ? ['pull','push','admin'].map(k => `${{pull:'读取',push:'推送',admin:'管理'}[k]}：${permissions[k] == null ? '未知' : permissions[k] ? '允许' : '未允许'}`).join('，') : '权限等待检查';
+  text('github-time', `${data.checked_at ? `检查于 ${date(data.checked_at)}。` : '尚无检查时间。'} ${permissionText}`);
+  const counts = data.issue_counts;
+  const issues = Array.isArray(data.issues) ? data.issues : [];
+  const connected = data.status === 'connected' && !data.checking;
+  const checked = data.checked_at ? `检查于 ${date(data.checked_at)}。` : '检查时间未报告。';
+  if (data.checking) {
+    text('queue-summary', '正在检查连接（下方若有内容为上次快照）。');
+  } else if (connected) {
+    text('queue-summary', counts ? `最近 40 条 Issue 窗口：共 ${counts.total ?? '—'} 条，开放 ${counts.open ?? '—'}，关闭 ${counts.closed ?? '—'}。${checked}` : `连接正常，队列统计未报告。${checked}`);
+  } else {
+    const reason = [data.reason || labels[data.status] || '尚未检查连接', data.suggestion].filter(Boolean).join(' ');
+    text('queue-summary', `${reason} ${issues.length ? '下方为上次任务快照。' : '连接成功后读取任务队列。'}`);
+  }
+  const list = $('queue-list'); list.replaceChildren();
+  if (!issues.length) {
+    list.append(empty(connected ? '最近的 Issue 窗口为空' : '暂无任务快照', connected ? '连接成功，最近的 Issue 窗口没有任务。' : '连接成功后读取任务队列。'));
+    return;
+  }
+  for (const issue of issues) {
+    const row = element('article','queue-item'), heading = element('div','queue-heading');
+    const title = element('strong','',issue.title || '未命名任务');
+    if (issue.url && /^https:\/\/github\.com\//.test(issue.url)) { const link = element('a','',issue.title || '未命名任务'); link.href=issue.url; link.target='_blank'; link.rel='noopener noreferrer'; heading.append(link); } else heading.append(title);
+    heading.append(element('span','queue-state',issue.state === 'open' ? '开放' : issue.state === 'closed' ? '已关闭' : '状态未知'));
+    row.append(heading, element('p','queue-meta',`#${issue.number}  ${issue.updated_at ? `更新于 ${date(issue.updated_at)}` : ''}`));
+    if (Array.isArray(issue.labels) && issue.labels.length) { const labels = element('div','queue-labels'); for (const label of issue.labels) labels.append(element('span','',label)); row.append(labels); }
+    list.append(row);
   }
 }
 
@@ -194,15 +278,16 @@ async function control(action) {
 }
 
 function showView(view) {
-  if(!['overview','history','logs'].includes(view))return;currentView=view;
-  for(const name of ['overview','history','logs'])visible('view-'+name,name===view);
+  if(!['overview','queue','history','logs','connection'].includes(view))return;stopGithubPolling();currentView=view;
+  for(const name of ['overview','queue','history','logs','connection'])visible('view-'+name,name===view);
   document.querySelectorAll('.tab').forEach(button=>{const selected=button.dataset.view===view;button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
   if(view==='logs')refreshLogs();
+  if(view==='queue'||view==='connection')refreshGithub(false);
 }
 
 function logRows() {
   return logData.map(e=>{
-    if(logSource==='events')return{title:eventTitles[e.event]||'流程更新',at:e.at,text:eventText(e),kind:'message'};
+    if(logSource==='events')return{title:(eventTitles[e.event]||'流程更新') + (e.count > 1 ? `（重复 ${e.count} 次）` : ''),at:e.last_at || e.at,text:eventText(e) + (e.count > 1 && e.first_at ? `\n首次记录：${date(e.first_at)}` : ''),kind:'message'};
     if(logSource==='agent')return{title:e.kind==='command'?'执行命令':'角色进展',text:e.text,kind:e.kind};
     if(logSource==='checks')return{title:`${e.command} · ${e.exit_code===0?'通过':'未通过'}`,text:e.text};
     return{title:e.name,text:e.text};
@@ -224,6 +309,7 @@ async function refreshLogs() {
 
 document.addEventListener('click',event=>{const nav=event.target.closest('[data-view]');if(nav)showView(nav.dataset.view);const action=event.target.closest('[data-action]');if(action&&!action.disabled)control(action.dataset.action);const source=event.target.closest('[data-source]');if(source){logSource=source.dataset.source;document.querySelectorAll('[data-source]').forEach(b=>{b.classList.toggle('active',b===source);b.setAttribute('aria-pressed',String(b===source));});refreshLogs();}});
 $('refresh').addEventListener('click',refreshStatus);
+document.querySelectorAll('.github-refresh').forEach(button => button.addEventListener('click', () => refreshGithub(true)));
 $('log-search').addEventListener('input',renderLogs);
 $('copy-logs').addEventListener('click',async()=>{if(!visibleLogText)return toast('当前没有可复制的日志。');try{await navigator.clipboard.writeText(visibleLogText);toast('日志已复制。');}catch(_){toast('浏览器未允许复制，可选中日志手动复制。');}});
 refreshStatus();updateCountdown();setInterval(refreshStatus,5000);setInterval(updateCountdown,1000);

@@ -5,6 +5,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -174,6 +175,16 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(self.request('/api/logs?source=checks')[1]['entries'],[])
         self.assertEqual(self.request('/../config.json')[0],404)
         self.assertEqual(self.request('/api/logs?source=../../config')[0],400)
+
+
+    def test_github_cached_endpoint_keeps_origin_and_host_guards(self):
+        payload = {'status': 'checking', 'checking': True, 'issues': []}
+        with patch.object(self.server.store.github, 'get', return_value=payload) as get:
+            self.assertEqual(self.request('/api/github?refresh=1'), (200, payload))
+            get.assert_called_once_with(True)
+            self.assertEqual(self.request('/api/github', headers={'Origin': 'https://unrelated.example'})[0], 403)
+            self.assertEqual(self.request('/api/github', headers={'Host': 'evil.example'})[0], 403)
+            self.assertEqual(get.call_count, 1)
 
 
 if __name__ == '__main__':
