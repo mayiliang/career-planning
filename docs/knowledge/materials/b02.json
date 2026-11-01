@@ -91,27 +91,79 @@
       "anchor": "js-04",
       "title": "Promise 与事件循环",
       "question": "异步代码什么时候继续，结果什么时候可以显示？",
-      "summary": "从同步调用和稍后回调出发，用执行顺序表理解 Promise、微任务、并发与取消。",
-      "outcomes": ["推演同步代码、任务和微任务的执行关系", "解释 Promise 链、结果接纳和 await 的恢复时机", "控制任务启动，处理失败，并防止旧结果覆盖界面"],
-      "prerequisites": ["javascript-promises-and-cancellation.md#prejs-07", "js-01-execution-context-scope-closure.md#js-01"],
+      "summary": "从同步调用和稍后回调出发，理解 Promise 结果链、微任务、启动与等待。",
+      "outcomes": [
+        "推演同步代码、任务和微任务的执行关系",
+        "解释 Promise 链、结果接纳和 await 的恢复时机",
+        "限制成功任务的启动数量，并按输入槽位保留结果"
+      ],
+      "prerequisites": [
+        "javascript-promises-and-cancellation.md#prejs-07",
+        "js-01-execution-context-scope-closure.md#js-01"
+      ],
       "concepts": [
-        { "id": "callback-scheduling", "heading": "先区分现在调用和以后回调" },
-        { "id": "promise-executor", "heading": "Promise 的执行器现在就会运行" },
-        { "id": "promise-adoption", "heading": "状态已决定和结果已到手不是同一件事" },
-        { "id": "promise-chain", "heading": "链上的返回值决定下一步收到什么" },
-        { "id": "task-microtask", "heading": "用调用栈任务和微任务推演顺序" },
-        { "id": "await-continuation", "heading": "await 暂停的是当前异步函数" },
-        { "id": "render-opportunity", "heading": "微任务执行完不等于浏览器已经绘制" },
-        { "id": "concurrent-start", "heading": "并发从启动动作开始" },
-        { "id": "promise-combinators", "heading": "组合 Promise 不会自动取消工作" },
-        { "id": "concurrency-limit", "heading": "限制并发需要推迟启动" },
-        { "id": "latest-result", "heading": "取消之后仍要判断结果是否过期" }
+        {
+          "id": "callback-scheduling",
+          "heading": "先区分现在调用和以后回调"
+        },
+        {
+          "id": "promise-executor",
+          "heading": "Promise 的执行器现在就会运行"
+        },
+        {
+          "id": "promise-adoption",
+          "heading": "状态已决定和结果已到手不是同一件事"
+        },
+        {
+          "id": "promise-chain",
+          "heading": "链上的返回值决定下一步收到什么"
+        },
+        {
+          "id": "task-microtask",
+          "heading": "用调用栈任务和微任务推演顺序"
+        },
+        {
+          "id": "await-continuation",
+          "heading": "await 暂停的是当前异步函数"
+        },
+        {
+          "id": "render-opportunity",
+          "heading": "微任务执行完不等于浏览器已经绘制"
+        },
+        {
+          "id": "concurrent-start",
+          "heading": "并发从启动动作开始"
+        },
+        {
+          "id": "promise-combinators",
+          "heading": "组合 Promise 不会自动取消工作"
+        },
+        {
+          "id": "concurrency-limit",
+          "heading": "限制并发需要推迟启动"
+        }
       ],
       "connections": [
-        { "concept": "main-thread-chunking", "reason": "把事件循环的解释用于拆开主线程长计算。" },
-        { "concept": "worker-cancellation", "reason": "比较取消信号、消息取消和直接终止的不同作用。" },
-        { "concept": "resource-lifetime", "reason": "成功、失败和取消都需要明确资源清理责任。" },
-        { "concept": "async-iterator", "reason": "把逐次等待应用到可连续读取的异步数据。" }
+        {
+          "concept": "controlled-group",
+          "reason": "学完取消与清理后，把并发领取扩展成完整任务组协议。"
+        },
+        {
+          "concept": "main-thread-chunking",
+          "reason": "把事件循环的解释用于拆开主线程长计算。"
+        },
+        {
+          "concept": "worker-cancellation",
+          "reason": "比较取消信号、消息取消和直接终止的不同作用。"
+        },
+        {
+          "concept": "resource-lifetime",
+          "reason": "成功、失败和取消都需要明确资源清理责任。"
+        },
+        {
+          "concept": "async-iterator",
+          "reason": "把逐次等待应用到可连续读取的异步数据。"
+        }
       ]
     }
   ]

@@ -1,3 +1,5 @@
+import { ASYNC_PILOT_VERSION } from '@career-atlas/shared';
+import { buildAsyncPilotContext } from '../async-pilot-context.js';
 /** 按知识点合同构建题目；读取本地资料上下文，不写入数据库。 */
 import { randomUUID } from 'node:crypto';
 import type { CreateAssessmentRequest } from '@career-atlas/shared';
@@ -76,7 +78,9 @@ export function buildAssessmentQuestions(
   const passCriteria = compactMarkdown(knowledgePoint.passCriteriaMd, 1200);
   const knowledgeTags = extractKnowledgeTags(knowledgePoint.title);
   const materialReferences = extractLearningMaterialReferences(knowledgePoint.studyMaterialMd, knowledgePoint.title);
-  const localMaterialContext = extractLocalMaterialContext(knowledgePoint.studyMaterialMd)
+  const pilotContext = buildAsyncPilotContext(knowledgePoint.code, knowledgePoint.studyMaterialMd);
+  if (pilotContext && !pilotContext.complete) throw new Error('异步试点必需机制正文不足，暂不能创建语义挑战；可继续阅读或保存练习草稿。');
+  const localMaterialContext = (pilotContext?.sections ?? extractLocalMaterialContext(knowledgePoint.studyMaterialMd))
     .map((item) => `【${item.title}｜${item.source}】\n${item.content}`);
   const directGuide = buildDerivationGuide(knowledgePoint.title, materialReferences, false);
   const profile = resolveChallengeProfile(request.challengeProfile, request.challengeMode, firstQuestions[2]!.body);
@@ -100,6 +104,10 @@ export function buildAssessmentQuestions(
       orderIndex: index,
       createdAt: now,
       questionContent: JSON.stringify({
+        contractSnapshot: pilotContext && index === 0 ? { assessmentSpecMd: knowledgePoint.assessmentSpecMd,
+          passCriteriaMd: knowledgePoint.passCriteriaMd, studyMaterialMd: knowledgePoint.studyMaterialMd, materialContext: pilotContext } : undefined,
+        contractVersion: pilotContext ? ASYNC_PILOT_VERSION : undefined,
+        contextCoverage: pilotContext ? { ...pilotContext, sections: undefined } : undefined,
         level: source.label,
         question: effectiveContract.question,
         prompt: effectiveContract.question,
@@ -122,7 +130,7 @@ export function buildAssessmentQuestions(
         materialReferences,
         derivationGuide: source.number === 1 || request.masteryStage <= 2 ? directGuide : buildDerivationGuide(knowledgePoint.title, materialReferences, true),
         sourceHint: effectiveContract.sourceHint,
-        sourceBasis: [source.body, passCriteria, studySource, ...localMaterialContext],
+        sourceBasis: [source.body, passCriteria, studySource, ...(pilotContext ? [] : localMaterialContext)],
         referenceAnswer: effectiveContract.referenceDirection,
         referenceDirection: effectiveContract.referenceDirection,
         verificationEvidence: effectiveContract.verificationChecklist,

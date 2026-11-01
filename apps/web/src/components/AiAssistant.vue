@@ -66,6 +66,7 @@ const contextSnapshot = ref(capturePage());
 let controller: AbortController | null = null;
 let selectionTimer: number | undefined;
 let contextRefreshTimer: number | undefined;
+let pageContextObserver: MutationObserver | undefined;
 let pointerSelecting = false;
 let suppressSelectionUntil = 0;
 let persistSessionsTimer: number | undefined;
@@ -613,9 +614,16 @@ onMounted(() => {
   document.addEventListener('selectionchange', onSelectionChange);
   window.addEventListener('keydown', onKeydown);
   refreshContextAfterPageSettles();
+  const main = document.querySelector('#main-content');
+  if (main) {
+    // 页面数据可在打开助手后才到达，不能只依赖固定延时的一次快照。
+    pageContextObserver = new MutationObserver(refreshContextAfterPageSettles);
+    pageContextObserver.observe(main, { childList: true, subtree: true, characterData: true });
+  }
 });
 
 onBeforeUnmount(() => {
+  pageContextObserver?.disconnect();
   document.removeEventListener('pointerdown', onPointerDown, true);
   document.removeEventListener('pointerup', onPointerUp, true);
   document.removeEventListener('pointercancel', onPointerCancel, true);

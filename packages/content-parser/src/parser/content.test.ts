@@ -188,6 +188,7 @@ type ReportedResource = {
   deleted: boolean;
   hasRequiredAuditFields: boolean;
   hasLowBodyRelevance: boolean;
+  hasFactAuditFields: boolean;
   rawUrl: string;
   unverified: boolean;
 };
@@ -248,6 +249,14 @@ function auditResourceMap(markdown: string): Map<string, Map<string, ReportedRes
             && hasRequiredBodyRelevanceDeclaration(line)
             && hasCoverageRoleDeclaration(line)
           ),
+        // 仅对定位到具体锚点的一手材料记录事实核验；不声称整份标准正文相关度达到 80%。
+        hasFactAuditFields:
+          (previous?.hasFactAuditFields ?? false)
+          || (!lineIsDeleted && /^https?:\/\//i.test(url) && Boolean(new URL(url).hash)
+            && /仅用于事实核验/.test(line)
+            && /核验日期\s*[=＝]\s*\d{4}-\d{2}-\d{2}/.test(line)
+            && /核验结论\s*[=＝]\s*[^\s|]/.test(line)
+            && hasCoverageRoleDeclaration(line)),
         hasLowBodyRelevance:
           (previous?.hasLowBodyRelevance ?? false)
           || (!lineIsDeleted && hasExplicitLowBodyRelevance(line)),
@@ -274,7 +283,7 @@ function hasImmediateEnglishVersionMarker(studyMaterial: string, linkMarkup: str
   const linkIndex = studyMaterial.indexOf(linkMarkup);
   if (linkIndex < 0) return false;
   const suffix = studyMaterial.slice(linkIndex + linkMarkup.length);
-  return /^\s*[（(【[]\s*英文原文\s*[,，、;；:：]\s*仅用于版本核验\s*[）)】\]]/.test(suffix);
+  return /^\s*[（(【[]\s*英文原文\s*[,，、;；:：]\s*仅用于(?:版本|事实)核验\s*[）)】\]]/.test(suffix);
 }
 
 function normalizeLearningResourceUrl(url: string): string {
@@ -706,7 +715,7 @@ describe('知识资源审计防线', () => {
         for (const source of EnglishSources) {
           expect(
             hasImmediateEnglishVersionMarker(point.studyMaterial, source.markup),
-            `${point.code} 的非中文外链 ${source.url} 后必须紧随“英文原文，仅用于版本核验”标记`,
+            `${point.code} 的非中文外链 ${source.url} 后必须紧随“英文原文，仅用于版本核验”或“英文原文，仅用于事实核验”标记`,
           ).toBe(true);
         }
         expect(
@@ -726,7 +735,7 @@ describe('知识资源审计防线', () => {
           `${point.code} 的严格考核必须限制英文资料不得独立命题`,
         ).toMatch(/英文(?:原文|资料)[\s\S]{0,100}(?:不作为|不属于|不得作为|不能作为|不得)[\s\S]{0,40}(?:独立首考|独立命题|独立题源)/);
       } else {
-        if (/英文(?:原文|资料)[\s\S]{0,100}仅用于版本核验/.test(`${point.studyMaterial}\n${point.assessmentSpec}`)) {
+        if (/英文(?:原文|资料)[\s\S]{0,100}仅用于(?:版本|事实)核验/.test(`${point.studyMaterial}\n${point.assessmentSpec}`)) {
           staleEnglishVersionDeclarations.push(point.code);
         }
       }
@@ -755,11 +764,24 @@ describe('知识资源审计防线', () => {
     }
     expect(
       staleEnglishVersionDeclarations,
-      '没有非中文外链的知识点不得保留英文版本核验声明',
+      '没有非中文外链的知识点不得保留英文核验声明',
     ).toEqual([]);
   });
 
-  it('逐点限制所有非中文外链只能用于版本核验', () => {
+  it('事实核验必须逐链接标记，不能代替中文主源及考核边界', () => {
+    const link = '[DOM 取消章节](https://dom.spec.whatwg.org/#aborting-ongoing-activities)';
+    expect(hasImmediateEnglishVersionMarker(`${link}（英文原文，仅用于事实核验）`, link)).toBe(true);
+    expect(hasImmediateEnglishVersionMarker(`${link}（英文原文，仅用于版本核验）`, link)).toBe(true);
+    expect(hasImmediateEnglishVersionMarker(`${link}用于事实核验`, link)).toBe(false);
+    expect(hasImmediateEnglishVersionMarker(`${link} 这是说明（英文原文，仅用于事实核验）`, link)).toBe(false);
+    expect(hasChineseMainSource(`${link}（英文原文，仅用于事实核验）`)).toBe(false);
+    const fact = auditResourceMap(`| \`TEST-99\` | ${link} | 仅用于事实核验；核验日期=2026-10-29；核验结论=Promise 无内置取消；覆盖分工=取消语义 |`);
+    expect(fact.get('TEST-99')?.get('https://dom.spec.whatwg.org/')).toMatchObject({ hasFactAuditFields: true, hasRequiredAuditFields: false });
+    const noAnchor = auditResourceMap('| \`TEST-99\` | [DOM](https://dom.spec.whatwg.org/) | 仅用于事实核验；核验日期=2026-10-29；核验结论=取消；覆盖分工=语义 |');
+    expect(noAnchor.get('TEST-99')?.get('https://dom.spec.whatwg.org/')?.hasFactAuditFields).toBe(false);
+  });
+
+  it('逐点限制所有非中文外链只能用于版本或事实核验', () => {
     const root = findProjectRoot();
     const knowledgeDirectory = path.join(root, 'docs', 'knowledge', 'knowledge-base');
     const contents = new Map(
@@ -777,7 +799,7 @@ describe('知识资源审计防线', () => {
 
       for (const source of englishSources) {
         if (!hasImmediateEnglishVersionMarker(point.studyMaterial, source.markup)) {
-          failures.push(`${point.code}:链接后缺版本核验标记 ${source.url}`);
+          failures.push(`${point.code}:链接后缺版本或事实核验标记 ${source.url}`);
         }
       }
       if (!hasChineseMainSource(point.studyMaterial)) failures.push(`${point.code}:缺少中文主学习源`);
@@ -1127,13 +1149,19 @@ describe('知识资源审计防线', () => {
         }
         const missingRelevanceDeclaration = [...actualResourceUrls].filter((url) => {
           const resource = auditedResourceUrls.get(url);
-          return resource
-            && !resource.deleted
-            && !resource.hasRequiredAuditFields;
+          if (!resource || resource.deleted || resource.hasRequiredAuditFields) return false;
+          // 事实核验仅接受明确指向具体锚点、逐项记录日期与结论的链接，
+          // 且知识点资料行须在同一链接之后声明仅用于事实核验。
+          const verifiedFactSource = resource.hasFactAuditFields && extractMarkdownLinks(point.studyMaterial).some(source =>
+            source.url === resource.rawUrl && !isChineseResource(source.markup)
+            && hasImmediateEnglishVersionMarker(point.studyMaterial, source.markup)
+            && point.studyMaterial.slice(point.studyMaterial.indexOf(source.markup) + source.markup.length)
+              .match(/^\s*[（(【[]\s*英文原文\s*[,，、;；:：]\s*仅用于事实核验\s*[）)】\]]/));
+          return !verifiedFactSource;
         });
         if (missingRelevanceDeclaration.length > 0) {
           resourceMappingProblems.push(
-            `${report.file}/${code}:当前资料映射行必须声明“正文相关度≥80%；覆盖分工=...” ${missingRelevanceDeclaration.join(', ')}`,
+            `${report.file}/${code}:当前学习资料须声明正文相关度≥80%及覆盖分工；具体锚点事实核验须逐项记录日期、结论与覆盖分工 ${missingRelevanceDeclaration.join(', ')}`,
           );
         }
 

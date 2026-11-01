@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -133,6 +134,7 @@ onMounted(load);
     <div v-else-if="error && !workspace" class="state-card error">{{ error }}<button @click="load">重试</button></div>
 
     <template v-else-if="workspace">
+      <AsyncPilotRoute :current-code="workspace.current?.code" :refresh-key="`${workspace.stats.learned}-${workspace.stats.deferred}`" />
       <p v-if="error" class="inline-error" role="alert">{{ error }}</p>
       <p v-if="feedback" class="inline-success" role="status"><AppIcon name="check" />{{ feedback }}<button aria-label="关闭提示" @click="feedback = ''"><AppIcon name="close" /></button></p>
       <section v-if="workspace.current" class="current-card">

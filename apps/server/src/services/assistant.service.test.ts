@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { config } from '../config/index.js';
@@ -249,7 +250,7 @@ describe('Atlas AI 助手服务', () => {
     expect(second.id).toBe(first.id);
     const directory = listAssistantGapCandidates();
     expect(directory.items.filter((item) => item.title === evaluation.title)).toHaveLength(1);
-    expect(existsSync(`${directory.directory}\\${first.id}.md`)).toBe(true);
+    expect(existsSync(join(directory.directory, `${first.id}.md`))).toBe(true);
     expect(directory.directory.startsWith(config.DATA_DIR)).toBe(true);
   });
 });

@@ -1,3 +1,4 @@
+import { collectHeadingAnchors, normalizeGithubAnchor, extractLinks } from './learning-link-anchors.mjs';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,40 +17,6 @@ function walkMarkdownFiles(directory) {
     if (entry.isDirectory()) return walkMarkdownFiles(path);
     return entry.isFile() && extname(entry.name).toLowerCase() === '.md' ? [path] : [];
   });
-}
-
-function normalizeGithubAnchor(value) {
-  return decodeURIComponent(value)
-    .trim()
-    .toLowerCase()
-    .replace(/<[^>]+>/g, '')
-    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
-
-function collectHeadingAnchors(markdown) {
-  const counts = new Map();
-  const anchors = new Set();
-  for (const line of markdown.split(/\r?\n/)) {
-    const match = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
-    if (!match) continue;
-    const base = normalizeGithubAnchor(match[2]);
-    if (!base) continue;
-    const duplicateIndex = counts.get(base) ?? 0;
-    counts.set(base, duplicateIndex + 1);
-    anchors.add(duplicateIndex === 0 ? base : `${base}-${duplicateIndex}`);
-  }
-  return anchors;
-}
-
-function extractLinks(markdown) {
-  const links = [];
-  const pattern = /(?<!!)\[[^\]]*]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
-  for (const match of markdown.matchAll(pattern)) {
-    links.push(match[1].replace(/^<|>$/g, ''));
-  }
-  return links;
 }
 
 function classifyLink(rawLink, sourceFile) {
@@ -79,7 +46,7 @@ function checkLocalLink(link) {
 
   const targetMarkdown = readFileSync(link.targetFile, 'utf8');
   const expectedAnchor = normalizeGithubAnchor(link.fragment);
-  if (collectHeadingAnchors(targetMarkdown).has(expectedAnchor)) return { ok: true };
+  if (collectHeadingAnchors(targetMarkdown, relative(KNOWLEDGE_ROOT, link.targetFile).startsWith('chinese-guides/')).has(expectedAnchor)) return { ok: true };
   return {
     ok: false,
     reason: `锚点不存在：#${link.fragment}`,

@@ -405,6 +405,8 @@ test.describe.serial('核心使用体验', () => {
   });
 
   test('B20～B24 二十二份主讲义只为关键名词提供英文发音', async ({ page }) => {
+    // 单例包含 22 次正文导航和 5 次音频检查，保留每次断言的默认超时。
+    test.slow();
     const materials = [
       '/knowledge/materials/biz-03-rbac-abac-data-permissions.md/biz-03',
       '/knowledge/materials/biz-04-api-contract-dto-frontend-model.md/biz-04',
@@ -728,11 +730,11 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.locator('.question-body h2')).not.toContainText('固定 fixture 为上述循环、两个独立计数器');
   });
 
-  test('35 个核心批次只包含可进入的真实知识点', async ({ page }) => {
+  test('兼容批次保留真实知识点，路线明确按能力与基础编排', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '先建立面试竞争力，再走向高级工程师' })).toBeVisible();
-    await expect(page.getByText(/按求职优先重新排序/)).toBeVisible();
-    await expect(page.getByText(/B04 起进入 React\/Vue/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '按能力与基础安排学习' })).toBeVisible();
+    await expect(page.getByText(/暂保留旧分组供查阅/)).toBeVisible();
+    await expect(page.getByText(/框架不享有提前或交错特权/)).toBeVisible();
     await expect(page.locator('.week-list article')).toHaveCount(35);
     const pairedHeights = await page.locator('.week-list article:not(.open)').evaluateAll((items) => items.slice(0, 2).map((item) => item.getBoundingClientRect().height));
     expect(Math.abs((pairedHeights[0] ?? 0) - (pairedHeights[1] ?? 0))).toBeLessThanOrEqual(1);
@@ -753,10 +755,10 @@ test.describe.serial('核心使用体验', () => {
 
   test('详情下一步与路线一致，关系分支按知识点去重', async ({ page }) => {
     await page.goto('/knowledge/JS-01');
-    await expect(page.getByRole('heading', { name: '继续当前路线的下一个知识点' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '依据路线与前置继续学习' })).toBeVisible();
     // JS-02 已在上一条回归用例中学完，连续路线应自动跳过它并推荐 JS-03。
     await expect(page.locator('.branch-grid article').first()).toContainText('JS-03');
-    await expect(page.locator('.branch-grid article').first()).toContainText('唯一下一步');
+    await expect(page.locator('.branch-grid article').first()).toContainText('建议继续');
     await expect(page.getByText('TS-01', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '学习下一个 →' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: '暂缓整条路线' })).toHaveCount(0);
@@ -767,7 +769,7 @@ test.describe.serial('核心使用体验', () => {
 
     await page.goto('/knowledge/REACT-01');
     await expect(page.locator('.branch-grid article').first()).toContainText('VUE-01');
-    await expect(page.locator('.branch-grid article').first()).toContainText('求职优先核心路线');
+    await expect(page.locator('.branch-grid article').first()).toContainText('兼容学习路线');
   });
 
   test('路线建议、学习完成和学习台当前现场形成连续闭环', async ({ page }) => {
@@ -1040,7 +1042,7 @@ test.describe.serial('核心使用体验', () => {
     await expect(page).toHaveURL(/\/knowledge\/map$/);
 
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { name: '先建立面试竞争力，再走向高级工程师' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '按能力与基础安排学习' })).toBeVisible();
     await page.locator('.week-list article').last().scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     await page.getByRole('link', { name: /学习台/ }).click();

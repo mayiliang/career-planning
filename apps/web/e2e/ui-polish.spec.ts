@@ -91,7 +91,7 @@ test('打卡可搜索前 60 项以外的知识点，失败保留输入并可重�
   await expect(dialog.getByLabel('今日学习记录', { exact: true })).toHaveValue('这次学习的关键收获');
   await dialog.getByRole('button', { name: '保存今日打卡' }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('status')).toContainText('今日学习已记录');
+  await expect(page.getByRole('status').filter({ hasText: '今日学习已记录' })).toBeVisible();
   expect(saveCount).toBe(2);
 });
 

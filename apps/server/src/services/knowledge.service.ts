@@ -1,3 +1,4 @@
+import { practiceActivityId } from '@career-atlas/shared';
 /**
  * 知识点服务
  * 
@@ -380,7 +381,7 @@ function buildLearningActivities(
     ...(isCode ? ['代码包含固定输入、expected、actual 与 console.assert，并已成功执行'] : []),
   ];
   activities.push({
-    id: 'strict-practice', type: profile === 'THEORY_ONLY' ? 'CASE_STUDY' : 'GUIDED_PRACTICE', label,
+    id: practiceActivityId(point.code), type: profile === 'THEORY_ONLY' ? 'CASE_STUDY' : 'GUIDED_PRACTICE', label,
     minutes: point.practiceMinutes + (profile === 'THEORY_ONLY' ? 0 : point.projectMinutes), optional: true,
     task: strictTasks.minimumOutput,
     input: `首考题 3（最小产出）原文：${strictTasks.minimumOutput}\n\n首考题 4（受限排错）原文：${strictTasks.constrainedDebugging}\n\n仅可依据 ${sourceNames} 和本点通过标准完成；不得用通用 PASS/CONTROLLED 模板替换题目给定的输入、预期或异常。`,

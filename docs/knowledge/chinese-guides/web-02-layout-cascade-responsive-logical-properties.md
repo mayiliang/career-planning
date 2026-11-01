@@ -258,7 +258,7 @@ sticky 依赖滚动祖先、可移动空间和 inset 阈值。若祖先意外形
 
 - [MDN：盒模型](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics/Box_model)：理解声明宽度与最终占用空间。
 - [MDN：Grid 中的尺寸](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Grid_layout/Basic_concepts_of_grid_layout)：查阅轨道、fr 与 minmax。
-- [MDN：Flex 项目比例](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Flexible_box_layout/Controlling_ratios_of_items_along_the_main_axis)：理解增长、收缩和基础尺寸。
+- [MDN：Flex 项目比例](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Flexible_box_layout/Controlling_flex_item_ratios)：理解增长、收缩和基础尺寸。
 - [MDN：层叠](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascade/Introduction) 与 [优先级](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascade/Specificity)：区分不同层次的比较。
 - [MDN：层叠上下文](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Positioned_layout/Stacking_context)：排查跨祖先的覆盖问题。
 - [MDN：逻辑属性](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Logical_properties_and_values)：按文字方向理解尺寸与边距。

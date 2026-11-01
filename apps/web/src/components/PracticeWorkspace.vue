@@ -12,6 +12,7 @@ const code = ref('');
 const executionOutput = ref('');
 const executionStatus = ref<'NOT_RUN' | BrowserExecutionStatus>('NOT_RUN');
 const attempt = ref<PracticeAttempt | null>(null);
+const history = ref<PracticeAttempt[]>([]);
 const loading = ref(true);
 const running = ref(false);
 const saving = ref(false);
@@ -52,6 +53,7 @@ const validationDescription = computed(() => {
 onMounted(async () => {
   try {
     const attempts = await apiClient.getPracticeAttempts(props.pointCode);
+    history.value = attempts.filter(item => item.activityId !== props.activity.id);
     attempt.value = attempts.find((item) => item.activityId === props.activity.id) ?? null;
     submissionMd.value = attempt.value?.submissionMd || props.activity.submissionTemplate || '';
     code.value = attempt.value?.code || props.activity.starterCode || '';
@@ -154,6 +156,15 @@ onBeforeUnmount(() => validationController?.abort());
         <span :data-status="attempt?.status ?? 'DRAFT'">{{ fullyPassed ? '完全通过' : attempt?.status === 'COMPLETED' ? '已保存证据' : attempt ? '已恢复草稿' : '新草稿' }}</span>
       </header>
 
+      <details v-for="record in history" :key="record.id" class="task-statement">
+        <summary>历史练习 · {{ record.contractVersion || record.activityId }} · 只读证据</summary>
+        <p>旧提交按原合同解释，不代表已完成本次更新后的练习。原评分保留。</p>
+        <MarkdownRenderer v-if="record.contractSnapshot" :source="record.contractSnapshot" />
+        <MarkdownRenderer :source="record.submissionMd" />
+        <pre>{{ record.code }}</pre><pre>{{ record.executionOutput }}</pre>
+        <p>{{ record.validation?.summary || '未评分' }}</p>
+        <template v-if="record.validation"><p>原结果：{{ record.validation.passed ? '通过' : '未通过' }} · {{ record.validation.mode }}</p><ul><li v-for="(check, index) in record.validation.checks" :key="index">{{ check.passed ? '通过' : '待补充' }}：{{ check.label }}</li></ul><p>{{ record.validation.nextAction }}</p></template>
+      </details>
       <section class="task-statement" aria-label="具体任务题干">
         <span>00 · 具体任务题干</span><p>{{ activity.task }}</p>
       </section>

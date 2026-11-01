@@ -1,0 +1,15 @@
+{
+  "browser": "156.0.8078.76",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "pages": [
+    "/plan",
+    "/knowledge/JS-04",
+    "/knowledge/materials/js-04-async-promise-browser-event-loop.md/js-04",
+    "/knowledge/materials/javascript-promises-and-cancellation.md/prejs-07",
+    "/knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05",
+    "/knowledge/JS-05"
+  ]
+}

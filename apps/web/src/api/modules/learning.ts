@@ -29,7 +29,7 @@ const LearningWorkspaceSchema = z.object({
 const BranchSchema = WorkspacePointSchema.extend({
   relation: z.string(), relationDescription: z.string().nullable(), recommended: z.boolean(), requiredPrerequisite: z.boolean(),
   routeChoice: z.string().nullable(), routeChoiceScope: z.string().nullable(), field: z.string(), impactIfDeferred: z.string(),
-  navigationKind: z.enum(['CONTINUE', 'TRACK_CHOICE']), trackName: z.string(), trackRemaining: z.number(),
+  navigationKind: z.enum(['CONTINUE', 'TRACK_CHOICE', 'PREREQUISITE']), trackName: z.string(), trackRemaining: z.number(),
 });
 
 const PracticeValidationSchema = z.object({
@@ -43,6 +43,7 @@ const PracticeAttemptSchema = z.object({
   language: z.string().nullable(), executionOutput: z.string(), executionStatus: z.string().nullable(),
   validationJson: z.string().nullable(), status: z.enum(['DRAFT', 'COMPLETED']), createdAt: z.string(), updatedAt: z.string(),
   validation: PracticeValidationSchema.nullable(),
+  contractVersion: z.string().nullable().optional(), contractSnapshot: z.string().nullable().optional(), readOnly: z.boolean().optional(),
 });
 
 const NoteVersionSchema = z.object({

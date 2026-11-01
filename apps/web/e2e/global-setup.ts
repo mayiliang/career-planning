@@ -1,11 +1,11 @@
 import type { FullConfig } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { createConnection } from 'node:net';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const testRoot = fileURLToPath(new URL('../../../tmp/e2e/', import.meta.url));
 const backendPort = 42730;
 const frontendPort = 42731;
 const backendUrl = `http://127.0.0.1:${backendPort}/api/v1/system/health`;
@@ -45,7 +45,7 @@ async function assertPortIsFree(port: number) {
 }
 
 async function removeTestDataDir(dataDir: string) {
-  const expectedPrefix = join(tmpdir(), 'career-atlas-e2e-');
+  const expectedPrefix = join(testRoot, 'career-atlas-e2e-');
   if (!dataDir.startsWith(expectedPrefix)) throw new Error(`拒绝清理非测试目录：${dataDir}`);
   await rm(dataDir, { recursive: true, force: true });
 }
@@ -84,7 +84,8 @@ async function stopProcess(child: ChildProcess) {
 
 export default async function globalSetup(_config: FullConfig) {
   await Promise.all([assertPortIsFree(backendPort), assertPortIsFree(frontendPort)]);
-  const dataDir = await mkdtemp(join(tmpdir(), 'career-atlas-e2e-'));
+  await mkdir(testRoot, { recursive: true });
+  const dataDir = await mkdtemp(join(testRoot, 'career-atlas-e2e-'));
   const backend = startNodeProcess(
     fileURLToPath(new URL('../../server/dist/index.js', import.meta.url)),
     [],
@@ -92,6 +93,7 @@ export default async function globalSetup(_config: FullConfig) {
       PORT: String(backendPort),
       DATA_DIR: dataDir,
       NODE_ENV: 'test',
+      CAREER_ATLAS_ENV_FILE: '',
       AUTO_BACKUP: 'false',
       DEEPSEEK_API_KEY: '',
     },

@@ -28,7 +28,7 @@ export function extractLocalMaterialContext(studyMaterialMd: string) {
     if (remaining <= 0) return [];
     const content = section.content.slice(0, Math.min(MAX_SECTION_CHARS, remaining));
     remaining -= content.length;
-    return [{ ...section, content }];
+    return [{ ...section, content, truncated: content.length < section.content.length, originalChars: section.content.length }];
   });
 }
 

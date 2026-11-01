@@ -1,0 +1,20 @@
+{
+  "browser": "156.0.8078.76",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "path": "/assessment/00000000-0000-4000-8000-000000000011",
+  "submitBox": {
+    "x": 1049.453125,
+    "y": 564,
+    "width": 180,
+    "height": 46
+  },
+  "launcherBox": {
+    "x": 1068,
+    "y": 642,
+    "width": 190,
+    "height": 58
+  }
+}

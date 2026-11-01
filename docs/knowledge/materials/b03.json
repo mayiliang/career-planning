@@ -71,8 +71,20 @@
           "heading": "可取消的等待需要处理开始前和结束后的情况"
         },
         {
+          "id": "controlled-group",
+          "heading": "把领取取消和结果槽位放进同一个协议"
+        },
+        {
+          "id": "latest-result",
+          "heading": "取消之后仍要判断结果是否过期"
+        },
+        {
           "id": "stale-cleanup",
           "heading": "新请求开始后旧请求的清理也可能过期"
+        },
+        {
+          "id": "error-kinds",
+          "heading": "区分取消与需要告知用户的失败"
         },
         {
           "id": "safe-retry",

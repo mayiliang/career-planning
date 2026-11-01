@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { apiClient, type KnowledgePointDetail, type LearningBranch } from '@/api/client';
@@ -256,6 +257,8 @@ onBeforeUnmount(() => {
       <p v-if="error" class="notice error">{{ error }}</p>
       <p v-if="message" class="notice">{{ message }}</p>
 
+      <AsyncPilotRoute v-if="['JS-04', 'JS-05'].includes(point.code)" :current-code="point.code" :refresh-key="point.learningState" />
+
       <details class="learning-guide">
         <summary><span><small>推荐学习方式</small><strong>{{ profileText }}</strong></span><em>展开规则与预计投入</em><i aria-hidden="true"></i></summary>
         <div class="learning-guide__body">
@@ -265,7 +268,7 @@ onBeforeUnmount(() => {
             <li>由你点击“已学完”；掌握挑战完全可选</li>
           </ol>
           <div class="effort"><span v-for="activity in point.learningActivities" :key="activity.type">{{ activity.label }} {{ activity.minutes }}m</span><b>只有资料与笔记是学习完成条件；其余任务均可选</b></div>
-          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01～B32 前置学习</small><strong>只列直接前置，下一层会继续展开</strong><p>主讲义不会重复列出间接依赖；每个链接会显示未读、阅读进度或已看完，正文超过 80% 后自动完成。</p></div></aside>
+          <aside v-if="usesLinkedPrerequisites" class="beginner-assist"><div><small>B01～B32 前置学习</small><strong>只列直接前置，下一层会继续展开</strong><p>主讲义不会重复列出间接依赖；每个链接会显示未读、阅读进度或已看完，正文超过 80% 只标记资料看完，知识点是否学完仍由你决定。</p></div></aside>
           <aside v-else class="beginner-assist"><div><small>初学者阅读辅助</small><strong>遇到陌生术语或隐含前置知识时，先补台阶</strong><p>中文译名与英文原名同时保留；这份辅助讲义不扩张当前知识点，也不单独作为考核题源。</p></div><button type="button" @click="openBeginnerGuide">打开前置与术语讲义 →</button></aside>
         </div>
       </details>
@@ -347,13 +350,13 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="branches-section">
-        <header><div><small>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? 'NEXT TRACK' : 'CONTINUE ROUTE' }}</small><h2>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '当前路线已完成，选择下一条学习方向' : '继续当前路线的下一个知识点' }}</h2><p>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '只有一条连续路线走完后才会出现选择；未选择的方向不会被放弃，完成所选路线后仍会再次出现。' : '系统沿当前路线连续推进，不在每个知识点后制造分支；暂缓时会跳过该点继续后面的内容。' }}</p></div></header>
+        <header><div><small>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? 'NEXT TRACK' : 'CONTINUE ROUTE' }}</small><h2>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '当前路线已完成，选择下一条学习方向' : '依据路线与前置继续学习' }}</h2><p>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '只有一条连续路线走完后才会出现选择；未选择的方向不会被放弃，完成所选路线后仍会再次出现。' : '异步链优先解释未满足的硬前置；查看建议不会修改你的当前选择。其他内容暂沿兼容路线推荐。' }}</p></div></header>
         <div v-if="branches.length" class="branch-grid">
           <article v-for="branch in branches" :key="branch.code" :class="{ deferred: branch.routeChoice === 'DEFERRED' || branch.learningState === 'DEFERRED' }">
-            <div><code>{{ branch.code }}</code><span>{{ branch.navigationKind === 'CONTINUE' ? '唯一下一步' : '新路线入口' }}</span></div>
+            <div><code>{{ branch.code }}</code><span>{{ branch.requiredPrerequisite ? '待补硬前置' : branch.navigationKind === 'CONTINUE' ? '建议继续' : '新路线入口' }}</span></div>
             <h3>{{ branch.title }}</h3><p>{{ branch.relationDescription || branch.learningApproach }}</p>
             <dl><div><dt>路线</dt><dd>{{ branch.trackName }}</dd></div><div><dt>剩余</dt><dd>{{ branch.trackRemaining }} 个知识点</dd></div><div><dt>预计投入</dt><dd>当前点约 {{ branch.estimatedMinutes }} 分钟</dd></div><div><dt>暂缓影响</dt><dd>{{ branch.impactIfDeferred }}</dd></div></dl>
-            <footer><button class="primary" @click="chooseBranch(branch)">{{ branch.navigationKind === 'CONTINUE' ? '学习下一个 →' : '选择这条路线 →' }}</button><button @click="deferBranch(branch, 'POINT')">暂缓此知识点</button><button v-if="branch.navigationKind === 'TRACK_CHOICE'" @click="deferBranch(branch, 'BRANCH')">暂缓整条路线</button></footer>
+            <footer><button v-if="branch.requiredPrerequisite" class="primary" @click="router.push(`/knowledge/${branch.code}`)">查看前置 →</button><button v-else class="primary" @click="chooseBranch(branch)">{{ branch.navigationKind === 'CONTINUE' ? '学习下一个 →' : '选择这条路线 →' }}</button><button @click="deferBranch(branch, 'POINT')">暂缓此知识点</button><button v-if="branch.navigationKind === 'TRACK_CHOICE'" @click="deferBranch(branch, 'BRANCH')">暂缓整条路线</button></footer>
           </article>
         </div>
         <div v-else class="content-card empty">所有可继续的路线都已完成或被你主动暂缓。你仍可在知识体系中恢复任意知识点。</div>

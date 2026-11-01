@@ -4,11 +4,11 @@
 
 “先写的代码为什么后执行？”学异步时，最容易把这个问题全交给一句“事件循环”。但它实际上包含几个不同问题：哪段代码现在就在执行，哪件事还在等待，完成后谁来安排回调，以及浏览器什么时候有机会响应用户。
 
-本篇从几行可以手动推演的代码开始。先建立执行顺序，再把它用于并发请求、界面响应和过期结果处理。这里讨论浏览器；Node.js 的具体阶段和 `process.nextTick` 不在本篇的顺序模型内。
+本篇从几行可以手动推演的代码开始。先建立执行顺序，再把它用于并发请求和界面响应。这里讨论浏览器；Node.js 的具体阶段和 `process.nextTick` 不在本篇的顺序模型内。
 
 ### 学习前先确认
 
-- 直接前置：[PREJS-07 Promise、async/await 与取消信号](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。先认识 Promise 表示什么、怎样得到结果。
+- 直接前置：[PREJS-07 Promise 与 await 入门](../chinese-guides/javascript-promises-and-cancellation.md#prejs-07)。先认识 Promise 表示什么、怎样得到结果。
 - 直接前置：[JS-01 执行上下文、作用域与闭包](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。回调仍然遵守普通函数的调用与变量查找规则。
 
 带 `await` 的示例可在现代桌面浏览器开发者工具的 Console 中逐段运行。每段示例都定义了自己需要的变量，输出用注释标在对应位置。先预测一次，再运行核对，重点看“哪个动作安排了下一步”。
@@ -122,7 +122,7 @@ console.log(second); // => 6
 
 带花括号的箭头函数是函数体，表达式结果不会自动成为返回值。链上没有返回值，下一步就收到 `undefined`。这属于函数规则，不是 Promise 特有的随机行为。
 
-`finally` 通常用于无论成功失败都要执行的清理。它不会接收前一步的结果；正常结束时保留原结果。不过它若抛错或返回最终拒绝的 Promise，就会让整条链转为相应失败；它若返回 pending 的 Promise，后续也会等待。释放资源的责任可与 [B01 的资源关闭](../chinese-guides/js-07-iteration-metaprogramming-resources.md#让资源的打开和关闭待在一起) 一起理解。
+这里的 `finally` 只记录收尾动作；它正常结束时保留原结果。清理失败怎样影响结果，以及它与语言语句 `try/finally` 的区别，留到 [JS-05 的两种 finally](../chinese-guides/js-05-promise-errors-async-control-flow.md#两种-finally-的返回值不要混在一起)。
 
 ### 用调用栈任务和微任务推演顺序
 
@@ -314,45 +314,11 @@ console.log(peak); // => 2
 
 两个消费者各自领取一个编号，然后等待自己手上的任务。谁先完成，谁再领下一个。因此上限约束的是正在等待完成的任务数，结果仍放回输入对应的位置。
 
-这是讲解“领取后再启动”的最小实现。示例中的任务都成功；若某个任务失败，它的消费者会停止，外层会拒绝，但另一个消费者仍可能继续领取后续任务。需要“一次失败就停止领取”时，还要加入共享停止状态，并在领取前检查；需要停止已启动的请求时，再传递取消信号。这个区别与 `Promise.all` 不负责取消完全一致。
+这是讲解“领取后再启动”的最小实现。示例中的任务都成功；若某个任务失败，它的消费者会停止，外层会拒绝，但另一个消费者仍可能继续领取后续任务。需要“一次失败就停止领取”时，还要加入共享停止状态，并在领取前检查；需要停止已启动的请求时，再传递取消信号。这个区别与 `Promise.all` 不负责取消完全一致。完整的逐项失败与取消策略在 [JS-05 的任务组](../chinese-guides/js-05-promise-errors-async-control-flow.md#把领取取消和结果槽位放进同一个协议) 中实现。
 
 ### 取消之后仍要判断结果是否过期
 
-搜索框的例子最容易看出问题：用户先输入“函数”，再输入“闭包”，第二次结果先到，第一次随后到。如果每个回调都直接写界面，旧查询就会覆盖新查询。
-
-下面用可手动完成的 Promise 固定顺序，不靠网络速度复现。
-
-```js example=js04-stale-result
-function deferred() {
-  let resolve;
-  const promise = new Promise((done) => { resolve = done; });
-  return { promise, resolve };
-}
-const first = deferred();
-const second = deferred();
-let version = 0;
-let visible = '';
-async function displayLatest(promise) {
-  const ownVersion = ++version;
-  const text = await promise;
-  if (ownVersion !== version) return;
-  visible = text;
-}
-
-const oldTask = displayLatest(first.promise);
-const newTask = displayLatest(second.promise);
-second.resolve('闭包的结果');
-await newTask;
-first.resolve('函数的结果');
-await oldTask;
-console.log(visible); // => 闭包的结果
-```
-
-每次启动保存自己的版本；提交前与当前版本比较。这个检查让“最后一次查询”决定界面，而不是“最后一次返回”决定界面。失败提示也要做同样的判断，否则旧查询的错误仍可能盖住新查询的成功。
-
-真实请求中，可以在启动新查询时先调用上一个 `AbortController` 的 `abort()`，把新 `signal` 交给 `fetch` 等支持它的操作。这能减少已失去价值的工作。但取消与结果就绪可能接近发生，某些底层操作也不支持取消，因此提交前的版本检查仍有意义。取消表示意图，版本检查决定结果现在是否适合显示。
-
-页面关闭时也应使旧版本失效，并释放监听或其他资源。涉及 Worker 时，消息可能已经在途；同样的判断可以放在消息接收处，见 [CS-03 的任务编号](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#停止旧工作和拒绝旧结果需要分别处理)。
+此处保留旧小节入口。完整的版本检查示例已移到 [JS-05：取消之后仍要判断结果是否过期](../chinese-guides/js-05-promise-errors-async-control-flow.md#取消之后仍要判断结果是否过期)，与错误、取消和清理一起学习。本篇先掌握启动与等待；还不要求实现取消协议。
 
 ### 把顺序问题还原成几个具体动作
 

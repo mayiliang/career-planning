@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { pilotNode, pilotMaterialHref, ASYNC_PILOT_CHAIN } from '@career-atlas/shared';
+import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiClient } from '@/api/client';
@@ -18,6 +20,10 @@ const chapter = computed(() => findLearningChapter(material.value?.guide ?? ''))
 const batch = computed(() => findLearningBatch(material.value?.guide ?? ''));
 const connections = computed(() => chapter.value ? chapterConnections(chapter.value) : []);
 const chapterIndex = computed(() => batch.value?.chapters.findIndex((item) => item.guide === chapter.value?.guide) ?? -1);
+const pilot = computed(() => pilotNode(material.value?.anchor.toUpperCase() ?? ''));
+const pilotIndex = computed(() => ASYNC_PILOT_CHAIN.findIndex(code => code === pilot.value?.code));
+const pilotPrevious = computed(() => pilotNode(ASYNC_PILOT_CHAIN[pilotIndex.value - 1] ?? ''));
+const pilotNext = computed(() => pilotNode(ASYNC_PILOT_CHAIN[pilotIndex.value + 1] ?? ''));
 const previousChapter = computed(() => batch.value?.chapters[chapterIndex.value - 1]);
 const nextChapter = computed(() => batch.value?.chapters[chapterIndex.value + 1]);
 const readerRoot = ref<HTMLElement | null>(null);
@@ -85,6 +91,7 @@ const materialKind = computed(() => isBeginnerGuide.value ? '阅读辅助' : isA
 
 async function load() {
   const request = latestLoad.start();
+  readerRoot.value?.removeAttribute('data-reader-ready');
   void flushReadingProgressSave();
   headingObserver?.disconnect();
   pronunciationAudio?.pause();
@@ -95,7 +102,7 @@ async function load() {
   try {
     const guide = String(route.params.guide ?? '');
     const anchor = String(route.params.anchor ?? '');
-    sectionVisit.value = Boolean(findLearningChapter(guide) && route.hash);
+    sectionVisit.value = Boolean(route.hash);
     const [materialData, readingRecords] = await Promise.all([
       apiClient.getKnowledgeMaterial(guide, anchor, request.signal),
       pronunciationBatchByGuide.has(guide) ? apiClient.getMaterialReadingProgress(request.signal) : Promise.resolve([]),
@@ -349,6 +356,7 @@ function handleReaderClick(event: MouseEvent) {
   if (!href.startsWith('/knowledge/materials/') && !href.startsWith('#')) return;
   event.preventDefault();
   void flushReadingProgressSave();
+  if (href.startsWith('#')) sectionVisit.value = true;
   void router.push(href.startsWith('#') ? `${route.path}${href}` : href);
 }
 
@@ -376,9 +384,12 @@ function handleRendered() {
 function scrollToHeading(id: string) {
   const element = readerRoot.value?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
   if (!element) return;
+  sectionVisit.value = true;
   activeHeading.value = id;
   tocOpen.value = false;
   if (route.hash === `#${encodeURIComponent(id)}` || route.hash === `#${id}`) {
+    element.setAttribute('tabindex', '-1');
+    element.focus({ preventScroll: true });
     element.scrollIntoView({ behavior: 'instant', block: 'start' });
   } else {
     void router.replace({ hash: `#${id}` });
@@ -392,6 +403,7 @@ function returnToReading() {
 
 function readFromStart() {
   sectionVisit.value = false;
+  window.scrollTo({ top: 0, behavior: 'instant' });
   void router.replace({ hash: '' });
 }
 
@@ -457,7 +469,7 @@ onBeforeUnmount(() => {
         <RouterLink v-for="item in learningMaterialCatalogs" :key="item.batch" :to="chapterHref(item.chapters[0]!)" :aria-current="item.batch === batch.batch ? 'true' : undefined">{{ item.batch }}</RouterLink>
       </nav>
       <nav v-if="chapter && batch" class="batch-path" :aria-label="`${batch.batch} 阅读路线`">
-        <div><span>{{ batch.batch }} · 核心路线</span><strong>{{ batch.title }}</strong></div>
+        <div><span>{{ batch.batch }} · 兼容阅读分组</span><strong>{{ batch.title }}</strong></div>
         <ol :style="{ '--chapter-count': batch.chapters.length }">
           <li v-for="(item, index) in batch.chapters" :key="item.id">
             <RouterLink :to="chapterHref(item)" :aria-current="item.id === chapter.id ? 'page' : undefined">
@@ -466,6 +478,7 @@ onBeforeUnmount(() => {
           </li>
         </ol>
       </nav>
+      <AsyncPilotRoute v-if="pilotIndex >= 0" :current-code="pilot?.code" />
       <header class="material-hero">
         <div>
           <p>{{ chapter && batch ? `${batch.batch} · 第 ${chapterIndex + 1} / ${batch.chapters.length} 篇` : '站内中文讲义' }} <span>·</span> {{ material.anchor.toUpperCase() }}</p>
@@ -512,14 +525,20 @@ onBeforeUnmount(() => {
             <strong>{{ isBeginnerGuide ? '这是一份阅读辅助' : isAtomicPrerequisite ? '只补当前需要的一个台阶' : '先理解，再复现' }}</strong>
             <span>{{ isBeginnerGuide ? '用于补齐陌生术语和隐含前置知识，不单独作为考核题源。' : isAtomicPrerequisite ? '读懂定义和最小示例后，沿文末链接回到原知识点；不需要继续阅读无关术语。' : '建议先读机制与边界，再运行示例，并保留日志、截图或测试结果作为学习证据。' }}</span>
           </div>
+          <p v-if="pilotIndex >= 0" class="sheet-note">2026-10-29 更新：入门范围已精简；JS-04 聚焦启动与等待；JS-05 新增完整任务组协议与旧结果处理。历史阅读进度与学习状态保留，可从目录补读新增部分。</p>
           <MarkdownRenderer class="reader-content" :source="material.markdown" @rendered="handleRendered" />
-          <nav v-if="chapter" class="chapter-pagination" aria-label="继续学习">
+          <nav v-if="pilotIndex >= 0" class="chapter-pagination" aria-label="异步链连续阅读">
+            <RouterLink v-if="pilotPrevious" :to="pilotMaterialHref(pilotPrevious)">← 上一篇 · {{ pilotPrevious.title }}</RouterLink>
+            <RouterLink v-if="pilotNext" :to="pilotMaterialHref(pilotNext)">接着读 → {{ pilotNext.title }}</RouterLink>
+            <RouterLink v-if="pilot?.kind === 'POINT'" :to="`/knowledge/${pilot.code}`">返回详情与练习 →</RouterLink>
+          </nav>
+          <nav v-else-if="chapter" class="chapter-pagination" aria-label="继续学习">
             <RouterLink v-if="previousChapter" :to="chapterHref(previousChapter)"><small>← 上一篇</small><strong>{{ previousChapter.title }}</strong></RouterLink>
             <RouterLink v-if="nextChapter" :to="chapterHref(nextChapter)"><small>接着读 →</small><strong>{{ nextChapter.title }}</strong></RouterLink>
             <RouterLink v-else :to="`/knowledge/${chapter.id}`"><small>{{ batch?.batch }} · 最后一篇</small><strong>返回知识点，整理理解 →</strong></RouterLink>
           </nav>
           <footer>
-            <span>{{ sectionVisit ? '本次查阅小节，不改变整篇阅读进度' : currentReading.completed ? '本资料已自动标记为看完' : '正文阅读超过 80% 后会自动标记为看完' }}</span>
+            <span>{{ sectionVisit ? '本次查阅小节，不改变整篇阅读进度' : currentReading.completed ? '本资料已看完；知识点是否学完由你决定' : '正文阅读超过 80% 仅标记资料看完，不改变知识点状态' }}</span>
             <button type="button" @click="returnToReading">返回上一页 →</button>
           </footer>
           <span class="pronunciation-feedback" aria-live="polite">{{ pronunciationFeedback }}</span>

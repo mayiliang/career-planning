@@ -1,3 +1,4 @@
+import { asyncGradingSources } from './async-pilot-contract.js';
 /** 评分流程编排：模型请求、逐题归一化、服务端重算和原子提交。 */
 import { prepareGrading, commitGrading, failGrading } from './grading/persistence.js';
 import { eq } from 'drizzle-orm';
@@ -64,7 +65,8 @@ async function executeGrading(
     const aiProvider = createProvider(provider);
     
     // 构建 AI 评分请求
-    const localMaterialContext = extractLocalMaterialContext(knowledgePoint.studyMaterialMd);
+    const pilotSources = asyncGradingSources(session.knowledgePointCode, questions);
+    const localMaterialContext = pilotSources ? [] : extractLocalMaterialContext(knowledgePoint.studyMaterialMd);
     const gradingMaterialContext = localMaterialContext.length
       ? `${knowledgePoint.studyMaterialMd}\n\n以下是本知识点链接的本地中文讲义正文（仅这些章节可作为补充事实依据）：\n${localMaterialContext.map((item) => `【${item.title}｜${item.source}】\n${item.content}`).join('\n\n')}`
       : knowledgePoint.studyMaterialMd;
@@ -77,7 +79,7 @@ async function executeGrading(
         type: q.questionType,
         dimension: q.dimension,
         maxScore: q.maxScore,
-        content: q.questionContent,
+        content: pilotSources ? JSON.stringify((({ contractSnapshot: _snapshot, ...rest }) => rest)(JSON.parse(q.questionContent))) : q.questionContent,
       })),
       answers: answers.map(a => ({
         questionId: a.questionId,
@@ -96,9 +98,9 @@ async function executeGrading(
             error: parsed?.error,
           };
         }),
-      rubric: knowledgePoint.assessmentSpecMd,
-      passCriteria: knowledgePoint.passCriteriaMd,
-      studyMaterial: gradingMaterialContext,
+      rubric: pilotSources?.rubric ?? knowledgePoint.assessmentSpecMd,
+      passCriteria: pilotSources?.passCriteria ?? knowledgePoint.passCriteriaMd,
+      studyMaterial: pilotSources?.studyMaterial ?? gradingMaterialContext,
     };
     
     // 调用 AI 评分

@@ -1,0 +1,241 @@
+{
+  "browser": "156.0.8078.76",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "results": [
+    {
+      "id": "js04-first-order",
+      "output": [
+        "开始 → 结束 → Promise 回调 → 定时器"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-executor",
+      "output": [
+        "创建前 → 执行器 → resolve 之后 → 创建后 → 收到 7"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-adoption",
+      "output": [
+        "false",
+        "资料已准备好",
+        "true"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-chain",
+      "output": [
+        "中间值 6 → 示例中的失败 → 清理",
+        "0"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-missing-return",
+      "output": [
+        "undefined",
+        "6"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-nested-microtasks",
+      "output": [
+        "同步开始 → 同步结束 → 微任务 A → 微任务 B → 微任务 C → 定时器"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-await-order",
+      "output": [
+        "10",
+        "调用前 → 函数开始 → 调用后 → await 之后 5"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-bounded-microtasks",
+      "output": [
+        "第 1 步 → 第 2 步 → 第 3 步 → 第 4 步 → 定时器"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-start-order",
+      "output": [
+        "启动资料 → 资料已等待完 → 启动通知",
+        "启动资料 → 启动通知 → 一起等待完",
+        "资料,通知"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-all-keeps-running",
+      "output": [
+        "其中一件失败 → 另一件事仍然完成"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-concurrency-limit",
+      "output": [
+        "10,20,30,40",
+        "2"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-floating-work",
+      "output": [
+        "外层已结束",
+        "外层已结束 → 数据写完"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-return-await",
+      "output": [
+        "外层收到：写入失败",
+        "本地恢复"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-catch-position",
+      "output": [
+        "后续 catch：成功回调出错"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-error-cause",
+      "output": [
+        "学习清单读取失败",
+        "顶层必须是数组"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-http-status",
+      "output": [
+        "3",
+        "HTTP 503"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-promise-finally",
+      "output": [
+        "原结果",
+        "原失败"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-cleanup-failure",
+      "output": [
+        "清理也失败"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-statement-finally",
+      "output": [
+        "被覆盖的结果"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-partial-results",
+      "output": [
+        "1：第一份已保存 / 2：第二份格式无效 / 3：第三份已保存"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-abortable-wait",
+      "output": [
+        "用户停止等待",
+        "等完了"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-controlled-group",
+      "output": [
+        "1,2,3",
+        "cancelled,fulfilled,cancelled,skipped,skipped",
+        "{\"active\":0,\"peak\":2,\"listeners\":0}"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js04-stale-result",
+      "output": [
+        "闭包的结果"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-stale-cleanup",
+      "output": [
+        "加载中",
+        "结果：新内容"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-error-kinds",
+      "output": [
+        "network",
+        "business",
+        "program",
+        "cancelled"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-bounded-retry",
+      "output": [
+        "读取完成 3",
+        "100,200"
+      ],
+      "error": ""
+    },
+    {
+      "id": "js05-deadline",
+      "output": [
+        "TimeoutError"
+      ],
+      "error": ""
+    },
+    {
+      "id": "prejs07-value",
+      "output": [
+        "小林",
+        "小林"
+      ],
+      "error": ""
+    },
+    {
+      "id": "prejs07-wait",
+      "output": [
+        "开始等待 → 调用者继续 → 收到小林"
+      ],
+      "error": ""
+    },
+    {
+      "id": "prejs07-failure",
+      "output": [
+        "姓名暂不可用"
+      ],
+      "error": ""
+    }
+  ]
+}

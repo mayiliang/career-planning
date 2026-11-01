@@ -270,13 +270,13 @@ describe('自主学习、笔记版本与打卡', () => {
     }
   });
 
-  it('详情下一步沿紧凑主干交错推荐 React 与 Vue，而不是先学完单一框架', () => {
+  it('非试点暂保留框架兼容顺序并明确标为兼容路线', () => {
     rawDb.prepare("UPDATE knowledge_points SET learning_state = 'NOT_STARTED' WHERE code IN ('REACT-01', 'VUE-01', 'VUE-02', 'REACT-02')").run();
     const afterReactStart = getNextBranches('REACT-01');
     expect(afterReactStart).toHaveLength(1);
     expect(afterReactStart[0]?.code).toBe('VUE-01');
     expect(afterReactStart[0]?.navigationKind).toBe('CONTINUE');
-    expect(afterReactStart[0]?.trackName).toBe('求职优先核心路线');
+    expect(afterReactStart[0]?.trackName).toBe('兼容学习路线');
 
     rawDb.prepare("UPDATE knowledge_points SET learning_state = 'LEARNED' WHERE code = 'VUE-01'").run();
     expect(getNextBranches('REACT-01')[0]?.code).toBe('VUE-02');

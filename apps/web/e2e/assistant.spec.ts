@@ -49,10 +49,29 @@ test.describe('Atlas AI 可读交互', () => {
     await expect.poll(() => panel.evaluate((element) => Math.round(element.getBoundingClientRect().width))).toBeGreaterThanOrEqual(700);
   });
 
+  test('先打开助手再收到页面数据时更新当前页上下文', async ({ page }) => {
+    let release!: () => void;
+    const delayed = new Promise<void>(resolve => { release = resolve; });
+    await page.route('**/api/v1/knowledge/points/JS-04', async route => {
+      const response = await route.fetch();
+      await delayed;
+      await route.fulfill({ response });
+    });
+    await page.goto('/knowledge/JS-04');
+    await page.getByRole('button', { name: /Atlas AI/ }).click();
+    const context = page.getByLabel('Atlas AI 学习助手').locator('.context-bar');
+    await expect(context).toContainText('知识点详情');
+    // 明确超过旧实现的 650ms 单次快照窗口，再释放实际页面数据。
+    await page.waitForTimeout(800);
+    release();
+    await expect(context).toContainText('JS-04 异步、Promise 与事件循环');
+  });
+
   test('鼠标仍在调整选区时不提示，松开并稳定后才显示 AI 解释', async ({ page }) => {
     await page.goto('/knowledge/JS-04');
-    const paragraph = page.locator('#main-content p:visible').filter({ hasText: /任务|微任务|事件循环|异步/ }).first();
+    const paragraph = page.getByRole('region', { name: '异步学习链试点' }).locator('p').first();
     await expect(paragraph).toBeVisible();
+    await paragraph.scrollIntoViewIfNeeded();
     const box = await paragraph.boundingBox();
     if (!box) throw new Error('selectable paragraph has no bounding box');
     const y = box.y + Math.min(box.height / 2, 12);
@@ -60,6 +79,7 @@ test.describe('Atlas AI 可读交互', () => {
     await page.mouse.down();
     await page.mouse.move(box.x + Math.min(box.width - 5, 180), y, { steps: 8 });
 
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
     await page.waitForTimeout(450);
     await expect(page.getByRole('button', { name: 'AI 解释' })).toBeHidden();
 

@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 const sessionId = '00000000-0000-4000-8000-000000000011';
 const firstId = '00000000-0000-4000-8000-000000000012';
@@ -6,7 +8,8 @@ const secondId = '00000000-0000-4000-8000-000000000013';
 const now = '2026-10-13T00:00:00Z';
 
 for (const failure of ['save', 'grade'] as const) {
-  test(`挑战${failure === 'save' ? '答案保存' : '评分'}失败时保留新答案和明确错误`, async ({ page }) => {
+  test(`挑战${failure === 'save' ? '答案保存' : '评分'}失败时保留新答案和明确错误`, async ({ page, browser }) => {
+    await page.setViewportSize(failure === 'save' ? { width: 390, height: 844 } : { width: 1280, height: 720 });
     let status = 'IN_PROGRESS';
     let lockCount = 0;
     let gradeCount = 0;
@@ -54,7 +57,16 @@ for (const failure of ['save', 'grade'] as const) {
     const second = page.getByPlaceholder('写下可以被追问、验证和复现的答案...');
     await first.fill('最新答案一');
     await second.fill('最新答案二');
-    await page.getByRole('button', { name: '提交并查看掌握反馈' }).click();
+    const submit = page.getByRole('button', { name: '提交并查看掌握反馈' });
+    await submit.scrollIntoViewIfNeeded();
+    const submitBox = (await submit.boundingBox())!;
+    const launcherBox = (await page.locator('.assistant-launcher').boundingBox())!;
+    expect(submitBox.y + submitBox.height).toBeLessThanOrEqual(launcherBox.y);
+    const evidence = new URL('../../../tmp/async-repair-evidence/', import.meta.url);
+    await mkdir(evidence, { recursive: true });
+    await page.screenshot({ path: fileURLToPath(new URL(`assessment-${failure}.png`, evidence)) });
+    await writeFile(new URL(`assessment-${failure}.json`, evidence), JSON.stringify({ browser: browser.version(), viewport: page.viewportSize(), path: `/assessment/${sessionId}`, submitBox, launcherBox }, null, 2));
+    await submit.click();
     await page.getByRole('button', { name: '提交并生成反馈', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(failure === 'save' ? '答卷尚未提交' : '模拟模型连接失败');
     await expect(first).toHaveValue('最新答案一');

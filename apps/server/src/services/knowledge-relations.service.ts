@@ -1,3 +1,4 @@
+import { ASYNC_PILOT_NODES } from '@career-atlas/shared';
 import { randomUUID } from 'crypto';
 import { resolvePointTaxonomy } from '@career-atlas/content-parser';
 import { rawDb } from '../db/index.js';
@@ -168,7 +169,7 @@ const explicitPrerequisites: Array<[string, string, string]> = [
   ['CS-02', 'CS-03', '前端大数据处理建立在常用结构、算法模式和正确性之上'],
   ['CS-01', 'REACT-07', '前端性能优化需要识别算法复杂度和数据结构成本'],
   ['CS-03', 'VIS-01', '大规模可视化需要先理解聚合、索引、Worker 和内存边界'],
-  ['JS-04', 'JS-05', 'Promise 与异步流程建立在事件循环和任务调度之上'],
+
   ['JS-06', 'ENG-01', '模块图、Tree-shaking 和 Chunk 拆分依赖 ESM 与模块边界'],
   ['ENG-01', 'ENG-02', '开发与生产环境差异需要先理解模块图、构建产物和运行时加载'],
   ['ENG-03', 'ENG-05', '可复现质量门禁建立在锁定依赖、workspace 边界和统一脚本之上'],
@@ -477,7 +478,9 @@ const relatedPairs: Array<[string, string, string]> = [
 ];
 
 export function buildRelationDefinitions(): RelationDefinition[] {
-  const definitions: RelationDefinition[] = [];
+  const definitions: RelationDefinition[] = ASYNC_PILOT_NODES.flatMap(node => node.prerequisites
+    .filter(code => ASYNC_PILOT_NODES.find(item => item.code === code)?.kind === 'POINT' && node.kind === 'POINT')
+    .map(source => ({ source, target: node.code, type: 'PREREQUISITE' as const, description: node.reason, weight: 9 })));
   for (const [source, target, description] of explicitPrerequisites) {
     definitions.push({ source, target, type: 'PREREQUISITE', description, weight: 9 });
   }

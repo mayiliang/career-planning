@@ -236,6 +236,132 @@ console.log(await wait(0, new AbortController().signal)); // => 等完了
 
 长同步循环也不会因为收到 signal 就自动被打断。需要在可响应的分段边界检查；Worker 的消息取消为什么也有这个限制，可回看 [CS-03 的取消](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#停止旧工作和拒绝旧结果需要分别处理)。
 
+### 把领取取消和结果槽位放进同一个协议
+
+设想批量读取五份资料，最多同时读取两份。我们需要一份完整报告，某份失败不影响其他独立资料；用户点击停止时，尚未启动的资料不再领取，已启动的操作收到同一信号。先明确这些约定，代码才有可判断的正确结果。
+
+- 输入是启动函数数组，每个函数接收 signal。传已启动的 Promise 无法控制并发。
+- 每个输入都有固定槽位。正常完成记 fulfilled，普通失败记 rejected，观察到取消的在途项记 cancelled，从未启动的项记 skipped；后两种是本协议的报告状态，不是 Promise 新增状态。
+- 普通失败后继续领取。只有取消会停止领取；这适合互相独立的读取，不适合需要整体回滚的事务。
+- 取消前已汇总的结果保留；取消后才恢复的 await 不提交成功值，即使底层忽略信号也如此。取消不保证远端撤销。
+- 返回报告前等待所有已启动任务收尾。底层必须响应取消或自行结束；若它永远 pending，本函数也无法替它释放资源。
+
+```js example=js05-controlled-group
+async function runControlled(tasks, limit, signal) {
+  if (!Number.isInteger(limit) || limit < 1) throw new RangeError('并发数必须是正整数');
+  const results = Array.from({ length: tasks.length }, () => ({ status: 'skipped' }));
+  let next = 0;
+  async function consume() {
+    while (!signal.aborted && next < tasks.length) {
+      const index = next++;
+      try {
+        const value = await tasks[index](signal);
+        results[index] = signal.aborted
+          ? { status: 'cancelled', reason: signal.reason }
+          : { status: 'fulfilled', value };
+      } catch (reason) {
+        results[index] = signal.aborted
+          ? { status: 'cancelled', reason: signal.reason }
+          : { status: 'rejected', reason };
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, consume));
+  return results;
+}
+
+// 用手动交付代替毫秒延迟；每一项都拥有自己的监听和释放职责。
+function controlledTasks(count) {
+  const controls = [];
+  const started = [];
+  let active = 0;
+  let peak = 0;
+  let listeners = 0;
+  const tasks = Array.from({ length: count }, (_, index) => (signal) => new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(signal.reason); return; }
+    started.push(index + 1);
+    active++;
+    peak = Math.max(peak, active);
+    let settled = false;
+    function finish(failed, value) {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      listeners--;
+      active--;
+      if (failed) reject(value); else resolve(value);
+    }
+    function onAbort() { finish(true, signal.reason); }
+    signal.addEventListener('abort', onAbort, { once: true });
+    listeners++;
+    controls[index] = {
+      succeed: (value) => finish(false, value),
+      fail: () => finish(true, new Error('读取失败')),
+    };
+  }));
+  return { tasks, controls, started, stats: () => ({ active, peak, listeners }) };
+}
+const group = controlledTasks(5);
+const controller = new AbortController();
+const report = runControlled(group.tasks, 2, controller.signal);
+// 同步启动了 1、2。完成 2 后，让消费者的 await 续体领取 3。
+group.controls[1].succeed('第二份');
+await Promise.resolve();
+controller.abort(new Error('用户停止'));
+const results = await report;
+console.log(group.started.join(',')); // => 1,2,3
+console.log(results.map((item) => item.status).join(',')); // => cancelled,fulfilled,cancelled,skipped,skipped
+console.log(JSON.stringify(group.stats())); // => {"active":0,"peak":2,"listeners":0}
+```
+
+这里的输入不是“五个倒计时”，而是明确的事件次序：启动 1、2 → 完成 2 → 消费者领取 3 → 发出取消 → 1、3 收尾 → 报告。取消不会回到过去，把已经汇总的 2 改成失败；4、5 从未调用，所以无需给它们释放尚未创建的资源。
+
+`next++` 在 await 之前完成，给每项一个唯一槽位；同时最多只有 limit 个消费者，每个消费者等完一项才领下一项。catch 留在循环里面，所以普通失败只填自己的槽位，循环仍会继续。若把 catch 移到循环外面，就变成“一项失败，整个消费者退场”，这是另一种策略，不能混用同一套预期。
+
+资源归任务自己释放。示例里的 active 表示还没落定的操作，正常完成和取消都经 finish 归零；settled 防止重复释放。真实定时器任务还需要像上一节 wait 那样清除 timer。finish 使用独立的 failed 标志，因而 signal.reason 即使是 0 或 undefined，也不会被误认为成功。
+
+可这样验证策略：另开一组，让 2 失败，等待消费者恢复后应仍启动 3；在调用 runControlled 前取消，应全部 skipped；传空数组应返回空报告。复测可以让 1、2 成功、3 失败、5 成功依次落定，再取消，此时启动顺序为 1、2、3、4、5，槽位应为 fulfilled、fulfilled、rejected、cancelled、fulfilled。这里每一步都等对应消费者恢复，不依赖真实时钟的偶然快慢。
+
+这个协议把取消之后才观察到的失败统一归为 cancelled，原始底层错误如需诊断可以另行记录。它保护的是报告，不负责页面状态；下面还要给每次搜索分配独立版本。
+
+### 取消之后仍要判断结果是否过期
+
+搜索框的例子最容易看出问题：用户先输入“函数”，再输入“闭包”，第二次结果先到，第一次随后到。如果每个回调都直接写界面，旧查询就会覆盖新查询。
+
+下面用可手动完成的 Promise 固定顺序，不靠网络速度复现。
+
+```js example=js04-stale-result
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+const first = deferred();
+const second = deferred();
+let version = 0;
+let visible = '';
+async function displayLatest(promise) {
+  const ownVersion = ++version;
+  const text = await promise;
+  if (ownVersion !== version) return;
+  visible = text;
+}
+
+const oldTask = displayLatest(first.promise);
+const newTask = displayLatest(second.promise);
+second.resolve('闭包的结果');
+await newTask;
+first.resolve('函数的结果');
+await oldTask;
+console.log(visible); // => 闭包的结果
+```
+
+每次启动保存自己的版本；提交前与当前版本比较。这个检查让“最后一次查询”决定界面，而不是“最后一次返回”决定界面。失败提示也要做同样的判断，否则旧查询的错误仍可能盖住新查询的成功。
+
+真实请求中，可以在启动新查询时先调用上一个 `AbortController` 的 `abort()`，把新 `signal` 交给 `fetch` 等支持它的操作。这能减少已失去价值的工作。但取消与结果就绪可能接近发生，某些底层操作也不支持取消，因此提交前的版本检查仍有意义。取消表示意图，版本检查决定结果现在是否适合显示。
+
+页面关闭时也应使旧版本失效，并释放监听或其他资源。涉及 Worker 时，消息可能已经在途；同样的判断可以放在消息接收处，见 [CS-03 的任务编号](../chinese-guides/cs-03-large-data-workers-incremental-memory.md#停止旧工作和拒绝旧结果需要分别处理)。
+
 ### 新请求开始后旧请求的清理也可能过期
 
 版本检查不应只保护成功结果。旧请求的 catch 可能显示错误，旧请求的 finally 也可能把新请求的 loading 提前关闭。
@@ -275,6 +401,31 @@ console.log(state); // => 结果：新内容
 旧请求结束时，新请求还在等待，因此页面应该继续显示加载中。每个修改共享状态的位置都要判断当前版本，而不是只有给 data 赋值时才判断。
 
 这个例子没有取消底层工作，专门展示状态归属。真实请求可以配合 AbortController 节省工作，但提交前仍保留版本判断。下一篇类型建模会把“加载中”“成功”“失败”变成互斥状态，见 [TS-02 的状态转换](../chinese-guides/ts-02-unions-narrowing-never-exhaustiveness.md#类型描述状态版本判断决定谁能更新状态)。
+
+### 区分取消与需要告知用户的失败
+
+连续搜索中的取消通常是“这个请求已失去价值”，不应显示为系统故障。网络失败是尚未取得可用响应；业务失败是服务端明确拒绝当前操作；程序错误则可能来自解析、字段假设或自己的代码。不能只检查 error.message 是否包含某个词来区分它们，应在已知失败的边界明确标记类别。
+
+下面用三个带 kind 的错误模拟我们已经识别的边界。kind 是应用自己的协议，不是 fetch 自动填入的属性。fetch 的网络拒绝需要在请求层标记为 network；服务端业务响应要先按约定检查，再标记为 business；没有识别的异常归为 program。取消先检查本次操作的 signal，只有同一次操作的信号才有解释力。
+
+```js example=js05-error-kinds
+function classify(error, signal) {
+  if (signal.aborted) return 'cancelled';
+  if (error?.kind === 'network') return 'network';
+  if (error?.kind === 'business') return 'business';
+  return 'program';
+}
+const controller = new AbortController();
+console.log(classify({ kind: 'network' }, controller.signal)); // => network
+console.log(classify({ kind: 'business' }, controller.signal)); // => business
+console.log(classify(new TypeError('字段读取失败'), controller.signal)); // => program
+controller.abort();
+console.log(classify(controller.signal.reason, controller.signal)); // => cancelled
+```
+
+接回上一节的 show：catch 内先检查 `ownVersion === version`，过期的任何失败都不呈现；当前版本再调用 classify，cancelled 不显示错误，network 提示连接问题，business 展示可解释的业务拒绝，program 保留诊断并提示暂时失败。finally 仍要核对版本，不能让旧操作清掉新 loading。取消优先是一种明确的产品策略，不代表它能证明服务端没有发生业务效果。
+
+验证时分别送入四类输入，再交换新旧操作的完成顺序；保持“只有当前版本能提交”这一条规则，确认旧成功、旧错误和旧清理都没有写共享状态。
 
 ### 重试前先问上一次可能已经做成了吗
 

@@ -4,6 +4,7 @@
  * 导出所有 DTO、Zod schema、枚举和状态机
  */
 export * from './domain/knowledge.js';
+export * from './domain/async-pilot.js';
 export * from './domain/assessment.js';
 export * from './domain/planning.js';
 export * from './domain/jobs.js';

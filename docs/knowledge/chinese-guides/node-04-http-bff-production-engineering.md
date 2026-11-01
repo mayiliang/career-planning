@@ -346,4 +346,4 @@ liveness 回答进程是否仍能工作，readiness 回答是否接新流量。�
 - [Node.js：HTTP API](https://nodejs.org/api/http.html)：IncomingMessage、ServerResponse、超时与关闭方法；查询时注意页面版本。
 - [Node.js：Stream API](https://nodejs.org/docs/latest-v22.x/api/stream.html)：响应背压、pipeline 与销毁。
 - [MDN：AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController)：取消通知及其适用边界。
-- [Node.js：HTTP 请求剖析](https://nodejs.org/en/learn/modules/anatomy-of-an-http-transaction)：请求和响应的基础生命周期。
+- [Node.js：HTTP 请求剖析](https://nodejs.org/learn/http/anatomy-of-an-http-transaction)：请求和响应的基础生命周期。
