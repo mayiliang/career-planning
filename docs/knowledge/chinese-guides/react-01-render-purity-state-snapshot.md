@@ -8,9 +8,90 @@
 
 ### 学习前先确认
 
-- 直接前置：[TS-03 泛型、约束、keyof 与索引访问](../chinese-guides/ts-03-generics-constraints-keyof-indexed-access.md#ts-03)、[WEB-01 HTML 语义、表单与可访问性基础](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)、[JS-06 ES Modules 与模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#js-06)。分别补足类型、页面语义和模块导入。
+本篇已更新为 framework-entry-v2：新增固定工程与操作协议，旧笔记、阅读进度和完成状态保留；旧考核仍按原合同查看。熟悉以下基础可直接继续，查阅不等于掌握。
 
-下面每个 TSX 示例都是独立的默认导出组件，放入已有 React + TypeScript 项目的 `App.tsx` 即可观察；一次只使用一个。也可以使用 React 在线演练环境并选择 TypeScript。本文使用函数组件和现代 `createRoot` 应用，不依赖实验性 API。
+
+- 直接前置：[JS-01](../chinese-guides/js-01-execution-context-scope-closure.md#js-01)。函数局部绑定与闭包：解释同一渲染创建的回调。
+- 直接前置：[JS-03](../chinese-guides/js-03-types-equality-copy-immutability.md#js-03)。对象共享与不可变更新：避免渲染修改输入。
+- 推荐补读：[JS-06 模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#用两个文件建立公开入口)。本篇只用静态导入，不要求先掌握动态导入、Promise 错误与资源清理整条链。
+- 直接前置：[WEB-01](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)。HTML 元素、按钮与挂载容器：读懂组件输出。
+
+下面每个 TSX 示例都是独立的默认导出组件，放入下述工程的 `src/App.tsx`；一次只使用一个。
+
+本篇先就地读懂模块记号：`export default` 导出一个默认值，`import App from './App'` 取这个默认值，名称由导入方命名；`import { useState } from 'react'` 或 `import { ref } from 'vue'` 取库中同名导出。相对路径从当前文件所在目录解析，裸包名由工程工具从依赖解析。导入的组件交给框架创建实例，不是复制粘贴模块源码。每个模块实例通常只求值一次，组件函数或 setup 则可按实例执行多次。后文沿这些规则追踪入口，不使用动态 import。
+
+### 建立可复现的练习工程
+
+新建一个独立空目录（例如 `framework-entry-lab`），不要覆盖已有项目。使用 Node 22.14.0，按以下路径创建文件，再运行 `npm install`、`npm run typecheck`、`npm run build`、`npm run dev -- --host 127.0.0.1`。安装后保留生成的 package-lock.json，复现时用 `npm ci`。组件源码和浏览器结果作为练习提交正文；站内 JavaScript/TypeScript 自检不提供 React/Vue DOM 运行环境，不能把 TSX/SFC 直接当普通脚本执行。站内断言只能补充核对已取得的结果，不能替代工程类型、构建与浏览器证据。这些是本篇固定版本，不代表最新版本或升级建议。
+
+`package.json`：
+
+```json example=react01-package runtime=project file=package.json
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3",
+    "vite": "6.4.4",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2"
+  }
+}
+```
+
+`tsconfig.json`：
+
+```json example=react01-tsconfig runtime=project file=tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "vite/client"
+    ],
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src"
+  ]
+}
+```
+
+`index.html` 和 `src/main.tsx`：
+
+```html example=react01-index runtime=project file=index.html
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>快照实验</title></head>
+<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+```
+
+```tsx example=react01-main runtime=project file=src/main.tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+
+createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+```
+
+`src/App.tsx` 使用下方“用手动释放回调固定观察顺序”的完整组件。感叹号表示此处断言 root 存在，若 HTML ID 写错仍会运行失败。Vite 按 tsconfig 的 react-jsx 转换 JSX；本练习无需额外 React 插件，修改后可手动刷新。开始前打开开发者工具 Console，清空日志；每组实验刷新页面重新从 0 开始。
 
 ### 组件先返回一份界面描述
 
@@ -214,6 +295,81 @@ export default function App() {
 
 如果需求是“执行时读取最新输入”，应重新设计明确的数据通道；ref 可以作为某些集成的手段，但不应让所有显示状态都绕过 setter。异步结果能否覆盖当前页面，则还涉及 [JS-05 的旧请求与清理](../chinese-guides/js-05-promise-errors-async-control-flow.md#新请求开始后旧请求的清理也可能过期)，不能只用“闭包旧了”解释全部竞态。
 
+### 用手动释放回调固定观察顺序
+
+真实定时器受机器调度影响。本练习把“稍后执行”变成两个明确的释放按钮：保存的函数仍是闭包，只把运行时机交给操作者。两个回调必须在同一次点击中创建，不能分两次预约。
+
+```tsx example=react01-controlled runtime=project file=src/App.tsx
+import { useLayoutEffect, useRef, useState } from 'react';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+  const jobs = useRef<Array<() => void>>([]);
+  console.log('render', count); // 只用于诊断，不能当业务操作或评分次数
+  useLayoutEffect(() => { console.log('commit observation', count); }, [count]);
+  function triple(functional: boolean) {
+    console.log('event triple', functional, count);
+    for (let i = 0; i < 3; i++) {
+      if (functional) setCount(previous => previous + 1);
+      else setCount(count + 1);
+    }
+  }
+  function schedule(functional: boolean) {
+    console.log('event schedule', functional, count);
+    jobs.current = [1, 2].map(id => () => {
+      console.log('callback', id, 'snapshot', count);
+      if (functional) setCount(previous => previous + 1);
+      else setCount(count + 1);
+    });
+  }
+  function release() {
+    console.log('event release');
+    jobs.current.shift()?.();
+  }
+  return <main>
+    <h1>固定快照实验</h1><output aria-label="计数">{count}</output>
+    <button onClick={() => triple(false)}>值式三次</button>
+    <button onClick={() => triple(true)}>函数三次</button>
+    <button onClick={() => schedule(false)}>预约值式回调</button>
+    <button onClick={() => schedule(true)}>预约函数回调</button>
+    <button onClick={release}>释放一个回调</button>
+  </main>;
+}
+```
+
+`useRef` 保存跨 render 的同一个容器，`.current` 可放回调列表，改它不会触发显示更新。这里仅在用户事件中写它；显示的 count 仍由 state 管理。`Array<() => void>` 表示“由无参数、无返回值要求的函数组成的数组”，无需先学泛型设计。
+
+`useLayoutEffect` 的回调在 DOM 提交后执行，用来观察已提交的 count；依赖数组 `[count]` 表达该观察依赖 count。它不是 render，也不是浏览器绘制日志。开发 Strict Mode 可能额外建立观察；完整清理与外部同步留给 REACT-04，本实验不建立订阅或计时器，无需隐藏的清理代码。
+
+| 操作（每行先刷新回到 0） | 入队过程 | 等界面提交后观察 |
+| --- | --- | --- |
+| 点击一次“值式三次” | 替换 1、替换 1、替换 1 | 1 |
+| 点击一次“函数三次” | 0→1→2→3 | 3 |
+| 分别点击三次“值式三次”，每次等 output 更新 | 各事件读 0、1、2，各提交三份相同替换值 | 依次 1、2、3 |
+| 预约值式回调→函数三次→释放一次→再释放一次 | 预约捕获 0；先累加至 3；两个回调各替换成 1 | 0→3→1→1，两个 callback snapshot 都为 0 |
+| 预约函数回调→函数三次→释放一次→再释放一次 | 回调仍捕获 0，但 updater 接前一步结果 | 0→3→4→5，两个 callback snapshot 都为 0 |
+
+按事件、回调、render、commit observation 分栏保存控制台记录，断言 output 和回调快照，不断言 render 或 commit 的固定次数。第二次替换成 1 可能没有新的 DOM 变化；日志多并不表示用户多点击。复测仅把初始值从 0 改成 10，得到值式单次 11、函数单次 13、三次独立点击 11/12/13，延迟值式 13→11→11、延迟函数式 13→14→15。
+
+### 用相同输入复现纯度错误
+
+下面是可独立执行的确定性反例，用普通函数模拟组件中计算列表的那一步。它不依赖两次 Date.now() 是否落在不同毫秒：
+
+```js example=react01-purity
+function impure(items) { items.push('占位'); return items.join(','); }
+function pure(items) { return [...items, '占位'].join(','); }
+const badInput = ['资料'];
+const bad = [impure(badInput), impure(badInput)];
+const goodInput = ['资料'];
+const good = [pure(goodInput), pure(goodInput)];
+console.log(JSON.stringify({ bad, badInput, good, goodInput }));
+// => {"bad":["资料,占位","资料,占位,占位"],"badInput":["资料","占位","占位"],"good":["资料,占位","资料,占位"],"goodInput":["资料"]}
+if (bad[0] === bad[1] || badInput.length !== 3) throw new Error('未复现输入污染');
+if (good[0] !== good[1] || goodInput.length !== 1) throw new Error('纯计算结果错误');
+```
+
+错误版本第二次输出“资料,占位,占位”，输入也被污染；正确版本两次都输出“资料,占位”，输入保持一项。把同样的 push 放进组件 render 就违反相同规则。Date.now 的输出依赖外部时钟，因此不能据同一输入推导；但两次读数也可能相等，不以一次实验恰好相等证明纯度。
+
 ### 纯渲染允许 React 重新计算
 
 React 可能重新执行组件，甚至不采用某一次计算结果。如果 render 每执行一次就修改外部数据，那么用户没有看到的计算也会留下痕迹。**组件纯度（component purity）**因此有两个实际要求：相同输入得到相同描述；计算过程不修改已有的外部世界。
@@ -324,7 +480,7 @@ export default function App() {
 
 如果通过 Effect 监听 query 然后调用 `setVisible`，就多维护了一个本可直接推导的值，也多了一次同步机会。先判断数据是否真的独立，再考虑是否放进 state。计算昂贵时可以研究缓存与调度，但不要先复制一份状态再解决复制带来的问题。
 
-同样的筛选会在 [VUE-02 的 computed](../chinese-guides/vue-02-ref-reactive-computed-boundaries.md#computed-让筛选结果跟着源状态变化)中出现。React 这里重新运行组件中的普通计算；Vue 会跟踪响应式读取并按依赖管理派生计算。它们都应避免无必要地保存两份同义数据。
+选读（无需先学 Vue）：同样的筛选会在 [VUE-02 的 computed](../chinese-guides/vue-02-ref-reactive-computed-boundaries.md#computed-让筛选结果跟着源状态变化)中出现。React 这里重新运行组件中的普通计算；Vue 会跟踪响应式读取并按依赖管理派生计算。它们都应避免无必要地保存两份同义数据。
 
 ### 先保证计算正确再理解并发与 Hydration
 
@@ -335,6 +491,8 @@ export default function App() {
 服务端渲染场景还会遇到 **Hydration**：客户端接管已有 HTML，并把组件交互与之连接起来。服务端与客户端的初始输出需要匹配。如果 render 随机生成文本、直接读取只在浏览器存在的存储，可能导致初始结果不一致。解决方向是明确初始数据与客户端同步时机，而不是把错误提示隐藏。
 
 遇到旧值、重复或草稿错位时，先说清五件事：这次回调来自哪次渲染；队列里是替换还是累积；render 有没有改外部对象；派生值是否重复保存；key 是否表达了正确身份。能够沿这几步说明结果，就有了继续学习 Hooks 与性能优化所需的基础。
+
+类型写法就地理解：`{ title: string; minutes: number }` 约定两个字段；`useState<0 | 1>` 限定只能保存 0 或 1；`defineProps<{ ... }>()` 声明组件输入类型。使用这些声明不要求先完成 TS-03 的泛型设计、keyof 与索引访问。TS-01 可作为类型记号的推荐补读，TS-03 属于深入学习。
 
 ### 参考与延伸阅读
 

@@ -1,0 +1,355 @@
+{
+  "browser": "156.0.8078.76",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "pages": [
+    "/plan",
+    "/knowledge/REACT-01",
+    "/knowledge/materials/react-01-render-purity-state-snapshot.md/react-01",
+    "/knowledge/WEB-01"
+  ],
+  "before": {
+    "id": "ba5859d9-5095-468a-a10f-55870c40e894",
+    "code": "REACT-01",
+    "title": "渲染、组件纯度与 state snapshot",
+    "secondaryTopic": "渲染与组件边界",
+    "topicOrder": 0,
+    "summary": null,
+    "studyMaterialMd": "[中文主讲义：REACT-01 渲染纯度、状态快照与提交](../chinese-guides/react-01-render-purity-state-snapshot.md#react-01)、[Render and Commit](https://zh-hans.react.dev/learn/render-and-commit)、[State as a Snapshot](https://zh-hans.react.dev/learn/state-as-a-snapshot)、[Keeping Components Pure](https://zh-hans.react.dev/learn/keeping-components-pure)。覆盖范围：通过独立 TSX 组件观察更新队列、混合更新、延迟发送、纯列表、草稿 key 和派生筛选，讲清 render/commit/绘制、快照与闭包、批处理、Strict Mode、不可变数据及并发与 Hydration 边界；提供逐步操作和结果对照。",
+    "assessmentSpecMd": "挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：REACT-01 渲染纯度、状态快照与提交》《Render and Commit》《State as a Snapshot》《Keeping Components Pure》；外链仅作参考索引，评分依据是中文主讲义的完整机制。定位中文主讲义的更新队列、手动释放回调与纯度反例章节，说明每处支持哪条断言；首考题 2（机制解释）：分别解释一次点击内三次 setter、三次独立点击、同一渲染创建的两个延迟回调，区分 event、render、commit observation 与绘制；首考题 3（最小产出）：使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染；首考题 4（受限排错）：固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同；首考题 5（学习复述）：说明快照与闭包的关系、值式与函数式适用场景、为何 render 不应改输入。复测变式：只把完整组件初始 count 从 0 改为 10，保持五组操作与纯度协议；预期 11、13、11/12/13、13/11/11、13/14/15，交付新的队列和断言。命题边界：framework-entry-v2，仅按以上中文正文机制与固定输入评分，不考 Vue、Effect 深入机制或渲染次数。",
+    "passCriteriaMd": "五组状态序列、两个回调快照、纯度输入保护均有组件运行证据；日志区分事件、计算、提交。否决项：混淆一次点击与三次点击、只交最终数值、修改输入或按固定渲染次数评分。结构自检不等于语义通过。评估边界：仅按本点固定输入、中文正文机制与可复核产出评分。",
+    "difficulty": "intermediate",
+    "capabilityLayer": "APPLICATION",
+    "requirementLevel": "TRACK_REQUIRED",
+    "maturity": "STABLE",
+    "aiRelation": "NONE",
+    "portability": "FRAMEWORK_SPECIFIC",
+    "applicabilityTags": [
+      "FRAMEWORK_SPECIFIC"
+    ],
+    "topicTags": [],
+    "trackIds": [
+      "react"
+    ],
+    "verifiedAt": "2026-08-09",
+    "fallbackStrategy": "按 Baseline、目标浏览器和运行环境做能力检测与渐进增强。隔离框架适配层，保留框架无关的业务、数据与测试契约。",
+    "planWeek": 4,
+    "status": "NOT_STARTED",
+    "learningState": "LEARNING",
+    "masteryLevel": 0,
+    "learnedAt": null,
+    "deferredAt": null,
+    "deferReason": null,
+    "currentFocus": true,
+    "domainId": "d061b4b4-8b7f-43da-9976-d990eb1c4e32",
+    "domainCode": "03",
+    "domainTitle": "React 原理、状态、Hooks、路由与性能",
+    "selfMasteredAt": null,
+    "firstPassedAt": null,
+    "masteredAt": null,
+    "createdAt": "2026-11-09T12:32:21.679Z",
+    "updatedAt": "2026-11-09T12:32:25.442Z",
+    "studyMinutes": 105,
+    "practiceMinutes": 165,
+    "projectMinutes": 150,
+    "assessmentMinutes": 90,
+    "retestMinutes": 75,
+    "routeOrder": 14,
+    "estimatedTotalMinutes": 420,
+    "estimatedCoreMinutes": 105,
+    "learningActivities": [
+      {
+        "id": "reading",
+        "type": "READING",
+        "label": "资料阅读与笔记",
+        "minutes": 105,
+        "optional": false,
+        "task": "读完列出的资料，记录核心概念、仍有疑问的地方，以及至少一个边界或反例。",
+        "input": "学习资料：《中文主讲义：REACT-01 渲染纯度、状态快照与提交》、《Render and Commit》、《State as a Snapshot》、《Keeping Components Pure》。",
+        "outputRequirements": [
+          "知识点原始笔记",
+          "至少一个资料定位",
+          "至少一个边界、反例或疑问"
+        ],
+        "completionCriteria": [
+          "由你确认资料已经阅读",
+          "原始笔记已保存；系统不会用 AI 稿覆盖原文"
+        ],
+        "deliveryMode": "READ_ONLY",
+        "workspaceMode": null,
+        "language": null,
+        "starterCode": null,
+        "submissionTemplate": null,
+        "materialReferences": [
+          {
+            "title": "中文主讲义：REACT-01 渲染纯度、状态快照与提交",
+            "url": "/knowledge/materials/react-01-render-purity-state-snapshot.md/react-01",
+            "locator": "打开后定位到“react 01”章节",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Render and Commit",
+            "url": "https://zh-hans.react.dev/learn/render-and-commit",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "State as a Snapshot",
+            "url": "https://zh-hans.react.dev/learn/state-as-a-snapshot",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Keeping Components Pure",
+            "url": "https://zh-hans.react.dev/learn/keeping-components-pure",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          }
+        ],
+        "failureFixture": null,
+        "verificationChecklist": [],
+        "vetoItems": []
+      },
+      {
+        "id": "strict-practice@framework-entry-v2",
+        "type": "GUIDED_PRACTICE",
+        "label": "站内编码验证",
+        "minutes": 315,
+        "optional": true,
+        "task": "使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染",
+        "input": "首考题 3（最小产出）原文：使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染\n\n首考题 4（受限排错）原文：固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同\n\n仅可依据 《中文主讲义：REACT-01 渲染纯度、状态快照与提交》、《Render and Commit》、《State as a Snapshot》、《Keeping Components Pure》 和本点通过标准完成；不得用通用 PASS/CONTROLLED 模板替换题目给定的输入、预期或异常。",
+        "outputRequirements": [
+          "题 3 的可执行实现",
+          "固定输入、预期、实际输出与断言",
+          "题 4 的异常、根因、修复和回归证据"
+        ],
+        "completionCriteria": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "deliveryMode": "WORKSPACE",
+        "workspaceMode": "CODE",
+        "language": "javascript",
+        "starterCode": "// REACT-01 渲染、组件纯度与 state snapshot\n// 首考题 3 原文：使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染\n// 首考题 4 原文：固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同\n// 把题目给定的具体 fixture 写入 fixedInput；不要把预期替换成通用 PASS/CONTROLLED。\nconst fixedInput = Object.freeze({ /* 填写首考题 3 的固定输入 */ });\nconst expected = Object.freeze({ /* 填写题目要求的具体预期 */ });\n\nfunction solve(input) {\n  // 根据学习资料实现首考题 3。\n  throw new Error('TODO');\n}\n\nlet actual;\ntry {\n  actual = solve(fixedInput);\n  console.log({ fixedInput, expected, actual });\n  console.assert(JSON.stringify(actual) === JSON.stringify(expected), '实际输出与首考题 3 的具体预期不一致');\n} catch (error) {\n  console.error({ fixedInput, expected, error: String(error) });\n  throw error;\n}\n",
+        "submissionTemplate": "# 首考题 3：实现说明\n\n# 固定输入\n\n# 预期输出\n\n# 实际输出\n\n# 首考题 4：异常、根因与修复\n\n# 资料机制映射\n\n# 验证证据\n",
+        "materialReferences": [
+          {
+            "title": "中文主讲义：REACT-01 渲染纯度、状态快照与提交",
+            "url": "/knowledge/materials/react-01-render-purity-state-snapshot.md/react-01",
+            "locator": "打开后定位到“react 01”章节",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Render and Commit",
+            "url": "https://zh-hans.react.dev/learn/render-and-commit",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "State as a Snapshot",
+            "url": "https://zh-hans.react.dev/learn/state-as-a-snapshot",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Keeping Components Pure",
+            "url": "https://zh-hans.react.dev/learn/keeping-components-pure",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          }
+        ],
+        "failureFixture": "固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同",
+        "verificationChecklist": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "vetoItems": [
+          "未保留首考题 3 的具体产出或首考题 4 的受限排错证据",
+          "以资料外经验、空泛描述或预设 PASS/CONTROLLED 状态替代题目要求"
+        ]
+      }
+    ],
+    "challengeProfile": "CODING"
+  },
+  "after": {
+    "id": "ba5859d9-5095-468a-a10f-55870c40e894",
+    "code": "REACT-01",
+    "title": "渲染、组件纯度与 state snapshot",
+    "secondaryTopic": "渲染与组件边界",
+    "topicOrder": 0,
+    "summary": null,
+    "studyMaterialMd": "[中文主讲义：REACT-01 渲染纯度、状态快照与提交](../chinese-guides/react-01-render-purity-state-snapshot.md#react-01)、[Render and Commit](https://zh-hans.react.dev/learn/render-and-commit)、[State as a Snapshot](https://zh-hans.react.dev/learn/state-as-a-snapshot)、[Keeping Components Pure](https://zh-hans.react.dev/learn/keeping-components-pure)。覆盖范围：通过独立 TSX 组件观察更新队列、混合更新、延迟发送、纯列表、草稿 key 和派生筛选，讲清 render/commit/绘制、快照与闭包、批处理、Strict Mode、不可变数据及并发与 Hydration 边界；提供逐步操作和结果对照。",
+    "assessmentSpecMd": "挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：REACT-01 渲染纯度、状态快照与提交》《Render and Commit》《State as a Snapshot》《Keeping Components Pure》；外链仅作参考索引，评分依据是中文主讲义的完整机制。定位中文主讲义的更新队列、手动释放回调与纯度反例章节，说明每处支持哪条断言；首考题 2（机制解释）：分别解释一次点击内三次 setter、三次独立点击、同一渲染创建的两个延迟回调，区分 event、render、commit observation 与绘制；首考题 3（最小产出）：使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染；首考题 4（受限排错）：固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同；首考题 5（学习复述）：说明快照与闭包的关系、值式与函数式适用场景、为何 render 不应改输入。复测变式：只把完整组件初始 count 从 0 改为 10，保持五组操作与纯度协议；预期 11、13、11/12/13、13/11/11、13/14/15，交付新的队列和断言。命题边界：framework-entry-v2，仅按以上中文正文机制与固定输入评分，不考 Vue、Effect 深入机制或渲染次数。",
+    "passCriteriaMd": "五组状态序列、两个回调快照、纯度输入保护均有组件运行证据；日志区分事件、计算、提交。否决项：混淆一次点击与三次点击、只交最终数值、修改输入或按固定渲染次数评分。结构自检不等于语义通过。评估边界：仅按本点固定输入、中文正文机制与可复核产出评分。",
+    "difficulty": "intermediate",
+    "capabilityLayer": "APPLICATION",
+    "requirementLevel": "TRACK_REQUIRED",
+    "maturity": "STABLE",
+    "aiRelation": "NONE",
+    "portability": "FRAMEWORK_SPECIFIC",
+    "applicabilityTags": [
+      "FRAMEWORK_SPECIFIC"
+    ],
+    "topicTags": [],
+    "trackIds": [
+      "react"
+    ],
+    "verifiedAt": "2026-08-09",
+    "fallbackStrategy": "按 Baseline、目标浏览器和运行环境做能力检测与渐进增强。隔离框架适配层，保留框架无关的业务、数据与测试契约。",
+    "planWeek": 4,
+    "status": "NOT_STARTED",
+    "learningState": "LEARNING",
+    "masteryLevel": 0,
+    "learnedAt": null,
+    "deferredAt": null,
+    "deferReason": null,
+    "currentFocus": true,
+    "domainId": "d061b4b4-8b7f-43da-9976-d990eb1c4e32",
+    "domainCode": "03",
+    "domainTitle": "React 原理、状态、Hooks、路由与性能",
+    "selfMasteredAt": null,
+    "firstPassedAt": null,
+    "masteredAt": null,
+    "createdAt": "2026-11-09T12:32:21.679Z",
+    "updatedAt": "2026-11-09T12:32:25.442Z",
+    "studyMinutes": 105,
+    "practiceMinutes": 165,
+    "projectMinutes": 150,
+    "assessmentMinutes": 90,
+    "retestMinutes": 75,
+    "routeOrder": 14,
+    "estimatedTotalMinutes": 420,
+    "estimatedCoreMinutes": 105,
+    "learningActivities": [
+      {
+        "id": "reading",
+        "type": "READING",
+        "label": "资料阅读与笔记",
+        "minutes": 105,
+        "optional": false,
+        "task": "读完列出的资料，记录核心概念、仍有疑问的地方，以及至少一个边界或反例。",
+        "input": "学习资料：《中文主讲义：REACT-01 渲染纯度、状态快照与提交》、《Render and Commit》、《State as a Snapshot》、《Keeping Components Pure》。",
+        "outputRequirements": [
+          "知识点原始笔记",
+          "至少一个资料定位",
+          "至少一个边界、反例或疑问"
+        ],
+        "completionCriteria": [
+          "由你确认资料已经阅读",
+          "原始笔记已保存；系统不会用 AI 稿覆盖原文"
+        ],
+        "deliveryMode": "READ_ONLY",
+        "workspaceMode": null,
+        "language": null,
+        "starterCode": null,
+        "submissionTemplate": null,
+        "materialReferences": [
+          {
+            "title": "中文主讲义：REACT-01 渲染纯度、状态快照与提交",
+            "url": "/knowledge/materials/react-01-render-purity-state-snapshot.md/react-01",
+            "locator": "打开后定位到“react 01”章节",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Render and Commit",
+            "url": "https://zh-hans.react.dev/learn/render-and-commit",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "State as a Snapshot",
+            "url": "https://zh-hans.react.dev/learn/state-as-a-snapshot",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Keeping Components Pure",
+            "url": "https://zh-hans.react.dev/learn/keeping-components-pure",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          }
+        ],
+        "failureFixture": null,
+        "verificationChecklist": [],
+        "vetoItems": []
+      },
+      {
+        "id": "strict-practice@framework-entry-v2",
+        "type": "GUIDED_PRACTICE",
+        "label": "站内编码验证",
+        "minutes": 315,
+        "optional": true,
+        "task": "使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染",
+        "input": "首考题 3（最小产出）原文：使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染\n\n首考题 4（受限排错）原文：固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同\n\n仅可依据 《中文主讲义：REACT-01 渲染纯度、状态快照与提交》、《Render and Commit》、《State as a Snapshot》、《Keeping Components Pure》 和本点通过标准完成；不得用通用 PASS/CONTROLLED 模板替换题目给定的输入、预期或异常。",
+        "outputRequirements": [
+          "题 3 的可执行实现",
+          "固定输入、预期、实际输出与断言",
+          "题 4 的异常、根因、修复和回归证据"
+        ],
+        "completionCriteria": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "deliveryMode": "WORKSPACE",
+        "workspaceMode": "CODE",
+        "language": "javascript",
+        "starterCode": "// REACT-01 渲染、组件纯度与 state snapshot\n// 首考题 3 原文：使用中文讲义“建立可复现的练习工程”和“用手动释放回调固定观察顺序”的完整源码，初始 count=0，每组刷新。运行表格五组操作并编写组件测试，逐步交付输入、入队过程、output 和 callback snapshot；预期值式单次=1、函数单次=3、三次独立点击=1/2/3、预约后先加三再释放的值式=3/1/1、函数式=3/4/5；保存分阶段日志，不按固定 render 次数判断；运行纯度反例并验证输入是否被污染\n// 首考题 4 原文：固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同\n// 把题目给定的具体 fixture 写入 fixedInput；不要把预期替换成通用 PASS/CONTROLLED。\nconst fixedInput = Object.freeze({ /* 填写首考题 3 的固定输入 */ });\nconst expected = Object.freeze({ /* 填写题目要求的具体预期 */ });\n\nfunction solve(input) {\n  // 根据学习资料实现首考题 3。\n  throw new Error('TODO');\n}\n\nlet actual;\ntry {\n  actual = solve(fixedInput);\n  console.log({ fixedInput, expected, actual });\n  console.assert(JSON.stringify(actual) === JSON.stringify(expected), '实际输出与首考题 3 的具体预期不一致');\n} catch (error) {\n  console.error({ fixedInput, expected, error: String(error) });\n  throw error;\n}\n",
+        "submissionTemplate": "# 首考题 3：实现说明\n\n# 固定输入\n\n# 预期输出\n\n# 实际输出\n\n# 首考题 4：异常、根因与修复\n\n# 资料机制映射\n\n# 验证证据\n",
+        "materialReferences": [
+          {
+            "title": "中文主讲义：REACT-01 渲染纯度、状态快照与提交",
+            "url": "/knowledge/materials/react-01-render-purity-state-snapshot.md/react-01",
+            "locator": "打开后定位到“react 01”章节",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Render and Commit",
+            "url": "https://zh-hans.react.dev/learn/render-and-commit",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "State as a Snapshot",
+            "url": "https://zh-hans.react.dev/learn/state-as-a-snapshot",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          },
+          {
+            "title": "Keeping Components Pure",
+            "url": "https://zh-hans.react.dev/learn/keeping-components-pure",
+            "locator": "打开后使用页面查找定位“渲染”相关段落",
+            "focus": "渲染、组件纯度、state snapshot"
+          }
+        ],
+        "failureFixture": "固定失败为预约值式后先加三，再释放导致计数回到 1。仅比较“旧快照替换”“函数更新累积”“重复用户事件”三个候选，提交最小复现、逐项证伪和改为函数更新后的 3/4/5 回归；另以纯度片段的 push 反例验证修复前后输入和输出，不能依赖 Date.now 两次不同",
+        "verificationChecklist": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "vetoItems": [
+          "未保留首考题 3 的具体产出或首考题 4 的受限排错证据",
+          "以资料外经验、空泛描述或预设 PASS/CONTROLLED 状态替代题目要求"
+        ]
+      }
+    ],
+    "challengeProfile": "CODING"
+  }
+}

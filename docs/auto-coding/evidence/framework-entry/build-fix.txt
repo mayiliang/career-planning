@@ -1,0 +1,182 @@
+$ pnpm materials:check && pnpm pronunciation:check && vue-tsc --noEmit && vite build && node scripts/check-bundle-budget.mjs
+$ node scripts/check-learning-materials.mjs && node scripts/check-curated-materials.mjs
+B01～B35 学习资料结构检查通过：160 份资料，209 条直接前置，无环且无传递性重复。
+TypeScript 5.7.3：122 个正文示例的严格类型检查通过，预期错误注释有效。
+B01–B35 资料检查通过：149 篇主讲义，1621 个唯一概念入口，559 条知识连接，857 个正文内部引用，388 个通用示例输出一致（v22.14.0）；另登记 25 个浏览器示例、317 个页面、项目或终端片段，需按正文场景另行核对。
+$ node scripts/check-pronunciations.mjs
+英文发音检查通过：B01 12 份资料、39 个关键术语；B02 7 份资料、44 个关键术语；B03 4 份资料、31 个关键术语；B04 5 份资料、31 个关键术语；B05 4 份资料、21 个关键术语；B06 4 份资料、22 个关键术语；B07 4 份资料、22 个关键术语；B08 5 份资料、31 个关键术语；B09 4 份资料、35 个关键术语；B10 4 份资料、29 个关键术语；B11 4 份资料、28 个关键术语；B12 5 份资料、23 个关键术语；B13 4 份资料、28 个关键术语；B14 4 份资料、25 个关键术语；B15 4 份资料、47 个关键术语；B16 5 份资料、39 个关键术语；B17 4 份资料、30 个关键术语；B18 4 份资料、18 个关键术语；B19 4 份资料、25 个关键术语；B20 5 份资料、16 个关键术语；B21 4 份资料、16 个关键术语；B22 4 份资料、17 个关键术语；B23 4 份资料、18 个关键术语；B24 5 份资料、24 个关键术语；B25 4 份资料、34 个关键术语；B26 4 份资料、31 个关键术语；B27 4 份资料、16 个关键术语；B28 5 份资料、20 个关键术语；B29 4 份资料、16 个关键术语；B30 4 份资料、16 个关键术语；B31 4 份资料、16 个关键术语；B32 5 份资料、20 个关键术语；B33 4 份资料、16 个关键术语；B34 4 份资料、16 个关键术语；B35 5 份资料、20 个关键术语，音频与清单一致。
+vite v6.4.4 building for production...
+transforming...
+✓ 2371 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                           0.82 kB │ gzip:     0.47 kB
+dist/assets/KaTeX_Size3-Regular-CTq5MqoE.woff             4.42 kB
+dist/assets/KaTeX_Size4-Regular-Dl5lxZxV.woff2            4.93 kB
+dist/assets/KaTeX_Size2-Regular-Dy4dx90m.woff2            5.21 kB
+dist/assets/KaTeX_Size1-Regular-mCD8mA8B.woff2            5.47 kB
+dist/assets/KaTeX_Size4-Regular-BF-4gkZK.woff             5.98 kB
+dist/assets/KaTeX_Size2-Regular-oD1tc_U0.woff             6.19 kB
+dist/assets/KaTeX_Size1-Regular-C195tn64.woff             6.50 kB
+dist/assets/KaTeX_Caligraphic-Regular-Di6jR-x-.woff2      6.91 kB
+dist/assets/KaTeX_Caligraphic-Bold-Dq_IR9rO.woff2         6.91 kB
+dist/assets/KaTeX_Size3-Regular-DgpXs0kz.ttf              7.59 kB
+dist/assets/KaTeX_Caligraphic-Regular-CTRA-rTL.woff       7.66 kB
+dist/assets/KaTeX_Caligraphic-Bold-BEiXGLvX.woff          7.72 kB
+dist/assets/KaTeX_Script-Regular-D3wIWfF6.woff2           9.64 kB
+dist/assets/KaTeX_SansSerif-Regular-DDBCnlJ7.woff2       10.34 kB
+dist/assets/KaTeX_Size4-Regular-DWFBv043.ttf             10.36 kB
+dist/assets/KaTeX_Script-Regular-D5yQViql.woff           10.59 kB
+dist/assets/KaTeX_Fraktur-Regular-CTYiF6lA.woff2         11.32 kB
+dist/assets/KaTeX_Fraktur-Bold-CL6g_b3V.woff2            11.35 kB
+dist/assets/KaTeX_Size2-Regular-B7gKUWhC.ttf             11.51 kB
+dist/assets/KaTeX_SansSerif-Italic-C3H0VqGB.woff2        12.03 kB
+dist/assets/KaTeX_SansSerif-Bold-D1sUS0GD.woff2          12.22 kB
+dist/assets/KaTeX_Size1-Regular-Dbsnue_I.ttf             12.23 kB
+dist/assets/KaTeX_SansSerif-Regular-CS6fqUqJ.woff        12.32 kB
+dist/assets/KaTeX_Caligraphic-Regular-wX97UBjC.ttf       12.34 kB
+dist/assets/KaTeX_Caligraphic-Bold-ATXxdsX0.ttf          12.37 kB
+dist/assets/KaTeX_Fraktur-Regular-Dxdc4cR9.woff          13.21 kB
+dist/assets/KaTeX_Fraktur-Bold-BsDP51OF.woff             13.30 kB
+dist/assets/KaTeX_Typewriter-Regular-CO6r4hn1.woff2      13.57 kB
+dist/assets/KaTeX_SansSerif-Italic-DN2j7dab.woff         14.11 kB
+dist/assets/KaTeX_SansSerif-Bold-DbIhKOiC.woff           14.41 kB
+dist/assets/KaTeX_Typewriter-Regular-C0xS9mPB.woff       16.03 kB
+dist/assets/KaTeX_Math-BoldItalic-CZnvNsCZ.woff2         16.40 kB
+dist/assets/KaTeX_Math-Italic-t53AETM-.woff2             16.44 kB
+dist/assets/KaTeX_Script-Regular-C5JkGWo-.ttf            16.65 kB
+dist/assets/KaTeX_Main-BoldItalic-DxDJ3AOS.woff2         16.78 kB
+dist/assets/KaTeX_Main-Italic-NWA7e6Wa.woff2             16.99 kB
+dist/assets/KaTeX_Math-BoldItalic-iY-2wyZ7.woff          18.67 kB
+dist/assets/KaTeX_Math-Italic-DA0__PXp.woff              18.75 kB
+dist/assets/KaTeX_Main-BoldItalic-SpSLRI95.woff          19.41 kB
+dist/assets/KaTeX_SansSerif-Regular-BNo7hRIc.ttf         19.44 kB
+dist/assets/KaTeX_Fraktur-Regular-CB_wures.ttf           19.57 kB
+dist/assets/KaTeX_Fraktur-Bold-BdnERNNW.ttf              19.58 kB
+dist/assets/KaTeX_Main-Italic-BMLOBm91.woff              19.68 kB
+dist/assets/KaTeX_SansSerif-Italic-YYjJ1zSn.ttf          22.36 kB
+dist/assets/KaTeX_SansSerif-Bold-CFMepnvq.ttf            24.50 kB
+dist/assets/KaTeX_Main-Bold-Cx986IdX.woff2               25.32 kB
+dist/assets/KaTeX_Main-Regular-B22Nviop.woff2            26.27 kB
+dist/assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf        27.56 kB
+dist/assets/KaTeX_AMS-Regular-BQhdFMY1.woff2             28.08 kB
+dist/assets/KaTeX_Main-Bold-Jm3AIy58.woff                29.91 kB
+dist/assets/KaTeX_Main-Regular-Dr94JaBh.woff             30.77 kB
+dist/assets/KaTeX_Math-BoldItalic-B3XSjfu4.ttf           31.20 kB
+dist/assets/KaTeX_Math-Italic-flOr_0UB.ttf               31.31 kB
+dist/assets/KaTeX_Main-BoldItalic-DzxPMmG6.ttf           32.97 kB
+dist/assets/KaTeX_AMS-Regular-DMm9YOAa.woff              33.52 kB
+dist/assets/KaTeX_Main-Italic-3WenGoN9.ttf               33.58 kB
+dist/assets/KaTeX_Main-Bold-waoOVXN0.ttf                 51.34 kB
+dist/assets/KaTeX_Main-Regular-ypZvNtVU.ttf              53.58 kB
+dist/.vite/manifest.json                                 63.18 kB │ gzip:     5.86 kB
+dist/assets/KaTeX_AMS-Regular-DRggAlZN.ttf               63.63 kB
+dist/assets/FrameworkEntry-DiJXlcjQ.css                   0.55 kB │ gzip:     0.28 kB
+dist/assets/AsyncPilotRoute-B9WnZN-b.css                  1.36 kB │ gzip:     0.53 kB
+dist/assets/NotFoundPage-CdRB7KV2.css                     1.98 kB │ gzip:     0.75 kB
+dist/assets/BaseDialog-BDE0_Y2f.css                       4.15 kB │ gzip:     1.32 kB
+dist/assets/JobDetailPage-Dk1uLnhf.css                    5.78 kB │ gzip:     1.32 kB
+dist/assets/KnowledgeMindMapPage-CqVL3ZVU.css             7.54 kB │ gzip:     1.87 kB
+dist/assets/JobsPage-CBv8gveJ.css                         8.29 kB │ gzip:     2.16 kB
+dist/assets/CalendarPage-Dj26s6zR.css                    10.49 kB │ gzip:     2.61 kB
+dist/assets/NotesPage-B9udPRX6.css                       11.50 kB │ gzip:     2.83 kB
+dist/assets/KnowledgePage-BXfns4pn.css                   12.97 kB │ gzip:     3.08 kB
+dist/assets/SettingsPage-CpPJ_JWU.css                    14.71 kB │ gzip:     3.01 kB
+dist/assets/KnowledgeMaterialPage-CfUstJhG.css           15.99 kB │ gzip:     3.77 kB
+dist/assets/AssessmentPage-Crz7sUbB.css                  17.16 kB │ gzip:     4.10 kB
+dist/assets/TodayPage-Cho6uzq3.css                       17.53 kB │ gzip:     3.77 kB
+dist/assets/KnowledgeDetailPage-GuT37IHs.css             26.84 kB │ gzip:     5.78 kB
+dist/assets/KnowledgeGraphPage-CZperp-J.css              28.16 kB │ gzip:     5.31 kB
+dist/assets/index-dpYeD-kW.css                           30.71 kB │ gzip:     7.08 kB
+dist/assets/MarkdownRenderer-COgdIQgn.css                40.78 kB │ gzip:    10.96 kB
+dist/assets/channel-CbfhmNH5.js                           0.11 kB │ gzip:     0.13 kB
+dist/assets/init-Gi6I4Gst.js                              0.15 kB │ gzip:     0.13 kB
+dist/assets/chunk-2Q5K7J3B-CngmNPh6.js                    0.19 kB │ gzip:     0.16 kB
+dist/assets/latest-request-li3q24Nf.js                    0.21 kB │ gzip:     0.16 kB
+dist/assets/chunk-XXDRQBXY-BVShmxuM.js                    0.23 kB │ gzip:     0.21 kB
+dist/assets/chunk-JWPE2WC7-KsO5jFHb.js                    0.30 kB │ gzip:     0.20 kB
+dist/assets/chunk-5VM5RSS4-Cv--kFEc.js                    0.37 kB │ gzip:     0.27 kB
+dist/assets/chunk-POPQ4Y6H-pNc6Fulu.js                    0.53 kB │ gzip:     0.38 kB
+dist/assets/stateDiagram-v2-MP3YSRHH-Dr7E4tW1.js          0.54 kB │ gzip:     0.36 kB
+dist/assets/classDiagram-ZZMXUADV-XTyN1URd.js             0.58 kB │ gzip:     0.37 kB
+dist/assets/classDiagram-v2-VYDZK3BY-XTyN1URd.js          0.58 kB │ gzip:     0.37 kB
+dist/assets/swimlanesDiagram-VR7AAH4N-Bs2GdffF.js         0.66 kB │ gzip:     0.43 kB
+dist/assets/infoDiagram-27XIBGKW-DeJZsuLm.js              0.70 kB │ gzip:     0.46 kB
+dist/assets/NotFoundPage-Cj99lhWD.js                      1.03 kB │ gzip:     0.73 kB
+dist/assets/sizeCapture-INFHLROL-Cw-4vaPc.js              1.11 kB │ gzip:     0.62 kB
+dist/assets/ordinal-Cboi1Yqb.js                           1.19 kB │ gzip:     0.57 kB
+dist/assets/railroadDiagram-O6MQD6OU-Cd3IvN_w.js          1.72 kB │ gzip:     0.82 kB
+dist/assets/chunk-F27PBJKO-BystDJSt.js                    1.88 kB │ gzip:     0.83 kB
+dist/assets/abnfDiagram-VCTEODGH-BZbUmCYh.js              1.92 kB │ gzip:     0.95 kB
+dist/assets/pegDiagram-XKGWAZYB-Ck4aWuL9.js               2.07 kB │ gzip:     0.98 kB
+dist/assets/ebnfDiagram-PWID7BFC-BiHQvnhz.js              2.12 kB │ gzip:     0.94 kB
+dist/assets/FrameworkEntry-CCynjZ2W.js                    2.80 kB │ gzip:     1.84 kB
+dist/assets/BaseDialog-BgQA_cA_.js                        3.26 kB │ gzip:     1.52 kB
+dist/assets/arc-DkHNjkcJ.js                               3.43 kB │ gzip:     1.48 kB
+dist/assets/KnowledgeMindMapPage-C3tHncmw.js              4.23 kB │ gzip:     2.17 kB
+dist/assets/diagram-Z3DM3KII-DeadlrbM.js                  4.36 kB │ gzip:     1.92 kB
+dist/assets/browser-code-runner-Dv99AMxV.js               4.53 kB │ gzip:     2.27 kB
+dist/assets/defaultLocale-DX6XiGOO.js                     4.69 kB │ gzip:     2.18 kB
+dist/assets/AsyncPilotRoute-DTTdGUca.js                   4.92 kB │ gzip:     2.70 kB
+dist/assets/linear-Cl8V1TRr.js                            5.66 kB │ gzip:     2.31 kB
+dist/assets/diagram-UQ7AKVKN-7daOdOdK.js                  6.34 kB │ gzip:     2.74 kB
+dist/assets/pieDiagram-E7YTZNPT-f5a4xQxd.js               6.46 kB │ gzip:     2.71 kB
+dist/assets/CalendarPage-DH56A5Qv.js                      7.20 kB │ gzip:     3.39 kB
+dist/assets/material-metadata-v_OIDCu3.js                 8.45 kB │ gzip:     3.52 kB
+dist/assets/diagram-S7CK7UJ4-mEtUhLgc.js                  8.47 kB │ gzip:     3.78 kB
+dist/assets/NotesPage-6Jk9co1x.js                         8.55 kB │ gzip:     3.73 kB
+dist/assets/cynefinDiagram-5FMLGOSQ-DbUPOvg2.js          10.21 kB │ gzip:     3.69 kB
+dist/assets/stateDiagram-D77RDMKH-Ut0m0K2l.js            10.48 kB │ gzip:     3.68 kB
+dist/assets/diagram-VSXAHHWV-CNSxZRfz.js                 10.93 kB │ gzip:     4.23 kB
+dist/assets/dagre-GXQ25YYZ-Bf3Yhg-c.js                   11.25 kB │ gzip:     4.25 kB
+dist/assets/JobDetailPage-Cfqp-K67.js                    11.42 kB │ gzip:     4.13 kB
+dist/assets/KnowledgePage-B4KQyTkC.js                    12.81 kB │ gzip:     5.10 kB
+dist/assets/JobsPage-DbxkP9ec.js                         14.05 kB │ gzip:     5.72 kB
+dist/assets/chunk-SVP7TREG-C3g4IIgR.js                   15.76 kB │ gzip:     4.43 kB
+dist/assets/TodayPage-zbI0brGX.js                        15.77 kB │ gzip:     6.00 kB
+dist/assets/diagram-VX7I27RA-CH7baIYR.js                 16.18 kB │ gzip:     5.79 kB
+dist/assets/ishikawaDiagram-5VMMS53U-mbY0IkIC.js         17.68 kB │ gzip:     6.74 kB
+dist/assets/KnowledgeMaterialPage-B0Gncim8.js            20.03 kB │ gzip:     8.10 kB
+dist/assets/kanban-definition-UXKFOSKX-BZ7T5TBY.js       20.81 kB │ gzip:     7.35 kB
+dist/assets/sankeyDiagram-P5KCCOFB-BM6pI1Yy.js           23.50 kB │ gzip:     8.65 kB
+dist/assets/SettingsPage-CI2dNnQ5.js                     23.58 kB │ gzip:     8.98 kB
+dist/assets/journeyDiagram-3NMN7TZE-CzVHD2yB.js          23.68 kB │ gzip:     8.41 kB
+dist/assets/mindmap-definition-YA3MSWOX-B9PTXHXq.js      23.75 kB │ gzip:     8.06 kB
+dist/assets/wardleyDiagram-VM6X3IG4-DSwod2mG.js          26.21 kB │ gzip:     7.00 kB
+dist/assets/AssessmentPage-CyCowe2R.js                   26.79 kB │ gzip:    10.31 kB
+dist/assets/gitGraphDiagram-WWUBYQGX-ea1esKnO.js         30.05 kB │ gzip:     8.94 kB
+dist/assets/erDiagram-RLTQ6QDP-BWuqBwKq.js               31.04 kB │ gzip:    10.69 kB
+dist/assets/requirementDiagram-BXWQKSXE-DyF4IsJh.js      31.32 kB │ gzip:     9.88 kB
+dist/assets/timeline-definition-24CTP7MA-CkXmSlmb.js     31.46 kB │ gzip:    10.49 kB
+dist/assets/quadrantDiagram-AXDQQJYC-CpjQk62o.js         34.61 kB │ gzip:    10.19 kB
+dist/assets/layout-iguOvkcg.js                           35.44 kB │ gzip:    12.75 kB
+dist/assets/chunk-IMKFNOWR-fAAg74ei.js                   38.62 kB │ gzip:    12.68 kB
+dist/assets/KnowledgeDetailPage-COoyGqwO.js              39.24 kB │ gzip:    15.52 kB
+dist/assets/vennDiagram-4TSXK5OY-DSsRsq3u.js             42.49 kB │ gzip:    15.87 kB
+dist/assets/blockDiagram-I7D4REHJ-CaaXtefk.js            43.27 kB │ gzip:    13.98 kB
+dist/assets/xychartDiagram-S5SC5T6Z-CbuZU1gX.js          44.62 kB │ gzip:    12.67 kB
+dist/assets/chunk-TICWLB2K-D_IHXY3Y.js                   49.35 kB │ gzip:    15.80 kB
+dist/assets/flowDiagram-HODETNUW-Bo0Jc8BH.js             62.66 kB │ gzip:    20.06 kB
+dist/assets/c4Diagram-7LVT6UL2-Cfv37Qmn.js               65.67 kB │ gzip:    18.89 kB
+dist/assets/ganttDiagram-EL5Y4UJY-l6tBJsef.js            69.81 kB │ gzip:    23.62 kB
+dist/assets/cose-bilkent-JH36ORCC-BY-4WEE9.js            81.83 kB │ gzip:    22.55 kB
+dist/assets/vue-AkImlkMn.js                             108.95 kB │ gzip:    42.29 kB
+dist/assets/swimlanes-42K2YHIH-BjuD31c8.js              117.23 kB │ gzip:    42.90 kB
+dist/assets/sequenceDiagram-WJ2MYXX4-C440FvJ_.js        117.56 kB │ gzip:    31.34 kB
+dist/assets/architectureDiagram-5GKGNRK7-BAJa5GZ-.js    152.13 kB │ gzip:    43.29 kB
+dist/assets/index-C-u8T5Uo.js                           169.78 kB │ gzip:    49.46 kB
+dist/assets/KnowledgeGraphPage-B9MKFHwd.js              178.27 kB │ gzip:    58.51 kB
+dist/assets/learning-material-catalog-BYf9DJtW.js       241.33 kB │ gzip:    91.65 kB
+dist/assets/katex-C5jXJg4s.js                           261.33 kB │ gzip:    77.57 kB
+dist/assets/cytoscape.esm-Ix0LnXOy.js                   443.83 kB │ gzip:   142.41 kB
+dist/assets/MarkdownRenderer-9Rsfx7Hi.js                491.71 kB │ gzip:   163.87 kB
+dist/assets/mermaid.core-7-vrOS9h.js                    666.98 kB │ gzip:   160.82 kB
+dist/assets/cynefin-OW5HDTMX-DpT3olrM.js                690.86 kB │ gzip:   155.11 kB
+dist/assets/typescript-CIxZQmA6.js                    3,570.84 kB │ gzip: 1,022.29 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 39.70s
+体积预算通过：首屏 JS 272.2 KiB，首屏 CSS 30.0 KiB，全部 JS 7.99 MiB。

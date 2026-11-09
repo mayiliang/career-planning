@@ -1,0 +1,11 @@
+$ pnpm architecture:check && pnpm -r lint
+$ node scripts/check-module-boundaries.mjs
+模块边界检查通过：137 个源文件，无循环依赖或分层越界。
+packages/shared lint$ eslint src --ext .ts
+packages/content-parser lint$ eslint src --ext .ts
+packages/shared lint: Done
+apps/web lint$ eslint src --ext .vue,.ts,.tsx
+packages/content-parser lint: Done
+apps/server lint$ eslint src --ext .ts
+apps/server lint: Done
+apps/web lint: Done

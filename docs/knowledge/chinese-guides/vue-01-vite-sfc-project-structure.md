@@ -8,19 +8,88 @@
 
 ### 学习前先确认
 
-- 直接前置：[TS-03 泛型、约束、keyof 与索引访问](../chinese-guides/ts-03-generics-constraints-keyof-indexed-access.md#ts-03)、[WEB-01 HTML 语义、表单与可访问性基础](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)、[JS-06 ES Modules 与模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#js-06)。分别补足类型、HTML 和模块运行模型。
+本篇已更新为 framework-entry-v2：新增固定工程与操作协议，旧笔记、阅读进度和完成状态保留；旧考核仍按原合同查看。熟悉以下基础可直接继续，查阅不等于掌握。
+
+
+- 推荐补读：[JS-06 模块边界](../chinese-guides/js-06-es-modules-module-boundaries.md#用两个文件建立公开入口)。本篇只用静态导入，不要求先掌握动态导入、Promise 错误与资源清理整条链。
+- 直接前置：[WEB-01](../chinese-guides/web-01-html-semantics-forms-accessibility.md#web-01)。HTML 元素、按钮与挂载容器：读懂组件输出。
 
 本文采用 Vue 3 的组合式 API 与 `<script setup lang="ts">`。例子沿用常见的 Vite 项目结构；脚手架的选项、Node.js 要求与默认配置会随版本变化，创建新项目时以对应版本的官方说明为准。读懂角色比背下一份特定版本的生成清单更有用。
 
-### 脚手架先帮你准备工具和入口
+本篇先就地读懂模块记号：`export default` 导出一个默认值，`import App from './App'` 取这个默认值，名称由导入方命名；`import { useState } from 'react'` 或 `import { ref } from 'vue'` 取库中同名导出。相对路径从当前文件所在目录解析，裸包名由工程工具从依赖解析。导入的组件交给框架创建实例，不是复制粘贴模块源码。每个模块实例通常只求值一次，组件函数或 setup 则可按实例执行多次。后文沿这些规则追踪入口，不使用动态 import。
 
-如果从零开始，可以在准备放置练习项目的父目录运行 Vue 官方创建工具：
+### 建立可复现的练习工程
 
-```sh
-npm create vue@latest
+新建一个独立空目录（例如 `framework-entry-lab`），不要覆盖已有项目。使用 Node 22.14.0，按以下路径创建文件，再运行 `npm install`、`npm run typecheck`、`npm run build`、`npm run dev -- --host 127.0.0.1`。安装后保留生成的 package-lock.json，复现时用 `npm ci`。组件源码和浏览器结果作为练习提交正文；站内 JavaScript/TypeScript 自检不提供 React/Vue DOM 运行环境，不能把 TSX/SFC 直接当普通脚本执行。站内断言只能补充核对已取得的结果，不能替代工程类型、构建与浏览器证据。这些是本篇固定版本，不代表最新版本或升级建议。
+
+`package.json`：
+
+```json example=vue01-package runtime=project file=package.json
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "vue-tsc --noEmit",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3",
+    "vite": "6.4.4",
+    "@vitejs/plugin-vue": "5.2.4",
+    "vue-tsc": "2.2.12",
+    "@types/node": "22.10.5"
+  }
+}
 ```
 
-项目名可填 `reading-room`，选择 TypeScript。为了先理解本篇入口，可以暂不加入 Router 和 Pinia，等需要路由或共享状态时再学习它们。生成后进入目录，按创建工具提示安装依赖并启动开发服务。
+`tsconfig.json`：
+
+```json example=vue01-tsconfig runtime=project file=tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "vite/client"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ]
+}
+```
+
+`vite.config.ts` 使用下方“别名需要让构建工具和类型工具指向同一处”的完整配置；`index.html`、`src/main.ts` 使用入口章节文件；`src/ReadingCard.vue` 和 `src/App.vue` 使用“两张独立的资料卡片”版本。根目录 `.env` 写入以下公开练习值，供开发和构建共同使用：
+
+```dotenv example=vue01-env runtime=project file=.env
+VITE_API_BASE=/api
+VITE_SHOW_READING_TIPS=false
+```
+
+`src/public-config.ts` 使用公开配置章节的完整文件，并在 App.vue 中导入、显示（见“固定入口练习与单变量排错”）。本项目无 Router、Pinia 或后端，不发网络请求。`/api` 仅是要观察的公开字符串。不要复制后文代理配置覆盖别名配置；代理与资源章节属于延伸阅读，不是本次首考工程必需设置。
+
+### 脚手架先帮你准备工具和入口
+
+本篇直接使用上方固定文件建立练习工程。也可以参考文末 Vue 官方快速上手使用创建工具；该路径的交互选项会随版本变化，不属于本篇固定复现协议。选择 TypeScript 时可暂不加入 Router 和 Pinia，等需要路由或共享状态时再学习它们。
 
 选择一项功能，会增加相应依赖、配置与文件。它不会自动替你决定页面应该怎样拆分。已有项目则先使用仓库指定的包管理器和锁文件，不要为了对齐示例重新创建整个工程。
 
@@ -151,7 +220,7 @@ import ReadingCard from './ReadingCard.vue';
 </template>
 ```
 
-点击第一张卡片的“展开说明”，第二张仍收起。因为 `expanded` 在各自 setup 中创建，每个组件实例有自己的 ref。这里暂时把 ref 理解为可以追踪变化的容器；下一篇会详细拆解它。
+点击第一张卡片的“展开说明”，第二张仍收起。因为 `expanded` 在各自 setup 中创建，每个组件实例有自己的 ref。ref(false) 创建初始值为 false 的响应式容器；脚本中用 expanded.value 读写，模板会自动解包，所以模板中 expanded = !expanded 能切换布尔值。v-if 只在为真时创建说明段落；@click 绑定点击处理。更新后 Vue 安排 DOM 更新，不要求你先读 VUE-02 的依赖追踪实现。
 
 如果把这个可变 ref 移到单独模块顶层再让两个组件共同导入，就变成共享状态。共享可以是需求，也可以是 bug，区别取决于谁应该拥有这份数据。服务端渲染还涉及多个请求之间的隔离，不能随意把用户状态放进进程共享模块。
 
@@ -333,6 +402,23 @@ export default defineConfig({
 
 把全局排版和颜色变量放在明确入口，组件局部样式跟随组件，跨组件覆盖保持可搜索。遇到规则不生效，查看真实 DOM、生成选择器与层叠顺序，比连续叠加 `!important` 更容易得到可维护的结果。
 
+### 固定入口练习与单变量排错
+
+在两张卡片版本 App.vue 的 script setup 中加入 `import { publicConfig } from './public-config'`，并把卡片导入改为 `import ReadingCard from '@/ReadingCard.vue'`。在 main 内加入 `<p>公开地址：{{ publicConfig.apiBase }}；提示开关：{{ publicConfig.showReadingTips }}</p>`。此时应显示 /api 与 false，两张卡片初始收起，点击第一张只展开第一张。
+
+为检查样式边界，在 ReadingCard.vue 末尾加入 `<style scoped>h2 { color: rgb(20, 100, 60); }</style>`，在 App.vue 的 main 内另加 `<h2>卡片外标题</h2>`。CSS 选择器 h2 选择标题元素，color 设置文本颜色；scoped 后只有卡片内部标题被这条规则命中。DevTools 中检查实际 h2 与作用域属性，不能用“所有外部样式都进不来”解释。字体继承与全局规则仍可能影响组件。
+
+每次只注入一种故障，记录原配置、错误输出、最小修复和恢复结果：
+
+| 固定故障 | 可观察结果及证伪动作 | 最小修复 |
+| --- | --- | --- |
+| 只删除 Vite resolve.alias，保留 TS paths | typecheck 通过而 build 无法解析 @/ReadingCard.vue；相对路径能构建，证伪组件语法错误 | 恢复 Vite 别名 |
+| 从 .env 删除 VITE_API_BASE，重启 dev 并重建 | public-config 抛出缺少公开地址，入口模块仍成功加载，证伪 mount ID 错误 | 恢复公开变量；绝不填写密钥 |
+| 删除卡片 style 的 scoped | 卡片外 h2 也被命中，DevTools 中规则没有作用域限制 | 恢复 scoped；不靠叠加 !important |
+| 将 main.ts 的 mount 改成 #missing | 容器不存在，页面空白；HTML 中 #app 存在，证伪 SFC 没有导出 | 改回 #app |
+
+复测只将第二张卡片 minutes 从 30 改成 45：typecheck/build 应通过，展开第二张后文字变为 45，第一张仍为 25，入口、别名与公开配置不变。原先路由地址、路由懒加载和 chunk 检查留给 VUE-07 的后续练习，不是本入口必考。跨框架对照仅供已经了解 React 的读者选读。
+
 ### 类型检查和构建各自回答不同问题
 
 故意把卡片的 `:minutes="25"` 改成 `minutes="很多"`：模板可以被转成 JavaScript，但这不代表 props 类型正确。Vue 项目常用 `vue-tsc` 检查 SFC 与模板关系，而 Vite 的 TypeScript 转换本身不等于完整类型检查。
@@ -342,6 +428,8 @@ export default defineConfig({
 锁文件保存实际依赖解析结果，便于另一台机器重现同一套工具。团队应约定 Node 与包管理器范围；升级时读对应版本说明，再看实际锁文件和产物变化。仅修改版本范围并不能证明所有人已使用同一依赖版本。
 
 当页面空白时，可以按入口顺序逐项说明证据：HTML 是否成功返回，模块请求是否成功，挂载容器是否存在，组件是否编译，运行时是否抛错，资源路径是否正确。这样定位到哪一层，就只修改相关问题，避免让简单错误被更多无关调整掩盖。
+
+类型写法就地理解：`{ title: string; minutes: number }` 约定两个字段；`useState<0 | 1>` 限定只能保存 0 或 1；`defineProps<{ ... }>()` 声明组件输入类型。使用这些声明不要求先完成 TS-03 的泛型设计、keyof 与索引访问。TS-01 可作为类型记号的推荐补读，TS-03 属于深入学习。
 
 ### 参考与延伸阅读
 

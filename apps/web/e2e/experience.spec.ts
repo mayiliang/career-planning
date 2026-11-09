@@ -768,8 +768,13 @@ test.describe.serial('核心使用体验', () => {
     await expect(page.getByText('UX-01', { exact: true })).toHaveCount(0);
 
     await page.goto('/knowledge/REACT-01');
-    await expect(page.locator('.branch-grid article').first()).toContainText('VUE-01');
-    await expect(page.locator('.branch-grid article').first()).toContainText('兼容学习路线');
+    // Vue 入口的 WEB-01 尚未满足时，真实前置优先于旧交错路线。
+    const branch = page.locator('.branch-grid article');
+    await expect(branch).toHaveCount(1);
+    await expect(branch.first()).toContainText('WEB-01');
+    await expect(branch.first()).toContainText('待补硬前置');
+    await expect(branch.first()).toContainText('基础补学');
+    await expect(branch.first().getByRole('button', { name: '查看前置 →' })).toBeVisible();
   });
 
   test('路线建议、学习完成和学习台当前现场形成连续闭环', async ({ page }) => {

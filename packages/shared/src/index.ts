@@ -11,3 +11,5 @@ export * from './domain/jobs.js';
 export * from './domain/code-executor.js';
 export * from './enums/status.js';
 export * from './state-machines/knowledge-status.js';
+
+export * from './domain/framework-entry.js';

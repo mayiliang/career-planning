@@ -1,0 +1,23 @@
+
+Running 14 tests using 1 worker
+
+(node:55602) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:55602) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop-chrome] › e2e/async-navigation.spec.ts:20:1 › 笔记搜索忽略旧请求的迟到结果 (3.1s)
+  ✓   2 [desktop-chrome] › e2e/async-navigation.spec.ts:51:1 › 岗位详情在同一页面切换参数后读取新的岗位 (1.7s)
+  ✓   3 [desktop-chrome] › e2e/async-navigation.spec.ts:72:1 › 知识点切换后，旧保存失败不能把新草稿写到旧知识点名下 (4.1s)
+  ✓   4 [desktop-chrome] › e2e/async-navigation.spec.ts:114:1 › 知识点详情忽略切换前的迟到读取结果 (1.5s)
+  ✓   5 [desktop-chrome] › e2e/async-navigation.spec.ts:139:1 › 原始笔记保存失败时，不整理旧原文，也不标记学习完成 (3.2s)
+  ✓   6 [desktop-chrome] › e2e/async-pilot.spec.ts:25:1 › 三篇正文的实际代码在 Chrome 中产生标注结果 (431ms)
+  ✓   7 [desktop-chrome] › e2e/async-pilot.spec.ts:48:1 › 目录查阅与手机代码交互不会把跳转记成整篇读完 (6.6s)
+  ✓   8 [desktop-chrome] › e2e/async-pilot.spec.ts:95:1 › 小节直达不记录整篇完成，正常读到末尾只完成阅读 (2.9s)
+  ✓   9 [desktop-chrome] › e2e/async-pilot.spec.ts:120:1 › 路线、详情、补基础返回与跨批次练习形成连续路径 (7.9s)
+  ✓  10 [desktop-chrome] › e2e/async-pilot.spec.ts:153:1 › 前置暂缓只解释状态，浏览资料不改变用户当前点 (2.1s)
+  ✓  11 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 (8.0s)
+  ✓  12 [desktop-chrome] › e2e/framework-entry.spec.ts:52:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 (4.9s)
+  ✓  13 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 (7.4s)
+  ✓  14 [desktop-chrome] › e2e/framework-entry.spec.ts:52:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 (5.4s)
+
+  14 passed (1.1m)

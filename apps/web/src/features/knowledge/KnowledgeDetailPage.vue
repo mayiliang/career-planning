@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FrameworkEntry from '@/components/FrameworkEntry.vue';
 import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
@@ -257,6 +258,8 @@ onBeforeUnmount(() => {
       <p v-if="error" class="notice error">{{ error }}</p>
       <p v-if="message" class="notice">{{ message }}</p>
 
+      <RouterLink v-if="typeof route.query.entryReturn === 'string' && ['REACT-01', 'VUE-01'].includes(route.query.entryReturn)" :to="`/knowledge/${route.query.entryReturn}`">← 返回框架入口 {{ route.query.entryReturn }}</RouterLink>
+      <FrameworkEntry v-if="['REACT-01', 'VUE-01'].includes(point.code)" :code="point.code" :refresh-key="point.learningState" />
       <AsyncPilotRoute v-if="['JS-04', 'JS-05'].includes(point.code)" :current-code="point.code" :refresh-key="point.learningState" />
 
       <details class="learning-guide">
@@ -350,7 +353,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="branches-section">
-        <header><div><small>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? 'NEXT TRACK' : 'CONTINUE ROUTE' }}</small><h2>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '当前路线已完成，选择下一条学习方向' : '依据路线与前置继续学习' }}</h2><p>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '只有一条连续路线走完后才会出现选择；未选择的方向不会被放弃，完成所选路线后仍会再次出现。' : '异步链优先解释未满足的硬前置；查看建议不会修改你的当前选择。其他内容暂沿兼容路线推荐。' }}</p></div></header>
+        <header><div><small>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? 'NEXT TRACK' : 'CONTINUE ROUTE' }}</small><h2>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '当前路线已完成，选择下一条学习方向' : '依据路线与前置继续学习' }}</h2><p>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '只有一条连续路线走完后才会出现选择；未选择的方向不会被放弃，完成所选路线后仍会再次出现。' : '异步链与框架入口优先解释未满足的硬前置；查看建议不会修改你的当前选择。其他内容暂沿兼容路线推荐。' }}</p></div></header>
         <div v-if="branches.length" class="branch-grid">
           <article v-for="branch in branches" :key="branch.code" :class="{ deferred: branch.routeChoice === 'DEFERRED' || branch.learningState === 'DEFERRED' }">
             <div><code>{{ branch.code }}</code><span>{{ branch.requiredPrerequisite ? '待补硬前置' : branch.navigationKind === 'CONTINUE' ? '建议继续' : '新路线入口' }}</span></div>

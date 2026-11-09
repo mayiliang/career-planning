@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FrameworkEntry from '@/components/FrameworkEntry.vue';
 import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -75,6 +76,7 @@ onMounted(load);
 
 <template>
   <div class="route-reference">
+    <FrameworkEntry />
     <AsyncPilotRoute />
     <header class="route-hero">
       <div class="hero-copy"><p>COMPATIBLE READING GROUPS · {{ routeBatchCount }} BATCHES</p><h1>按能力与基础安排学习</h1><span>异步链试点已按真实前置连接。以下 {{ stats.total }} 个知识点暂保留旧分组供查阅；框架不享有提前或交错特权，完整路线将逐步按能力与认知负担重构。</span><div class="hero-actions"><button type="button" class="primary" @click="router.push('/')">继续当前学习 <span>→</span></button><button type="button" @click="router.push('/knowledge')">查看完整知识清单</button></div></div>

@@ -1,4 +1,4 @@
-import { pilotNode } from '@career-atlas/shared';
+import { pilotNode, frameworkEntry } from '@career-atlas/shared';
 import { rawDb } from '../../db/index.js';
 import { KNOWLEDGE_PATHS, RECOMMENDED_KNOWLEDGE_ROUTE } from '../knowledge-relations.service.js';
 import { compareRouteOrder, enrichPoint, fieldDescription, pointSelect, type LearningState, type PointRow } from './points.js';
@@ -16,11 +16,11 @@ export function planNextRoute(code: string, states: ReadonlyMap<string, Learning
   const trackIndex = KNOWLEDGE_PATHS.findIndex(path => path.includes(code));
   const mainline = RECOMMENDED_KNOWLEDGE_ROUTE.includes(code);
   const currentTrack = mainline ? RECOMMENDED_KNOWLEDGE_ROUTE : KNOWLEDGE_PATHS[trackIndex] ?? [code];
-  const candidate = ['JS-04', 'JS-05'].includes(code) && states.get(code) === 'LEARNING'
+  const candidate = (['JS-04', 'JS-05'].includes(code) || frameworkEntry(code)) && states.get(code) === 'LEARNING'
     ? code : currentTrack.slice(currentTrack.indexOf(code) + 1).find(available);
   const pendingPrerequisite = (target: string): string | undefined => {
-    for (const prerequisite of pilotNode(target)?.prerequisites ?? []) {
-      if (pilotNode(prerequisite)?.kind !== 'POINT' || states.get(prerequisite) === 'LEARNED') continue;
+    for (const prerequisite of frameworkEntry(target)?.prerequisites ?? pilotNode(target)?.prerequisites ?? []) {
+      if ((!frameworkEntry(target) && pilotNode(prerequisite)?.kind !== 'POINT') || states.get(prerequisite) === 'LEARNED') continue;
       return pendingPrerequisite(prerequisite) ?? prerequisite;
     }
   };
@@ -48,12 +48,12 @@ export function getNextBranches(code: string) {
       const prerequisite = step.kind === 'PREREQUISITE';
       return {
         ...enrichPoint(point), relation: step.kind,
-        relationDescription: prerequisite ? `这是异步链尚未满足的硬前置${point.learningState === 'DEFERRED' ? '，你已将其暂缓' : ''}；查看不会修改当前学习点或暂缓状态。` : continuing
+        relationDescription: prerequisite ? `这是当前入口尚未满足的硬前置${point.learningState === 'DEFERRED' ? '，你已将其暂缓' : ''}；查看不会修改当前学习点或暂缓状态。` : continuing
           ? '当前学习路线中紧接此知识点的下一步；不会打乱路线或丢失其他方向。'
           : `“${point.domainTitle}”路线的下一个未完成知识点。未选择的路线不会被放弃，完成所选路线后仍会再次出现。`,
         recommended: continuing, requiredPrerequisite: prerequisite, routeChoice: null, routeChoiceScope: null,
         navigationKind: step.kind,
-        trackName: prerequisite || ['JS-04', 'JS-05'].includes(step.code) ? '异步学习链试点' : step.mainline ? '兼容学习路线' : point.domainTitle,
+        trackName: prerequisite ? '基础补学' : frameworkEntry(code) && code === step.code ? '框架入口基础' : ['JS-04', 'JS-05'].includes(step.code) ? '异步学习链试点' : step.mainline ? '兼容学习路线' : point.domainTitle,
         trackRemaining: step.remaining, field: fieldDescription(point.domainTitle),
         impactIfDeferred: prerequisite ? '暂缓不会使依赖自动满足；可查看基础并返回，或自行恢复学习。' : continuing
           ? '系统会直接跳过它，继续推荐本路线后面的知识点；它只进入“稍后学习”，不会被删除。'

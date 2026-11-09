@@ -26,6 +26,12 @@ test('B01 正文全部示例在浏览器中的实际输出与讲义一致', asyn
 });
 
 test('B01 小节交叉引用保留完整正文，后退恢复原来的阅读位置', async ({ page }) => {
+  const materialRequests: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'GET' && request.url().includes('/api/v1/knowledge/materials/')) {
+      materialRequests.push(new URL(request.url()).pathname);
+    }
+  });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(first);
   await expect(page.locator('[data-reader-ready]')).toBeVisible();
@@ -43,6 +49,9 @@ test('B01 小节交叉引用保留完整正文，后退恢复原来的阅读位�
   await expect(page).toHaveURL(first);
   await expect.poll(async () => Math.abs(await page.evaluate(() => window.scrollY) - before)).toBeLessThan(8);
   await expect(link).toBeInViewport();
+  // 路径已由 App 的 key 决定实例身份，离场实例不应重复请求下一篇正文。
+  expect(materialRequests.filter(path => path.includes('js-03-types-equality'))).toHaveLength(1);
+  expect(materialRequests.filter(path => path.includes('js-01-execution-context'))).toHaveLength(2);
 
   await page.locator('.toc-rail').getByRole('button', { name: '闭包让函数继续访问创建处的变量', exact: true }).click();
   await expect(page).toHaveURL(`${first}#${encodeURIComponent('闭包让函数继续访问创建处的变量')}`);

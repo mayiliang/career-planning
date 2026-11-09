@@ -1,6 +1,6 @@
 # 11 Vue 3 项目开发
 
-所有“通过”均需满足[统一考核规则](00-assessment-rules.md)。本领域必须使用 Career Atlas 的真实 Vue 代码作为学习和考核证据，不能只完成孤立 Demo。
+所有“通过”均需满足[统一考核规则](00-assessment-rules.md)。VUE-01 先完成讲义固定入口工程；后续知识点按各自合同使用 Career Atlas 项目证据。
 
 ### 项目与响应式基础
 
@@ -9,8 +9,8 @@
 - [ ] 自评已掌握
 - [ ] 已通过严格考核
 - 学习资料：[中文主讲义：VUE-01 Vite、SFC 与项目结构](../chinese-guides/vue-01-vite-sfc-project-structure.md#vue-01)、[Vue Quick Start](https://cn.vuejs.org/guide/quick-start.html)、[Single-File Components](https://cn.vuejs.org/guide/scaling-up/sfc.html)、[Vite 为什么选择 Vite](https://cn.vite.dev/guide/why)。覆盖范围：沿 HTML、main.ts、App.vue 和两份独立卡片追踪页面，讲清脚手架、SFC 编译、模块与实例、开发/生产、目录、双端别名、公开环境变量、资源、开发代理、HMR、Scoped CSS、锁文件及类型与产物核对；完整文件标明路径和组合方式。
-- 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：VUE-01 Vite、SFC 与项目结构》《Vue Quick Start》《Single-File Components》《Vite 为什么选择 Vite》，定位脚手架、SFC 编译和边界；首考题 2（机制解释）：闭卷说明 `main.ts→createApp→App.vue`、`script setup` 编译和 scoped 样式标记分别发生在哪里，及 dev 的模块更新为何不等于 production bundle；首考题 3（最小产出）：固定夹具为 `/knowledge/:id` 页面、`@/` 别名和 `VITE_API_BASE`；提交严格 TS 项目树、入口/路由/页面/组件边界、dev/build/typecheck 日志与产物清单；预期观察=环境变量不进入未声明位置，且 `/knowledge/:id` 从入口可追踪到页面组件；验证=执行固定夹具的 dev、build 与 typecheck，核对构建产物、入口链路和环境变量断言；首考题 4（受限排错）：仅可改 Vite/SFC/目录层；注入别名构建失败、未暴露变量、style scoped 穿透误用和组件被错误当页面入口。提交错误输出、三项假设、最小修复与 build 回归；首考题 5（掌握挑战）：向 React 开发者解释 SFC 模板/样式作用域与 JSX 模块的相同边界和关键不同，并现场追踪一个路由到组件。复测变式：仅将页面组件导入方式改为路由级懒加载；不变量=`/knowledge/:id`、`@/` 别名、`VITE_API_BASE` 和入口到组件边界不变；预期变化=dev 与 production build 均解析同一页面模块且产生独立路由 chunk；证据=模块解析日志、构建 chunk 清单和路由断言。命题边界：只在所列资料和覆盖范围内命题。
-- 通过标准：dev/build/typecheck 均通过（证据=日志）；入口到组件可追踪（证据=项目树/链路）；四个夹具均有确定诊断（证据=回归）；环境与样式边界不泄漏（证据=构建/DOM 检查）。否决项：只交脚手架截图、混入未解释的 Options API、或以 dev 成功替代构建验证，均不能通过。 评估边界：仅以本点资料、题目输入与上述可复核产出评分，资料外经验不能替代证据。
+- 严格考核：挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：VUE-01 Vite、SFC 与项目结构》《Vue Quick Start》《Single-File Components》《Vite 为什么选择 Vite》；外链仅作参考索引，评分依据是中文主讲义的完整机制。定位中文主讲义的入口、实例隔离、别名、公开配置和 scoped CSS 章节；首考题 2（机制解释）：说明 HTML→main.ts→App.vue→ReadingCard.vue，区分模块求值与实例 setup、SFC 编译与浏览器执行；首考题 3（最小产出）：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2；首考题 4（受限排错）：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归；首考题 5（学习复述）：向只熟悉 HTML 与 JavaScript 的同学追踪一张卡片如何显示，解释类型检查与构建为何不能互相替代。复测变式：只把第二张卡片 minutes 从 30 改为 45；入口、配置和第一张卡片不变，交付类型/构建日志和两张卡片独立展开后的 25/45 断言。命题边界：framework-entry-v2，不要求 React、Router、懒加载或独立路由 chunk。
+- 通过标准：dev/typecheck/build/preview、实例隔离、入口追踪、公开配置和样式边界均有可复核证据；四项故障单独诊断并恢复。否决项：只交脚手架截图、用 dev 代替类型/生产验证、将配置前缀当加密。结构自检不等于语义通过。评估边界：仅按本点固定输入、中文正文机制与可复核产出评分。
 - 预计耗时：资料 105 分钟；练习 165 分钟；项目 150 分钟；考核 90 分钟；复测 75 分钟
 
 ## VUE-02 `ref`、`reactive`、`computed` 与响应式边界

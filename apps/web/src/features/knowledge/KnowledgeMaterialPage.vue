@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import FrameworkEntry from '@/components/FrameworkEntry.vue';
 import { pilotNode, pilotMaterialHref, ASYNC_PILOT_CHAIN } from '@career-atlas/shared';
 import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { apiClient } from '@/api/client';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
@@ -13,6 +14,8 @@ import { announceMaterialReady } from '@/utils/material-navigation';
 
 const route = useRoute();
 const router = useRouter();
+// App 按 route.path 重建阅读器。离场动画中的旧实例不能以新路径报告就绪。
+const materialPath = route.path;
 const loading = ref(true);
 const error = ref('');
 const material = ref<Awaited<ReturnType<typeof apiClient.getKnowledgeMaterial>> | null>(null);
@@ -124,7 +127,7 @@ async function load() {
     if (request.isCurrent()) loading.value = false;
     if (request.isCurrent() && error.value) {
       await nextTick();
-      if (request.isCurrent()) announceMaterialReady(route.path);
+      if (request.isCurrent()) announceMaterialReady(materialPath);
     }
   }
 }
@@ -374,9 +377,9 @@ function handleRendered() {
         pronunciationFeedback.value = reason instanceof Error ? reason.message : '发音资源加载失败';
       }
     }
-    if (readerRoot.value && material.value?.guide === guide) {
+    if (!disposed && route.path === materialPath && readerRoot.value && material.value?.guide === guide) {
       readerRoot.value.dataset.readerReady = 'true';
-      announceMaterialReady(route.path);
+      announceMaterialReady(materialPath);
     }
   });
 }
@@ -437,7 +440,6 @@ onMounted(() => {
   window.addEventListener('scroll', updateReadingProgress, { passive: true });
   window.addEventListener('resize', updateReadingProgress);
 });
-watch(() => [route.params.guide, route.params.anchor], load);
 onBeforeUnmount(() => {
   disposed = true;
   latestLoad.cancel();
@@ -478,6 +480,7 @@ onBeforeUnmount(() => {
           </li>
         </ol>
       </nav>
+      <FrameworkEntry v-if="chapter && ['REACT-01', 'VUE-01'].includes(chapter.id)" :code="chapter.id" />
       <AsyncPilotRoute v-if="pilotIndex >= 0" :current-code="pilot?.code" />
       <header class="material-hero">
         <div>
@@ -515,7 +518,7 @@ onBeforeUnmount(() => {
           </nav>
         </aside>
 
-        <article ref="readerRoot" class="material-sheet" :data-material-path="route.path" @click="handleReaderClick">
+        <article ref="readerRoot" class="material-sheet" :data-material-path="materialPath" @click="handleReaderClick">
           <div v-if="chapter" class="chapter-intro">
             <span>这一篇，读懂一个问题</span>
             <h2>{{ chapter.question }}</h2>

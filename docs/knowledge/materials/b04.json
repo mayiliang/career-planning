@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "batch": "B04",
   "title": "从类型关系走到页面与组件",
-  "reviewedOn": "2026-09-08",
+  "reviewedOn": "2026-11-09",
   "chapters": [
     {
       "id": "TS-03",
@@ -209,9 +209,9 @@
       "guide": "react-01-render-purity-state-snapshot.md",
       "anchor": "react-01",
       "prerequisites": [
-        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03",
-        "web-01-html-semantics-forms-accessibility.md#web-01",
-        "js-06-es-modules-module-boundaries.md#js-06"
+        "js-01-execution-context-scope-closure.md#js-01",
+        "js-03-types-equality-copy-immutability.md#js-03",
+        "web-01-html-semantics-forms-accessibility.md#web-01"
       ],
       "concepts": [
         {
@@ -295,9 +295,7 @@
       "guide": "vue-01-vite-sfc-project-structure.md",
       "anchor": "vue-01",
       "prerequisites": [
-        "ts-03-generics-constraints-keyof-indexed-access.md#ts-03",
-        "web-01-html-semantics-forms-accessibility.md#web-01",
-        "js-06-es-modules-module-boundaries.md#js-06"
+        "web-01-html-semantics-forms-accessibility.md#web-01"
       ],
       "concepts": [
         {

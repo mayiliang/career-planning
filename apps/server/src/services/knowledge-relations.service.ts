@@ -1,4 +1,4 @@
-import { ASYNC_PILOT_NODES } from '@career-atlas/shared';
+import { ASYNC_PILOT_NODES, FRAMEWORK_ENTRY_NODES } from '@career-atlas/shared';
 import { randomUUID } from 'crypto';
 import { resolvePointTaxonomy } from '@career-atlas/content-parser';
 import { rawDb } from '../db/index.js';
@@ -481,7 +481,12 @@ export function buildRelationDefinitions(): RelationDefinition[] {
   const definitions: RelationDefinition[] = ASYNC_PILOT_NODES.flatMap(node => node.prerequisites
     .filter(code => ASYNC_PILOT_NODES.find(item => item.code === code)?.kind === 'POINT' && node.kind === 'POINT')
     .map(source => ({ source, target: node.code, type: 'PREREQUISITE' as const, description: node.reason, weight: 9 })));
+  for (const node of FRAMEWORK_ENTRY_NODES) {
+    definitions.push({ source: 'JS-06', target: node.code, type: 'RELATED', description: '推荐补读静态模块导入；入口就地讲解最小用法，不要求先完成动态导入与异步链。', weight: 6 });
+    for (const source of node.prerequisites) definitions.push({ source, target: node.code, type: 'PREREQUISITE', description: '框架入口必需基础；具体概念与补学范围见入口合同。', weight: 9 });
+  }
   for (const [source, target, description] of explicitPrerequisites) {
+    if (FRAMEWORK_ENTRY_NODES.some(node => node.code === target)) continue;
     definitions.push({ source, target, type: 'PREREQUISITE', description, weight: 9 });
   }
   for (const [source, target, description] of relatedPairs) {

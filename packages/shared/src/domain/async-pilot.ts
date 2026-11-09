@@ -1,3 +1,4 @@
+import { assessmentContractVersion } from './framework-entry.js';
 /** 异步链试点的唯一导航与前置定义。短文没有知识点身份。 */
 export const ASYNC_PILOT_VERSION = 'async-v2';
 export type PilotNode = {
@@ -14,7 +15,7 @@ export const ASYNC_PILOT_NODES: readonly PilotNode[] = [
 export const ASYNC_PILOT_CHAIN = ['PREJS-07', 'JS-04', 'JS-05'] as const;
 export function pilotNode(code: string) { return ASYNC_PILOT_NODES.find(node => node.code === code); }
 export function pilotMaterialHref(node: PilotNode) { return `/knowledge/materials/${node.guide}/${node.anchor}`; }
-export function practiceActivityId(code: string) { return ['JS-04', 'JS-05'].includes(code) ? `strict-practice@${ASYNC_PILOT_VERSION}` : 'strict-practice'; }
+export function practiceActivityId(code: string) { return assessmentContractVersion(code) ? `strict-practice@${assessmentContractVersion(code)}` : 'strict-practice'; }
 export type PilotState = 'NOT_STARTED' | 'LEARNING' | 'LEARNED' | 'DEFERRED';
 
 /** 只返回建议，不写状态；已学完的点不再递归要求补读其基础。 */

@@ -1,0 +1,14 @@
+
+Running 5 tests using 1 worker
+
+(node:57111) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:57111) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 (8.3s)
+  ✓  2 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 (5.5s)
+  ✓  3 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 (9.8s)
+  ✓  4 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 (5.0s)
+  ✓  5 [desktop-chrome] › e2e/framework-entry.spec.ts:92:1 › 入口明确区分未学与已学基础，查阅后当前点保持不变 (4.5s)
+
+  5 passed (37.8s)

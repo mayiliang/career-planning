@@ -1,4 +1,3 @@
-import { ASYNC_PILOT_VERSION } from '@career-atlas/shared';
 import { buildAsyncPilotContext } from '../async-pilot-context.js';
 /** 按知识点合同构建题目；读取本地资料上下文，不写入数据库。 */
 import { randomUUID } from 'node:crypto';
@@ -79,7 +78,7 @@ export function buildAssessmentQuestions(
   const knowledgeTags = extractKnowledgeTags(knowledgePoint.title);
   const materialReferences = extractLearningMaterialReferences(knowledgePoint.studyMaterialMd, knowledgePoint.title);
   const pilotContext = buildAsyncPilotContext(knowledgePoint.code, knowledgePoint.studyMaterialMd);
-  if (pilotContext && !pilotContext.complete) throw new Error('异步试点必需机制正文不足，暂不能创建语义挑战；可继续阅读或保存练习草稿。');
+  if (pilotContext && !pilotContext.complete) throw new Error('当前合同必需机制正文不足，暂不能创建语义挑战；可继续阅读或保存练习草稿。');
   const localMaterialContext = (pilotContext?.sections ?? extractLocalMaterialContext(knowledgePoint.studyMaterialMd))
     .map((item) => `【${item.title}｜${item.source}】\n${item.content}`);
   const directGuide = buildDerivationGuide(knowledgePoint.title, materialReferences, false);
@@ -106,7 +105,7 @@ export function buildAssessmentQuestions(
       questionContent: JSON.stringify({
         contractSnapshot: pilotContext && index === 0 ? { assessmentSpecMd: knowledgePoint.assessmentSpecMd,
           passCriteriaMd: knowledgePoint.passCriteriaMd, studyMaterialMd: knowledgePoint.studyMaterialMd, materialContext: pilotContext } : undefined,
-        contractVersion: pilotContext ? ASYNC_PILOT_VERSION : undefined,
+        contractVersion: pilotContext?.contractVersion,
         contextCoverage: pilotContext ? { ...pilotContext, sections: undefined } : undefined,
         level: source.label,
         question: effectiveContract.question,

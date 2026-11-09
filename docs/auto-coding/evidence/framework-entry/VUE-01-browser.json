@@ -1,0 +1,355 @@
+{
+  "browser": "156.0.8078.76",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "pages": [
+    "/plan",
+    "/knowledge/VUE-01",
+    "/knowledge/materials/vue-01-vite-sfc-project-structure.md/vue-01",
+    "/knowledge/WEB-01"
+  ],
+  "before": {
+    "id": "58dae077-3604-4494-88a6-d293268ea3d4",
+    "code": "VUE-01",
+    "title": "Vite 脚手架、SFC 与项目结构",
+    "secondaryTopic": "项目与响应式基础",
+    "topicOrder": 0,
+    "summary": null,
+    "studyMaterialMd": "[中文主讲义：VUE-01 Vite、SFC 与项目结构](../chinese-guides/vue-01-vite-sfc-project-structure.md#vue-01)、[Vue Quick Start](https://cn.vuejs.org/guide/quick-start.html)、[Single-File Components](https://cn.vuejs.org/guide/scaling-up/sfc.html)、[Vite 为什么选择 Vite](https://cn.vite.dev/guide/why)。覆盖范围：沿 HTML、main.ts、App.vue 和两份独立卡片追踪页面，讲清脚手架、SFC 编译、模块与实例、开发/生产、目录、双端别名、公开环境变量、资源、开发代理、HMR、Scoped CSS、锁文件及类型与产物核对；完整文件标明路径和组合方式。",
+    "assessmentSpecMd": "挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：VUE-01 Vite、SFC 与项目结构》《Vue Quick Start》《Single-File Components》《Vite 为什么选择 Vite》；外链仅作参考索引，评分依据是中文主讲义的完整机制。定位中文主讲义的入口、实例隔离、别名、公开配置和 scoped CSS 章节；首考题 2（机制解释）：说明 HTML→main.ts→App.vue→ReadingCard.vue，区分模块求值与实例 setup、SFC 编译与浏览器执行；首考题 3（最小产出）：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2；首考题 4（受限排错）：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归；首考题 5（学习复述）：向只熟悉 HTML 与 JavaScript 的同学追踪一张卡片如何显示，解释类型检查与构建为何不能互相替代。复测变式：只把第二张卡片 minutes 从 30 改为 45；入口、配置和第一张卡片不变，交付类型/构建日志和两张卡片独立展开后的 25/45 断言。命题边界：framework-entry-v2，不要求 React、Router、懒加载或独立路由 chunk。",
+    "passCriteriaMd": "dev/typecheck/build/preview、实例隔离、入口追踪、公开配置和样式边界均有可复核证据；四项故障单独诊断并恢复。否决项：只交脚手架截图、用 dev 代替类型/生产验证、将配置前缀当加密。结构自检不等于语义通过。评估边界：仅按本点固定输入、中文正文机制与可复核产出评分。",
+    "difficulty": "intermediate",
+    "capabilityLayer": "APPLICATION",
+    "requirementLevel": "TRACK_REQUIRED",
+    "maturity": "STABLE",
+    "aiRelation": "NONE",
+    "portability": "FRAMEWORK_SPECIFIC",
+    "applicabilityTags": [
+      "FRAMEWORK_SPECIFIC"
+    ],
+    "topicTags": [],
+    "trackIds": [
+      "vue"
+    ],
+    "verifiedAt": "2026-08-09",
+    "fallbackStrategy": "按 Baseline、目标浏览器和运行环境做能力检测与渐进增强。隔离框架适配层，保留框架无关的业务、数据与测试契约。",
+    "planWeek": 4,
+    "status": "NOT_STARTED",
+    "learningState": "LEARNING",
+    "masteryLevel": 0,
+    "learnedAt": null,
+    "deferredAt": null,
+    "deferReason": null,
+    "currentFocus": true,
+    "domainId": "7bf19094-bf34-4616-bcfb-97c792728778",
+    "domainCode": "11",
+    "domainTitle": "Vue 3 项目开发",
+    "selfMasteredAt": null,
+    "firstPassedAt": null,
+    "masteredAt": null,
+    "createdAt": "2026-11-09T12:32:21.729Z",
+    "updatedAt": "2026-11-09T12:32:39.130Z",
+    "studyMinutes": 105,
+    "practiceMinutes": 165,
+    "projectMinutes": 150,
+    "assessmentMinutes": 90,
+    "retestMinutes": 75,
+    "routeOrder": 15,
+    "estimatedTotalMinutes": 420,
+    "estimatedCoreMinutes": 105,
+    "learningActivities": [
+      {
+        "id": "reading",
+        "type": "READING",
+        "label": "资料阅读与笔记",
+        "minutes": 105,
+        "optional": false,
+        "task": "读完列出的资料，记录核心概念、仍有疑问的地方，以及至少一个边界或反例。",
+        "input": "学习资料：《中文主讲义：VUE-01 Vite、SFC 与项目结构》、《Vue Quick Start》、《Single-File Components》、《Vite 为什么选择 Vite》。",
+        "outputRequirements": [
+          "知识点原始笔记",
+          "至少一个资料定位",
+          "至少一个边界、反例或疑问"
+        ],
+        "completionCriteria": [
+          "由你确认资料已经阅读",
+          "原始笔记已保存；系统不会用 AI 稿覆盖原文"
+        ],
+        "deliveryMode": "READ_ONLY",
+        "workspaceMode": null,
+        "language": null,
+        "starterCode": null,
+        "submissionTemplate": null,
+        "materialReferences": [
+          {
+            "title": "中文主讲义：VUE-01 Vite、SFC 与项目结构",
+            "url": "/knowledge/materials/vue-01-vite-sfc-project-structure.md/vue-01",
+            "locator": "打开后定位到“vue 01”章节",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vue Quick Start",
+            "url": "https://cn.vuejs.org/guide/quick-start.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Single-File Components",
+            "url": "https://cn.vuejs.org/guide/scaling-up/sfc.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vite 为什么选择 Vite",
+            "url": "https://cn.vite.dev/guide/why",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          }
+        ],
+        "failureFixture": null,
+        "verificationChecklist": [],
+        "vetoItems": []
+      },
+      {
+        "id": "strict-practice@framework-entry-v2",
+        "type": "GUIDED_PRACTICE",
+        "label": "站内编码验证",
+        "minutes": 315,
+        "optional": true,
+        "task": "按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2",
+        "input": "首考题 3（最小产出）原文：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2\n\n首考题 4（受限排错）原文：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归\n\n仅可依据 《中文主讲义：VUE-01 Vite、SFC 与项目结构》、《Vue Quick Start》、《Single-File Components》、《Vite 为什么选择 Vite》 和本点通过标准完成；不得用通用 PASS/CONTROLLED 模板替换题目给定的输入、预期或异常。",
+        "outputRequirements": [
+          "题 3 的可执行实现",
+          "固定输入、预期、实际输出与断言",
+          "题 4 的异常、根因、修复和回归证据"
+        ],
+        "completionCriteria": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "deliveryMode": "WORKSPACE",
+        "workspaceMode": "CODE",
+        "language": "javascript",
+        "starterCode": "// VUE-01 Vite 脚手架、SFC 与项目结构\n// 首考题 3 原文：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2\n// 首考题 4 原文：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归\n// 把题目给定的具体 fixture 写入 fixedInput；不要把预期替换成通用 PASS/CONTROLLED。\nconst fixedInput = Object.freeze({ /* 填写首考题 3 的固定输入 */ });\nconst expected = Object.freeze({ /* 填写题目要求的具体预期 */ });\n\nfunction solve(input) {\n  // 根据学习资料实现首考题 3。\n  throw new Error('TODO');\n}\n\nlet actual;\ntry {\n  actual = solve(fixedInput);\n  console.log({ fixedInput, expected, actual });\n  console.assert(JSON.stringify(actual) === JSON.stringify(expected), '实际输出与首考题 3 的具体预期不一致');\n} catch (error) {\n  console.error({ fixedInput, expected, error: String(error) });\n  throw error;\n}\n",
+        "submissionTemplate": "# 首考题 3：实现说明\n\n# 固定输入\n\n# 预期输出\n\n# 实际输出\n\n# 首考题 4：异常、根因与修复\n\n# 资料机制映射\n\n# 验证证据\n",
+        "materialReferences": [
+          {
+            "title": "中文主讲义：VUE-01 Vite、SFC 与项目结构",
+            "url": "/knowledge/materials/vue-01-vite-sfc-project-structure.md/vue-01",
+            "locator": "打开后定位到“vue 01”章节",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vue Quick Start",
+            "url": "https://cn.vuejs.org/guide/quick-start.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Single-File Components",
+            "url": "https://cn.vuejs.org/guide/scaling-up/sfc.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vite 为什么选择 Vite",
+            "url": "https://cn.vite.dev/guide/why",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          }
+        ],
+        "failureFixture": "分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归",
+        "verificationChecklist": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "vetoItems": [
+          "未保留首考题 3 的具体产出或首考题 4 的受限排错证据",
+          "以资料外经验、空泛描述或预设 PASS/CONTROLLED 状态替代题目要求"
+        ]
+      }
+    ],
+    "challengeProfile": "CODING"
+  },
+  "after": {
+    "id": "58dae077-3604-4494-88a6-d293268ea3d4",
+    "code": "VUE-01",
+    "title": "Vite 脚手架、SFC 与项目结构",
+    "secondaryTopic": "项目与响应式基础",
+    "topicOrder": 0,
+    "summary": null,
+    "studyMaterialMd": "[中文主讲义：VUE-01 Vite、SFC 与项目结构](../chinese-guides/vue-01-vite-sfc-project-structure.md#vue-01)、[Vue Quick Start](https://cn.vuejs.org/guide/quick-start.html)、[Single-File Components](https://cn.vuejs.org/guide/scaling-up/sfc.html)、[Vite 为什么选择 Vite](https://cn.vite.dev/guide/why)。覆盖范围：沿 HTML、main.ts、App.vue 和两份独立卡片追踪页面，讲清脚手架、SFC 编译、模块与实例、开发/生产、目录、双端别名、公开环境变量、资源、开发代理、HMR、Scoped CSS、锁文件及类型与产物核对；完整文件标明路径和组合方式。",
+    "assessmentSpecMd": "挑战类型：CODING；首考题 1（资料定位）：只允许使用《中文主讲义：VUE-01 Vite、SFC 与项目结构》《Vue Quick Start》《Single-File Components》《Vite 为什么选择 Vite》；外链仅作参考索引，评分依据是中文主讲义的完整机制。定位中文主讲义的入口、实例隔离、别名、公开配置和 scoped CSS 章节；首考题 2（机制解释）：说明 HTML→main.ts→App.vue→ReadingCard.vue，区分模块求值与实例 setup、SFC 编译与浏览器执行；首考题 3（最小产出）：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2；首考题 4（受限排错）：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归；首考题 5（学习复述）：向只熟悉 HTML 与 JavaScript 的同学追踪一张卡片如何显示，解释类型检查与构建为何不能互相替代。复测变式：只把第二张卡片 minutes 从 30 改为 45；入口、配置和第一张卡片不变，交付类型/构建日志和两张卡片独立展开后的 25/45 断言。命题边界：framework-entry-v2，不要求 React、Router、懒加载或独立路由 chunk。",
+    "passCriteriaMd": "dev/typecheck/build/preview、实例隔离、入口追踪、公开配置和样式边界均有可复核证据；四项故障单独诊断并恢复。否决项：只交脚手架截图、用 dev 代替类型/生产验证、将配置前缀当加密。结构自检不等于语义通过。评估边界：仅按本点固定输入、中文正文机制与可复核产出评分。",
+    "difficulty": "intermediate",
+    "capabilityLayer": "APPLICATION",
+    "requirementLevel": "TRACK_REQUIRED",
+    "maturity": "STABLE",
+    "aiRelation": "NONE",
+    "portability": "FRAMEWORK_SPECIFIC",
+    "applicabilityTags": [
+      "FRAMEWORK_SPECIFIC"
+    ],
+    "topicTags": [],
+    "trackIds": [
+      "vue"
+    ],
+    "verifiedAt": "2026-08-09",
+    "fallbackStrategy": "按 Baseline、目标浏览器和运行环境做能力检测与渐进增强。隔离框架适配层，保留框架无关的业务、数据与测试契约。",
+    "planWeek": 4,
+    "status": "NOT_STARTED",
+    "learningState": "LEARNING",
+    "masteryLevel": 0,
+    "learnedAt": null,
+    "deferredAt": null,
+    "deferReason": null,
+    "currentFocus": true,
+    "domainId": "7bf19094-bf34-4616-bcfb-97c792728778",
+    "domainCode": "11",
+    "domainTitle": "Vue 3 项目开发",
+    "selfMasteredAt": null,
+    "firstPassedAt": null,
+    "masteredAt": null,
+    "createdAt": "2026-11-09T12:32:21.729Z",
+    "updatedAt": "2026-11-09T12:32:39.130Z",
+    "studyMinutes": 105,
+    "practiceMinutes": 165,
+    "projectMinutes": 150,
+    "assessmentMinutes": 90,
+    "retestMinutes": 75,
+    "routeOrder": 15,
+    "estimatedTotalMinutes": 420,
+    "estimatedCoreMinutes": 105,
+    "learningActivities": [
+      {
+        "id": "reading",
+        "type": "READING",
+        "label": "资料阅读与笔记",
+        "minutes": 105,
+        "optional": false,
+        "task": "读完列出的资料，记录核心概念、仍有疑问的地方，以及至少一个边界或反例。",
+        "input": "学习资料：《中文主讲义：VUE-01 Vite、SFC 与项目结构》、《Vue Quick Start》、《Single-File Components》、《Vite 为什么选择 Vite》。",
+        "outputRequirements": [
+          "知识点原始笔记",
+          "至少一个资料定位",
+          "至少一个边界、反例或疑问"
+        ],
+        "completionCriteria": [
+          "由你确认资料已经阅读",
+          "原始笔记已保存；系统不会用 AI 稿覆盖原文"
+        ],
+        "deliveryMode": "READ_ONLY",
+        "workspaceMode": null,
+        "language": null,
+        "starterCode": null,
+        "submissionTemplate": null,
+        "materialReferences": [
+          {
+            "title": "中文主讲义：VUE-01 Vite、SFC 与项目结构",
+            "url": "/knowledge/materials/vue-01-vite-sfc-project-structure.md/vue-01",
+            "locator": "打开后定位到“vue 01”章节",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vue Quick Start",
+            "url": "https://cn.vuejs.org/guide/quick-start.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Single-File Components",
+            "url": "https://cn.vuejs.org/guide/scaling-up/sfc.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vite 为什么选择 Vite",
+            "url": "https://cn.vite.dev/guide/why",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          }
+        ],
+        "failureFixture": null,
+        "verificationChecklist": [],
+        "vetoItems": []
+      },
+      {
+        "id": "strict-practice@framework-entry-v2",
+        "type": "GUIDED_PRACTICE",
+        "label": "站内编码验证",
+        "minutes": 315,
+        "optional": true,
+        "task": "按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2",
+        "input": "首考题 3（最小产出）原文：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2\n\n首考题 4（受限排错）原文：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归\n\n仅可依据 《中文主讲义：VUE-01 Vite、SFC 与项目结构》、《Vue Quick Start》、《Single-File Components》、《Vite 为什么选择 Vite》 和本点通过标准完成；不得用通用 PASS/CONTROLLED 模板替换题目给定的输入、预期或异常。",
+        "outputRequirements": [
+          "题 3 的可执行实现",
+          "固定输入、预期、实际输出与断言",
+          "题 4 的异常、根因、修复和回归证据"
+        ],
+        "completionCriteria": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "deliveryMode": "WORKSPACE",
+        "workspaceMode": "CODE",
+        "language": "javascript",
+        "starterCode": "// VUE-01 Vite 脚手架、SFC 与项目结构\n// 首考题 3 原文：按中文讲义“建立可复现的练习工程”和“固定入口练习与单变量排错”实现无 Router 的双资料卡片项目。固定输入为两张卡片 25/30 分钟、@/ReadingCard.vue、VITE_API_BASE=/api、提示开关 false；提交全部源码、项目树、dev/typecheck/build/preview 日志和产物清单；断言第一张展开不影响第二张、公开配置显示 /api 与 false、卡片 scoped 标题不命中外部 h2\n// 首考题 4 原文：分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归\n// 把题目给定的具体 fixture 写入 fixedInput；不要把预期替换成通用 PASS/CONTROLLED。\nconst fixedInput = Object.freeze({ /* 填写首考题 3 的固定输入 */ });\nconst expected = Object.freeze({ /* 填写题目要求的具体预期 */ });\n\nfunction solve(input) {\n  // 根据学习资料实现首考题 3。\n  throw new Error('TODO');\n}\n\nlet actual;\ntry {\n  actual = solve(fixedInput);\n  console.log({ fixedInput, expected, actual });\n  console.assert(JSON.stringify(actual) === JSON.stringify(expected), '实际输出与首考题 3 的具体预期不一致');\n} catch (error) {\n  console.error({ fixedInput, expected, error: String(error) });\n  throw error;\n}\n",
+        "submissionTemplate": "# 首考题 3：实现说明\n\n# 固定输入\n\n# 预期输出\n\n# 实际输出\n\n# 首考题 4：异常、根因与修复\n\n# 资料机制映射\n\n# 验证证据\n",
+        "materialReferences": [
+          {
+            "title": "中文主讲义：VUE-01 Vite、SFC 与项目结构",
+            "url": "/knowledge/materials/vue-01-vite-sfc-project-structure.md/vue-01",
+            "locator": "打开后定位到“vue 01”章节",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vue Quick Start",
+            "url": "https://cn.vuejs.org/guide/quick-start.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Single-File Components",
+            "url": "https://cn.vuejs.org/guide/scaling-up/sfc.html",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          },
+          {
+            "title": "Vite 为什么选择 Vite",
+            "url": "https://cn.vite.dev/guide/why",
+            "locator": "打开后使用页面查找定位“Vite 脚手架”相关段落",
+            "focus": "Vite 脚手架、SFC、项目结构"
+          }
+        ],
+        "failureFixture": "分别注入并恢复正文表格四项故障：只删除 Vite 别名、删除公开地址变量、删除 scoped、mount 改为 #missing；每项提交失败证据、可证伪假设、最小修复和回归",
+        "verificationChecklist": [
+          "首考题 3 和首考题 4 原文均已绑定到本练习",
+          "提交模板的每个固定栏目都已填写",
+          "固定输入、预期、实际和验证证据均可定位",
+          "代码保留固定输入、预期输出、实际输出和断言",
+          "题 4 异常有根因、修复与回归证据",
+          "代码包含固定输入、expected、actual 与 console.assert，并已成功执行"
+        ],
+        "vetoItems": [
+          "未保留首考题 3 的具体产出或首考题 4 的受限排错证据",
+          "以资料外经验、空泛描述或预设 PASS/CONTROLLED 状态替代题目要求"
+        ]
+      }
+    ],
+    "challengeProfile": "CODING"
+  }
+}

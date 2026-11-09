@@ -11,6 +11,7 @@ declare module 'vue' {
     AppIcon: typeof import('./components/AppIcon.vue')['default']
     AsyncPilotRoute: typeof import('./components/AsyncPilotRoute.vue')['default']
     BaseDialog: typeof import('./components/BaseDialog.vue')['default']
+    FrameworkEntry: typeof import('./components/FrameworkEntry.vue')['default']
     MarkdownRenderer: typeof import('./components/MarkdownRenderer.vue')['default']
     PracticeWorkspace: typeof import('./components/PracticeWorkspace.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

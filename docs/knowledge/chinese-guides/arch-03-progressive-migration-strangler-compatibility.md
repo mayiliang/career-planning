@@ -206,5 +206,5 @@ try { write('op-1', 'o-demo', '不同参数'); } catch (error) {
 
 - [Azure Strangler Fig](https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig)：核对渐进替换入口、适用条件及临时架构成本。
 - [Azure 防腐层](https://learn.microsoft.com/en-us/azure/architecture/patterns/anti-corruption-layer)：进一步理解模型转换与边界代价。
-- [AWS 事务外盒](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html)：查本地事务、事件投递和消费者幂等之间的职责；不能从模式名称推导端到端恰好一次。
+- [AWS 事务外盒官方示例与说明](https://github.com/aws-samples/transactional-outbox-pattern)：阅读 README 的 Intent、Issues and Considerations 与 Implementation，核对双写一致性、重复消息和消费者幂等的职责；不能从模式名称推导端到端恰好一次。此来源于 2026-11-10 复核，替代当前环境返回 404 的原文档入口；本篇只要求阅读说明，无需部署云资源。
 - [React 渐进接入](https://react.dev/learn/add-react-to-an-existing-project)：查看子路由和局部界面的实际接入方式，业务数据迁移仍需独立设计。
