@@ -1,0 +1,19 @@
+react: typecheck（预期通过）
+react: build（预期通过）
+vue: typecheck（预期通过）
+vue: build（预期通过）
+react: 启动 dev :42742
+vue: 启动 dev :42743
+vue: 启动 preview :42744
+vue: typecheck（预期通过）
+vue: build（预期通过）
+vue: typecheck（预期通过）
+vue: build（预期失败）
+vue: 启动 dev :42743
+vue: build（预期通过）
+vue: 启动 dev :42743
+vue: typecheck（预期失败）
+vue: build（预期通过）
+vue: typecheck（预期通过）
+vue: build（预期通过）
+正文抽取工程：类型、生产、组件行为、单变量变式与代表性错误全部通过

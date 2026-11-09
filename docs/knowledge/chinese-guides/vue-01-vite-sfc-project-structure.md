@@ -78,7 +78,7 @@
 }
 ```
 
-`vite.config.ts` 使用下方“别名需要让构建工具和类型工具指向同一处”的完整配置；`index.html`、`src/main.ts` 使用入口章节文件；`src/ReadingCard.vue` 和 `src/App.vue` 使用“两张独立的资料卡片”版本。根目录 `.env` 写入以下公开练习值，供开发和构建共同使用：
+`vite.config.ts` 使用下方“别名需要让构建工具和类型工具指向同一处”的完整配置；`index.html`、`src/main.ts` 使用入口章节文件；`src/ReadingCard.vue` 和 `src/App.vue` 使用“两张独立的资料卡片”版本。根目录只创建 `.env` 这一份环境文件，写入以下公开练习值，供开发和构建共同使用。不要创建 `.env.local` 或模式文件，也不要在启动命令的环境中设置这两个变量，避免覆盖练习值：
 
 ```dotenv example=vue01-env runtime=project file=.env
 VITE_API_BASE=/api
@@ -297,12 +297,7 @@ Vite 配置运行在工具环境，可以导入 `node:url`；浏览器里的组�
 
 API 的公开地址、显示开关等可以随环境变化。Vite 通过 `import.meta.env` 提供这些信息，自定义变量默认需要 `VITE_` 前缀才暴露给客户端；前缀也可以由项目配置调整。
 
-在项目根目录 `.env.development` 中写：
-
-```dotenv
-VITE_API_BASE=/api
-VITE_SHOW_READING_TIPS=false
-```
+继续使用建立工程时的根目录 `.env`，其中 `VITE_API_BASE=/api`、`VITE_SHOW_READING_TIPS=false`；此处不新增环境文件。
 
 创建一个可在组件中导入的 `src/public-config.ts`：
 
@@ -322,9 +317,11 @@ export const publicConfig = {
 
 自定义环境变量读到的是字符串。因此 `Boolean('false')` 仍是 true，不能用它解释关闭开关。内置 `DEV`、`PROD`、`SSR` 等变量有各自类型，不要把“所有 env 都是字符串”当成通用规则。
 
-更改 env 文件后通常需要重启开发服务。生产值一般在构建时替换进产物，部署后仅修改服务器同名环境变量，不会自动改写已经生成的静态文件。如果产品需要部署时动态配置，就要另外设计明确的加载入口。
+更改 `.env` 后停止并重新启动开发服务。生产值一般在构建时替换进产物，部署后仅修改服务器同名环境变量，不会自动改写已经生成的静态文件。如果产品需要部署时动态配置，就要另外设计明确的加载入口。
 
 VITE 前缀表示“允许进入客户端”，并不表示加密。数据库密码和服务端密钥不应出现在这些配置中；能在浏览器脚本或请求中读取的地址和开关，应按公开信息对待。
+
+选读：模式文件可覆盖通用文件。若在另一个独立实验目录创建 `.env.development` 并设置 `VITE_API_BASE=/dev-api`，默认开发模式会优先使用它；默认生产构建仍使用 `.env` 中的 `/api`。此时只删 `.env` 的地址不会让开发模式报缺失错误。本篇必做工程不加入这个文件；如果之前已加入，应先移除额外环境文件并重启，再做下方单变量故障。已有进程环境中的同名变量优先级更高。规则见 [Vite 环境文件说明](https://cn.vite.dev/guide/env-and-mode#env-files)（2026-11-10 核验，在线文档未标补丁版本；本篇实测 Vite 6.4.4）。
 
 mode 与生产优化也别混在一起：`vite build --mode staging` 可以读取 staging 配置，但 build 仍是在做生产构建。命令、mode、环境文件与最终值需要一起看，不能只凭文件名判断行为。
 
@@ -413,7 +410,7 @@ export default defineConfig({
 | 固定故障 | 可观察结果及证伪动作 | 最小修复 |
 | --- | --- | --- |
 | 只删除 Vite resolve.alias，保留 TS paths | typecheck 通过而 build 无法解析 @/ReadingCard.vue；相对路径能构建，证伪组件语法错误 | 恢复 Vite 别名 |
-| 从 .env 删除 VITE_API_BASE，重启 dev 并重建 | public-config 抛出缺少公开地址，入口模块仍成功加载，证伪 mount ID 错误 | 恢复公开变量；绝不填写密钥 |
+| 从唯一的 .env 删除 VITE_API_BASE，停止并重启 dev；另运行 build 后启动 preview | 开发页与生产预览页均抛出“缺少公开 API 地址 VITE_API_BASE”，卡片未挂载；build 本身仍成功，HTML 与模块请求成功但模块求值抛错，证伪 mount ID 错误 | 恢复公开变量，再重启 dev、重新 build 并预览，两处均恢复 /api 与 false；绝不填写密钥 |
 | 删除卡片 style 的 scoped | 卡片外 h2 也被命中，DevTools 中规则没有作用域限制 | 恢复 scoped；不靠叠加 !important |
 | 将 main.ts 的 mount 改成 #missing | 容器不存在，页面空白；HTML 中 #app 存在，证伪 SFC 没有导出 | 改回 #app |
 

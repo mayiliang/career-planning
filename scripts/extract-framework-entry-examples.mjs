@@ -1,4 +1,4 @@
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 
 // 只从实际正文提取固定文件，避免测试副本与学习者看到的代码分叉。
@@ -8,6 +8,16 @@ for (const [framework, guide, ids] of [
 ]) {
   const markdown = readFileSync(resolve('docs/knowledge/chinese-guides', guide), 'utf8');
   const blocks = [...markdown.matchAll(/```\w+ example=([^\s]+)[^\n]*?file=([^\s]+)\n([\s\S]*?)\n```/g)];
+  // 环境文件全部来自正文命名块；拒绝旧实验残留，避免模式覆盖悄悄改变故障预期。
+  const envBlocks = blocks.filter(block => /^\.env(?:\.|$)/.test(block[2]));
+  const root = resolve('tmp/framework-entry-examples', framework);
+  const expectedEnv = envBlocks.map(block => block[2]).sort();
+  if (framework === 'vue' && JSON.stringify(expectedEnv) !== '[".env"]') throw new Error('Vue 固定工程必须只有 .env；修改协议时需同步验证');
+  if (existsSync(root)) {
+    const unexpected = readdirSync(root).filter(file => /^\.env(?:\.|$)/.test(file) && !expectedEnv.includes(file));
+    if (unexpected.length) throw new Error(`请先检查并移走实验残留环境文件：${unexpected.join(', ')}`);
+  }
+  for (const block of envBlocks) if (!ids.includes(block[1])) ids.push(block[1]);
   for (const id of ids) {
     const match = blocks.find(block => block[1] === id);
     if (!match) throw new Error(`缺少完整文件 ${id}`);

@@ -1,0 +1,19 @@
+$ pnpm --filter @career-atlas/content-parser content:check && pnpm --filter @career-atlas/web materials:check && pnpm --filter @career-atlas/web pronunciation:check
+$ vitest run src/parser/content.test.ts
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/packages/content-parser
+
+ ✓ src/parser/content.test.ts (14 tests) 1240ms
+   ✓ 知识资源审计防线 > 解析 docs/knowledge 中每一条本地 Markdown 资源与锚点 700ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  00:56:27
+   Duration  2.07s (transform 180ms, setup 25ms, collect 182ms, tests 1.24s, environment 0ms, prepare 173ms)
+
+$ node scripts/check-learning-materials.mjs && node scripts/check-curated-materials.mjs
+B01～B35 学习资料结构检查通过：160 份资料，209 条直接前置，无环且无传递性重复。
+TypeScript 5.7.3：122 个正文示例的严格类型检查通过，预期错误注释有效。
+B01–B35 资料检查通过：149 篇主讲义，1621 个唯一概念入口，559 条知识连接，857 个正文内部引用，388 个通用示例输出一致（v22.14.0）；另登记 25 个浏览器示例、317 个页面、项目或终端片段，需按正文场景另行核对。
+$ node scripts/check-pronunciations.mjs
+英文发音检查通过：B01 12 份资料、39 个关键术语；B02 7 份资料、44 个关键术语；B03 4 份资料、31 个关键术语；B04 5 份资料、31 个关键术语；B05 4 份资料、21 个关键术语；B06 4 份资料、22 个关键术语；B07 4 份资料、22 个关键术语；B08 5 份资料、31 个关键术语；B09 4 份资料、35 个关键术语；B10 4 份资料、29 个关键术语；B11 4 份资料、28 个关键术语；B12 5 份资料、23 个关键术语；B13 4 份资料、28 个关键术语；B14 4 份资料、25 个关键术语；B15 4 份资料、47 个关键术语；B16 5 份资料、39 个关键术语；B17 4 份资料、30 个关键术语；B18 4 份资料、18 个关键术语；B19 4 份资料、25 个关键术语；B20 5 份资料、16 个关键术语；B21 4 份资料、16 个关键术语；B22 4 份资料、17 个关键术语；B23 4 份资料、18 个关键术语；B24 5 份资料、24 个关键术语；B25 4 份资料、34 个关键术语；B26 4 份资料、31 个关键术语；B27 4 份资料、16 个关键术语；B28 5 份资料、20 个关键术语；B29 4 份资料、16 个关键术语；B30 4 份资料、16 个关键术语；B31 4 份资料、16 个关键术语；B32 5 份资料、20 个关键术语；B33 4 份资料、16 个关键术语；B34 4 份资料、16 个关键术语；B35 5 份资料、20 个关键术语，音频与清单一致。

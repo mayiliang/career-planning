@@ -56,6 +56,15 @@ describe('框架入口合同', () => {
         expect(section.truncated).toBe(false);
         expect((section.content.match(/^```/gm) ?? []).length % 2).toBe(0);
       }
+      if (node.code === 'VUE-01') {
+        // 按完整机制节核对发送合同，不能只凭关键词命中宣称覆盖。
+        const environment = coverage.sections.find(section => section.content.includes('const apiBase = import.meta.env'))!;
+        const faultProtocol = coverage.sections.find(section => section.content.includes('| 固定故障 |'))!;
+        expect(environment.content).toContain('此处不新增环境文件');
+        expect(environment.content).toContain('此时只删 `.env` 的地址不会让开发模式报缺失错误');
+        expect(faultProtocol.content).toContain('从唯一的 .env 删除 VITE_API_BASE');
+        expect(faultProtocol.content).toContain('开发页与生产预览页均抛出');
+      }
       expect(buildAsyncPilotContext(node.code, '')?.complete).toBe(false);
       const partial = buildAsyncPilotContext(node.code, point.studyMaterialMd, 20)!;
       const source = vi.spyOn(contextModule, 'buildAsyncPilotContext').mockReturnValue(partial);

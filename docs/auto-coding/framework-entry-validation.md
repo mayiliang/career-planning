@@ -84,3 +84,19 @@ Vue 验证开发与生产预览都显示两张独立卡片；公开配置 /api �
 - `PATH="$PWD/tmp/framework-bin:$PATH" pnpm test:e2e`：**77 项全部通过，0 跳过，耗时 7.0 分钟**，覆盖两处原失败、上轮跳过的 13 项、异步链和两个框架入口。[完整日志](evidence/framework-entry/e2e-fix.txt)。Chrome 156.0.8078.76，沿用 globalSetup 的独立 DATA_DIR、42730/42731 端口、禁用真实配置与自动备份；沙箱内 Chrome 启动失败后经自动审批使用隔离临时 profile 运行。
 - `pnpm --filter @career-atlas/web lint`、`pnpm --filter @career-atlas/web exec vue-tsc --noEmit`、`pnpm --filter @career-atlas/web test`（51 项）、`pnpm --filter @career-atlas/web build` 均退出 0；`git diff --check` 通过。[lint](evidence/framework-entry/lint-fix.txt)、[类型检查](evidence/framework-entry/typecheck-fix.txt)、[单测](evidence/framework-entry/unit-fix.txt)、[构建](evidence/framework-entry/build-fix.txt)。构建保留已有大 chunk 提示，体积预算通过。
 - 已打开本轮 [B01 桌面截图](evidence/framework-entry/b01-return-fix-desktop.png)（1440×1000）复核正文、目录与阅读入口显示；截图不用于证明滚动坐标，坐标和键盘定位以浏览器断言为据。本轮未修改学习正文或服务端，未重跑已由调度器通过的内容、外链及服务端单测；未调用真实模型。独立产品验收仍由调度器后续会话完成。
+
+### 2026-11-10：产品验收返工——Vue 环境协议
+
+本节替代首次记录中“删公开地址只测生产页”的验证范围。正文必做工程现在仅创建 `.env`；公开配置章节复用该文件，模式覆盖只在另一个目录选读。删除地址后，开发服务停止再启动；生产构建成功但预览页模块求值失败。恢复文件后重启开发服务、重新构建，两个页面均恢复 `/api` 与 `false`。此前 `.env.development` 的必做说明已移除，历史合同快照和学习记录不改写。
+
+- 官方依据：[Vite 环境文件优先级](https://cn.vite.dev/guide/env-and-mode#env-files)，2026-11-10 实际打开核验。在线文档未标补丁；实际版本仍为 Vite 6.4.4、Vue 3.5.43、TypeScript 5.7.3、Node v22.14.0，Chrome 156.0.8078.76，锁文件未变。
+- `node scripts/extract-framework-entry-examples.mjs` 通过；枚举所有命名环境文件，明确只允许 `.env`。另注入 `.env.development` 反例，确认提取拒绝后移除，再提取通过：[反例记录](evidence/framework-entry/env-extraction.txt)。不自动删除学习者未知文件。
+- `node scripts/verify-framework-entry-examples.mjs` 退出 0：[运行日志](evidence/framework-entry/env-examples.txt)、[结构化结果](evidence/framework-entry/examples-results.json)。两种模式均捕获精确运行时错误“缺少公开 API 地址 VITE_API_BASE”，卡片数为 0；恢复后两种模式均通过原有卡片、实例隔离、配置与样式断言。React 序列、纯度及其他 Vue 错误断言全部保留并通过。缺失页面截图：[开发](evidence/framework-entry/vue-env-missing-development.png)、[生产](evidence/framework-entry/vue-env-missing-production.png)（1280×720；空页面仅补充证据，错误以 pageerror 为准）。
+- 示例服务仍仅使用 42742/42743/42744，临时 Chrome profile。沙箱内 Chrome 启动被 OS 拒绝，经自动审批在相同隔离参数下完成。脚本补充阶段日志、已被信号终止的子进程判断和 10 秒退出期限，防止重复清理无限等待。
+- `pnpm --filter @career-atlas/server exec vitest run src/services/framework-entry.test.ts`：5 项通过，覆盖上下文、缺失降级、旧记录与重复导入：[单测日志](evidence/framework-entry/env-unit.txt)。沿用 test/setup.ts 的工作副本独立 DATA_DIR、禁用自动备份与真实配置。
+- 已重新捕获 [Vue 练习请求](evidence/framework-entry/VUE-01-practice-request.json) 和 [Vue 挑战请求](evidence/framework-entry/VUE-01-challenge-request.json)。12 个完整机制节共 13,067 字符，小于 24,000 预算；请求保留来源和完整性标记。断言将实际发送的完整节与正文逐字比对，并检查唯一文件、模式覆盖边界和双模式故障协议。捕获在模拟 fetch / Provider 边界结束，未调用真实模型，不能据此宣称语义评分正确。
+- `pnpm content:check`、`pnpm lint` 均通过：[内容](evidence/framework-entry/env-content.txt)、[静态](evidence/framework-entry/env-lint.txt)。`pnpm content:links` 常规模式退出 0：1528 个本地链接无失效，914 个远程链接无明确失效，31 个暂无法确认：[完整地址及结果](evidence/framework-entry/env-links.txt)。网络未确认不算已验证可访问。
+- `pnpm --filter @career-atlas/web exec playwright test e2e/framework-entry.spec.ts e2e/async-pilot.spec.ts e2e/async-navigation.spec.ts`：15 项通过，无跳过，[日志](evidence/framework-entry/env-e2e.txt)。使用 globalSetup 的隔离数据库及 42730/42731，禁用真实配置/备份。本轮刷新 Vue 桌面、移动及浏览器状态证据；已打开桌面截图复核目录和正文显示。此处未修改布局，不把截图当作故障结果的证明。
+- 两份历史日志仅去掉末尾额外空行，脚本去掉尾随空格。`git diff --check 0dafd46` 退出 0，检查的是基线到本轮工作树的累计差异；此前 `git diff --check 0dafd46 HEAD` 在旧交付 8fa0917 上退出 2，属实。本代理禁止提交，因此新交付 SHA 尚不存在；调度器提交后应再运行 `git diff --check 0dafd46 <交付SHA>`，不能将旧交付检查写成已通过。
+
+本轮没有运行全仓库 test/build 或全套 77 项 E2E；运行的是上述受影响检查与独立工程类型/生产构建。全仓库复验及最终产品验收由调度器继续执行。没有更改应用运行逻辑、全局路线或 automation/，也没有验证真实模型输出与学习效果。

@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
 const require = createRequire(resolve('apps/web/package.json'));
@@ -9,19 +9,26 @@ const evidence = resolve('tmp/framework-entry-evidence');
 mkdirSync(evidence, { recursive: true });
 const children = [];
 const results = [];
+// 不读取个人配置；固定工程拒绝继承同名公开变量及 NODE_ENV，保证默认模式可复现。
+const fixtureEnv = { ...process.env };
+for (const key of Object.keys(fixtureEnv)) if (key.startsWith('VITE_') || key === 'NODE_ENV') delete fixtureEnv[key];
+assert.deepEqual(readdirSync(resolve('tmp/framework-entry-examples/vue')).filter(file => /^\.env(?:\.|$)/.test(file)).sort(), ['.env']);
+results.push({ environmentFiles: ['.env'], modes: ['development', 'production'] });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 let page = await browser.newPage();
 const logs = [];
 page.on('console', msg => logs.push(msg.text()));
 const project = framework => resolve('tmp/framework-entry-examples', framework);
 function command(framework, script, success = true) {
-  const result = spawnSync('npm', ['run', script], { cwd: project(framework), encoding: 'utf8' });
+  console.log(`${framework}: ${script}（预期${success ? '通过' : '失败'}）`);
+  const result = spawnSync('npm', ['run', script], { cwd: project(framework), encoding: 'utf8', env: fixtureEnv });
   results.push({ framework, script, expectedSuccess: success, status: result.status, output: result.stdout + result.stderr });
   assert.equal(result.status === 0, success, `${framework} ${script}: ${result.stdout}${result.stderr}`);
 }
 async function start(framework, port, mode = 'dev') {
+  console.log(`${framework}: 启动 ${mode} :${port}`);
   const cwd = project(framework);
-  const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', ...(mode === 'preview' ? ['preview'] : []), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd, stdio: 'pipe' });
+  const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', ...(mode === 'preview' ? ['preview'] : []), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd, stdio: 'pipe', env: fixtureEnv });
   children.push(child);
   let output = '';
   child.stdout.on('data', data => { output += data; }); child.stderr.on('data', data => { output += data; });
@@ -33,8 +40,12 @@ async function start(framework, port, mode = 'dev') {
   throw new Error(`启动失败 ${output}`);
 }
 async function stop(child) {
-  if (child.exitCode !== null) return;
-  await new Promise(r => { child.once('exit', r); child.kill(); });
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  await new Promise((done, reject) => {
+    const timeout = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`服务 ${child.pid} 未正常退出`)); }, 10000);
+    child.once('exit', () => { clearTimeout(timeout); done(); });
+    child.kill();
+  });
 }
 try {
   for (const framework of ['react', 'vue']) { command(framework, 'typecheck'); command(framework, 'build'); }
@@ -106,7 +117,7 @@ try {
   try {
     writeFileSync(cardFile, cardSource.replace('<style scoped>', '<style>'));
     await page.goto(vueUrl); await page.getByRole('heading', { name: '卡片外标题' }).waitFor();
-    await page.waitForFunction(() => [...document.querySelectorAll('h2')].some(el => el.textContent === '卡片外标题' && getComputedStyle(el).color === 'rgb(20, 100, 60)')); 
+    await page.waitForFunction(() => [...document.querySelectorAll('h2')].some(el => el.textContent === '卡片外标题' && getComputedStyle(el).color === 'rgb(20, 100, 60)'));
     results.push({ fault: '删除 scoped', observed: '外部标题变绿' });
   } finally { writeFileSync(cardFile, cardSource); }
   const mainFile = resolve(project('vue'), 'src/main.ts'); const main = readFileSync(mainFile, 'utf8');
@@ -121,19 +132,34 @@ try {
   finally { writeFileSync(configFile, config); }
   await page.close();
   await stop(children[1]);
-  page = await browser.newPage(); page.on('console', msg => logs.push(msg.text())); // 后续只看生产产物，避免 Vite 配置重启触发旧页 reload 干扰导航。
-  // 独立生产构建验证缺失配置，不依赖开发服务器是否保留旧 env。
+  page = await browser.newPage(); page.on('console', msg => logs.push(msg.text()));
   const envFile = resolve(project('vue'), '.env'); const env = readFileSync(envFile, 'utf8');
+  async function missingConfig(url, mode) {
+    const error = page.waitForEvent('pageerror', { predicate: e => e.message.includes('缺少公开 API 地址 VITE_API_BASE') });
+    await page.goto(url);
+    const observed = (await error).message;
+    assert.equal(await page.locator('article').count(), 0);
+    await page.screenshot({ path: resolve(evidence, `vue-env-missing-${mode}.png`) });
+    results.push({ fault: '删除公开地址', mode, error: observed, cards: 0 });
+  }
+  let restartedDev;
   try {
-    writeFileSync(envFile, 'VITE_SHOW_READING_TIPS=false\n'); command('vue', 'build');
-    const errors = []; const handler = e => errors.push(e.message); page.on('pageerror', handler);
-    await page.goto(preview); await page.waitForTimeout(300);
-    assert.ok(errors.some(e => e.includes('缺少公开 API 地址'))); page.off('pageerror', handler);
-    results.push({ fault: '删除公开地址', errors });
-  } finally { writeFileSync(envFile, env); }
+    writeFileSync(envFile, env.replace(/^VITE_API_BASE=.*\n/m, ''));
+    const development = await start('vue', 42743);
+    restartedDev = children.at(-1);
+    await missingConfig(development, 'development');
+    await page.close(); await stop(restartedDev);
+    page = await browser.newPage();
+    command('vue', 'build');
+    await missingConfig(preview, 'production');
+  } finally { writeFileSync(envFile, env); if (restartedDev) await stop(restartedDev); }
+  const restoredDev = await start('vue', 42743);
+  await vueNormal(restoredDev);
+  results.push({ restored: 'development', apiBase: '/api', showReadingTips: false });
   try { writeFileSync(vueApp, vueSource.replace(':minutes="30"', 'minutes="很多"')); command('vue', 'typecheck', false); command('vue', 'build'); }
   finally { writeFileSync(vueApp, vueSource); }
   command('vue', 'typecheck'); command('vue', 'build'); await vueNormal(preview);
+  results.push({ restored: 'production', apiBase: '/api', showReadingTips: false });
   writeFileSync(resolve(evidence, 'examples-results.json'), JSON.stringify({ browser: browser.version(), node: process.version, results }, null, 2));
   console.log('正文抽取工程：类型、生产、组件行为、单变量变式与代表性错误全部通过');
 } finally { await browser.close(); for (const child of children) await stop(child); }
