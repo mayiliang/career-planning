@@ -1,0 +1,8 @@
+2026-11-11 验收补证；运行 node docs/auto-coding/evidence/framework-foundation-route/verify-contract.mjs
+合同模型：15 案例通过，14 点无环/可解析/无跨框架硬边；2 份文档的 51 个本地文件链接存在且已纳入 Git 索引。短文另按阅读辅助检查，不伪造知识 ID。
+
+负例：忽略文件被拒绝（链接目标未纳入 Git 索引）。
+负例：未跟踪文件被拒绝（链接目标未纳入 Git 索引）。
+负例：不存在文件被拒绝（链接目标不存在）。
+contract-check 日志与 .txt 副本逐字节一致；capture 仅移除末尾空行，忽略末尾换行后逐字节一致。
+负例通过临时追加证据 README 链接执行，结束后恢复原文并删除临时文件。

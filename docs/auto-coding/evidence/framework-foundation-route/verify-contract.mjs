@@ -1,7 +1,8 @@
 // 研究方案的参考模型，不导入生产规划器；通过只表示合同案例自洽。
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,readdirSync,existsSync} from 'node:fs';
-import {resolve,dirname} from 'node:path';
+import {resolve,dirname,relative,sep} from 'node:path';
+import {execFileSync} from 'node:child_process';
 const root='docs/auto-coding/evidence/framework-foundation-route';
 const graph={
  'JS-01':[], 'JS-03':[], 'WEB-01':[], 'JS-04':['JS-01'], 'JS-05':['JS-04'],
@@ -50,7 +51,19 @@ const cases=[
  ['未审焦点仍可继续',{choice:'VUE',focus:'VUE-07'},{outcome:'STEP',code:'VUE-07',blocker:null}]
 ].map(([name,input,expected])=>{const before=JSON.stringify(input);const actual=plan(input);assert.deepEqual(actual,expected,name);assert.equal(JSON.stringify(input),before);return {name,input,expected,actual};});
 writeFileSync(root+'/route-cases.json',JSON.stringify({scope:'参考模型；不证明生产实现。STEP 的 kind、reading blockers、focus 元数据尚待生产测试。',graph,readingEdges:[['PREJS-04','PREJS-07'],['PREJS-07','JS-04']],cases},null,2)+'\n');
-const doc='docs/auto-coding/framework-foundation-route-contract.md';
-const links=[...readFileSync(doc,'utf8').matchAll(/\]\(([^)]+)\)/g)].map(m=>m[1]).filter(x=>!/^https?:/.test(x));
-for(const link of links)assert(existsSync(resolve(dirname(doc),link.split('#')[0])),link);
-console.log(`合同模型：${cases.length} 案例通过，${Object.keys(graph).length} 点无环/可解析/无跨框架硬边；${links.length} 本地文件链接有效。短文另按阅读辅助检查，不伪造知识 ID。`);
+// 同时核对工作区存在性和 Git 索引，防止被忽略的本地证据造成假通过。
+const repository=execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();
+const tracked=new Set(execFileSync('git',['ls-files','--cached','-z'],{cwd:repository,encoding:'utf8'}).split('\0').filter(Boolean));
+const docs=['docs/auto-coding/framework-foundation-route-contract.md',root+'/README.md'];
+let linkCount=0;
+for(const doc of docs){
+ const links=[...readFileSync(doc,'utf8').matchAll(/\]\(([^)]+)\)/g)].map(m=>m[1]).filter(x=>!/^https?:/.test(x));
+ for(const link of links){
+  const target=resolve(dirname(doc),decodeURIComponent(link.split('#')[0]));
+  const gitPath=relative(repository,target).split(sep).join('/');
+  assert(existsSync(target),`${doc}: 链接目标不存在：${link}`);
+  assert(tracked.has(gitPath),`${doc}: 链接目标未纳入 Git 索引：${link}`);
+  linkCount++;
+ }
+}
+console.log(`合同模型：${cases.length} 案例通过，${Object.keys(graph).length} 点无环/可解析/无跨框架硬边；${docs.length} 份文档的 ${linkCount} 个本地文件链接存在且已纳入 Git 索引。短文另按阅读辅助检查，不伪造知识 ID。`);

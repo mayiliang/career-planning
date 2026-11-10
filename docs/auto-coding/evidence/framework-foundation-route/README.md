@@ -6,11 +6,11 @@
 
 | 命令/检查 | 结果与范围 |
 | --- | --- |
-| `node node_modules/vitest/vitest.mjs run --config docs/auto-coding/evidence/framework-foundation-route/capture.config.ts` | [capture.log](capture.log)：1 个采集测试通过，实际 import/练习服务/评分服务；三个练习 fetch 被拦截，三个挑战在 FakeProvider.grade 入口捕获后主动停止，无模型调用 |
+| `node node_modules/vitest/vitest.mjs run --config docs/auto-coding/evidence/framework-foundation-route/capture.config.ts` | [capture.txt](capture.txt)：1 个采集测试通过，实际 import/练习服务/评分服务；三个练习 fetch 被拦截，三个挑战在 FakeProvider.grade 入口捕获后主动停止，无模型调用 |
 | `node docs/auto-coding/evidence/framework-foundation-route/examples.mjs` | [examples.json](examples.json)：Vue 3.5.43 / Node 22.14.0，13 个正文独立 JS 片段全部输出等于原注释；不含两个 SFC、真实地图或 React 组件 |
 | `node node_modules/typescript/bin/tsc -p apps/server/tsconfig.json` | exit 0，为启动本轮工作副本服务编译；不是完整产品测试或课程验证 |
 | `node docs/auto-coding/evidence/framework-foundation-route/pages.mjs` | [pages.json](pages.json)：Chrome 157.0.8103.40，1440×1000，四个实际页面，另拍分支/阅读导航 |
-| `node docs/auto-coding/evidence/framework-foundation-route/verify-contract.mjs` | [contract-check.log](contract-check.log)：研究方案参考模型的案例/无环/解析/链接检查，不测试生产规划器 |
+| `node docs/auto-coding/evidence/framework-foundation-route/verify-contract.mjs` | [contract-check.txt](contract-check.txt)：研究方案参考模型的案例/无环/解析/链接检查，不测试生产规划器 |
 | `git diff --check` | 交付前执行；无生产代码修改，不运行全套产品测试 |
 
 复现先从仓库根运行。采集器复用 server test/setup.ts，在 `tmp/tests/server-<pid>-<worker>` 创建隔离 SQLite，自动迁移，禁用真实配置与备份。结构占位提交只为抵达发送边界，不是假造学习效果；请求头和 key 不写证据。[read-manifest.json](read-manifest.json) 记录七篇实际全文的 SHA-256 与行数。source-inventory 包含七点实际提取器返回的正文片段，catalog 为对应目录原值。legacy-route-map 为运行时索引快照，材料批次另见 catalog，不能把两者混用。
@@ -52,3 +52,9 @@ node docs/auto-coding/evidence/framework-foundation-route/pages.mjs
 4. 第一次阅读 URL 漏 `.md`，返回“学习资料路径无效”；修正为应用实际格式后重新采集。错误截图未作为正文成功证据保留。
 
 脚本只用于本次研究复现，存放 docs 证据目录，不进入产品测试或运行入口。不修改 automation，不执行 commit/push。
+
+## 2026-11-11 验收补证
+
+`capture.txt`、`contract-check.txt` 保存上一轮本地 `.log` 的真实内容（capture 仅移除文件末尾空行以通过差异格式检查），未重新捕获请求；其中 23 条链接为旧检查范围。新增检查结果见 [contract-check-rework.txt](contract-check-rework.txt)。
+
+校验器现在同时检查研究报告和本索引的本地 Markdown 文件链接：目标必须存在且位于 Git 索引中（已提交或已暂存），未跟踪或被忽略的本地文件不能通过。新增证据需先纳入索引再运行；索引检查不等于已提交，最终提交由调度器完成。外部 URL 与页面锚点不属于本次文件检查范围。

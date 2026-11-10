@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository
+
+ ✓ docs/auto-coding/evidence/framework-foundation-route/capture.test.ts (1 test) 427ms
+   ✓ 捕获七点题源及代表性真实练习/评分输入 425ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  07:48:16
+   Duration  3.12s (transform 757ms, setup 771ms, collect 1.07s, tests 427ms, environment 0ms, prepare 162ms)
