@@ -1,0 +1,174 @@
+{
+  "node": "v22.14.0",
+  "vue": "3.5.43",
+  "scope": "正文全部独立 JS 片段；未运行 SFC、真实地图、IME 或 React 组件",
+  "results": [
+    {
+      "id": "vue02-ref",
+      "expected": [
+        "还有 2 篇",
+        "3",
+        "还有 3 篇"
+      ],
+      "actual": [
+        "还有 2 篇",
+        "3",
+        "还有 3 篇"
+      ]
+    },
+    {
+      "id": "vue02-proxy",
+      "expected": [
+        "false true",
+        "第 1 页",
+        "第 2 页"
+      ],
+      "actual": [
+        "false true",
+        "第 1 页",
+        "第 2 页"
+      ]
+    },
+    {
+      "id": "vue02-raw-write",
+      "expected": [
+        "0",
+        "1 0",
+        "4"
+      ],
+      "actual": [
+        "0",
+        "1 0",
+        "4"
+      ]
+    },
+    {
+      "id": "vue02-ref-replace",
+      "expected": [
+        "表单",
+        "响应式"
+      ],
+      "actual": [
+        "表单",
+        "响应式"
+      ]
+    },
+    {
+      "id": "vue02-reactive-replace",
+      "expected": [
+        "0",
+        "10 0",
+        "1"
+      ],
+      "actual": [
+        "0",
+        "10 0",
+        "1"
+      ]
+    },
+    {
+      "id": "vue02-destructure",
+      "expected": [
+        "0 2 响应式",
+        "3"
+      ],
+      "actual": [
+        "0 2 响应式",
+        "3"
+      ]
+    },
+    {
+      "id": "vue02-unwrapping",
+      "expected": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "actual": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "vue02-conditional-dependencies",
+      "expected": [
+        "暂不显示 1",
+        "暂不显示 1",
+        "响应式 2",
+        "状态快照 3"
+      ],
+      "actual": [
+        "暂不显示 1",
+        "暂不显示 1",
+        "响应式 2",
+        "状态快照 3"
+      ]
+    },
+    {
+      "id": "vue02-writable-computed",
+      "expected": [
+        "1:30",
+        "125 2:05",
+        "请按 小时:分钟 填写，例如 1:30",
+        "125"
+      ],
+      "actual": [
+        "1:30",
+        "125 2:05",
+        "请按 小时:分钟 填写，例如 1:30",
+        "125"
+      ]
+    },
+    {
+      "id": "vue02-shallow-ref",
+      "expected": [
+        "1",
+        "2 1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2 1",
+        "2"
+      ]
+    },
+    {
+      "id": "vue02-mark-raw",
+      "expected": [
+        "true false",
+        "3"
+      ],
+      "actual": [
+        "true false",
+        "3"
+      ]
+    },
+    {
+      "id": "vue02-readonly",
+      "expected": [
+        "true 0",
+        "1"
+      ],
+      "actual": [
+        "true 0",
+        "1"
+      ]
+    },
+    {
+      "id": "vue02-map",
+      "expected": [
+        "1 1",
+        "1 3",
+        "undefined 2"
+      ],
+      "actual": [
+        "1 1",
+        "1 3",
+        "undefined 2"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,366 @@
+{
+  "scope": "参考模型；不证明生产实现。STEP 的 kind、reading blockers、focus 元数据尚待生产测试。",
+  "graph": {
+    "JS-01": [],
+    "JS-03": [],
+    "WEB-01": [],
+    "JS-04": [
+      "JS-01"
+    ],
+    "JS-05": [
+      "JS-04"
+    ],
+    "REACT-01": [
+      "JS-01",
+      "JS-03",
+      "WEB-01"
+    ],
+    "REACT-02": [
+      "REACT-01"
+    ],
+    "REACT-03": [
+      "REACT-02"
+    ],
+    "REACT-04": [
+      "REACT-03",
+      "JS-05"
+    ],
+    "VUE-01": [
+      "WEB-01"
+    ],
+    "VUE-02": [
+      "VUE-01"
+    ],
+    "VUE-03": [
+      "VUE-02"
+    ],
+    "VUE-04": [
+      "VUE-03"
+    ],
+    "VUE-05": [
+      "VUE-04",
+      "JS-05"
+    ]
+  },
+  "readingEdges": [
+    [
+      "PREJS-04",
+      "PREJS-07"
+    ],
+    [
+      "PREJS-07",
+      "JS-04"
+    ]
+  ],
+  "cases": [
+    {
+      "name": "未知偏好不得从历史推断",
+      "input": {
+        "learned": [
+          "REACT-01"
+        ]
+      },
+      "expected": {
+        "outcome": "CHOOSE_FRAMEWORK",
+        "code": null,
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "CHOOSE_FRAMEWORK",
+        "code": null,
+        "blocker": null
+      }
+    },
+    {
+      "name": "React 承接",
+      "input": {
+        "choice": "REACT",
+        "learned": [
+          "JS-01",
+          "JS-03",
+          "WEB-01",
+          "REACT-01"
+        ]
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "REACT-02",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "REACT-02",
+        "blocker": null
+      }
+    },
+    {
+      "name": "Vue 入口",
+      "input": {
+        "choice": "VUE",
+        "learned": [
+          "WEB-01"
+        ]
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "VUE-01",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "VUE-01",
+        "blocker": null
+      }
+    },
+    {
+      "name": "缺基础",
+      "input": {
+        "choice": "REACT",
+        "learned": [
+          "JS-01",
+          "WEB-01"
+        ]
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "JS-03",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "JS-03",
+        "blocker": null
+      }
+    },
+    {
+      "name": "暂缓基础",
+      "input": {
+        "choice": "REACT",
+        "learned": [
+          "JS-01",
+          "WEB-01"
+        ],
+        "deferred": [
+          "JS-03"
+        ]
+      },
+      "expected": {
+        "outcome": "PAUSED_PREREQUISITE",
+        "code": null,
+        "blocker": "JS-03"
+      },
+      "actual": {
+        "outcome": "PAUSED_PREREQUISITE",
+        "code": null,
+        "blocker": "JS-03"
+      }
+    },
+    {
+      "name": "缺目录",
+      "input": {
+        "choice": "VUE",
+        "missing": [
+          "WEB-01"
+        ]
+      },
+      "expected": {
+        "outcome": "DATA_GAP",
+        "code": null,
+        "blocker": "WEB-01"
+      },
+      "actual": {
+        "outcome": "DATA_GAP",
+        "code": null,
+        "blocker": "WEB-01"
+      }
+    },
+    {
+      "name": "切偏好保留焦点",
+      "input": {
+        "choice": "VUE",
+        "focus": "REACT-03"
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "REACT-03",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "REACT-03",
+        "blocker": null
+      }
+    },
+    {
+      "name": "Effect 补异步",
+      "input": {
+        "choice": "REACT",
+        "learned": [
+          "JS-01",
+          "JS-03",
+          "WEB-01",
+          "REACT-01",
+          "REACT-02",
+          "REACT-03"
+        ]
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "JS-04",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "JS-04",
+        "blocker": null
+      }
+    },
+    {
+      "name": "Vue 链完成",
+      "input": {
+        "choice": "VUE",
+        "learned": [
+          "VUE-01",
+          "VUE-02",
+          "VUE-03",
+          "VUE-04",
+          "VUE-05"
+        ]
+      },
+      "expected": {
+        "outcome": "AUDITED_CHAIN_COMPLETE",
+        "code": null,
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "AUDITED_CHAIN_COMPLETE",
+        "code": null,
+        "blocker": null
+      }
+    },
+    {
+      "name": "双框架历史不自动续另一轨",
+      "input": {
+        "choice": "REACT",
+        "learned": [
+          "REACT-01",
+          "REACT-02",
+          "REACT-03",
+          "REACT-04",
+          "VUE-01",
+          "VUE-02"
+        ]
+      },
+      "expected": {
+        "outcome": "AUDITED_CHAIN_COMPLETE",
+        "code": null,
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "AUDITED_CHAIN_COMPLETE",
+        "code": null,
+        "blocker": null
+      }
+    },
+    {
+      "name": "切 Vue 续旧进度",
+      "input": {
+        "choice": "VUE",
+        "learned": [
+          "WEB-01",
+          "VUE-01"
+        ]
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "VUE-02",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "VUE-02",
+        "blocker": null
+      }
+    },
+    {
+      "name": "旧 BRANCH 不隐式恢复",
+      "input": {
+        "choice": "VUE",
+        "learned": [
+          "WEB-01",
+          "VUE-01"
+        ],
+        "deferred": [
+          "VUE-02",
+          "VUE-03"
+        ]
+      },
+      "expected": {
+        "outcome": "PAUSED_POINT",
+        "code": null,
+        "blocker": "VUE-02"
+      },
+      "actual": {
+        "outcome": "PAUSED_POINT",
+        "code": null,
+        "blocker": "VUE-02"
+      }
+    },
+    {
+      "name": "暂不进框架",
+      "input": {
+        "choice": "NONE"
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "JS-01",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "JS-01",
+        "blocker": null
+      }
+    },
+    {
+      "name": "无可推荐",
+      "input": {
+        "choice": "NONE",
+        "learned": [
+          "JS-01",
+          "JS-03",
+          "WEB-01",
+          "JS-04",
+          "JS-05"
+        ]
+      },
+      "expected": {
+        "outcome": "NO_RECOMMENDATION",
+        "code": null,
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "NO_RECOMMENDATION",
+        "code": null,
+        "blocker": null
+      }
+    },
+    {
+      "name": "未审焦点仍可继续",
+      "input": {
+        "choice": "VUE",
+        "focus": "VUE-07"
+      },
+      "expected": {
+        "outcome": "STEP",
+        "code": "VUE-07",
+        "blocker": null
+      },
+      "actual": {
+        "outcome": "STEP",
+        "code": "VUE-07",
+        "blocker": null
+      }
+    }
+  ]
+}

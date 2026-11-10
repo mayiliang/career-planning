@@ -1,0 +1,17 @@
+{
+  "scope": "下一轮真实 SQLite 迁移验收的隔离样本设计，本轮没有执行生产迁移",
+  "samples": [
+    {"id":"dual-progress","before":{"frameworkPreference":null,"points":[{"code":"REACT-01","id":"stable-r1","learningState":"LEARNED","masteryLevel":3},{"code":"VUE-02","id":"stable-v2","learningState":"LEARNING","currentFocus":true}],"routeChoices":[{"source":"REACT-01","target":"VUE-01","state":"SELECTED","scope":"POINT"}]},"expected":{"frameworkChoice":"UNDECIDED","revision":0,"preserve":"全部旧字段、ID、routeChoices、焦点逐项相等"}},
+    {"id":"old-branch","before":{"routeChoice":{"source":"REACT-01","target":"VUE-02","state":"DEFERRED","scope":"BRANCH","reason":"原用户原因"},"deferredCodes":["VUE-02","VUE-03","VUE-04"],"learnedCodes":["VUE-01"]},"action":"迁移后设置偏好 VUE","expected":"仅偏好修改，三个暂缓状态/原因不变；PAUSED_POINT VUE-02"},
+    {"id":"personal-evidence","before":{"reading":{"guide":"vue-02-ref-reactive-computed-boundaries.md","anchor":"vue-02","progressPercent":37},"note":{"id":"note-v2","code":"VUE-02","markdown":"个人草稿","versions":["旧版","个人草稿"]},"practice":{"activityId":"strict-practice","submission":"旧夹具答卷","status":"DRAFT"},"challenge":{"sessionId":"old-session","questionSnapshot":"旧五题原文","answers":"旧答案","results":"旧评分","hints":["旧提示"]},"masteryEvents":["原始证据事件"],"checkins":[{"date":"2026-11-01","codes":["VUE-02"]}],"settings":{"personalSetting":"原值"}},"expected":"逐表按主键与原字段比对相等，旧挑战按旧快照展示，不追加新版语义结论"}
+  ],
+  "operations": [
+    "初次迁移：只新增 preferences 默认行、route version 与指定自动边来源映射",
+    "重复执行：表行数、偏好 revision、所有旧记录完全不变",
+    "删除旧自动边后注入异常：同事务回滚，旧边和旧记录恢复",
+    "同值 PUT：幂等；过期 expectedRevision：409，不改旧表或偏好",
+    "旧应用读取：忽略新增表仍能按稳定 code/ID 读取学习记录",
+    "新应用读取旧证据：缺机制快照显示 legacy/证据不足，不用当前正文补写",
+    "关系来源未知：保留人工边，标注非本合同推荐依据，不能按 RELATED 对误删"
+  ]
+}

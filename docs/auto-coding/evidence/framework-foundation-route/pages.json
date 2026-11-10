@@ -1,0 +1,46 @@
+[
+  {
+    "name": "today",
+    "url": "http://127.0.0.1:42831/",
+    "browser": "157.0.8103.40",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "capturedAt": "2026-11-10T17:14:02.442Z",
+    "screenshot": "today.png"
+  },
+  {
+    "name": "plan",
+    "url": "http://127.0.0.1:42831/plan",
+    "browser": "157.0.8103.40",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "capturedAt": "2026-11-10T17:14:03.584Z",
+    "screenshot": "plan.png"
+  },
+  {
+    "name": "detail",
+    "url": "http://127.0.0.1:42831/knowledge/REACT-02",
+    "browser": "157.0.8103.40",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "capturedAt": "2026-11-10T17:14:05.073Z",
+    "screenshot": "detail.png"
+  },
+  {
+    "name": "reader",
+    "url": "http://127.0.0.1:42831/knowledge/materials/react-02-component-boundaries-data-flow-composition.md/react-02",
+    "browser": "157.0.8103.40",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "capturedAt": "2026-11-10T17:14:06.773Z",
+    "screenshot": "reader.png"
+  }
+]
