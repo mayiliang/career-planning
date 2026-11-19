@@ -2,7 +2,7 @@
 
 const $ = id => document.getElementById(id);
 const phases = [['plan', '研究规划'], ['publish', '发布任务'], ['develop', '开发实现'], ['validate', '验证交付'], ['review', '产品验收'], ['accept', '完成归档']];
-const phaseName = p => phases.find(x => x[0] === p)?.[1] || '准备下一步';
+const phaseName = p => p === 'recover' ? '恢复保存成果' : phases.find(x => x[0] === p)?.[1] || '准备下一步';
 const dateFormat = new Intl.DateTimeFormat('zh-CN', {timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
 let state = null, currentView = 'overview', logSource = 'events', fetching = false, busy = false, pendingId = null, toastTimer;
 let logData = [], visibleLogText = '', lastBody = null, lastHistory = null, lastActivity = null, lastLogRender = null;
@@ -20,6 +20,7 @@ function describeStatus(s) {
   if (!s.runner_online) return {title: '调度服务未运行', meta: '进度已保留', tone: 'paused'};
   if (s.status === 'needs_attention') return {title: '需要处理后继续', meta: '检查点已保存', tone: 'error'};
   if (s.paused) return {title: s.status.startsWith('running:') ? '正在暂停' : '流程已暂停', meta: '当前任务保留', tone: 'paused'};
+  if (s.status === 'waiting:research' && s.blockers?.length) return {title:'存在暂缓任务', meta:'等待恢复或下次复查', tone:'warning'};
   const waiting = {
     'waiting:quota': ['等待额度恢复', '重置后自动复查'],
     'waiting:retry': ['等待重试', `第 ${s.failures || 1} 次重试`],
@@ -27,7 +28,7 @@ function describeStatus(s) {
     'waiting:research': ['定期研究待命', '下一轮会自动开始'],
   }[s.status];
   if (waiting) return {title: waiting[0], meta: waiting[1], tone: 'warning'};
-  return {title: {plan: '产品经理研究中', publish: '正在发布任务', develop: '开发者实现中', validate: '正在验证交付', review: '产品经理验收中', accept: '正在完成归档'}[s.phase] || '准备下一步', meta: roleName(s.phase), tone: ''};
+  return {title: {plan: '产品经理研究中', publish: '正在发布任务', develop: '开发者实现中', validate: '正在验证交付', review: '产品经理验收中', accept: '正在完成归档', recover:'正在恢复已保存工作'}[s.phase] || '准备下一步', meta: roleName(s.phase), tone: ''};
 }
 
 function renderMarkdown(container, source) {
@@ -47,15 +48,16 @@ function render(s) {
   state = s;
   const info = describeStatus(s), task = s.task;
   text('bar-status', info.title); text('status-title', info.title); text('status-meta', info.meta); $('status-strip').className = 'status-strip ' + info.tone;
-  text('task-title', task?.title || '产品经理正在寻找下一项值得推进的改进');
-  const decision = task ? (task.decision || '') : '围绕知识体系、中文学习资料与学习路线，研究真实问题并形成可验收的任务。';
+  const waiting = s.status === 'waiting:research';
+  text('task-title', task?.title || (waiting ? (s.blockers?.length ? '当前没有执行中的任务' : '等待下一轮研究') : '等待调度器报告当前任务'));
+  const decision = task ? (task.recovery?.reason || task.decision || '') : (waiting && s.blockers?.length ? '下方流程等待下一项任务；可查看上方暂缓任务及恢复条件。' : '');
   text('task-description', decision.length > 180 ? decision.slice(0, 180).trimEnd() + '…' : decision);
   text('decision-full', decision); visible('decision-details', decision.length > 180);
   if (task?.url) { $('issue-link').href = task.url; text('issue-link', `Issue #${task.issue_number} ↗`); }
   visible('issue-link', !!task?.url);
   if (task?.priority) text('priority', task.priority); visible('priority', !!task?.priority);
   $('repo-link').href = s.repository_url || 'https://github.com/mayiliang/career-planning/tree/auto_coding';
-  const index = phases.findIndex(x => x[0] === s.phase);
+  const index = phases.findIndex(x => x[0] === (s.phase === 'recover' ? 'develop' : s.phase));
   $('pipeline').replaceChildren(...phases.map(([key, label], i) => {
     const li = element('li', i < index ? 'done' : i === index ? 'current' : '', label);
     if (i === index && info.tone === 'warning') li.classList.add('waiting');
@@ -74,10 +76,10 @@ function render(s) {
   }
   visible('task-details', !!task?.body);
   if (task?.body !== lastBody) { renderMarkdown($('task-body'), task?.body || ''); lastBody = task?.body; }
-  text('task-attempt', task?.attempt ? `已完成 ${task.attempt} 轮实现检查` : s.phase === 'develop' ? '当前为第 1 轮开发' : '尚未开始开发');
+  text('task-attempt', task?.recovery?.status ? `恢复状态：${{pending:'等待恢复', applying:'正在恢复', applied:'成果已恢复', completed:'恢复完成'}[task.recovery.status] || '等待调度器报告'}` : task?.attempt ? `已完成 ${task.attempt} 轮实现检查` : s.phase === 'develop' ? '当前为第 1 轮开发' : '尚未开始开发');
   text('state-updated', s.updated_at ? `进度记录于 ${date(s.updated_at)}` : '尚无进度记录');
-  renderControls(s); renderQuota(s); renderRoles(s); renderActivity(s); renderHistory(s); renderDiagnostics(s.diagnostics);
-  text('history-count', s.history.length); text('completed-count', `已归档 ${s.cycle} 项任务`);
+  renderControls(s); renderBlockers(s); renderResearch(s); renderProgress(s); renderQuota(s); renderRoles(s); renderActivity(s); renderHistory(s); renderDiagnostics(s.diagnostics);
+  text('history-count', s.history.length); text('completed-count', s.counts ? `已验收 ${s.counts.accepted} · 已暂缓 ${s.counts.deferred}` : `已归档 ${s.cycle} 项任务`);
   text('service-state', s.runner_online ? '调度器在线' : '调度器离线'); $('service-led').classList.toggle('online', s.runner_online);
   if (pendingId) {
     const applied = s.controls.find(x => x.id === pendingId);
@@ -93,11 +95,13 @@ function updateCountdown() {
   if (!s.runner_online) next = `启动调度服务后，从“${phaseName(s.phase)}”阶段继续。`;
   else if (s.paused) next = `恢复后从“${phaseName(s.phase)}”阶段继续，已有任务和工作文件会保留。`;
   else if (s.next_run_at) next = `${countdown(s.next_run_at)}后${s.status === 'waiting:quota' ? '复查可用额度' : '继续检查执行条件'}，计划时间 ${date(s.next_run_at)}。`;
-  else next = {plan: '形成明确的任务范围与验收标准，随后发布 GitHub Issue。', publish: '任务发布成功后，交给开发者开始实现。', develop: '完成实现后，运行检查并提交到 auto_coding。', validate: '验证通过并推送代码后，交给产品经理独立验收。', review: '逐项核对验收标准，通过后关闭 Issue；需要改进时返回开发。', accept: '保存本轮结果，开始下一轮产品研究。'}[s.phase] || '继续处理当前任务。';
+  else if (s.status === 'waiting:research') next = s.blockers?.length ? '查看暂缓任务的恢复条件，或等待下一次复查。' : '等待下一轮定期研究。';
+  else next = {recover:'恢复保存的工作并诊断阻塞原因。', plan: '形成明确的任务范围与验收标准，随后发布 GitHub Issue。', publish: '任务发布成功后，交给开发者开始实现。', develop: '完成实现后，运行检查并提交到 auto_coding。', validate: '验证通过并推送代码后，交给产品经理独立验收。', review: '逐项核对验收标准，通过后关闭 Issue；需要改进时返回开发。', accept: '保存本轮结果，开始下一轮产品研究。'}[s.phase] || '继续处理当前任务。';
   text('next-step', next.replace('即将检查后', '即将'));
 }
 
-function feedback(message, error=false) { text('control-feedback', message); $('control-feedback').classList.toggle('error', error); visible('control-feedback', true); }
+let feedbackTimer;
+function feedback(message, error=false) { clearTimeout(feedbackTimer); text('control-feedback', message); $('control-feedback').classList.toggle('error', error); visible('control-feedback', true); if (!error) feedbackTimer = setTimeout(() => visible('control-feedback', false), 5000); }
 function renderControls(s) {
   const primary = $('primary-action');
   if (!s.runner_online) { primary.dataset.action = 'start'; primary.textContent = '启动调度服务'; text('control-description', '调度服务当前不在线。启动后可从已保存的位置继续。'); }
@@ -107,6 +111,68 @@ function renderControls(s) {
   const retry = ['waiting:retry', 'waiting:startup', 'waiting:research'].includes(s.status) && !s.paused && s.runner_online;
   visible('retry-action', retry); $('retry-action').disabled = busy || s.pending_controls > 0; $('retry-action').dataset.action = 'retry';
   text('control-hint', s.pending_controls ? '正在等待调度器确认操作，请稍候。' : '短暂进行中的网络或 Git 操作可能先完成。');
+}
+
+
+let blockerSignature = null, researchBody = null;
+function renderBlockers(s) {
+  const blockers = Array.isArray(s.blockers) ? s.blockers : [];
+  visible('blocker-section', blockers.length > 0);
+  const signature = JSON.stringify([blockers, s.recovery_allowed, s.pending_controls, s.runner_online, s.status, s.active, s.task?.id, busy]);
+  if (signature === blockerSignature) return; blockerSignature = signature;
+  const list = $('blocker-list'); list.replaceChildren();
+  for (const task of blockers) {
+    const row = element('article','blocker-item');
+    const header = element('div','blocker-header'), heading = element('div');
+    heading.append(element('h3','',task.title || '未命名任务'), element('p','blocker-meta', [task.issue_number ? `Issue #${task.issue_number}` : '', task.archived_at ? `暂缓于 ${date(task.archived_at)}` : '', task.saved_work ? '已保存工作' : '未报告已保存工作'].filter(Boolean).join(' · ')));
+    const button = element('button','button primary','恢复并诊断'); button.dataset.action='recover'; button.dataset.taskId=task.id || '';
+    button.disabled = !s.recovery_allowed || !task.recoverable || !task.id || busy || !!s.pending_controls;
+    header.append(heading,button); row.append(header);
+    const reason = task.review?.summary || task.feedback;
+    if (reason) row.append(element('p','blocker-reason',reason));
+    if (task.recovery_reason) row.append(element('p','blocker-meta',`成果快照：${task.recovery_reason}`));
+    const failed = (task.validation?.checks || []).filter(check => check.exit_code != null && check.exit_code !== 0);
+    if (task.review?.feedback || failed.length) {
+      const details = element('details','blocker-details');
+      details.append(element('summary','','恢复条件与失败检查'));
+      if (task.review?.feedback) details.append(element('p','',task.review.feedback));
+      for (const check of failed) {
+        const entry = element('div','failed-check');
+        entry.append(element('strong','',check.command || '检查命令未报告'));
+        const result = check.result || check.reason || `退出码 ${check.exit_code}`;
+        entry.append(element('pre','',typeof result === 'string' ? result : JSON.stringify(result)));
+        details.append(entry);
+      }
+      row.append(details);
+    }
+    if (button.disabled) {
+      const active = !!s.task || !!s.active?.phase || !!s.active?.thread_id;
+      const note = busy || s.pending_controls ? '正在处理控制请求，请稍候。'
+        : !s.runner_online ? '请先启动调度服务。'
+        : active ? '请等待当前任务结束。'
+        : s.status === 'waiting:quota' ? '等待额度恢复后再试。'
+        : !task.id ? '调度器未提供任务标识。'
+        : !task.recoverable ? (task.recovery_reason || '此任务当前不具备恢复条件。')
+        : '请等待流程进入可恢复状态。';
+      row.append(element('p','blocker-note',note));
+    }
+    list.append(row);
+  }
+}
+function renderResearch(s) {
+  const r=s.research; visible('research-section', !!r && !s.task);
+  if (!r) return;
+  text('research-title',r.title || '调度器未报告标题'); text('research-summary',r.summary || '调度器未报告决策摘要。');
+  text('research-meta',[r.issue_number ? `Issue #${r.issue_number}` : '', r.at ? `记录于 ${date(r.at)}` : '', r.wait_count != null ? `等待 ${r.wait_count} 次` : '', s.status === 'waiting:research' && s.next_run_at ? `下次复查 ${date(s.next_run_at)}` : ''].filter(Boolean).join(' · '));
+  visible('research-details', !!r.body); if (r.body !== researchBody) { renderMarkdown($('research-body'), r.body || ''); researchBody = r.body; }
+}
+function duration(seconds) { if (seconds == null) return null; seconds = Math.max(0, Math.floor(seconds)); return seconds >= 3600 ? `${Math.floor(seconds/3600)} 小时 ${Math.floor(seconds%3600/60)} 分钟` : seconds >= 60 ? `${Math.floor(seconds/60)} 分钟` : `${seconds} 秒`; }
+function renderProgress(s) {
+  const p=s.progress; if (!p) return text('progress-summary','等待调度器报告进展');
+  const parts=[]; if (p.last_activity_at) parts.push(`最近活动 ${date(p.last_activity_at)}`);
+  if (p.elapsed_seconds != null) parts.push(`本轮已持续 ${duration(p.elapsed_seconds)}`);
+  if (p.quiet_seconds != null) parts.push(`${p.quiet ? '暂无新活动' : '距上次活动'} ${duration(p.quiet_seconds)}`);
+  text('progress-summary',parts.join(' · ') || '调度器尚未报告活动时间');
 }
 
 function renderQuota(s) {
@@ -152,9 +218,9 @@ function renderRoles(s) {
 }
 
 const eventTitles = {turn_started:'开始执行', quota_wait:'等待额度恢复', retry:'等待重试', startup_failure:'启动检查未通过', needs_attention:'需要处理', turn_failed:'本轮未完成', task_completed:'任务已验收', task_deferred:'任务已暂缓', research_wait:'进入定期研究', operator_control:'控制操作'};
-function eventText(e) { return e.detail || e.summary || (e.phase ? `${roleName(e.phase)}开始${phaseName(e.phase)}。` : e.until ? `计划于 ${date(e.until)}重新检查。` : e.issue ? `Issue #${e.issue}` : '状态已记录。'); }
+function eventText(e) { return e.detail || e.summary || e.title || (e.phase ? `${roleName(e.phase)}开始${phaseName(e.phase)}。` : e.until ? `计划于 ${date(e.until)}重新检查。` : e.issue ? `Issue #${e.issue}` : '状态已记录。'); }
 function renderActivity(s) {
-  const messages = s.activity.filter(x => x.kind === 'message').slice(-3).reverse().map(x => ({title:`${roleName(s.active.phase || s.phase)}的进展`, message:x.text}));
+  const messages = s.activity.filter(x => x.kind === 'message').slice(-3).reverse().map(x => ({title:`${roleName(s.active.phase || s.phase)}的已记录进展`, message:x.text}));
   const events = [...s.events].reverse().slice(0, Math.max(2, 5-messages.length)).map(x => ({title:(eventTitles[x.event] || '流程更新') + (x.count > 1 ? `（重复 ${x.count} 次）` : ''), message:eventText(x), at:x.last_at || x.at, first:x.count > 1 ? x.first_at : null}));
   const data = [...messages,...events]; const signature = JSON.stringify(data); if (signature === lastActivity) return; lastActivity = signature;
   $('activity').replaceChildren();
@@ -163,13 +229,14 @@ function renderActivity(s) {
 }
 
 function renderHistory(s) {
+  text('history-counts', s.counts ? `已验收 ${s.counts.accepted} 项 · 已暂缓 ${s.counts.deferred} 项` : '等待调度器报告统计');
   const signature = JSON.stringify(s.history); if (lastHistory === signature) return; lastHistory = signature;
   $('history-list').replaceChildren();
   if (!s.history.length) return $('history-list').append(empty('还没有完成验收的任务', '当前任务完成或被暂缓后，会在这里留下交付和验收记录。', true));
   for (const task of s.history) {
     const details = element('details','history-item'), summary = element('summary','history-summary'), title = element('div');
     title.append(element('h3','',task.title)); const meta = element('div','history-meta'); meta.append(element('span','',task.issue_number ? `Issue #${task.issue_number}` : '未发布任务'), element('time','',date(task.recorded_at)), element('span','',`${task.attempt} 轮实现`)); title.append(meta);
-    const accepted = task.review.verdict === 'accept'; summary.append(title,element('span','history-badge'+(!accepted?' deferred':''),accepted?'已验收':'已暂缓'));
+    const verdict = task.review?.verdict; const accepted = verdict === 'accept'; summary.append(title,element('span','history-badge'+(!accepted?' deferred':''),accepted?'已验收':verdict === 'defer' ? '已暂缓' : '状态未报告'));
     const body = element('div','history-body'); body.append(element('p','',task.review.summary || task.development_summary));
     if(task.review.evidence.length){const list=element('ul');for(const e of task.review.evidence)list.append(element('li','',e));body.append(list);}
     if(task.validation?.checks?.length){const section=element('div','history-checks');section.append(element('strong','','实际检查'));for(const check of task.validation.checks){section.append(element('p','',`${check.exit_code === 0 ? '通过' : '未通过'} · ${check.command || '检查命令未报告'}`));}body.append(section);}
@@ -265,16 +332,16 @@ async function refreshStatus() {
   finally { fetching=false; }
 }
 
-async function control(action) {
-  if(busy)return;busy=true;if(state)renderControls(state);
+async function control(action, taskId) {
+  if(busy)return;busy=true;if(state){renderControls(state);renderBlockers(state);}
   try {
     const session=await fetch('/api/session',{cache:'no-store'});if(!session.ok)throw new Error('无法连接控制台，请刷新后重试。');
     const {token}=await session.json();
-    const response=await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json','X-Console-Token':token},body:JSON.stringify({action})});
+    const response=await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json','X-Console-Token':token},body:JSON.stringify(action === 'recover' ? {action, task_id:taskId} : {action})});
     const data=await response.json();if(!response.ok)throw new Error(data.error || '操作未完成');
     pendingId=data.id;feedback(data.message);await refreshStatus();setTimeout(refreshStatus,1200);
   } catch(error){feedback(error.message,true);}
-  finally{busy=false;if(state)renderControls(state);}
+  finally{busy=false;if(state){renderControls(state);renderBlockers(state);}}
 }
 
 function showView(view) {
@@ -307,7 +374,7 @@ async function refreshLogs() {
   catch(_){$('log-list').replaceChildren(empty('日志暂时无法读取','检查本地控制台连接，或点击刷新状态重试。'));}
 }
 
-document.addEventListener('click',event=>{const nav=event.target.closest('[data-view]');if(nav)showView(nav.dataset.view);const action=event.target.closest('[data-action]');if(action&&!action.disabled)control(action.dataset.action);const source=event.target.closest('[data-source]');if(source){logSource=source.dataset.source;document.querySelectorAll('[data-source]').forEach(b=>{b.classList.toggle('active',b===source);b.setAttribute('aria-pressed',String(b===source));});refreshLogs();}});
+document.addEventListener('click',event=>{const nav=event.target.closest('[data-view]');if(nav)showView(nav.dataset.view);const action=event.target.closest('[data-action]');if(action&&!action.disabled)control(action.dataset.action, action.dataset.taskId);const source=event.target.closest('[data-source]');if(source){logSource=source.dataset.source;document.querySelectorAll('[data-source]').forEach(b=>{b.classList.toggle('active',b===source);b.setAttribute('aria-pressed',String(b===source));});refreshLogs();}});
 $('refresh').addEventListener('click',refreshStatus);
 document.querySelectorAll('.github-refresh').forEach(button => button.addEventListener('click', () => refreshGithub(true)));
 $('log-search').addEventListener('input',renderLogs);

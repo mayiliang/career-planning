@@ -24,6 +24,8 @@
       <section id="view-overview" class="view" aria-label="运行概览">
         <div class="workspace">
           <div class="main-column">
+            <section id="blocker-section" class="blocker-section hidden" aria-labelledby="blocker-heading"><div class="section-title"><div><h2 id="blocker-heading">暂缓任务</h2><p>已有工作可在条件允许时恢复并诊断。</p></div></div><div id="blocker-list"></div></section>
+            <section id="research-section" class="research-section hidden" aria-labelledby="research-heading"><h2 id="research-heading">最近研究决策</h2><h3 id="research-title"></h3><p id="research-summary"></p><p id="research-meta" class="research-meta"></p><details id="research-details"><summary>查看决策详情</summary><article id="research-body" class="prose"></article></details></section>
             <section class="work-sheet">
               <div class="status-strip" id="status-strip"><span class="state-dot"></span><strong id="status-title">正在读取状态</strong><span id="status-meta">连接本机调度器</span></div>
               <div class="task-content"><div class="section-kicker"><span>当前任务</span><a id="issue-link" class="issue-link hidden" target="_blank" rel="noopener noreferrer"></a><span id="priority" class="priority hidden"></span></div><h2 id="task-title">正在读取当前任务…</h2><div class="task-description"><p id="task-description"></p><details id="decision-details" class="decision-details hidden"><summary>展开完整决策背景</summary><p id="decision-full"></p></details></div>
@@ -34,7 +36,7 @@
               </div>
               <footer class="task-footer"><span id="task-attempt">尚未开始开发</span><span id="state-updated"></span></footer>
             </section>
-            <section class="activity-section"><div class="section-title"><h2>最近动态</h2><button class="text-button" data-view="logs">查看完整日志 <span aria-hidden="true">↗</span></button></div><div id="activity" class="activity-list"></div></section>
+            <section class="activity-section"><div class="section-title"><div><h2>最近动态</h2><p id="progress-summary" class="progress-summary">等待调度器报告进展</p></div><button class="text-button" data-view="logs">查看完整日志 <span aria-hidden="true">↗</span></button></div><div id="activity" class="activity-list"></div></section>
           </div>
           <aside class="sidebar" aria-label="运行控制与用量">
             <section class="side-block control-block"><div class="section-title"><h2>运行说明</h2><span class="local-label">本机</span></div><p id="control-description">正在确认调度服务状态。</p><p class="control-hint" id="control-hint">操作会保留当前任务和已有进度。</p></section>
@@ -46,7 +48,7 @@
       </section>
       <section id="view-queue" class="view hidden" aria-label="任务队列"><div class="view-heading"><div><h2>任务队列</h2><p>GitHub Issue 的最近快照；当前任务仍以运行概览为准。</p></div><button class="button quiet github-refresh">重新检查连接</button></div><div id="queue-summary" class="data-summary" role="status">等待读取 GitHub 状态</div><div id="queue-list" class="queue-list"></div></section>
       <section id="view-connection" class="view hidden" aria-label="连接诊断"><div class="view-heading"><div><h2>连接诊断</h2><p>检查调度器和 GitHub 后台凭据的状态。</p></div><button class="button quiet github-refresh">重新检查连接</button></div><div class="diagnostic-panel"><h3 id="diagnostic-title">等待调度器报告</h3><p id="diagnostic-message"></p><p id="diagnostic-suggestion"></p><p class="subtle" id="diagnostic-time"></p></div><div class="diagnostic-panel"><h3>GitHub 后台连接</h3><p id="github-status">等待检查</p><p id="github-detail"></p><p class="subtle" id="github-time"></p></div></section>
-      <section id="view-history" class="view hidden" aria-label="任务历史"><div class="view-heading"><div><h2>每一次交付，都有据可查</h2><p>查看已验收或暂缓的任务、交付提交与验证结果。</p></div></div><div id="history-list"></div></section>
+      <section id="view-history" class="view hidden" aria-label="任务历史"><div class="view-heading"><div><h2>每一次交付，都有据可查</h2><p>查看已验收或暂缓的任务、交付提交与验证结果。</p></div></div><p id="history-counts" class="history-counts"></p><div id="history-list"></div></section>
       <section id="view-logs" class="view hidden" aria-label="运行日志"><div class="view-heading"><div><h2>运行日志</h2><p>按执行流程查看发生了什么，以及为什么等待。</p></div><button class="button quiet" id="copy-logs">复制当前日志</button></div><div class="log-toolbar"><div class="log-filters" role="group" aria-label="日志类型"><button class="log-filter active" data-source="events" aria-pressed="true">流程事件</button><button class="log-filter" data-source="agent" aria-pressed="false">角色动态</button><button class="log-filter" data-source="checks" aria-pressed="false">验证结果</button><button class="log-filter" data-source="service" aria-pressed="false">服务日志</button></div><label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="log-search" type="search" placeholder="搜索日志内容" aria-label="搜索日志内容"></label></div><div id="log-list" class="log-list"></div><p class="log-note">仅展示公开进度、执行记录和验证输出，不展示模型内部推理。</p></section>
     </main>
     <footer class="page-footer"><span>Career Atlas 自动化控制台</span><span>状态每 5 秒更新 · 时间均为北京时间</span></footer>

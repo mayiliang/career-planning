@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+from datetime import datetime
 import copy
 import fcntl
 import json
@@ -82,6 +83,8 @@ def summarize_task(task, repo):
     review = task.get('review') or {}
     validation = task.get('validation') or {}
     return {
+        **({'recovery': {key: redact((task.get('recovery') or {}).get(key)) for key in ('status', 'reason')}}
+           if isinstance(task.get('recovery'), dict) else {}),
         'id': task.get('id'), 'title': redact(plan.get('title') or '正在整理下一项任务'),
         'body': redact(plan.get('body')), 'priority': plan.get('priority'),
         'decision': redact(plan.get('decision_summary')), 'issue_number': number,
@@ -89,6 +92,7 @@ def summarize_task(task, repo):
         'attempt': task.get('attempt', 0), 'delivery_sha': task.get('delivery_sha'),
         'feedback': redact(task.get('feedback')), 'development_summary': redact(development.get('summary')),
         'review': {'verdict': review.get('verdict'), 'summary': redact(review.get('summary')),
+                   'feedback': redact(review.get('feedback')),
                    'evidence': [redact(x) for x in review.get('acceptance_evidence', [])]},
         'validation': {'passed': validation.get('passed'), 'at': validation.get('at'),
                        'reason': redact(validation.get('reason')),
@@ -219,6 +223,52 @@ class GitHubDiagnostic:
                 self.inflight = False
 
 
+def research_snapshot(state, events):
+    waits = [item for item in events if item.get('event') == 'research_wait' and isinstance(item.get('result'), dict)]
+    current = state.get('last_research')
+    if not isinstance(current, dict):
+        current = waits[-1]['result'] if waits else None
+    if not current:
+        if not state.get('last_decision'):
+            return None
+        current = {'summary': state['last_decision']}
+    issue = current.get('issue_number')
+    count = 0
+    for entry in reversed(waits):
+        if entry['result'].get('issue_number') != issue:
+            break
+        count += 1
+    stored_count = current.get('wait_count')
+    return {'title': redact(current.get('title')), 'summary': redact(current.get('summary') or current.get('decision_summary') or state.get('last_decision')),
+            'body': redact(current.get('body')), 'issue_number': issue,
+            'at': redact(current.get('at') or (waits[-1].get('at') if waits else None)) or None,
+            'wait_count': stored_count if isinstance(stored_count, int) and stored_count >= 0 else count}
+
+
+def progress_snapshot(runtime, active, current_time):
+    result = {'last_activity_at': None, 'elapsed_seconds': None, 'quiet_seconds': None, 'quiet': False}
+    if not isinstance(active, dict) or not active:
+        return result
+    started = active.get('started_at')
+    try:
+        started = float(started) if isinstance(started, (int, float)) else datetime.fromisoformat(started).timestamp()
+    except (TypeError, ValueError, OverflowError):
+        started = None
+    signal = started
+    run_id = active.get('run_id', '')
+    if isinstance(run_id, str) and re.fullmatch(r'[a-f0-9]{32}', run_id):
+        path = runtime / 'runs' / run_id / 'events.jsonl'
+        with contextlib.suppress(OSError):
+            signal = max(signal or 0, path.stat().st_mtime)
+    result['last_activity_at'] = signal
+    if started is not None:
+        result['elapsed_seconds'] = max(0, current_time - started)
+    if signal is not None:
+        result['quiet_seconds'] = max(0, current_time - signal)
+        result['quiet'] = result['quiet_seconds'] > 600
+    return result
+
+
 def team_snapshot(state):
     """Expose only the scheduler's public team and child activity fields."""
     team = state.get('team') if isinstance(state.get('team'), dict) else {}
@@ -266,36 +316,69 @@ class ControlStore:
                 item = read_json(path, {})
                 controls.append({k: item.get(k) for k in ('id', 'action', 'status', 'message', 'applied_at')})
         history = []
+        archives = []
         directory = self.runtime / 'history'
         if directory.exists():
-            for path in sorted(directory.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True)[:40]:
-                task = summarize_task(read_json(path, {}), repo)
+            for path in sorted(directory.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True):
+                raw = read_json(path, {})
+                task = summarize_task(raw, repo)
                 if task:
                     task['recorded_at'] = path.stat().st_mtime
                     history.append(task)
+                    archives.append((raw, task, path.stat().st_mtime))
+        accepted_at = {}
+        for raw, task, archived_at in archives:
+            if task['review']['verdict'] == 'accept' and task.get('issue_number'):
+                issue = task['issue_number']
+                accepted_at[issue] = max(accepted_at.get(issue, 0), archived_at)
+        blockers = []
+        for raw, task, archived_at in archives:
+            if task['review']['verdict'] != 'defer' or task.get('id') == (state.get('task') or {}).get('id'):
+                continue
+            if accepted_at.get(task.get('issue_number'), 0) >= archived_at:
+                continue
+            saved = isinstance(raw.get('partial_work_stash'), str) and re.fullmatch(r'[a-fA-F0-9]{40}', raw['partial_work_stash']) is not None
+            blockers.append({**task, 'saved_work': saved, 'recoverable': saved,
+                             'recovery_reason': '已记录成果快照；调度器恢复时会再次核验。' if saved else '没有合法的成果快照，无法直接恢复；请检查归档记录。',
+                             'archived_at': archived_at})
+        online = runner_online(self.runtime)
+        paused = (self.runtime / 'paused').exists()
+        recovery_allowed = bool(online and not state.get('active') and not state.get('task') and state.get('phase') == 'plan'
+                                and (paused or state.get('status') == 'waiting:research')
+                                and state.get('status') != 'waiting:quota' and state.get('resume_status') != 'waiting:quota')
+        events = json_lines(self.runtime / 'events.jsonl', 160)
+        current_time = time.time()
         team_data = team_snapshot(state)
         return {
-            'server_time': time.time(), 'status': state.get('status', 'starting'),
+            'server_time': current_time, 'status': state.get('status', 'starting'),
             'phase': state.get('phase', 'plan'), 'paused': (self.runtime / 'paused').exists(),
-            'runner_online': runner_online(self.runtime), 'cycle': state.get('cycle', 0),
+            'runner_online': online, 'cycle': state.get('cycle', 0),
             'updated_at': state.get('updated_at'), 'next_run_at': state.get('next_run_at'),
             'diagnostics': diagnostics(state), 'resume_status': state.get('resume_status'),
             'last_error': redact(state.get('last_error')), 'failures': state.get('failures', 0),
             'repository': repo, 'branch': 'auto_coding',
             'repository_url': f'https://github.com/{repo}/tree/auto_coding' if repo else None,
-            'task': summarize_task(state.get('task'), repo), 'history': history,
+            'task': summarize_task(state.get('task'), repo), 'history': history[:40],
+            'research': research_snapshot(state, events), 'blockers': blockers, 'recovery_allowed': recovery_allowed,
+            'progress': progress_snapshot(self.runtime, state.get('active'), current_time),
+            'counts': {'accepted': sum(task['review']['verdict'] == 'accept' for _, task, _ in archives),
+                       'deferred': len(blockers)},
             'quota': {'primary': bucket.get('primary'), 'secondary': bucket.get('secondary'),
                        'allowed': quota.get('ordinaryUsageAllowed'), 'checked_at': state.get('quota_checked_at')},
             'team': team_data['team'], 'active': team_data['active'],
             'activity': self.agent_activity(state)[-12:],
-            'events': grouped_events([self.event(x) for x in json_lines(self.runtime / 'events.jsonl', 160)])[-20:],
+            'events': grouped_events([self.event(x) for x in events])[-20:],
             'controls': controls,
             'pending_controls': len(list((self.runtime / 'controls' / 'pending').glob('*.json'))),
         }
 
     def event(self, item):
+        if item.get('event') == 'research_wait' and isinstance(item.get('result'), dict):
+            result = item['result']
+            item = {**item, 'title': result.get('title'),
+                    'detail': result.get('decision_summary') or result.get('summary'), 'issue': result.get('issue_number')}
         return {k: redact(v) if isinstance(v, str) else v for k, v in item.items()
-                if k in ('at', 'event', 'phase', 'detail', 'summary', 'issue', 'until', 'failure')}
+                if k in ('at', 'event', 'phase', 'detail', 'summary', 'issue', 'until', 'failure', 'title')}
 
     def agent_activity(self, state):
         active = state.get('active') or state.get('last_run') or {}
@@ -342,11 +425,19 @@ class ControlStore:
                     for name in ('launchd.stderr.log', 'app-server.stderr.log')]}
         raise ValueError('未知日志类型')
 
-    def enqueue(self, action):
-        if action not in ('pause', 'resume', 'retry', 'start'):
+    def enqueue(self, action, task_id=None):
+        if action not in ('pause', 'resume', 'retry', 'start', 'recover'):
             raise ValueError('不支持的操作')
+        if action == 'recover':
+            if not isinstance(task_id, str) or not re.fullmatch(r'[a-f0-9]{32}', task_id):
+                raise ValueError('恢复操作需要合法的任务编号')
+        elif task_id is not None:
+            raise ValueError('此操作不接受任务编号')
         with self.lock:
             state = self.snapshot()
+            if action == 'recover' and (not state['recovery_allowed'] or not any(
+                    item['id'] == task_id and item['recoverable'] for item in state['blockers'])):
+                raise ValueError('当前无法恢复此任务，请检查运行状态与成果快照')
             if action == 'pause' and (state['paused'] or not state['runner_online']):
                 raise ValueError('流程已暂停或调度服务未运行')
             if action == 'resume' and (not state['paused'] or not state['runner_online']):
@@ -358,6 +449,8 @@ class ControlStore:
                 raise ValueError('调度服务已在运行')
             request_id = uuid.uuid4().hex
             request = {'id': request_id, 'action': action, 'requested_at': now(), 'source': 'console'}
+            if action == 'recover':
+                request['task_id'] = task_id
             if action == 'pause':
                 path = self.runtime / f'pause-{request_id}.tmp'
                 path.write_text('用户通过控制台暂停\n')
@@ -366,6 +459,7 @@ class ControlStore:
                 self.start_runner()
             atomic_json(self.runtime / 'controls' / 'pending' / f'{time.time_ns()}-{request_id}.json', request)
             return {'id': request_id, 'status': 'queued', 'message': {
+                'recover': '恢复任务请求已发送，调度器将核验快照并保留已有成果。',
                 'pause': '暂停请求已发送，正在保存进度。', 'resume': '恢复请求已发送，将从检查点继续。',
                 'retry': '重试请求已发送，仍会检查额度和执行条件。', 'start': '启动请求已发送，正在连接调度器。'}[action]}
 
@@ -458,9 +552,9 @@ class Handler(BaseHTTPRequestHandler):
             if length < 1 or length > 1024 or self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                 return self.reply(400, {'error': '请求格式不正确'})
             data = json.loads(self.rfile.read(length))
-            if not isinstance(data, dict) or set(data) != {'action'}:
+            if not isinstance(data, dict) or set(data) != ({'action', 'task_id'} if data.get('action') == 'recover' else {'action'}):
                 return self.reply(400, {'error': '请求格式不正确'})
-            return self.reply(202, self.server.store.enqueue(data['action']))
+            return self.reply(202, self.server.store.enqueue(data['action'], data.get('task_id')))
         except (ValueError, TypeError) as error:
             return self.reply(409, {'error': str(error)})
         except Exception:

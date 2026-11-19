@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
 import fcntl
 import hashlib
 import json
@@ -81,6 +82,25 @@ def command(args, cwd=None, timeout=60):
     if result.returncode:
         raise RuntimeError(f'{args[0]} exit={result.returncode}: {result.stderr[-3500:]}')
     return result.stdout.strip()
+
+
+@contextlib.contextmanager
+def active_work_awake():
+    """Hold only an idle-system-sleep assertion while work is actually executing."""
+    guard = None
+    if sys.platform == 'darwin':
+        guard = subprocess.Popen(['/usr/bin/caffeinate', '-i', '-w', str(os.getpid())],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        yield
+    finally:
+        if guard is not None:
+            guard.terminate()
+            try:
+                guard.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                guard.kill()
+                guard.wait()
 
 
 def schema(properties):
@@ -393,6 +413,10 @@ class Runner:
             raise QuotaWait(until)
 
     def agent(self, phase, payload):
+        with active_work_awake():
+            return self._agent(phase, payload)
+
+    def _agent(self, phase, payload):
         active = self.state.get('active')
         if not active:
             run_id = uuid.uuid4().hex
@@ -568,11 +592,19 @@ class Runner:
             payload = {'mission_file': 'docs/auto-coding/CHARTER.md',
                        'pending_issues': [{k: i.get(k) for k in ('number', 'title', 'body', 'labels')} for i in pending],
                        'recent_completed': [{k: i.get(k) for k in ('number', 'title', 'body')} for i in recent],
-                       'last_decision': self.state.get('last_decision'), 'cycle': self.state['cycle']}
+                       'last_decision': self.state.get('last_decision'), 'cycle': self.state['cycle'],
+                       'deferred_work': [{'id': t['id'], 'issue_number': t['issue_number'],
+                                          'feedback': (t.get('review') or {}).get('feedback'),
+                                          'saved_work': bool(t.get('partial_work_stash'))}
+                                         for t in self.deferred_tasks()]}
             result = self.agent('plan', payload)
             if self.changed_paths():
                 raise Attention('产品经理规划阶段修改了文件，已保留改动供检查')
             if result['action'] == 'wait':
+                previous = self.state.get('last_research') or {}
+                self.state['last_research'] = {'title': result['title'], 'body': result['body'],
+                    'summary': result['decision_summary'], 'issue_number': result['issue_number'], 'at': now(),
+                    'wait_count': previous.get('wait_count', 0) + 1 if previous.get('issue_number') == result['issue_number'] else 1}
                 self.state['last_decision'] = result['decision_summary']
                 self.state['next_run_at'] = time.time() + self.config.get('idle_seconds', 21600)
                 self.state['status'] = 'waiting:research'
@@ -584,10 +616,17 @@ class Runner:
             chosen = result['issue_number']
             if chosen and chosen not in {i['number'] for i in pending}:
                 raise TurnFailure('产品经理选择了队列外的 Issue')
+            saved = next((t for t in self.deferred_tasks() if t['issue_number'] == chosen), None)
+            if saved:
+                # Preserve the completed planning result until recovery has been queued.
+                self.queue_recovery(saved['id'], result['decision_summary'], self.state['active']['run_id'], from_plan=True)
+                return
             self.state['task'] = {'id': self.state['active']['run_id'], 'plan': result,
                                   'issue_number': chosen, 'attempt': 0}
             self.state['phase'] = 'publish'
             self.finish_agent()
+        elif phase == 'recover':
+            self.restore_deferred_work()
         elif phase == 'publish':
             task = self.state['task']
             plan = task['plan']
@@ -667,6 +706,10 @@ class Runner:
         return commands
 
     def run_gate(self, args, path):
+        with active_work_awake():
+            return self._run_gate(args, path)
+
+    def _run_gate(self, args, path):
         with open(path, 'w') as output:
             process = subprocess.Popen(args, cwd=self.workspace, stdout=output, stderr=subprocess.STDOUT,
                                       env={**os.environ, 'CI': '1', 'GIT_TERMINAL_PROMPT': '0'},
@@ -800,6 +843,93 @@ class Runner:
                      '`。没有将未通过验证的改动推送到远端。后续可读取或恢复这些成果。')
                 return
 
+    def deferred_tasks(self):
+        tasks = []
+        for path in sorted((self.runtime / 'history').glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True):
+            task = read_json(path, {})
+            if task.get('review', {}).get('verdict') == 'defer':
+                tasks.append(task)
+        return tasks
+
+    def queue_recovery(self, task_id, reason, request_id, from_plan=False):
+        current = self.state.get('task') or {}
+        if current.get('recovery', {}).get('request_id') == request_id:
+            self.release_recovery_pause(current['recovery'])
+            return  # A crash after queueing but before the control acknowledgement.
+        if not isinstance(task_id, str) or not re.fullmatch(r'[a-f0-9]{32}', task_id):
+            raise ValueError('无效的受阻任务标识')
+        effective = self.state.get('resume_status') if (self.runtime / 'paused').exists() else self.state.get('status')
+        if self.state.get('task') or self.state['phase'] != 'plan' or (self.state.get('active') and not from_plan):
+            raise ValueError('当前还有活动任务，不能恢复其他任务')
+        if effective == 'waiting:quota' or quota_deadline(self.state.get('quota') or {}):
+            raise ValueError('请等待额度恢复后再安排诊断')
+        if not from_plan and not (self.runtime / 'paused').exists() and self.state.get('status') != 'waiting:research':
+            raise ValueError('当前不在研究待命状态，请稍后恢复')
+        self.assert_repo()
+        if self.changed_paths():
+            raise ValueError('工作区有其他改动，已保留；请先核对归属')
+        archived = read_json(self.runtime / 'history' / (task_id + '.json'), {})
+        if archived.get('id') != task_id or archived.get('review', {}).get('verdict') != 'defer':
+            raise ValueError('未找到对应的受阻任务')
+        stash = archived.get('partial_work_stash') or ''
+        if not re.fullmatch(r'[a-f0-9]{40,64}', stash) or stash not in self.git('stash', 'list', '--format=%H').splitlines():
+            raise ValueError('未找到该任务保存的工作快照，不能自动恢复')
+        task = copy.deepcopy(archived)
+        task['feedback'] = (archived.get('review') or {}).get('feedback', '') + '\n恢复与诊断要求：\n' + reason
+        task['recovery'] = {'status': 'pending', 'stash': stash, 'source_base': archived.get('base_sha'),
+                            'request_id': request_id, 'reason': reason, 'requested_at': now(),
+                            'paused_marker': (self.runtime / 'paused').stat().st_mtime_ns if (self.runtime / 'paused').exists() else None}
+        task['base_sha'] = self.git('rev-parse', 'HEAD')
+        task.pop('delivery_sha', None)
+        self.state['task'] = task
+        self.state['phase'] = 'recover'
+        if self.state.get('active'):
+            self.state['last_run'] = self.state.pop('active')
+        self.state.pop('next_run_at', None)
+        self.state.pop('last_error', None)
+        self.state.pop('resume_status', None)
+        self.state['status'] = 'ready:recover'
+        self.save()
+        self.release_recovery_pause(task['recovery'])
+
+    def release_recovery_pause(self, recovery):
+        path = self.runtime / 'paused'
+        if recovery['status'] == 'pending' and path.exists() and path.stat().st_mtime_ns == recovery.get('paused_marker'):
+            path.unlink()  # Do not erase a newer operator pause during replay.
+
+    def restore_deferred_work(self):
+        task = self.state['task']
+        recovery = task['recovery']
+        if self.git('rev-parse', 'HEAD') != task['base_sha']:
+            raise Attention('恢复期间 HEAD 变化，已保留保存的工作快照')
+        if recovery['status'] == 'applying':
+            raise Attention('工作快照恢复中断，需核对已恢复文件；不会重复应用或丢弃快照')
+        if recovery['status'] == 'pending':
+            if self.changed_paths():
+                raise Attention('恢复前发现其他文件改动，已保留现场')
+            issue = self.github.request('GET', f'/issues/{task["issue_number"]}')
+            if issue.get('state') != 'open' or 'auto-coding' not in {x['name'] for x in issue.get('labels', [])}:
+                raise Attention('原 Issue 已关闭或退出自动迭代，未恢复工作快照')
+            recovery['status'] = 'applying'
+            self.save()
+            try:
+                self.git('stash', 'apply', recovery['stash'])
+            except Exception as error:
+                raise Attention('恢复工作快照未完成，原快照仍保留；请核对冲突：' + str(error)) from None
+            recovery['status'] = 'applied'
+            recovery['fingerprint'] = self.fingerprint()
+            self.checkpoint()
+        if dict(self.fingerprint()) != dict(recovery.get('fingerprint', [])):
+            raise Attention('恢复后文件发生额外变化，已保留现场')
+        self.github.comment(task['issue_number'], task['id'] + ':recover:' + recovery['request_id'],
+                            '已恢复保存的工作，继续原任务的诊断与验证；原快照保留。\n\n' + recovery['reason'])
+        self.github.status(task['issue_number'], 'auto:in-progress')
+        recovery['status'] = 'completed'
+        recovery['restored_at'] = now()
+        self.state['phase'] = 'develop'
+        self.save()
+        self.log('task_recovered', issue=task['issue_number'], detail='已恢复保存的成果，继续诊断与验证。')
+
     def process_controls(self):
         """Only the scheduler mutates state.json; the web UI writes an inbox."""
         pending = self.runtime / 'controls' / 'pending'
@@ -822,9 +952,13 @@ class Runner:
                 request = read_json(path, {})
                 action = request.get('action')
                 result['action'] = action
-                if request.get('id') != request_id or action not in ('pause', 'resume', 'retry', 'start'):
+                if request.get('id') != request_id or action not in ('pause', 'resume', 'retry', 'start', 'recover'):
                     raise ValueError('无效的操作请求')
-                if action == 'pause':
+                if action == 'recover':
+                    self.queue_recovery(request.get('task_id'),
+                        '用户通过工作台要求恢复。先复用原成果与失败日志做最小诊断，明确阻塞是否仍存在，再修复和验证；不要重复实现或降低验收标准。', request_id)
+                    message = '已安排恢复保存的成果，随后诊断原阻塞；验证通过后才会交付。'
+                elif action == 'pause':
                     if self.state.get('status') not in ('paused', 'stopped'):
                         self.state['resume_status'] = self.state.get('status')
                     (self.runtime / 'paused').write_text('用户通过控制台暂停\n')
@@ -848,7 +982,7 @@ class Runner:
                 else:
                     message = '调度服务已启动。'
                 result.update(status='applied', message=message)
-            except (ValueError, TypeError, AttributeError) as error:
+            except (ValueError, TypeError, AttributeError, Attention, RuntimeError) as error:
                 result['message'] = str(error)
             self.state['last_control'] = result
             self.save()
