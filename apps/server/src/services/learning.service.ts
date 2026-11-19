@@ -1,8 +1,8 @@
 /** 自主学习路线、学习状态与打卡；笔记接口由独立服务提供。 */
 import { randomUUID } from 'node:crypto';
 import { rawDb } from '../db/index.js';
-import { pointSelect, requirePoint, enrichPoint, compareRouteOrder, type PointRow } from './learning/points.js';
-import { getNextBranches } from './learning/routes.js';
+import { pointSelect, requirePoint, enrichPoint, type PointRow } from './learning/points.js';
+import { getLearningRoute } from './learning/routes.js';
 export { getNextBranches } from './learning/routes.js';
 export { setCurrentLearningPoint, markPointLearned, deferPoint, restorePoint, saveRouteChoice } from './learning/state.js';
 export { inferChallengeProfile, type LearningState, type ChallengeProfile } from './learning/points.js';
@@ -13,26 +13,9 @@ export {
 } from './notes.service.js';
 
 export function getLearningWorkspace() {
-  let current = rawDb.prepare(`${pointSelect} WHERE kp.current_focus = 1 LIMIT 1`).get() as PointRow | undefined;
-  if (!current) {
-    current = rawDb.prepare(`${pointSelect}
-      WHERE kp.learning_state = 'LEARNING'
-      ORDER BY kp.updated_at DESC LIMIT 1`).get() as PointRow | undefined;
-  }
-  // 已学完的知识点会留在学习台，直到用户明确开始下一项，避免完成动作让学习现场突然消失。
-  if (!current) {
-    current = rawDb.prepare(`${pointSelect}
-      WHERE kp.learning_state = 'LEARNED'
-      ORDER BY kp.learned_at DESC LIMIT 1`).get() as PointRow | undefined;
-  }
-  // 学习台、路线参考和详情页必须使用同一份路线索引，不能依赖导入时为空的 plan_week。
-  const routeSuggested = current ? getNextBranches(current.code)[0] : null;
-  let suggested: ReturnType<typeof enrichPoint> | null | undefined = routeSuggested;
-  if (!suggested) {
-    const candidates = rawDb.prepare("SELECT code FROM knowledge_points WHERE learning_state = 'NOT_STARTED'").all() as Array<{ code: string }>;
-    const next = candidates.sort(compareRouteOrder)[0];
-    if (next) suggested = enrichPoint(requirePoint(next.code));
-  }
+  const route = getLearningRoute();
+  const current = route.current ? requirePoint(route.current.code) : null;
+  const suggested = route.next ? enrichPoint(requirePoint(route.next.code)) : null;
 
   const stats = rawDb.prepare(`SELECT
     COUNT(*) AS total,
@@ -50,6 +33,7 @@ export function getLearningWorkspace() {
 
   return {
     mode: 'SELF_PACED' as const,
+    route,
     current: current ? enrichPoint(current) : null,
     suggested: suggested ?? null,
     stats,

@@ -13,3 +13,4 @@ export * from './enums/status.js';
 export * from './state-machines/knowledge-status.js';
 
 export * from './domain/framework-entry.js';
+export * from './domain/learning-route.js';

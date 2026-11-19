@@ -9,6 +9,7 @@
 ### 学习前先确认
 
 - 直接前置：[REACT-03 状态建模、派生状态与受控模式](../chinese-guides/react-03-state-model-derived-controlled.md#react-03)。先能区分源数据、派生值和编辑草稿，再决定哪些变化需要连接外部系统。
+- 直接前置：[JS-05 异步错误与控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)。先能说明等待对象、错误出口、取消协作与旧结果资格；熟悉这些能力可按需回看，不要求先通过整篇考核。
 
 示例分别放入 React + TypeScript 项目的 `src/App.tsx`，一次运行一段；最后一段使用 React 19.2 的 useEffectEvent。其余示例只用常规 Hooks。保留开发环境的 Strict Mode，方便观察清理是否完整。请求均在内存中模拟，不访问真实接口。
 

@@ -1,0 +1,12 @@
+{
+  "日期": "2026-11-20",
+  "说明": "恢复轮的实际命令结果；无输出的成功命令按执行返回码记录。",
+  "检查": [
+    {"命令": "pnpm build:packages", "退出码": 1, "证据": "build-packages.txt", "说明": "pnpm 12.10.1 自切换失败，不记通过"},
+    {"命令": "pnpm build:server", "退出码": 1, "证据": "build-server.txt", "说明": "同一工具链问题，不记通过"},
+    {"命令": "node node_modules/typescript/bin/tsc -p packages/shared/tsconfig.json && node node_modules/typescript/bin/tsc -p packages/content-parser/tsconfig.json && node node_modules/typescript/bin/tsc -p apps/server/tsconfig.json", "退出码": 0},
+    {"目录": "apps/server", "命令": "node ../../node_modules/vitest/vitest.mjs run src/services/learning/route-contract.test.ts src/db/framework-route-migration.test.ts", "退出码": 0, "通过数": 30, "证据": "route-migration.txt"},
+    {"命令": "node node_modules/eslint/bin/eslint.js apps/web/e2e/global-setup.ts", "退出码": 0, "证据": "lint.txt"},
+    {"说明": "两批获准浏览器运行均在 globalSetup 先完成当前源码 Vite build，再启动 preview；其结果不代替全库 lint、内容检查或完整构建预算。"}
+  ]
+}

@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web
+
+ ✓ src/features/assessment/useAssessmentSession.test.ts (11 tests) 68ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  15:20:29
+   Duration  1.89s (transform 450ms, setup 0ms, collect 983ms, tests 68ms, environment 0ms, prepare 174ms)
+

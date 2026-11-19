@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/server
+
+ ✓ src/services/learning/route-contract.test.ts (29 tests) 1435ms
+   ✓ 生产规划器与隔离记录兼容 > 重复导入保留全部已有个人表字段与偏好 443ms
+
+ Test Files  1 passed (1)
+      Tests  29 passed (29)
+   Start at  19:15:30
+   Duration  5.73s (transform 988ms, setup 1.30s, collect 1.54s, tests 1.44s, environment 1ms, prepare 279ms)
+

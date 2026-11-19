@@ -49,6 +49,7 @@ function statusLabel(status: string) {
 
 <template>
   <main class="mindmap-page">
+    <p class="browse-notice">此处为知识浏览视图，旧顺序与关系不代表已审必修路线；个人建议请查看 <RouterLink to="/plan">我的学习路线</RouterLink>。</p>
     <header class="map-hero">
       <div>
         <p class="eyebrow">KNOWLEDGE CARTOGRAPHY</p>

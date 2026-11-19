@@ -8,11 +8,16 @@ const secondId = '00000000-0000-4000-8000-000000000013';
 const now = '2026-10-13T00:00:00Z';
 
 for (const failure of ['save', 'grade'] as const) {
-  test(`挑战${failure === 'save' ? '答案保存' : '评分'}失败时保留新答案和明确错误`, async ({ page, browser }) => {
+  test(`挑战${failure === 'save' ? '答案保存' : '评分'}失败时保留新答案和明确错误`, async ({ page, browser }, testInfo) => {
     await page.setViewportSize(failure === 'save' ? { width: 390, height: 844 } : { width: 1280, height: 720 });
     let status = 'IN_PROGRESS';
     let lockCount = 0;
     let gradeCount = 0;
+    const events: Array<{ event: string; content?: string; id?: string }> = [];
+    let navigations = 0;
+    page.on('request', request => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) navigations += 1;
+    });
     const session = () => ({
       id: sessionId, knowledgePointCode: 'JS-01', assessmentType: 'FIRST', status, durationMinutes: 30,
       masteryStage: 1, challengeMode: 'THEORY', challengeProfile: 'THEORY_ONLY', assistanceLevel: 0,
@@ -25,15 +30,18 @@ for (const failure of ['save', 'grade'] as const) {
     await page.route('**/api/v1/assessments/**', async route => {
       const path = new URL(route.request().url()).pathname;
       if (path.endsWith('/grade/stream')) {
+        events.push({ event: 'grade-error' });
         gradeCount += 1;
         status = 'ERROR';
         await route.fulfill({ contentType: 'text/event-stream', body: 'event: error\ndata: {"message":"模拟模型连接失败"}\n\n' });
       } else if (path.endsWith('/submit')) {
+        events.push({ event: 'submit' });
         lockCount += 1;
         status = 'SUBMITTED';
         await route.fulfill({ json: { data: session(), meta: { requestId: 'submit' } } });
       } else if (route.request().method() === 'PUT') {
         const id = path.split('/').pop()!;
+        events.push({ event: 'save', id, content: route.request().postDataJSON().answerContent });
         if (failure === 'save' && id === firstId) {
           await route.fulfill({ status: 500, json: { error: { code: 'SAVE_FAILED', message: '模拟答案保存失败', retryable: false }, meta: { requestId: 'failed-save' } } });
         } else {
@@ -41,6 +49,7 @@ for (const failure of ['save', 'grade'] as const) {
           await route.fulfill({ json: { data: answer(id, body.answerContent), meta: { requestId: 'saved' } } });
         }
       } else {
+        events.push({ event: 'load' });
         await route.fulfill({ json: { data: {
           session: session(),
           questions: [firstId, secondId].map((id, orderIndex) => ({
@@ -66,6 +75,8 @@ for (const failure of ['save', 'grade'] as const) {
     await mkdir(evidence, { recursive: true });
     await page.screenshot({ path: fileURLToPath(new URL(`assessment-${failure}.png`, evidence)) });
     await writeFile(new URL(`assessment-${failure}.json`, evidence), JSON.stringify({ browser: browser.version(), viewport: page.viewportSize(), path: `/assessment/${sessionId}`, submitBox, launcherBox }, null, 2));
+    await expect(first).toHaveValue('最新答案一');
+    await expect(second).toHaveValue('最新答案二');
     await submit.click();
     await page.getByRole('button', { name: '提交并生成反馈', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(failure === 'save' ? '答卷尚未提交' : '模拟模型连接失败');
@@ -73,6 +84,13 @@ for (const failure of ['save', 'grade'] as const) {
     await expect(second).toHaveValue('最新答案二');
     expect(lockCount).toBe(failure === 'save' ? 0 : 1);
     expect(gradeCount).toBe(failure === 'save' ? 0 : 1);
+    expect(navigations).toBe(1);
+    expect(events.filter(event => event.event === 'save').every(event => event.content === (event.id === firstId ? '最新答案一' : '最新答案二'))).toBe(true);
+    if (failure === 'grade') expect(events.slice(-3).map(event => event.event)).toEqual(['submit', 'grade-error', 'load']);
+    await testInfo.attach('answer-events', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath(`assessment-${failure}-after.png`), fullPage: true, animations: 'disabled' });
+    await testInfo.attach('page-metadata', { body: JSON.stringify({ browser: browser.version(), viewport: page.viewportSize(), url: page.url(), navigations }), contentType: 'application/json' });
     if (failure === 'save') await expect(first).toBeEnabled();
   });
 }

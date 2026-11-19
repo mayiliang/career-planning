@@ -3,6 +3,15 @@ import { z } from 'zod';
 import { request } from '../http';
 import { consumeSse, streamStructuredResult } from '../stream';
 
+export const LearningRouteSchema = z.object({
+  routeVersion: z.string(), preferenceRevision: z.number(), frameworkChoice: z.enum(['UNDECIDED', 'REACT', 'VUE', 'NONE']),
+  current: z.object({ code: z.string(), outsideSelectedTrack: z.boolean(), audited: z.boolean(), blockers: z.array(z.object({ code: z.string(), state: z.string(), reason: z.string(), href: z.string(), kind: z.enum(['POINT', 'READING']) })) }).nullable(),
+  next: z.object({ code: z.string(), kind: z.enum(['CONTINUE', 'PREREQUISITE', 'START']) }).nullable(),
+  outcome: z.enum(['STEP', 'CHOOSE_FRAMEWORK', 'PAUSED_PREREQUISITE', 'PAUSED_POINT', 'AUDITED_CHAIN_COMPLETE', 'NO_RECOMMENDATION', 'DATA_GAP']),
+  blockers: z.array(z.object({ code: z.string(), state: z.string(), reason: z.string(), href: z.string(), kind: z.enum(['POINT', 'READING']) })),
+  diagnostics: z.array(z.string()), reviewScope: z.object({ auditedCodes: z.array(z.string()), assessmentReadyCodes: z.array(z.string()), unreviewedCodes: z.array(z.string()) }),
+});
+const PreferencesSchema = z.object({ frameworkChoice: z.enum(['UNDECIDED', 'REACT', 'VUE', 'NONE']), revision: z.number(), updatedAt: z.string() });
 const WorkspacePointSchema = z.object({
   id: z.string(), code: z.string(), title: z.string(), domainCode: z.string(), domainTitle: z.string(),
   learningState: z.enum(['NOT_STARTED', 'LEARNING', 'LEARNED', 'DEFERRED']),
@@ -20,7 +29,7 @@ const LearningCheckinSchema = z.object({
 });
 
 const LearningWorkspaceSchema = z.object({
-  mode: z.literal('SELF_PACED'), current: WorkspacePointSchema.nullable(),
+  route: LearningRouteSchema, mode: z.literal('SELF_PACED'), current: WorkspacePointSchema.nullable(),
   suggested: WorkspacePointSchema.nullable(),
   stats: z.object({ total: z.number(), learned: z.number(), learning: z.number(), deferred: z.number(), mastered: z.number(), stable: z.number() }),
   todayCheckin: LearningCheckinSchema.nullable(), recentlyLearned: z.array(WorkspacePointSchema), principle: z.string(),
@@ -60,6 +69,11 @@ const KnowledgeNoteSchema = z.object({
 });
 
 export const learningApi = {
+  getLearningRoute() { return request('/learning/route', LearningRouteSchema); },
+  getLearningPreferences() { return request('/learning/preferences', PreferencesSchema); },
+  saveLearningPreferences(frameworkChoice: z.infer<typeof PreferencesSchema>['frameworkChoice'], expectedRevision: number) {
+    return request('/learning/preferences', PreferencesSchema, { method: 'PUT', body: JSON.stringify({ frameworkChoice, expectedRevision }) });
+  },
   async getLearningWorkspace() {
     return request('/learning/workspace', LearningWorkspaceSchema);
   },

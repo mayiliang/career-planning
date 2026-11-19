@@ -178,30 +178,16 @@ describe('自主学习、笔记版本与打卡', () => {
     expect(getLearningWorkspace().todayCheckin?.summaryMd).toBe('今天按实际进度学习。');
   });
 
-  it('一条路线没有结束时只给唯一下一步，不提前暴露关系分支', () => {
-    rawDb.prepare("UPDATE knowledge_points SET learning_state = 'NOT_STARTED', current_focus = 0, learned_at = NULL WHERE code IN ('JS-01','JS-02','TS-01','A11Y-01','UX-01')").run();
-    setCurrentLearningPoint('JS-01');
-    markPointLearned('JS-01');
+  it('无偏好时所有推荐入口为空，不使用浏览点或旧顺序兜底', () => {
+    rawDb.prepare("UPDATE knowledge_points SET learning_state='NOT_STARTED', current_focus=0").run();
+    rawDb.prepare("UPDATE learning_preferences SET framework_choice='UNDECIDED'").run();
+    setCurrentLearningPoint('JS-01'); markPointLearned('JS-01');
     const workspace = getLearningWorkspace();
     expect(workspace.current?.code).toBe('JS-01');
     expect(workspace.current?.learningState).toBe('LEARNED');
-    expect(workspace.suggested?.code).toBe('JS-02');
-    expect(getNextBranches('JS-01')[0]?.code).toBe('JS-02');
-    const a11yBranches = getNextBranches('A11Y-01');
-    expect(a11yBranches).toHaveLength(1);
-    expect(a11yBranches[0]?.code).toBe('BROWSER-01');
-    expect(a11yBranches[0]?.navigationKind).toBe('CONTINUE');
-    expect(a11yBranches.some((item) => item.code === 'UX-01')).toBe(false);
-    const crossDomainContinuation = getNextBranches('SEC-05');
-    expect(crossDomainContinuation).toHaveLength(1);
-    expect(crossDomainContinuation[0]?.code).toBe('TS-04');
-    expect(crossDomainContinuation[0]?.navigationKind).toBe('CONTINUE');
-    const jobRouteContinuation = getNextBranches('CAREER-05');
-    expect(jobRouteContinuation).toHaveLength(1);
-    expect(jobRouteContinuation[0]?.code).toBe('WEB-02');
-    const trackChoices = getNextBranches('LEAD-01');
-    expect(trackChoices.length).toBeGreaterThan(1);
-    expect(trackChoices.every((item) => item.navigationKind === 'TRACK_CHOICE')).toBe(true);
+    expect(workspace.suggested).toBeNull();
+    expect(workspace.route.outcome).toBe('CHOOSE_FRAMEWORK');
+    for (const code of ['JS-01', 'A11Y-01', 'SEC-05', 'CAREER-05', 'LEAD-01']) expect(getNextBranches(code)).toEqual([]);
   });
 
   it('学习时间只展示有实际任务的活动，纯理论知识不再虚构第二份项目', async () => {
@@ -272,14 +258,9 @@ describe('自主学习、笔记版本与打卡', () => {
 
   it('非试点暂保留框架兼容顺序并明确标为兼容路线', () => {
     rawDb.prepare("UPDATE knowledge_points SET learning_state = 'NOT_STARTED' WHERE code IN ('REACT-01', 'VUE-01', 'VUE-02', 'REACT-02')").run();
-    const afterReactStart = getNextBranches('REACT-01');
-    expect(afterReactStart).toHaveLength(1);
-    expect(afterReactStart[0]?.code).toBe('VUE-01');
-    expect(afterReactStart[0]?.navigationKind).toBe('CONTINUE');
-    expect(afterReactStart[0]?.trackName).toBe('兼容学习路线');
-
+    expect(getNextBranches('REACT-01')).toEqual([]);
     rawDb.prepare("UPDATE knowledge_points SET learning_state = 'LEARNED' WHERE code = 'VUE-01'").run();
-    expect(getNextBranches('REACT-01')[0]?.code).toBe('VUE-02');
+    expect(getNextBranches('REACT-01')).toEqual([]);
     rawDb.prepare("UPDATE knowledge_points SET learning_state = 'NOT_STARTED' WHERE code = 'VUE-01'").run();
   });
 

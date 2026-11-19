@@ -1,0 +1,20 @@
+{
+  "command": [
+    "node",
+    "node_modules/@playwright/test/cli.js",
+    "test",
+    "e2e/framework-entry.spec.ts",
+    "e2e/framework-route.spec.ts",
+    "e2e/ui-polish.spec.ts",
+    "--project=desktop-chrome",
+    "--workers=1",
+    "--grep",
+    "小节查阅、复制、滚动和阅读阈值|VUE-01 路线到补学返回和练习|独立方向、统一下一步|详情暂缓前置|侧栏可收起|搜索键盘选择|打卡可搜索前 60 项|主要页面适配",
+    "--trace=on",
+    "--reporter=list,json",
+    "--output=/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/tmp/issue8-recovery-20261120/focused-sandbox"
+  ],
+  "startedAt": "2026-11-19T17:17:26.543542+00:00",
+  "endedAt": "2026-11-19T17:18:33.395306+00:00",
+  "exitCode": 1
+}

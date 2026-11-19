@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import PersonalLearningRoute from '@/components/PersonalLearningRoute.vue';
 import FrameworkEntry from '@/components/FrameworkEntry.vue';
-import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiClient, type KnowledgePointListItem } from '@/api/client';
@@ -76,19 +76,19 @@ onMounted(load);
 
 <template>
   <div class="route-reference">
+    <PersonalLearningRoute expanded />
     <FrameworkEntry />
-    <AsyncPilotRoute />
     <header class="route-hero">
       <div class="hero-copy"><p>COMPATIBLE READING GROUPS · {{ routeBatchCount }} BATCHES</p><h1>按能力与基础安排学习</h1><span>异步链试点已按真实前置连接。以下 {{ stats.total }} 个知识点暂保留旧分组供查阅；框架不享有提前或交错特权，完整路线将逐步按能力与认知负担重构。</span><div class="hero-actions"><button type="button" class="primary" @click="router.push('/')">继续当前学习 <span>→</span></button><button type="button" @click="router.push('/knowledge')">查看完整知识清单</button></div></div>
-      <aside aria-label="核心路线完成情况"><div class="route-orbit" :style="{ '--progress': `${completionPercent * 3.6}deg` }"><div><strong>{{ completionPercent }}%</strong><span>主干完成度</span></div></div><dl><div><dt>当前批次</dt><dd>B{{ String(activeBatch).padStart(2, '0') }}</dd></div><div><dt>已学完</dt><dd>{{ stats.learned }} / {{ stats.total }}</dd></div><div><dt>M3+ 掌握</dt><dd>{{ stats.mastered }}</dd></div></dl></aside>
+      <aside aria-label="旧分组浏览统计"><div class="route-orbit" :style="{ '--progress': `${completionPercent * 3.6}deg` }"><div><strong>{{ completionPercent }}%</strong><span>旧分组阅读进度</span></div></div><dl><div><dt>当前批次</dt><dd>B{{ String(activeBatch).padStart(2, '0') }}</dd></div><div><dt>已学完</dt><dd>{{ stats.learned }} / {{ stats.total }}</dd></div><div><dt>M3+ 掌握</dt><dd>{{ stats.mastered }}</dd></div></dl></aside>
     </header>
-    <section class="route-principles"><strong><small>ROUTE CONTRACT</small>这条路线如何使用</strong><span><b>核心路线表达能力结构。</b>批次不是硬前置，按已有基础选择内容；{{ stats.optional }} 个专项选修仍保留在完整知识清单中。</span><span><b>个人路线结合进度推荐。</b>熟悉内容无需重学，暂缓不会使依赖自动满足；学习完成与 M3+ 掌握仍分别记录。</span></section>
-    <section class="route-stats" aria-label="路线统计"><div><small>CORE</small><strong>{{ stats.total }}</strong><span>主干知识点</span></div><div><small>DONE</small><strong>{{ stats.learned }}</strong><span>已学完</span></div><div><small>MASTERED</small><strong>{{ stats.mastered }}</strong><span>M3+ 已掌握</span></div><div><small>OPTIONAL</small><strong>{{ stats.optional }}</strong><span>专项路线知识点</span></div></section>
-    <section class="route-toolbar"><label class="route-search"><span>在核心路线中查找</span><div><i aria-hidden="true">⌕</i><input v-model="search" type="search" placeholder="主干知识点、编号或领域"></div></label><div><span>当前显示 {{ visiblePointCount }} 个知识点</span><button type="button" @click="toggleAll">{{ expandedWeeks.size === weeks.length ? '全部收起' : '全部展开' }}</button></div></section>
+    <section class="route-principles"><strong><small>ROUTE CONTRACT</small>旧分组浏览</strong><span><b>旧分组仅供浏览。</b>批次不是硬前置，按已有基础选择内容；{{ stats.optional }} 个专项选修仍保留在完整知识清单中。</span><span><b>个人路线结合进度推荐。</b>熟悉内容无需重学，暂缓不会使依赖自动满足；学习完成与 M3+ 掌握仍分别记录。</span></section>
+    <section class="route-stats" aria-label="旧分组统计"><div><small>CORE</small><strong>{{ stats.total }}</strong><span>旧分组知识点</span></div><div><small>DONE</small><strong>{{ stats.learned }}</strong><span>已学完</span></div><div><small>MASTERED</small><strong>{{ stats.mastered }}</strong><span>M3+ 已掌握</span></div><div><small>OPTIONAL</small><strong>{{ stats.optional }}</strong><span>专项路线知识点</span></div></section>
+    <section class="route-toolbar"><label class="route-search"><span>在旧分组中查找</span><div><i aria-hidden="true">⌕</i><input v-model="search" type="search" placeholder="旧分组知识点、编号或领域"></div></label><div><span>当前显示 {{ visiblePointCount }} 个知识点</span><button type="button" @click="toggleAll">{{ expandedWeeks.size === weeks.length ? '全部收起' : '全部展开' }}</button></div></section>
     <div v-if="loading" class="state">正在整理路线参考…</div><div v-else-if="error" class="state error">{{ error }}</div>
     <section v-else class="week-list">
       <article v-for="[week, items] in weeks" :key="week" :class="{ open: expandedWeeks.has(week) }">
-        <button class="week-summary" type="button" :aria-expanded="expandedWeeks.has(week)" @click="toggleWeek(week)"><span :class="{ current: week === activeBatch }">B{{ String(week).padStart(2, '0') }}<i v-if="week === activeBatch">当前</i></span><div><strong>{{ weekTheme(items) }}</strong><small>{{ items.length }} 个主干知识点 · 合计约 {{ Math.round(items.reduce((sum, item) => sum + item.estimatedTotalMinutes, 0) / 60) }} 小时，可逐点推进</small><em><i :style="{ width: `${items.filter(item => item.learningState === 'LEARNED').length / items.length * 100}%` }"></i></em></div><div class="week-progress"><b>{{ items.filter(item => item.learningState === 'LEARNED').length }}/{{ items.length }}</b><i>{{ expandedWeeks.has(week) ? '收起 ↑' : '展开 ↓' }}</i></div></button>
+        <button class="week-summary" type="button" :aria-expanded="expandedWeeks.has(week)" @click="toggleWeek(week)"><span :class="{ current: week === activeBatch }">B{{ String(week).padStart(2, '0') }}<i v-if="week === activeBatch">当前</i></span><div><strong>{{ weekTheme(items) }}</strong><small>{{ items.length }} 个旧分组知识点 · 合计约 {{ Math.round(items.reduce((sum, item) => sum + item.estimatedTotalMinutes, 0) / 60) }} 小时，可逐点推进</small><em><i :style="{ width: `${items.filter(item => item.learningState === 'LEARNED').length / items.length * 100}%` }"></i></em></div><div class="week-progress"><b>{{ items.filter(item => item.learningState === 'LEARNED').length }}/{{ items.length }}</b><i>{{ expandedWeeks.has(week) ? '收起 ↑' : '展开 ↓' }}</i></div></button>
         <div v-if="expandedWeeks.has(week)" class="week-points">
           <button v-for="item in items" :key="item.code" type="button" @click="router.push(`/knowledge/${item.code}`)"><code>{{ item.code }}</code><span><strong>{{ item.title }}</strong><small>{{ item.domainTitle }} · {{ item.challengeProfile }}</small></span><b :data-state="item.learningState">{{ stateLabel(item) }}</b><i aria-hidden="true">→</i></button>
         </div>

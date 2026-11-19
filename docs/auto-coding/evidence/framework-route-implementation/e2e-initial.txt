@@ -1,0 +1,229 @@
+
+Running 51 tests using 1 worker
+
+(node:73195) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:73195) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop-chrome] › e2e/async-pilot.spec.ts:25:1 › 三篇正文的实际代码在 Chrome 中产生标注结果 (1.2s)
+  ✓   2 [desktop-chrome] › e2e/async-pilot.spec.ts:48:1 › 目录查阅与手机代码交互不会把跳转记成整篇读完 (10.6s)
+  ✓   3 [desktop-chrome] › e2e/async-pilot.spec.ts:95:1 › 小节直达不记录整篇完成，正常读到末尾只完成阅读 (9.7s)
+  ✓   4 [desktop-chrome] › e2e/async-pilot.spec.ts:120:1 › 路线、详情、补基础返回与跨批次练习形成连续路径 (18.7s)
+  ✓   5 [desktop-chrome] › e2e/async-pilot.spec.ts:152:1 › 前置暂缓只解释状态，浏览资料不改变用户当前点 (4.7s)
+  ✓   6 [desktop-chrome] › e2e/experience.spec.ts:18:3 › 核心使用体验 › 知识脑图展示完整能力体系并可逐层展开 (2.1s)
+  ✓   7 [desktop-chrome] › e2e/experience.spec.ts:30:3 › 核心使用体验 › 首次进入直接给出可完成、可验收的具体学习任务 (1.8s)
+  ✓   8 [desktop-chrome] › e2e/experience.spec.ts:47:3 › 核心使用体验 › 资料学习、笔记和掌握状态彼此独立 (3.4s)
+  ✓   9 [desktop-chrome] › e2e/experience.spec.ts:85:3 › 核心使用体验 › 代码练习在站内执行、保存输出并提供明确任务契约 (2.8s)
+  ✓  10 [desktop-chrome] › e2e/experience.spec.ts:114:3 › 核心使用体验 › 本地结构失败不能被未参与的 AI 复核伪装为完全通过 (2.5s)
+  ✓  11 [desktop-chrome] › e2e/experience.spec.ts:134:3 › 核心使用体验 › 自建中文讲义能从知识点、练习与挑战共用的站内地址打开 (2.8s)
+  ✓  12 [desktop-chrome] › e2e/experience.spec.ts:147:3 › 核心使用体验 › B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义 (7.4s)
+  ✓  13 [desktop-chrome] › e2e/experience.spec.ts:206:3 › 核心使用体验 › B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮 (12.8s)
+  ✓  14 [desktop-chrome] › e2e/experience.spec.ts:227:3 › 核心使用体验 › B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音 (9.4s)
+  ✓  15 [desktop-chrome] › e2e/experience.spec.ts:246:3 › 核心使用体验 › B03 四份独立主讲义只为关键名词提供英文发音 (6.6s)
+  ✘  16 [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 (31.0s)
+  -  17 [desktop-chrome] › e2e/experience.spec.ts:313:3 › 核心使用体验 › B09～B12 十七份主讲义只为关键名词提供英文发音
+  -  18 [desktop-chrome] › e2e/experience.spec.ts:342:3 › 核心使用体验 › B13～B16 十七份主讲义只为关键名词提供英文发音
+  -  19 [desktop-chrome] › e2e/experience.spec.ts:371:3 › 核心使用体验 › B17 四份主讲义只为关键名词提供英文发音
+  -  20 [desktop-chrome] › e2e/experience.spec.ts:387:3 › 核心使用体验 › B18～B19 八份主讲义只为关键名词提供英文发音
+  -  21 [desktop-chrome] › e2e/experience.spec.ts:410:3 › 核心使用体验 › B20～B24 二十二份主讲义只为关键名词提供英文发音
+  -  22 [desktop-chrome] › e2e/experience.spec.ts:455:3 › 核心使用体验 › B25～B27 十二份主讲义只为关键名词提供英文发音
+  -  23 [desktop-chrome] › e2e/experience.spec.ts:486:3 › 核心使用体验 › B28 五份主讲义只为关键名词提供英文发音
+  -  24 [desktop-chrome] › e2e/experience.spec.ts:503:3 › 核心使用体验 › B29～B32 十七份主讲义只为关键名词提供英文发音
+  -  25 [desktop-chrome] › e2e/experience.spec.ts:540:3 › 核心使用体验 › B33～B35 十三份主讲义只为关键名词提供英文发音
+  -  26 [desktop-chrome] › e2e/experience.spec.ts:572:3 › 核心使用体验 › B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态
+  -  27 [desktop-chrome] › e2e/experience.spec.ts:609:3 › 核心使用体验 › 重复进入掌握挑战会恢复会话并展示资料与作答契约
+  -  28 [desktop-chrome] › e2e/experience.spec.ts:640:3 › 核心使用体验 › 取消挑战保留旧答卷，并允许按当前合同新建会话
+  -  29 [desktop-chrome] › e2e/experience.spec.ts:673:3 › 核心使用体验 › AI 不可用时在答题前说明影响、数据边界和修复入口
+  -  30 [desktop-chrome] › e2e/experience.spec.ts:685:3 › 核心使用体验 › M4 明示七天稳定性门槛，并以真实变式取代旧题附录
+  -  31 [desktop-chrome] › e2e/experience.spec.ts:736:3 › 核心使用体验 › 兼容批次保留真实知识点，路线明确按能力与基础编排
+  -  32 [desktop-chrome] › e2e/experience.spec.ts:759:3 › 核心使用体验 › 详情下一步与路线一致，关系分支按知识点去重
+  -  33 [desktop-chrome] › e2e/experience.spec.ts:774:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环
+  -  34 [desktop-chrome] › e2e/experience.spec.ts:798:3 › 核心使用体验 › 知识清单支持全局命令导航，笔记中心按体系归档
+  -  35 [desktop-chrome] › e2e/experience.spec.ts:809:3 › 核心使用体验 › 笔记服务端保存失败后保留本地草稿，刷新仍可恢复
+  -  36 [desktop-chrome] › e2e/experience.spec.ts:838:3 › 核心使用体验 › Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序
+  -  37 [desktop-chrome] › e2e/experience.spec.ts:885:3 › 核心使用体验 › 学习台不分配每日任务并支持回顾式打卡
+  -  38 [desktop-chrome] › e2e/experience.spec.ts:898:3 › 核心使用体验 › 关系图可浏览路径、搜索知识点并进入局部关系
+  -  39 [desktop-chrome] › e2e/experience.spec.ts:911:3 › 核心使用体验 › 系统页说明自主节奏、数据备份和重置保留笔记
+  -  40 [desktop-chrome] › e2e/experience.spec.ts:933:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约
+  -  41 [desktop-chrome] › e2e/experience.spec.ts:975:3 › 核心使用体验 › 恢复数据必须先展示当前值、恢复后值和差异
+  -  42 [desktop-chrome] › e2e/experience.spec.ts:995:3 › 核心使用体验 › 本地个人数据 JSON 必须完整校验并预览后才能导入
+  -  43 [desktop-chrome] › e2e/experience.spec.ts:1024:3 › 核心使用体验 › 窄屏下主导航和脑图没有页面级横向溢出
+  -  44 [desktop-chrome] › e2e/experience.spec.ts:1036:3 › 核心使用体验 › 未知地址提供可恢复入口，跨页面导航回到顶部
+  -  45 [desktop-chrome] › e2e/experience.spec.ts:1052:3 › 核心使用体验 › 窄屏下新学习路径没有页面级横向溢出
+(node:73527) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:73527) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  46 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 (9.0s)
+  ✓  47 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 (6.7s)
+  ✓  48 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 (8.7s)
+  ✓  49 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 (6.4s)
+  ✓  50 [desktop-chrome] › e2e/framework-entry.spec.ts:92:1 › 入口明确区分未学与已学基础，查阅后当前点保持不变 (4.7s)
+  ✘  51 [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 (19.5s)
+
+
+  1) [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 ────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.markdown-body[data-pronunciations="ready"]')
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('.markdown-body[data-pronunciations="ready"]') with timeout 5000ms
+      - waiting for locator('.markdown-body[data-pronunciations="ready"]')
+      - Test timeout of 30000ms exceeded.
+
+
+       at helpers/pronunciation.ts:31
+
+      29 | /** 播放检查依赖当前有效按钮；术语的完整覆盖由上面的断言保证。 */
+      30 | export async function playFirstPronunciation(page: Page, batch: string) {
+    > 31 |   await expect(page.locator('.markdown-body[data-pronunciations="ready"]')).toBeVisible();
+         |                                                                             ^
+      32 |   const button = page.locator('.pronunciation-button').first();
+      33 |   await expect(button).toHaveAttribute('aria-label', /^播放“.+”的美式发音$/);
+      34 |   const response = page.waitForResponse(value => new RegExp('/pronunciation/' + batch + '/[a-f0-9]+\\.wav$').test(value.url()));
+        at playFirstPronunciation (/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/helpers/pronunciation.ts:31:77)
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts:310:11
+
+    Error Context: test-results/experience-核心使用体验-B04～B08-二十二份主讲义只为关键名词提供英文发音-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/experience-核心使用体验-B04～B08-二十二份主讲义只为关键名词提供英文发音-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/experience-核心使用体验-B04～B08-二十二份主讲义只为关键名词提供英文发音-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 ──────────────────
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 5000ms
+    - Expected substring  -  1
+    + Received string     + 36
+
+    - 旧题原文保留
+    +
+    +     跳到主要内容Career AtlasAI 时代前端能力地图我的工作空间学习台知识体系笔记中心核心路线求职支线设置与数据服务正常本地优先 · 自主学习工作空间/掌握挑战搜索知识点、页面…⌘ K掌握挑战页面已打开← 返回知识点[
+    +   {
+    +     "validation": "uuid",
+    +     "code": "invalid_string",
+    +     "message": "Invalid uuid",
+    +     "path": [
+    +       "session",
+    +       "id"
+    +     ]
+    +   },
+    +   {
+    +     "validation": "uuid",
+    +     "code": "invalid_string",
+    +     "message": "Invalid uuid",
+    +     "path": [
+    +       "questions",
+    +       0,
+    +       "id"
+    +     ]
+    +   },
+    +   {
+    +     "validation": "uuid",
+    +     "code": "invalid_string",
+    +     "message": "Invalid uuid",
+    +     "path": [
+    +       "questions",
+    +       0,
+    +       "sessionId"
+    +     ]
+    +   }
+    + ]✦Atlas AI总结 · 解释 · 查资料
+    +     
+    +   
+    +
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 5000ms
+      - waiting for locator('body')
+        4 × locator resolved to <body>…</body>
+          - unexpected value "
+        跳到主要内容Career AtlasAI 时代前端能力地图我的工作空间学习台知识体系笔记中心核心路线求职支线设置与数据服务正常本地优先 · 自主学习工作空间/搜索知识点、页面…⌘ KCareer Atlas页面已打开✦Atlas AI总结 · 解释 · 查资料
+        
+      
+    
+    "
+        - locator resolved to <body>…</body>
+        - unexpected value "
+        跳到主要内容Career AtlasAI 时代前端能力地图我的工作空间学习台知识体系笔记中心核心路线求职支线设置与数据服务正常本地优先 · 自主学习工作空间/掌握挑战搜索知识点、页面…⌘ K掌握挑战页面已打开✦Atlas AI总结 · 解释 · 查资料
+        
+      
+    
+    "
+        9 × locator resolved to <body>…</body>
+          - unexpected value "
+        跳到主要内容Career AtlasAI 时代前端能力地图我的工作空间学习台知识体系笔记中心核心路线求职支线设置与数据服务正常本地优先 · 自主学习工作空间/掌握挑战搜索知识点、页面…⌘ K掌握挑战页面已打开← 返回知识点[
+      {
+        "validation": "uuid",
+        "code": "invalid_string",
+        "message": "Invalid uuid",
+        "path": [
+          "session",
+          "id"
+        ]
+      },
+      {
+        "validation": "uuid",
+        "code": "invalid_string",
+        "message": "Invalid uuid",
+        "path": [
+          "questions",
+          0,
+          "id"
+        ]
+      },
+      {
+        "validation": "uuid",
+        "code": "invalid_string",
+        "message": "Invalid uuid",
+        "path": [
+          "questions",
+          0,
+          "sessionId"
+        ]
+      }
+    ]✦Atlas AI总结 · 解释 · 查资料
+        
+      
+    
+    "
+
+
+      70 |   expect(JSON.stringify(legacy)).toContain('旧题原文保留');
+      71 |   await page.goto('/assessment/legacy-ui-session');
+    > 72 |   await expect(page.locator('body')).toContainText('旧题原文保留');
+         |                                      ^
+      73 |   await page.screenshot({path:fileURLToPath(new URL('legacy-challenge-narrow.png',evidence)),fullPage:false});
+      74 |   await writeFile(new URL('pages.json',evidence),JSON.stringify({time:new Date().toISOString(),browser:browser.version(),viewports:[{width:1440,height:1000},{width:390,height:844}],baseURL:'http://127.0.0.1:42731',paths:['/','/plan','/knowledge/REACT-02','/knowledge/WEB-01','/knowledge/materials/react-02-component-boundaries-data-flow-composition.md/react-02'],checks:['选择刷新持久化','各入口下一步一致','切换保留焦点','阅读进度不清零','补学返回','暂缓恢复','链完成无兜底','键盘焦点','窄屏无横向溢出']},null,2));
+      75 | });
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts:72:38
+
+    Error Context: test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 ─────────
+    [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 ───────────────────
+  29 did not run
+  20 passed (3.2m)

@@ -1,0 +1,14 @@
+{
+  "time": "2026-11-13T12:18:41.562Z",
+  "browser": "157.0.8103.40",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "url": "http://127.0.0.1:42731/knowledge/REACT-02",
+  "checks": [
+    "详情暂缓立即显示 PAUSED_PREREQUISITE",
+    "旧推荐与分支均无下一步",
+    "恢复单点后返回推荐一致"
+  ]
+}

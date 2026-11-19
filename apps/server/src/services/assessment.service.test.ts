@@ -1,3 +1,4 @@
+import { ASSESSMENT_PENDING } from '@career-atlas/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { rawDb } from '../db/index.js';
 import { executeImport } from './import.service.js';
@@ -74,6 +75,10 @@ describe('逐点首考合同掌握挑战', () => {
     const problems: string[] = [];
     for (const point of items) {
       rawDb.prepare('DELETE FROM assessment_sessions WHERE knowledge_point_code = ?').run(point.code);
+      if (ASSESSMENT_PENDING[point.code]) {
+        await expect(createAssessmentSession(requestFor(point.code))).rejects.toThrow('练习合同待修订');
+        continue;
+      }
       const created = await createAssessmentSession(requestFor(point.code));
       const detail = await getAssessmentSession(created.session.id);
       const row = rawDb.prepare('SELECT assessment_spec_md AS assessmentSpec FROM knowledge_points WHERE code = ?').get(point.code) as { assessmentSpec: string };

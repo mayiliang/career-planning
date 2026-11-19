@@ -28,7 +28,7 @@ const statusOptions = [
 
 const actionLabels = {
   LEARN: '开始学习', CONTINUE: '继续推进', ASSESS: '发起首考', RETEST: '完成复测',
-  RELEARN: '重新学习', COMPLETE: '查看掌握成果',
+  RELEARN: '重新学习', COMPLETE: '调整学习方向',
 } as const;
 const layerLabels = { CORE: '核心', APPLICATION: '应用', SPECIALTY: '专精', LEADERSHIP: '领导力' } as const;
 const requirementLabels = { REQUIRED: '必修', TRACK_REQUIRED: '主修必修', ELECTIVE: '选修' } as const;
@@ -80,18 +80,11 @@ const learningCount = computed(() => domainStats.value?.reduce((sum, domain) => 
 const progress = computed(() => totalCount.value ? Math.round(masteredCount.value / totalCount.value * 100) : 0);
 const hasFilters = computed(() => Boolean(selectedDomain.value || selectedStatus.value || selectedLayer.value || selectedRequirement.value || selectedMaturity.value || selectedAiRelation.value || selectedPortability.value || selectedTrack.value || selectedTopicTag.value || searchQuery.value.trim()));
 const currentCode = computed(() => recommendation.value?.point?.code);
-const routeStep = computed(() => {
-  const action = recommendation.value?.action;
-  if (action === 'ASSESS') return 2;
-  if (action === 'RETEST') return 3;
-  if (action === 'COMPLETE') return 4;
-  return 1;
-});
 const formatStatus = (status: string) => statusOptions.find((item) => item.value === status)?.label ?? status;
 const formatMinutes = (minutes: number) => minutes >= 60 ? `${Math.floor(minutes / 60)}h${minutes % 60 ? `${minutes % 60}m` : ''}` : `${minutes}m`;
 const openRecommendation = () => {
   const code = recommendation.value?.point?.code;
-  router.push(code ? `/knowledge/${code}` : '/knowledge/map');
+  router.push(code ? `/knowledge/${code}` : '/plan');
 };
 const clearFilters = () => {
   selectedDomain.value = '';
@@ -109,6 +102,7 @@ const clearFilters = () => {
 
 <template>
   <main class="knowledge-page">
+    <p class="browse-notice">此处为知识浏览视图，旧顺序与关系不代表已审必修路线；个人建议请查看 <RouterLink to="/plan">我的学习路线</RouterLink>。</p>
     <header class="knowledge-hero">
       <div class="hero-copy">
         <p class="eyebrow">LEARNING INVENTORY · 2026</p>
@@ -126,26 +120,18 @@ const clearFilters = () => {
     <section v-else-if="recommendation" class="route-deck" :data-readiness="recommendation.readiness">
       <div class="route-intro">
         <p class="eyebrow">NEXT BEST ACTION</p>
-        <span class="route-week">{{ recommendation.routePosition ? `W${String(recommendation.routePosition.week).padStart(2, '0')}` : 'DONE' }}</span>
+        <span class="route-week">我的下一步</span>
         <h2 v-if="recommendation.point"><code>{{ recommendation.point.code }}</code>{{ recommendation.point.title }}</h2>
-        <h2 v-else>整条路线已经贯通</h2>
+        <h2 v-else>当前没有自动下一步</h2>
         <p>{{ recommendation.reason }}</p>
         <button class="route-primary" @click="openRecommendation">{{ actionLabels[recommendation.action] }}<span>↗</span></button>
       </div>
 
-      <div class="route-rail" aria-label="知识掌握闭环">
-        <div v-for="(label, index) in ['学习', '首考', '7 天复测', '掌握']" :key="label" :class="{ active: routeStep === index + 1, passed: routeStep > index + 1 }">
-          <i>{{ routeStep > index + 1 ? '✓' : index + 1 }}</i><span>{{ label }}</span>
-        </div>
-      </div>
-
       <aside class="route-context">
-        <span class="context-label">前置就绪度</span>
-        <strong>{{ recommendation.prerequisiteProgress.mastered }}/{{ recommendation.prerequisiteProgress.total }}</strong>
-        <div class="readiness-bar"><i :style="{ width: `${recommendation.prerequisiteProgress.total ? recommendation.prerequisiteProgress.mastered / recommendation.prerequisiteProgress.total * 100 : 100}%` }"></i></div>
-        <p v-if="recommendation.blockers.length">先完成 <button v-for="blocker in recommendation.blockers.slice(0, 3)" :key="blocker.code" @click="router.push(`/knowledge/${blocker.code}`)">{{ blocker.code }}</button></p>
-        <p v-else>没有阻塞项，可以立即推进。</p>
-        <small v-if="recommendation.routePosition">能力路线 {{ recommendation.routePosition.index }} / {{ recommendation.routePosition.total }}</small>
+        <span class="context-label">已审推荐范围</span>
+        <p>共同基础与一个可选框架方向。未选方向不计入必修；学完与考核掌握分别记录。</p>
+        <ul><li v-for="blocker in recommendation.route.blockers" :key="blocker.code"><RouterLink :to="blocker.href">{{ blocker.code }}</RouterLink> · {{ blocker.reason }}</li></ul>
+        <RouterLink to="/plan">查看偏好与学习路线</RouterLink>
       </aside>
     </section>
 

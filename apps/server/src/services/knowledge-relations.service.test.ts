@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { resolvePointTaxonomy } from '@career-atlas/content-parser';
 import { projectRoot } from '../config/index.js';
 import {
   CONTENT_PLAN_WEEK_COUNT,
@@ -14,7 +13,7 @@ import {
   buildRelationDefinitions,
 } from './knowledge-relations.service.js';
 
-describe('知识关系与求职优先核心路线编排', () => {
+describe('知识关系与冻结旧分组兼容', () => {
   it('完整体系包含 223 点，35 个非空批次覆盖 149 个主干点且不生成占位任务', () => {
     const knowledgeCodes = KNOWLEDGE_PATHS.flat();
     const plannedCodes = Object.entries(LEARNING_WEEK_PATHS)
@@ -29,20 +28,7 @@ describe('知识关系与求职优先核心路线编排', () => {
     expect(plannedCodes).toHaveLength(149);
     expect(plannedSet.size).toBe(plannedCodes.length);
     expect(plannedCodes).toEqual(RECOMMENDED_KNOWLEDGE_ROUTE);
-    KNOWLEDGE_PATHS.forEach((path, index) => {
-      const domainCode = String(index + 1).padStart(2, '0');
-      for (const code of path) {
-        const { requirementLevel, trackIds } = resolvePointTaxonomy(code, domainCode);
-        const belongsToDefaultTrack = requirementLevel === 'TRACK_REQUIRED'
-          && trackIds.some((trackId) => DEFAULT_TRACK_IDS.has(trackId));
-        expect(
-          plannedSet.has(code),
-          `${code} 的默认路线归属与要求级别不一致`,
-        ).toBe(requirementLevel === 'REQUIRED' || belongsToDefaultTrack);
-      }
-    });
-
-    expect([...DEFAULT_TRACK_IDS]).toEqual(['react', 'vue', 'agent-mcp']);
+    expect([...DEFAULT_TRACK_IDS]).toEqual([]);
     expect(plannedSet.has('REACT-01')).toBe(true);
     expect(plannedSet.has('REACT-09')).toBe(true);
     expect(plannedSet.has('VUE-01')).toBe(true);
@@ -57,7 +43,7 @@ describe('知识关系与求职优先核心路线编排', () => {
     );
   });
 
-  it('唯一推荐路线文档的 35 个批次与运行时逐点一致', () => {
+  it('旧分组浏览文档的 35 个批次与运行时逐点一致', () => {
     const document = readFileSync(resolve(projectRoot, 'docs/plans/self-paced-learning-route.md'), 'utf8');
     const rows = [...document.matchAll(/^\| B(\d{2}) \| ([^|]+) \|$/gm)];
     expect(rows).toHaveLength(CORE_ROUTE_BATCH_COUNT);
@@ -68,7 +54,7 @@ describe('知识关系与求职优先核心路线编排', () => {
     }
   });
 
-  it('求职优先路线保留 B01～B03 底座，并在 B04～B12 完成框架与面试证据主线', () => {
+  it('冻结旧分组保留 B01～B03 底座，并在 B04～B12 完成框架与面试证据主线', () => {
     const batchByCode = new Map(Object.entries(LEARNING_WEEK_PATHS)
       .flatMap(([batch, codes]) => codes.map((code) => [code, Number(batch)] as const)));
 
@@ -204,7 +190,7 @@ describe('知识关系与求职优先核心路线编排', () => {
     expect(relationKeys.has('MCP-01->AIAPP-05')).toBe(false);
     expect(relationKeys.has('RENDER-01->RENDER-02')).toBe(true);
     expect(relationKeys.has('REACT-02->REACT-10')).toBe(true);
-    expect(relationKeys.has('VUE-02->VUE-05')).toBe(true);
+    expect(relationKeys.has('VUE-02->VUE-05')).toBe(false);
     expect(relationKeys.has('VUE-05->VUE-06')).toBe(true);
     expect(relationKeys.has('VUE-02->VUE-08')).toBe(true);
     expect(relationKeys.has('VUE-07->VUE-11')).toBe(true);

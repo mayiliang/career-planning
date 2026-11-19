@@ -1,0 +1,2 @@
+ ERROR  Failed to switch pnpm to v12.10.1. Looks like pnpm CLI is missing at "/Users/bob/Library/pnpm/.tools/pnpm/12.10.1/bin" or is incorrect
+spawnSync /Users/bob/Library/pnpm/.tools/pnpm/12.10.1/bin/pnpm Unknown system error -8

@@ -1,0 +1,12 @@
+
+Running 9 tests using 1 worker
+
+(node:7921) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7921) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 (7.5s)
+  ✓  2 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 (8.5s)
+  ✓  3 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 (6.3s)
+  ✓  4 [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 (14.7s)
+  ✓  5 [desktop-chrome] › e2e/framework-route.spec.ts:81:1 › 详情暂缓前置立即同步个人推荐并可恢复 (2.9s)

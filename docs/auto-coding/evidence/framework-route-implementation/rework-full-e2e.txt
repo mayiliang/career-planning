@@ -1,0 +1,217 @@
+
+Running 52 tests using 1 worker
+
+(node:80538) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:80538) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop-chrome] › e2e/async-pilot.spec.ts:25:1 › 三篇正文的实际代码在 Chrome 中产生标注结果 (1.6s)
+  ✓   2 [desktop-chrome] › e2e/async-pilot.spec.ts:48:1 › 目录查阅与手机代码交互不会把跳转记成整篇读完 (9.2s)
+  ✓   3 [desktop-chrome] › e2e/async-pilot.spec.ts:95:1 › 小节直达不记录整篇完成，正常读到末尾只完成阅读 (3.9s)
+  ✓   4 [desktop-chrome] › e2e/async-pilot.spec.ts:120:1 › 路线、详情、补基础返回与跨批次练习形成连续路径 (9.8s)
+  ✓   5 [desktop-chrome] › e2e/async-pilot.spec.ts:152:1 › 前置暂缓只解释状态，浏览资料不改变用户当前点 (3.5s)
+  ✓   6 [desktop-chrome] › e2e/experience.spec.ts:18:3 › 核心使用体验 › 知识脑图展示完整能力体系并可逐层展开 (1.9s)
+  ✓   7 [desktop-chrome] › e2e/experience.spec.ts:30:3 › 核心使用体验 › 首次进入直接给出可完成、可验收的具体学习任务 (1.5s)
+  ✓   8 [desktop-chrome] › e2e/experience.spec.ts:47:3 › 核心使用体验 › 资料学习、笔记和掌握状态彼此独立 (3.4s)
+  ✓   9 [desktop-chrome] › e2e/experience.spec.ts:85:3 › 核心使用体验 › 代码练习在站内执行、保存输出并提供明确任务契约 (4.7s)
+  ✓  10 [desktop-chrome] › e2e/experience.spec.ts:114:3 › 核心使用体验 › 本地结构失败不能被未参与的 AI 复核伪装为完全通过 (2.8s)
+  ✓  11 [desktop-chrome] › e2e/experience.spec.ts:134:3 › 核心使用体验 › 自建中文讲义能从知识点、练习与挑战共用的站内地址打开 (3.8s)
+  ✓  12 [desktop-chrome] › e2e/experience.spec.ts:147:3 › 核心使用体验 › B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义 (7.8s)
+  ✓  13 [desktop-chrome] › e2e/experience.spec.ts:206:3 › 核心使用体验 › B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮 (15.9s)
+  ✓  14 [desktop-chrome] › e2e/experience.spec.ts:227:3 › 核心使用体验 › B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音 (9.5s)
+  ✓  15 [desktop-chrome] › e2e/experience.spec.ts:246:3 › 核心使用体验 › B03 四份独立主讲义只为关键名词提供英文发音 (8.2s)
+  ✓  16 [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 (23.6s)
+  ✓  17 [desktop-chrome] › e2e/experience.spec.ts:315:3 › 核心使用体验 › B09～B12 十七份主讲义只为关键名词提供英文发音 (17.8s)
+  ✓  18 [desktop-chrome] › e2e/experience.spec.ts:344:3 › 核心使用体验 › B13～B16 十七份主讲义只为关键名词提供英文发音 (21.4s)
+  ✓  19 [desktop-chrome] › e2e/experience.spec.ts:373:3 › 核心使用体验 › B17 四份主讲义只为关键名词提供英文发音 (7.4s)
+  ✓  20 [desktop-chrome] › e2e/experience.spec.ts:389:3 › 核心使用体验 › B18～B19 八份主讲义只为关键名词提供英文发音 (15.8s)
+  ✓  21 [desktop-chrome] › e2e/experience.spec.ts:412:3 › 核心使用体验 › B20～B24 二十二份主讲义只为关键名词提供英文发音 (39.5s)
+  ✓  22 [desktop-chrome] › e2e/experience.spec.ts:457:3 › 核心使用体验 › B25～B27 十二份主讲义只为关键名词提供英文发音 (22.6s)
+  ✓  23 [desktop-chrome] › e2e/experience.spec.ts:488:3 › 核心使用体验 › B28 五份主讲义只为关键名词提供英文发音 (9.0s)
+  ✓  24 [desktop-chrome] › e2e/experience.spec.ts:505:3 › 核心使用体验 › B29～B32 十七份主讲义只为关键名词提供英文发音 (25.0s)
+  ✓  25 [desktop-chrome] › e2e/experience.spec.ts:542:3 › 核心使用体验 › B33～B35 十三份主讲义只为关键名词提供英文发音 (18.2s)
+  ✓  26 [desktop-chrome] › e2e/experience.spec.ts:574:3 › 核心使用体验 › B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态 (3.9s)
+  ✓  27 [desktop-chrome] › e2e/experience.spec.ts:611:3 › 核心使用体验 › 重复进入掌握挑战会恢复会话并展示资料与作答契约 (7.7s)
+  ✓  28 [desktop-chrome] › e2e/experience.spec.ts:644:3 › 核心使用体验 › 取消挑战保留旧答卷，并允许按当前合同新建会话 (6.0s)
+  ✓  29 [desktop-chrome] › e2e/experience.spec.ts:677:3 › 核心使用体验 › AI 不可用时在答题前说明影响、数据边界和修复入口 (2.2s)
+  ✓  30 [desktop-chrome] › e2e/experience.spec.ts:689:3 › 核心使用体验 › M4 明示七天稳定性门槛，并以真实变式取代旧题附录 (2.6s)
+  ✓  31 [desktop-chrome] › e2e/experience.spec.ts:740:3 › 核心使用体验 › 兼容批次保留真实知识点，路线明确按能力与基础编排 (2.2s)
+  ✓  32 [desktop-chrome] › e2e/experience.spec.ts:763:3 › 核心使用体验 › 详情下一步与路线一致，关系分支按知识点去重 (3.4s)
+  ✓  33 [desktop-chrome] › e2e/experience.spec.ts:784:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环 (4.9s)
+  ✓  34 [desktop-chrome] › e2e/experience.spec.ts:816:3 › 核心使用体验 › 知识清单支持全局命令导航，笔记中心按体系归档 (3.1s)
+  ✓  35 [desktop-chrome] › e2e/experience.spec.ts:827:3 › 核心使用体验 › 笔记服务端保存失败后保留本地草稿，刷新仍可恢复 (4.7s)
+  ✓  36 [desktop-chrome] › e2e/experience.spec.ts:856:3 › 核心使用体验 › Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序 (6.5s)
+  ✓  37 [desktop-chrome] › e2e/experience.spec.ts:903:3 › 核心使用体验 › 学习台不分配每日任务并支持回顾式打卡 (1.1s)
+  ✓  38 [desktop-chrome] › e2e/experience.spec.ts:916:3 › 核心使用体验 › 关系图可浏览路径、搜索知识点并进入局部关系 (1.9s)
+  ✓  39 [desktop-chrome] › e2e/experience.spec.ts:929:3 › 核心使用体验 › 系统页说明自主节奏、数据备份和重置保留笔记 (1.3s)
+  ✘  40 [desktop-chrome] › e2e/experience.spec.ts:951:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约 (9.9m)
+  -  41 [desktop-chrome] › e2e/experience.spec.ts:993:3 › 核心使用体验 › 恢复数据必须先展示当前值、恢复后值和差异
+  -  42 [desktop-chrome] › e2e/experience.spec.ts:1013:3 › 核心使用体验 › 本地个人数据 JSON 必须完整校验并预览后才能导入
+  -  43 [desktop-chrome] › e2e/experience.spec.ts:1042:3 › 核心使用体验 › 窄屏下主导航和脑图没有页面级横向溢出
+  -  44 [desktop-chrome] › e2e/experience.spec.ts:1054:3 › 核心使用体验 › 未知地址提供可恢复入口，跨页面导航回到顶部
+  -  45 [desktop-chrome] › e2e/experience.spec.ts:1070:3 › 核心使用体验 › 窄屏下新学习路径没有页面级横向溢出
+(node:81248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:81248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  46 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 (16.1m)
+(node:81285) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:81285) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  47 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 (6.6s)
+  ✓  48 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 (9.2s)
+  ✘  49 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 (15.9m)
+(node:81313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:81313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  50 [desktop-chrome] › e2e/framework-entry.spec.ts:92:1 › 入口明确区分未学与已学基础，查阅后当前点保持不变 (5.3s)
+  ✘  51 [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 (15.5m)
+(node:81342) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:81342) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  52 [desktop-chrome] › e2e/framework-route.spec.ts:79:1 › 详情暂缓前置立即同步个人推荐并可恢复 (4.1s)
+
+
+  1) [desktop-chrome] › e2e/experience.spec.ts:951:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约 ──────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.empty-guide li')
+    Expected: 3
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.empty-guide li') with timeout 5000ms
+      - waiting for locator('.empty-guide li')
+        5 × locator resolved to 0 elements
+          - unexpected value "0"
+
+
+      951 |   test('岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约', async ({ page }) => {
+      952 |     await page.goto('/jobs');
+    > 953 |     await expect(page.locator('.empty-guide li')).toHaveCount(3);
+          |                                                   ^
+      954 |     await expect(page.getByText('记录事实', { exact: true })).toBeVisible();
+      955 |
+      956 |     await page.keyboard.press('Tab');
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts:953:51
+
+    Error Context: test-results/experience-核心使用体验-岗位创建与-CSV-导入先预览再写入，并符合键盘对话框契约-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/experience-核心使用体验-岗位创建与-CSV-导入先预览再写入，并符合键盘对话框契约-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/experience-核心使用体验-岗位创建与-CSV-导入先预览再写入，并符合键盘对话框契约-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 ───────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: apiRequestContext.get: Test timeout of 30000ms exceeded.
+
+       7 |   { code: 'VUE-01', guide: 'vue-01-vite-sfc-project-structure.md', heading: '固定入口练习与单变量排错', sample: '两张独立的资料卡片' },
+       8 | ];
+    >  9 | async function point(page: Page, code: string) { return (await (await page.request.get(`/api/v1/knowledge/points/${code}`)).json()).data; }
+         |                                                                                    ^
+      10 | async function progress(page: Page, guide: string) {
+      11 |   const records = (await (await page.request.get('/api/v1/knowledge/material-progress')).json()).data;
+      12 |   return records.find((r: {guide:string}) => r.guide === guide)?.progressPercent ?? 0;
+        at point (/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:9:84)
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:49:25
+
+    Error Context: test-results/framework-entry-REACT-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-entry-REACT-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/framework-entry-REACT-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 ──────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-reader-ready="true"]')
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-reader-ready="true"]') with timeout 5000ms
+      - waiting for locator('[data-reader-ready="true"]')
+      - Test timeout of 30000ms exceeded.
+
+
+      82 |     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      83 |     await page.screenshot({ animations: 'disabled', path: fileURLToPath(new URL(`${entry.code}-mobile-code.png`, evidence)) });
+    > 84 |     await page.goto(href); await expect(page.locator('[data-reader-ready="true"]')).toBeVisible();
+         |                                                                                     ^
+      85 |     await page.locator('.material-sheet footer').scrollIntoViewIfNeeded();
+      86 |     await expect.poll(() => progress(page, entry.guide)).toBeGreaterThanOrEqual(80);
+      87 |     const after = await point(page, entry.code);
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:84:85
+
+    Error Context: test-results/framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 ──────────────────
+
+    Test timeout of 120000ms exceeded.
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '我的下一步', exact: true })
+    Expected substring: "补齐基础 · JS-01"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '我的下一步', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '我的下一步', exact: true })
+
+
+      22 |   await page.reload(); await expect(panel.getByLabel('框架方向')).toHaveValue('REACT');
+      23 |   for (const url of ['/plan','/knowledge/REACT-02','/knowledge/materials/react-02-component-boundaries-data-flow-composition.md/react-02']) {
+    > 24 |     await page.goto(url); await expect(panel).toContainText('补齐基础 · JS-01');
+         |                                               ^
+      25 |   }
+      26 |   await expect(page.getByLabel('练习合同状态')).toContainText('筛选后编辑器');
+      27 |   await expect(page.locator('[data-reader-ready="true"]')).toBeVisible();
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts:24:47
+
+    Error Context: test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [desktop-chrome] › e2e/experience.spec.ts:951:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约 ───────
+    [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 ────────────
+    [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 ───────────────────
+    [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 ───────────────────
+  5 did not run
+  43 passed (1.1h)

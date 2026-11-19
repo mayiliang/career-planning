@@ -1,0 +1,12 @@
+
+Running 3 tests using 1 worker
+
+(node:87061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:87061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战答案保存失败时保留新答案和明确错误 (3.6s)
+  ✓  2 [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战评分失败时保留新答案和明确错误 (3.4s)
+  ✓  3 [desktop-chrome] › e2e/ui-polish.spec.ts:116:1 › 开始学习失败有明确反馈并恢复可操作状态 (2.0s)
+
+  3 passed (1.1m)

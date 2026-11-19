@@ -1,0 +1,152 @@
+{
+  "scheduler4": {
+    "passed": 70,
+    "failed": 9,
+    "notRun": 0
+  },
+  "recovery": [
+    {
+      "file": "ui-polish.spec.ts",
+      "title": "侧栏可收起并记住偏好，手机仍保留全部主导航",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 2711,
+          "startTime": "2026-11-19T22:05:25.609Z"
+        }
+      ]
+    },
+    {
+      "file": "ui-polish.spec.ts",
+      "title": "搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 3474,
+          "startTime": "2026-11-19T22:05:32.841Z"
+        }
+      ]
+    },
+    {
+      "file": "ui-polish.spec.ts",
+      "title": "打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 4690,
+          "startTime": "2026-11-19T22:05:36.460Z"
+        }
+      ]
+    },
+    {
+      "file": "ui-polish.spec.ts",
+      "title": "主要页面适配桌面、平板和手机且无页面脚本错误",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 38020,
+          "startTime": "2026-11-19T22:05:41.412Z"
+        }
+      ]
+    },
+    {
+      "file": "framework-entry.spec.ts",
+      "title": "REACT-01 小节查阅、复制、滚动和阅读阈值",
+      "status": "passed",
+      "durationSeconds": 7.5,
+      "evidence": "focused-approved/runner.txt",
+      "batchIncomplete": true
+    },
+    {
+      "file": "framework-entry.spec.ts",
+      "title": "VUE-01 路线到补学返回和练习，查看不改变学习状态",
+      "status": "passed",
+      "durationSeconds": 8.5,
+      "evidence": "focused-approved/runner.txt",
+      "batchIncomplete": true
+    },
+    {
+      "file": "framework-entry.spec.ts",
+      "title": "VUE-01 小节查阅、复制、滚动和阅读阈值",
+      "status": "passed",
+      "durationSeconds": 6.3,
+      "evidence": "focused-approved/runner.txt",
+      "batchIncomplete": true
+    },
+    {
+      "file": "framework-route.spec.ts",
+      "title": "独立方向、统一下一步、保留焦点、阅读辅助与空态",
+      "status": "passed",
+      "durationSeconds": 14.7,
+      "evidence": "focused-approved/runner.txt",
+      "batchIncomplete": true
+    },
+    {
+      "file": "framework-route.spec.ts",
+      "title": "详情暂缓前置立即同步个人推荐并可恢复",
+      "status": "passed",
+      "durationSeconds": 2.9,
+      "evidence": "focused-approved/runner.txt",
+      "batchIncomplete": true
+    }
+  ],
+  "eventGaps": [
+    {
+      "test": "ui-polish-搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点-desktop-chrome",
+      "batch": "remaining-approved",
+      "maxConsecutiveEventGapMs": 402.293
+    },
+    {
+      "test": "ui-polish-侧栏可收起并记住偏好，手机仍保留全部主导航-desktop-chrome",
+      "batch": "remaining-approved",
+      "maxConsecutiveEventGapMs": 4342.319
+    },
+    {
+      "test": "ui-polish-打卡可搜索前-60-项以外的知识点，失败保留输入并可重试保存-desktop-chrome",
+      "batch": "remaining-approved",
+      "maxConsecutiveEventGapMs": 389.068
+    },
+    {
+      "test": "ui-polish-主要页面适配桌面、平板和手机且无页面脚本错误-desktop-chrome",
+      "batch": "remaining-approved",
+      "maxConsecutiveEventGapMs": 674.098
+    },
+    {
+      "test": "framework-route-详情暂缓前置立即同步个人推荐并可恢复-desktop-chrome",
+      "batch": "focused-approved",
+      "maxConsecutiveEventGapMs": 234.949
+    },
+    {
+      "test": "framework-entry-VUE-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome",
+      "batch": "focused-approved",
+      "maxConsecutiveEventGapMs": 407.552
+    },
+    {
+      "test": "framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome",
+      "batch": "focused-approved",
+      "maxConsecutiveEventGapMs": 423.914
+    },
+    {
+      "test": "framework-entry-REACT-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome",
+      "batch": "focused-approved",
+      "maxConsecutiveEventGapMs": 1211.908
+    },
+    {
+      "test": "framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome",
+      "batch": "focused-approved",
+      "maxConsecutiveEventGapMs": 759.377
+    }
+  ],
+  "stats": {
+    "startTime": "2026-11-19T22:04:27.414Z",
+    "duration": 113463.019,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

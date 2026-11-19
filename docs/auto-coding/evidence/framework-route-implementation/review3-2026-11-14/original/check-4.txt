@@ -1,0 +1,177 @@
+$ pnpm -r --workspace-concurrency=1 test
+Scope: 4 of 5 workspace projects
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/packages/content-parser[39m
+
+ [32m✓[39m src/parser/parser.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/parser/content.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 1539[2mms[22m[39m
+   [33m[2m✓[22m[39m 知识资源审计防线[2m > [22m解析 docs/knowledge 中每一条本地 Markdown 资源与锚点 [33m864[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m18 passed[39m[22m[90m (18)[39m
+[2m   Start at [22m 08:13:34
+[2m   Duration [22m 2.65s[2m (transform 270ms, setup 59ms, collect 440ms, tests 1.55s, environment 1ms, prepare 401ms)[22m
+
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/packages/shared[39m
+
+ [32m✓[39m src/domain/async-pilot.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/state-machines/knowledge-status.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m10 passed[39m[22m[90m (10)[39m
+[2m   Start at [22m 08:13:37
+[2m   Duration [22m 966ms[2m (transform 156ms, setup 47ms, collect 215ms, tests 20ms, environment 1ms, prepare 335ms)[22m
+
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/server[39m
+
+[90mstderr[2m | src/executor/executor.test.ts[2m > [22m[2mDisabledExecutor[2m > [22m[2mshould reject all execution requests
+[22m[39m[DisabledExecutor] Code execution request rejected: { reason: [32m'Test disabled'[39m, language: [32m'javascript'[39m, testCaseCount: [33m1[39m }
+
+[90mstdout[2m | src/executor/executor.test.ts[2m > [22m[2mExecutorManager[2m > [22m[2mshould execute code through manager
+[22m[39m[ExecutorManager] Executing code: { type: [32m'FAKE'[39m, language: [32m'javascript'[39m, testCount: [33m1[39m, timeLimit: [33m5000[39m }
+
+[90mstdout[2m | src/executor/executor.test.ts[2m > [22m[2mExecutorManager[2m > [22m[2mshould execute code through manager
+[22m[39m[ExecutorManager] Execution result: { status: [32m'SUCCESS'[39m, passed: [33mtrue[39m, passRate: [32m'1/1'[39m }
+
+[90mstderr[2m | src/executor/executor.test.ts[2m > [22m[2mPhase 7 Exit Criteria[2m > [22m[2m退出标准3: 没有沙箱时绝不在宿主机执行答案
+[22m[39m[DisabledExecutor] Code execution request rejected: {
+  reason: [32m'No sandbox available'[39m,
+  language: [32m'javascript'[39m,
+  testCaseCount: [33m1[39m
+}
+
+[90mstdout[2m | src/executor/executor.test.ts[2m > [22m[2mPhase 7 Exit Criteria[2m > [22m[2m代码题服务集成：执行器不可用时返回人工复核
+[22m[39m[ExecutorManager] Executing code: {
+  type: [32m'DISABLED'[39m,
+  language: [32m'javascript'[39m,
+  testCount: [33m1[39m,
+  timeLimit: [33m5000[39m
+}
+[ExecutorManager] Execution result: { status: [32m'SECURITY_VIOLATION'[39m, passed: [33mfalse[39m, passRate: [32m'0/1'[39m }
+
+[90mstderr[2m | src/executor/executor.test.ts[2m > [22m[2mPhase 7 Exit Criteria[2m > [22m[2m代码题服务集成：执行器不可用时返回人工复核
+[22m[39m[DisabledExecutor] Code execution request rejected: {
+  reason: [32m'Executor disabled by configuration'[39m,
+  language: [32m'javascript'[39m,
+  testCaseCount: [33m1[39m
+}
+
+ [32m✓[39m src/executor/executor.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 214[2mms[22m[39m
+ [32m✓[39m src/services/knowledge-relations.service.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 164[2mms[22m[39m
+ [32m✓[39m src/services/assistant.service.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 1251[2mms[22m[39m
+ [32m✓[39m src/services/knowledge-material.service.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 2622[2mms[22m[39m
+   [33m[2m✓[22m[39m 站内中文学习资料[2m > [22mB01～B35 主讲义与原子前置短文的站内链接可以逐一打开 [33m1309[2mms[22m[39m
+   [33m[2m✓[22m[39m 站内中文学习资料[2m > [22m知识库列出的每一个站内讲义链接都能由系统读取 [33m958[2mms[22m[39m
+ [32m✓[39m src/services/async-pilot.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1785[2mms[22m[39m
+   [33m[2m✓[22m[39m 异步试点的合同与兼容[2m > [22m重导入保留身份、笔记、完成、暂缓、阅读、打卡与旧练习，新版另存 [33m587[2mms[22m[39m
+ [32m✓[39m src/services/learning.service.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 2211[2mms[22m[39m
+   [33m[2m✓[22m[39m 自主学习、笔记版本与打卡[2m > [22m223 个知识点均有唯一、profile 特异且精确复用首考题 3/4 的站内练习合同 [33m779[2mms[22m[39m
+ [32m✓[39m src/services/learning/route-contract.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 3199[2mms[22m[39m
+   [33m[2m✓[22m[39m 生产规划器与隔离记录兼容[2m > [22m重复导入保留全部已有个人表字段与偏好 [33m1058[2mms[22m[39m
+   [33m[2m✓[22m[39m 生产规划器与隔离记录兼容[2m > [22m偏好保存只改独立表，重复同值幂等，过期请求409含当前值 [33m558[2mms[22m[39m
+   [33m[2m✓[22m[39m 生产规划器与隔离记录兼容[2m > [22m全部消费者一致，无下一步时不兜底 [33m314[2mms[22m[39m
+ [32m✓[39m src/services/framework-entry.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 3238[2mms[22m[39m
+   [33m[2m✓[22m[39m 框架入口合同[2m > [22mREACT-01 完整上下文、降级、实际练习请求与挑战快照 [33m305[2mms[22m[39m
+   [33m[2m✓[22m[39m 框架入口合同[2m > [22mREACT-01 重复导入保留旧草稿、完成挑战和个人记录 [33m1013[2mms[22m[39m
+   [33m[2m✓[22m[39m 框架入口合同[2m > [22mVUE-01 重复导入保留旧草稿、完成挑战和个人记录 [33m901[2mms[22m[39m
+ [32m✓[39m src/services/grading/persistence.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 1386[2mms[22m[39m
+ [32m✓[39m src/services/grading.service.test.ts [2m([22m[2m15 tests[22m[2m)[22m[90m 75[2mms[22m[39m
+ [32m✓[39m src/services/notes/persistence.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 1662[2mms[22m[39m
+   [33m[2m✓[22m[39m 笔记候选稿、阅读版本与并发写入[2m > [22m旧页面采用旧候选稿时返回 409，不能误采用其他页面新生成的内容 [33m456[2mms[22m[39m
+ [32m✓[39m src/db/framework-route-migration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 359[2mms[22m[39m
+   [33m[2m✓[22m[39m 真实旧 SQLite 迁移[2m > [22m旧字段逐表不变、重复迁移不重置偏好，删边后失败连同schema一起回滚 [33m358[2mms[22m[39m
+ [32m✓[39m src/services/assessment.service.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 6369[2mms[22m[39m
+   [33m[2m✓[22m[39m 逐点首考合同掌握挑战[2m > [22m223 个知识点生成后均与自己的首考题 1–5 闭环，而非复用跨点题干 [33m5125[2mms[22m[39m
+[90mstdout[2m | src/services/import.service.test.ts[2m > [22m[2mImport Service[2m > [22m[2m应该能够解析单个文件
+[22m[39m文件: /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/docs/knowledge/knowledge-base/01-javascript-browser.md
+领域: 01 - Web 平台核心基础
+知识点数量: 26
+第一个知识点: JS-01 - 执行上下文、作用域与闭包
+
+[90mstdout[2m | src/services/import.service.test.ts[2m > [22m[2mImport Service[2m > [22m[2m应该能够预览导入内容
+[22m[39m
+预览结果:
+领域数量: 20
+总知识点: 223
+  - 01: Web 平台核心基础 (26 个知识点)
+  - 02: TypeScript 与业务类型建模 (9 个知识点)
+  - 03: React 原理、状态、Hooks、路由与性能 (10 个知识点)
+  - 04: Umi/Max、Ant Design 与中后台应用 (8 个知识点)
+  - 05: 业务建模、权限与接口契约 (9 个知识点)
+  - 06: Git、工程化、测试、CI/CD 与发布质量 (17 个知识点)
+  - 07: 性能、移动 Web 与媒体交付 (11 个知识点)
+  - 08: 组件系统与多运行时交付 (11 个知识点)
+  - 09: Node.js 服务与接口工具 (6 个知识点)
+  - 10: 项目表达、技术方案与职业影响力 (5 个知识点)
+  - 11: Vue 3 项目开发 (11 个知识点)
+  - 12: AI 原生前端与模型应用工程 (15 个知识点)
+  - 13: Agent、MCP 与 AI 工具协议 (11 个知识点)
+  - 14: 浏览器 AI、本地推理与新 Web 平台 (12 个知识点)
+  - 15: AI 辅助研发、评审与工程治理 (10 个知识点)
+  - 16: Linux、Docker 与前端部署交付 (9 个知识点)
+  - 17: 现代渲染、数据层、实时协作与离线 (11 个知识点)
+  - 18: 图形可视化、增长内容、全球化与兼容治理专项 (12 个知识点)
+  - 19: 身份、隐私与 AI 风险治理 (9 个知识点)
+  - 20: 架构领导力与基础设施协作 (11 个知识点)
+
+ [32m✓[39m src/services/import.service.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2225[2mms[22m[39m
+   [33m[2m✓[22m[39m Import Service[2m > [22m应该删除已经从 Markdown 权威目录移除的幽灵知识点和领域 [33m1301[2mms[22m[39m
+   [33m[2m✓[22m[39m Import Service[2m > [22m应该能够重置学习进度并保留用户自建计划 [33m785[2mms[22m[39m
+ [32m✓[39m src/http/routes/assessment.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1500[2mms[22m[39m
+ [32m✓[39m src/services/portable-data.service.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1236[2mms[22m[39m
+ [32m✓[39m src/services/plan.service.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1014[2mms[22m[39m
+ [32m✓[39m src/db/note-migration.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 230[2mms[22m[39m
+ [32m✓[39m src/http/routes/assistant.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 710[2mms[22m[39m
+ [32m✓[39m src/services/learning/state.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1311[2mms[22m[39m
+   [33m[2m✓[22m[39m 学习状态与路线一致性[2m > [22m重新聚焦已学完的知识点返回真实状态，并保留学习与掌握记录 [33m473[2mms[22m[39m
+ [32m✓[39m src/http/routes/assessment-contract.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2130[2mms[22m[39m
+   [33m[2m✓[22m[39m 掌握挑战公开响应合同[2m > [22m创建、开始、作答、查询和取消符合共享合同，空字段明确为 null [33m352[2mms[22m[39m
+ [32m✓[39m src/services/assessment/creation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1427[2mms[22m[39m
+ [32m✓[39m src/services/assessment/answers.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1355[2mms[22m[39m
+ [32m✓[39m src/ai/sse.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 64[2mms[22m[39m
+ [32m✓[39m src/http/routes/jobs.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 430[2mms[22m[39m
+ [32m✓[39m src/services/backup.service.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 145[2mms[22m[39m
+ [32m✓[39m src/services/bootstrap.service.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 63[2mms[22m[39m
+ [32m✓[39m src/http/routes/backup.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1373[2mms[22m[39m
+   [33m[2m✓[22m[39m 个人数据 JSON 导入路由[2m > [22m要求先预览同一份文件，确认后自动备份并完成导入 [33m302[2mms[22m[39m
+ [32m✓[39m src/http/contract.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 500[2mms[22m[39m
+   [33m[2m✓[22m[39m HTTP 响应与校验协议[2m > [22m校验并转换 Zod 路由输入，成功响应包含请求标识 [33m459[2mms[22m[39m
+ [32m✓[39m src/http/local-web.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 613[2mms[22m[39m
+   [33m[2m✓[22m[39m Windows 单机版页面服务[2m > [22m未配置页面目录时不改变现有 API 服务 [33m349[2mms[22m[39m
+ [32m✓[39m src/http/sse.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 542[2mms[22m[39m
+   [33m[2m✓[22m[39m SSE 连接生命周期[2m > [22m读取完请求正文后继续发送事件，正常完成不会触发取消 [33m371[2mms[22m[39m
+ [32m✓[39m src/services/learning-content.service.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m src/services/knowledge-material-progress.service.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m src/config/config.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/services/learning-material-context.service.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/app.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 244[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m36 passed[39m[22m[90m (36)[39m
+[2m      Tests [22m [1m[32m265 passed[39m[22m[90m (265)[39m
+[2m   Start at [22m 08:13:39
+[2m   Duration [22m 20.91s[2m (transform 6.15s, setup 66.70s, collect 26.69s, tests 41.70s, environment 33ms, prepare 15.83s)[22m
+
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web[39m
+
+ [32m✓[39m src/app.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m src/utils/latest-request.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/utils/browser-code-runner.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/features/jobs/job-csv.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m src/api/http.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 122[2mms[22m[39m
+ [32m✓[39m src/api/stream.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 152[2mms[22m[39m
+ [32m✓[39m src/features/knowledge/usePointNoteEditor.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 30[2mms[22m[39m
+ [32m✓[39m src/features/assessment/useAssessmentSession.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m src/utils/markdown.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 154[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m51 passed[39m[22m[90m (51)[39m
+[2m   Start at [22m 08:14:02
+[2m   Duration [22m 2.96s[2m (transform 2.62s, setup 0ms, collect 6.71s, tests 537ms, environment 4ms, prepare 4.23s)[22m
+

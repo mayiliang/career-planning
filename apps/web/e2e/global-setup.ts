@@ -1,6 +1,7 @@
 import type { FullConfig } from '@playwright/test';
-import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,8 +85,13 @@ async function stopProcess(child: ChildProcess) {
 
 export default async function globalSetup(_config: FullConfig) {
   await Promise.all([assertPortIsFree(backendPort), assertPortIsFree(frontendPort)]);
+  // 对当次源码构建后预览，避免开发服务器重连/依赖优化触发整页刷新。
+  await promisify(execFile)(process.execPath, [
+    fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url)), 'build',
+  ], { cwd: fileURLToPath(new URL('../', import.meta.url)) });
   await mkdir(testRoot, { recursive: true });
   const dataDir = await mkdtemp(join(testRoot, 'career-atlas-e2e-'));
+  process.env.CAREER_ATLAS_E2E_DATA_DIR = dataDir;
   const backend = startNodeProcess(
     fileURLToPath(new URL('../../server/dist/index.js', import.meta.url)),
     [],
@@ -99,12 +105,27 @@ export default async function globalSetup(_config: FullConfig) {
     },
   );
   let frontend: ReturnType<typeof startNodeProcess> | undefined;
+  const startedAt = new Date().toISOString();
+  // 可选诊断目录由执行方按批次指定，保留成功运行的服务日志，避免仅有失败 trace。
+  const evidenceDir = process.env.CAREER_ATLAS_E2E_EVIDENCE_DIR;
+  async function saveServiceEvidence() {
+    if (!evidenceDir) return;
+    await mkdir(evidenceDir, { recursive: true });
+    await Promise.all([
+      writeFile(join(evidenceDir, 'backend.txt'), backend.output.join('')),
+      writeFile(join(evidenceDir, 'frontend.txt'), frontend?.output.join('') ?? ''),
+      writeFile(join(evidenceDir, 'services.json'), JSON.stringify({
+        startedAt, endedAt: new Date().toISOString(), dataDir, backendPort, frontendPort,
+        nodeEnv: 'test', autoBackup: false, realConfigLoaded: false,
+      }, null, 2)),
+    ]);
+  }
 
   try {
     await waitForUrl(backendUrl, backend);
     frontend = startNodeProcess(
       fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url)),
-      ['--port', String(frontendPort), '--strictPort'],
+      ['preview', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'],
       { VITE_PROXY_TARGET: `http://127.0.0.1:${backendPort}` },
     );
     await waitForUrl(frontendUrl, frontend);
@@ -112,11 +133,13 @@ export default async function globalSetup(_config: FullConfig) {
     return async () => {
       await stopProcess(frontend.child);
       await stopProcess(backend.child);
+      await saveServiceEvidence();
       await removeTestDataDir(dataDir);
     };
   } catch (error) {
     if (frontend) await stopProcess(frontend.child);
     await stopProcess(backend.child);
+    await saveServiceEvidence();
     await removeTestDataDir(dataDir);
     throw error;
   }

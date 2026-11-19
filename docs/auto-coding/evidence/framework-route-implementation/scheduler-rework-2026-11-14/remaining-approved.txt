@@ -1,0 +1,16 @@
+
+Running 7 tests using 1 worker
+
+(node:84471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:84471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/experience.spec.ts:784:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环 (6.4s)
+  ✓  2 [desktop-chrome] › e2e/experience.spec.ts:951:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约 (5.1s)
+  ✓  3 [desktop-chrome] › e2e/experience.spec.ts:993:3 › 核心使用体验 › 恢复数据必须先展示当前值、恢复后值和差异 (2.7s)
+  ✓  4 [desktop-chrome] › e2e/experience.spec.ts:1013:3 › 核心使用体验 › 本地个人数据 JSON 必须完整校验并预览后才能导入 (2.8s)
+  ✓  5 [desktop-chrome] › e2e/experience.spec.ts:1042:3 › 核心使用体验 › 窄屏下主导航和脑图没有页面级横向溢出 (1.2s)
+  ✓  6 [desktop-chrome] › e2e/experience.spec.ts:1054:3 › 核心使用体验 › 未知地址提供可恢复入口，跨页面导航回到顶部 (3.5s)
+  ✓  7 [desktop-chrome] › e2e/experience.spec.ts:1070:3 › 核心使用体验 › 窄屏下新学习路径没有页面级横向溢出 (7.3s)
+
+  7 passed (36.5s)

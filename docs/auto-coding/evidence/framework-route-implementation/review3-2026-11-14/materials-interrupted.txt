@@ -1,0 +1,14 @@
+
+Running 16 tests using 1 worker
+
+(node:87620) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:87620) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop-chrome] › e2e/experience.spec.ts:134:3 › 核心使用体验 › 自建中文讲义能从知识点、练习与挑战共用的站内地址打开 (2.7s)
+  ✓   2 [desktop-chrome] › e2e/experience.spec.ts:147:3 › 核心使用体验 › B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义 (5.6s)
+  ✓   3 [desktop-chrome] › e2e/experience.spec.ts:206:3 › 核心使用体验 › B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮 (12.6s)
+  ✓   4 [desktop-chrome] › e2e/experience.spec.ts:227:3 › 核心使用体验 › B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音 (9.1s)
+  ✓   5 [desktop-chrome] › e2e/experience.spec.ts:246:3 › 核心使用体验 › B03 四份独立主讲义只为关键名词提供英文发音 (6.4s)
+  ✓   6 [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 (28.0s)
+  ✓   7 [desktop-chrome] › e2e/experience.spec.ts:315:3 › 核心使用体验 › B09～B12 十七份主讲义只为关键名词提供英文发音 (20.2s)

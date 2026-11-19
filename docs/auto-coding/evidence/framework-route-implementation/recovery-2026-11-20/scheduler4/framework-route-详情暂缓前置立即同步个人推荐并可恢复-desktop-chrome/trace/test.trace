@@ -1,0 +1,57 @@
+{"version":9,"type":"context-options","origin":"testRunner","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1794680785937,"monotonicTime":3506416.903,"sdkLanguage":"javascript","testTimeout":30000,"annotations":[]}
+{"type":"before","callId":"hook@1","stepId":"hook@1","startTime":3506441.835,"class":"Test","method":"hook","title":"Before Hooks","params":{},"stack":[]}
+{"type":"before","callId":"fixture@29","stepId":"fixture@29","parentId":"hook@1","startTime":3506465.067,"class":"Test","method":"fixture","title":"Fixture \"browser\"","params":{},"stack":[]}
+{"type":"before","callId":"pw:api@30","stepId":"pw:api@30","parentId":"fixture@29","startTime":3506468.118,"class":"Test","method":"pw:api","title":"Launch browser","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@30","endTime":3507229.743,"annotations":[]}
+{"type":"after","callId":"fixture@29","endTime":3507230.166,"annotations":[]}
+{"type":"before","callId":"fixture@33","stepId":"fixture@33","parentId":"hook@1","startTime":3507235.748,"class":"Test","method":"fixture","title":"Fixture \"context\"","params":{},"stack":[]}
+{"type":"before","callId":"pw:api@34","stepId":"pw:api@34","parentId":"fixture@33","startTime":3507242.292,"class":"Test","method":"pw:api","title":"Create context","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@34","endTime":3507262.869,"annotations":[]}
+{"type":"after","callId":"fixture@33","endTime":3507273.927,"annotations":[]}
+{"type":"before","callId":"fixture@35","stepId":"fixture@35","parentId":"hook@1","startTime":3507274.659,"class":"Test","method":"fixture","title":"Fixture \"page\"","params":{},"stack":[]}
+{"type":"before","callId":"pw:api@36","stepId":"pw:api@36","parentId":"fixture@35","startTime":3507276.965,"class":"Test","method":"pw:api","title":"Create page","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@36","endTime":3507746.965,"annotations":[]}
+{"type":"after","callId":"fixture@35","endTime":3507747.084,"annotations":[]}
+{"type":"after","callId":"hook@1","endTime":3507747.234,"annotations":[]}
+{"type":"before","callId":"pw:api@37","stepId":"pw:api@37","startTime":3507750.486,"class":"Test","method":"pw:api","title":"POST","subtitle":"/api/v1/import/reset-learning-progress","params":{"url":"/api/v1/import/reset-learning-progress","method":"POST"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts","line":83,"column":22}]}
+{"type":"after","callId":"pw:api@37","endTime":3507973.922,"annotations":[]}
+{"type":"before","callId":"pw:api@38","stepId":"pw:api@38","startTime":3507975.5,"class":"Test","method":"pw:api","title":"GET","subtitle":"/api/v1/learning/preferences","params":{"url":"/api/v1/learning/preferences","method":"GET"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts","line":84,"column":49}]}
+{"type":"after","callId":"pw:api@38","endTime":3507985.156,"annotations":[]}
+{"type":"before","callId":"pw:api@39","stepId":"pw:api@39","startTime":3507989.27,"class":"Test","method":"pw:api","title":"PUT","subtitle":"/api/v1/learning/preferences","params":{"url":"/api/v1/learning/preferences","method":"PUT"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts","line":85,"column":22}]}
+{"type":"after","callId":"pw:api@39","endTime":3507998.835,"annotations":[]}
+{"type":"before","callId":"pw:api@40","stepId":"pw:api@40","startTime":3508000.017,"class":"Test","method":"pw:api","title":"Navigate","subtitle":"/knowledge/REACT-02","params":{"url":"/knowledge/REACT-02"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts","line":86,"column":14}]}
+{"type":"after","callId":"pw:api@40","endTime":3508365.506,"annotations":[]}
+{"type":"before","callId":"expect@41","stepId":"expect@41","startTime":3508372.444,"class":"Test","method":"expect","title":"Expect \"toContainText\"","subtitle":"getByRole('region', { name: '我的下一步', exact: true })","params":{"locator":"getByRole('region', { name: '我的下一步', exact: true })","expected":"补齐基础 · JS-01"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts","line":88,"column":23}]}
+{"type":"error","message":"\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m","stack":[]}
+{"type":"before","callId":"hook@42","stepId":"hook@42","startTime":4047888.321,"class":"Test","method":"hook","title":"After Hooks","params":{},"stack":[]}
+{"type":"before","callId":"fixture@43","stepId":"fixture@43","parentId":"hook@42","startTime":4047889.551,"class":"Test","method":"fixture","title":"Fixture \"page\"","params":{},"stack":[]}
+{"type":"after","callId":"fixture@43","endTime":4047889.806,"annotations":[]}
+{"type":"before","callId":"fixture@44","stepId":"fixture@44","parentId":"hook@42","startTime":4047890.105,"class":"Test","method":"fixture","title":"Fixture \"context\"","params":{},"stack":[]}
+{"type":"after","callId":"expect@41","endTime":4047911.743,"annotations":[],"error":{"name":"","message":"Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('region', { name: '我的下一步', exact: true })\nExpected substring: \u001b[32m\"补齐基础 · JS-01\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('region', { name: '我的下一步', exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('region', { name: '我的下一步', exact: true })\u001b[22m\n","stack":"Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('region', { name: '我的下一步', exact: true })\nExpected substring: \u001b[32m\"补齐基础 · JS-01\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('region', { name: '我的下一步', exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('region', { name: '我的下一步', exact: true })\u001b[22m\n\n    at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts:88:23"}}
+{"type":"error","message":"Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('region', { name: '我的下一步', exact: true })\nExpected substring: \u001b[32m\"补齐基础 · JS-01\"\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('region', { name: '我的下一步', exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('region', { name: '我的下一步', exact: true })\u001b[22m\n","stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts","line":88,"column":23}]}
+{"type":"before","callId":"pw:api@45","stepId":"pw:api@45","parentId":"fixture@44","startTime":4048006.822,"class":"Test","method":"pw:api","title":"Close context","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@45","endTime":4048026.075,"annotations":[]}
+{"type":"after","callId":"fixture@44","endTime":4048026.138,"annotations":[]}
+{"type":"before","callId":"attach@3b1ea215638d2413aa4e02cd1f628e19","stepId":"attach@3b1ea215638d2413aa4e02cd1f628e19","startTime":4048034.065,"class":"Test","method":"test.attach","title":"Attach \"error-context\"","params":{},"stack":[]}
+{"type":"after","callId":"attach@3b1ea215638d2413aa4e02cd1f628e19","endTime":4048034.085,"attachments":[{"name":"error-context","contentType":"text/markdown","file":"attachments/bb108738955165f794f4e9268fecf36c2f1d5028"}]}
+{"type":"before","callId":"fixture@54","stepId":"fixture@54","parentId":"hook@42","startTime":4048035.178,"class":"Test","method":"fixture","title":"Fixture \"baseURL\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@54","endTime":4048035.208,"annotations":[]}
+{"type":"before","callId":"fixture@55","stepId":"fixture@55","parentId":"hook@42","startTime":4048035.219,"class":"Test","method":"fixture","title":"Fixture \"userAgent\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@55","endTime":4048035.232,"annotations":[]}
+{"type":"before","callId":"fixture@57","stepId":"fixture@57","parentId":"hook@42","startTime":4048035.39,"class":"Test","method":"fixture","title":"Fixture \"viewport\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@57","endTime":4048035.406,"annotations":[]}
+{"type":"before","callId":"fixture@65","stepId":"fixture@65","parentId":"hook@42","startTime":4048038.15,"class":"Test","method":"fixture","title":"Fixture \"isMobile\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@65","endTime":4048038.177,"annotations":[]}
+{"type":"before","callId":"fixture@69","stepId":"fixture@69","parentId":"hook@42","startTime":4048038.662,"class":"Test","method":"fixture","title":"Fixture \"hasTouch\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@69","endTime":4048038.674,"annotations":[]}
+{"type":"before","callId":"fixture@72","stepId":"fixture@72","parentId":"hook@42","startTime":4048041.132,"class":"Test","method":"fixture","title":"Fixture \"deviceScaleFactor\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@72","endTime":4048041.148,"annotations":[]}
+{"type":"after","callId":"hook@42","endTime":4048043.013,"annotations":[]}
+{"type":"before","callId":"hook@79","stepId":"hook@79","startTime":4048043.581,"class":"Test","method":"hook","title":"Worker Cleanup","params":{},"stack":[]}
+{"type":"before","callId":"fixture@84","stepId":"fixture@84","parentId":"hook@79","startTime":4048045.508,"class":"Test","method":"fixture","title":"Fixture \"browser\"","params":{},"stack":[]}
+{"type":"after","callId":"fixture@84","endTime":4048928.101,"annotations":[]}
+{"type":"before","callId":"fixture@88","stepId":"fixture@88","parentId":"hook@79","startTime":4048929.058,"class":"Test","method":"fixture","title":"Fixture \"defaultBrowserType\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@88","endTime":4048929.081,"annotations":[]}
+{"type":"before","callId":"fixture@91","stepId":"fixture@91","parentId":"hook@79","startTime":4048929.556,"class":"Test","method":"fixture","title":"Fixture \"channel\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@91","endTime":4048929.573,"annotations":[]}
+{"type":"after","callId":"hook@79","endTime":4048930.345,"annotations":[]}

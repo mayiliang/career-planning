@@ -1,0 +1,17 @@
+
+Running 40 tests using 1 worker
+
+(node:75449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:75449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop-chrome] › e2e/experience.spec.ts:18:3 › 核心使用体验 › 知识脑图展示完整能力体系并可逐层展开 (1.8s)
+  ✓   2 [desktop-chrome] › e2e/experience.spec.ts:30:3 › 核心使用体验 › 首次进入直接给出可完成、可验收的具体学习任务 (2.0s)
+  ✓   3 [desktop-chrome] › e2e/experience.spec.ts:47:3 › 核心使用体验 › 资料学习、笔记和掌握状态彼此独立 (4.6s)
+  ✓   4 [desktop-chrome] › e2e/experience.spec.ts:85:3 › 核心使用体验 › 代码练习在站内执行、保存输出并提供明确任务契约 (2.9s)
+  ✓   5 [desktop-chrome] › e2e/experience.spec.ts:114:3 › 核心使用体验 › 本地结构失败不能被未参与的 AI 复核伪装为完全通过 (2.3s)
+  ✓   6 [desktop-chrome] › e2e/experience.spec.ts:134:3 › 核心使用体验 › 自建中文讲义能从知识点、练习与挑战共用的站内地址打开 (3.7s)
+  ✓   7 [desktop-chrome] › e2e/experience.spec.ts:147:3 › 核心使用体验 › B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义 (9.2s)
+  ✓   8 [desktop-chrome] › e2e/experience.spec.ts:206:3 › 核心使用体验 › B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮 (16.3s)
+  ✓   9 [desktop-chrome] › e2e/experience.spec.ts:227:3 › 核心使用体验 › B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音 (10.7s)
+  ✓  10 [desktop-chrome] › e2e/experience.spec.ts:246:3 › 核心使用体验 › B03 四份独立主讲义只为关键名词提供英文发音 (7.9s)

@@ -1,0 +1,51 @@
+{
+  "browser": "157.0.8103.51",
+  "baseURL": "http://127.0.0.1:42731",
+  "batch": "focused-approved.txt",
+  "screenshots": [
+    {
+      "file": "learning-1440.png",
+      "path": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "learning-390.png",
+      "path": "/",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      }
+    },
+    {
+      "file": "checkin-mobile.png",
+      "path": "/",
+      "viewport": {
+        "width": 390,
+        "height": 600
+      }
+    }
+  ],
+  "layoutChecks": {
+    "widths": [
+      1440,
+      1024,
+      390,
+      320
+    ],
+    "height": 900,
+    "paths": [
+      "/",
+      "/knowledge/map",
+      "/knowledge",
+      "/knowledge/graph",
+      "/notes",
+      "/plan",
+      "/jobs",
+      "/settings",
+      "/knowledge/WEB-01"
+    ]
+  }
+}

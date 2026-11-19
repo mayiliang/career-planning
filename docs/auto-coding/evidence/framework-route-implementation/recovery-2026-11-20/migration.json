@@ -1,0 +1,134 @@
+{
+  "database": "tmp/issue8-migrations/sample-5nDohx",
+  "tables": [
+    {
+      "name": "assessment_answers",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "assessment_hint_events",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "assessment_questions",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "assessment_results",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "assessment_sessions",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "assistant_gap_candidates",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "checkins",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "daily_reviews",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "job_activities",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "jobs",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "knowledge_domains",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "knowledge_note_versions",
+      "rows": 2,
+      "unchanged": true
+    },
+    {
+      "name": "knowledge_notes",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "knowledge_points",
+      "rows": 14,
+      "unchanged": true
+    },
+    {
+      "name": "learning_checkin_points",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "learning_checkins",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "learning_practice_attempts",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "learning_route_choices",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "leave_days",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "mastery_events",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "material_reading_progress",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "plan_events",
+      "rows": 1,
+      "unchanged": true
+    },
+    {
+      "name": "projects",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "skill_gaps",
+      "rows": 0,
+      "unchanged": true
+    },
+    {
+      "name": "weekly_reviews",
+      "rows": 0,
+      "unchanged": true
+    }
+  ],
+  "rollback": true,
+  "repeat": true,
+  "preferencesPreserved": true,
+  "settingsSampleUnchanged": true
+}

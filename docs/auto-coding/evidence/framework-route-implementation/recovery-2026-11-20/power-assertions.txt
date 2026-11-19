@@ -1,0 +1,26 @@
+2026-11-20 01:18:51 +0800 
+Assertion status system-wide:
+   BackgroundTask                 0
+   ApplePushServiceTask           0
+   UserIsActive                   1
+   PreventUserIdleDisplaySleep    1
+   SoftwareUpdateTask             0
+   PreventSystemSleep             0
+   PreventSystemSleepSecurityIndicator 0
+   ExternalMedia                  0
+   InternalPreventDisplaySleep    1
+   PreventUserIdleSystemSleep     1
+   NetworkClientActive            0
+Listed by owning process:
+   pid 6981(caffeinate): [0x00015eec000186cc] 00:03:01 PreventUserIdleSystemSleep named: "caffeinate command-line tool"  
+	Details: caffeinate asserting on behalf of Process ID 6772
+	Created for PID: 6772. 
+	Localized=THE CAFFEINATE TOOL IS PREVENTING SLEEP.
+   pid 94218(ChatGPT): [0x00015e3f000186b9] 00:05:54 NoIdleSleepAssertion named: "Electron"  
+   pid 94218(ChatGPT): [0x00015f93000586d8] 00:00:14 NoDisplaySleepAssertion named: "Capturing"  
+   pid 355(powerd): [0x00015bb500018672] 00:16:44 PreventUserIdleSystemSleep named: "Powerd - Prevent sleep while display is on"  
+   pid 355(powerd): [0x00015f93001083c0] 00:00:14 InternalPreventDisplaySleep named: "com.apple.powermanagement.delayDisplayOff"  
+	Timeout will fire in 286 secs Action=TimeoutActionTurnOff
+   pid 411(WindowServer): [0x00015bb40009866f] 00:05:36 UserIsActive named: "com.apple.iohideventsystem.queue.tickle serviceID:10000c95a service:AppleMultitouchDevice product:Apple Internal Keyboard / Trackpad eventType:11"  
+	Timeout will fire in 263 secs Action=TimeoutActionRelease
+No kernel assertions.

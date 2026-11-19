@@ -1,0 +1,3 @@
+$ pnpm --filter @career-atlas/shared build && pnpm --filter @career-atlas/content-parser build
+$ tsc
+$ tsc

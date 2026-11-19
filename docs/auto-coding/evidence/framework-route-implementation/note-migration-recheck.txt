@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/server
+
+ ✓ src/db/note-migration.test.ts (1 test) 146ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  00:27:16
+   Duration  1.79s (transform 66ms, setup 753ms, collect 31ms, tests 146ms, environment 0ms, prepare 169ms)
+

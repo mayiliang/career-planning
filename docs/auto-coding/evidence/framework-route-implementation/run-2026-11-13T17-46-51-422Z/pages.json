@@ -1,0 +1,36 @@
+{
+  "time": "2026-11-13T18:02:11.871Z",
+  "browser": "157.0.8103.40",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "baseURL": "http://127.0.0.1:42731",
+  "paths": [
+    "/",
+    "/plan",
+    "/knowledge/REACT-02",
+    "/knowledge/WEB-01",
+    "/assessment/38107d0d-8a15-4f08-95ef-19144cdd8f00",
+    "/knowledge/materials/react-02-component-boundaries-data-flow-composition.md/react-02"
+  ],
+  "checks": [
+    "选择刷新持久化",
+    "各入口下一步一致",
+    "切换保留焦点",
+    "阅读进度不清零",
+    "补学返回",
+    "暂缓恢复",
+    "链完成无兜底",
+    "键盘焦点",
+    "窄屏无横向溢出",
+    "旧练习只读",
+    "旧挑战原题读取"
+  ]
+}

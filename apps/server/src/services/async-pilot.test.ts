@@ -12,7 +12,7 @@ import { savePracticeAttempt, listPracticeAttempts, validatePracticeAttempt } fr
 import { savePointNote, saveCheckin, getNoteByCode } from './learning.service.js';
 import { updateMaterialReadingProgress, listMaterialReadingProgress } from './knowledge-material-progress.service.js';
 import { buildRelationDefinitions, syncKnowledgeRelations } from './knowledge-relations.service.js';
-import { planNextRoute } from './learning/routes.js';
+import { planLearningRoute } from './learning/routes.js';
 import { createAssessmentSession, getAssessmentSession } from './assessment.service.js';
 import { asyncGradingSources } from './async-pilot-contract.js';
 import { PRACTICE_SECTION_HEADINGS } from './learning-content.service.js';
@@ -44,9 +44,11 @@ describe('异步试点的合同与兼容', () => {
     }
     expect(relations.some(r => r.source === 'JS-05' && r.target === 'JS-04')).toBe(false);
     const states = new Map([['JS-01', 'DEFERRED'], ['JS-04', 'LEARNED'], ['JS-05', 'NOT_STARTED']] as const);
-    expect(planNextRoute('JS-04', states)[0]?.code).toBe('JS-05');
+    expect(planLearningRoute({ frameworkChoice: 'NONE', preferenceRevision: 0, currentFocusCode: 'JS-04', states: new Map([...states, ['JS-01', 'LEARNED'], ['JS-03', 'LEARNED'], ['WEB-01', 'LEARNED']]) }).next?.code).toBe('JS-05');
     const blockedStates = new Map([['JS-01', 'LEARNED'], ['JS-04', 'DEFERRED'], ['JS-05', 'LEARNING']] as const);
-    expect(planNextRoute('JS-05', blockedStates)[0]).toMatchObject({ code: 'JS-04', kind: 'PREREQUISITE' });
+    const route = planLearningRoute({ frameworkChoice: 'NONE', preferenceRevision: 0, currentFocusCode: 'JS-05', states: blockedStates });
+    expect(route.next).toMatchObject({ code: 'JS-05', kind: 'CONTINUE' });
+    expect(route.blockers).toContainEqual(expect.objectContaining({ code: 'JS-04', state: 'DEFERRED' }));
   });
   it('上下文使用完整机制小节，预算不足明确报告，未读取的外链不是正文', async () => {
     for (const code of ['JS-04', 'JS-05']) {

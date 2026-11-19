@@ -1,0 +1,253 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: assistant.spec.ts >> Atlas AI 可读交互 >> 先打开助手再收到页面数据时更新当前页上下文
+- Location: e2e/assistant.spec.ts:52:3
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - link "跳到主要内容" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e5]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: Career Atlas
+      - paragraph [ref=e10]: AI 时代前端能力地图
+    - paragraph [ref=e11]: 我的工作空间
+    - list [ref=e12]:
+      - listitem [ref=e13]:
+        - link [ref=e14] [cursor=pointer]:
+          - /url: /
+          - strong [ref=e19]: 学习台
+      - listitem [ref=e20]:
+        - link [ref=e21] [cursor=pointer]:
+          - /url: /knowledge/map
+          - strong [ref=e26]: 知识体系
+      - listitem [ref=e27]:
+        - link [ref=e28] [cursor=pointer]:
+          - /url: /notes
+          - strong [ref=e33]: 笔记中心
+      - listitem [ref=e34]:
+        - link [ref=e35] [cursor=pointer]:
+          - /url: /plan
+          - strong [ref=e40]: 核心路线
+      - listitem [ref=e41]:
+        - link [ref=e42] [cursor=pointer]:
+          - /url: /jobs
+          - strong [ref=e47]: 求职支线
+    - generic [ref=e48]:
+      - link [ref=e49] [cursor=pointer]:
+        - /url: /settings
+        - strong [ref=e54]: 设置与数据
+      - generic "服务正常" [ref=e55]:
+        - generic [ref=e57]:
+          - strong [ref=e58]: 服务正常
+          - generic [ref=e59]: 本地优先 · 自主学习
+  - generic [ref=e60]:
+    - banner [ref=e61]:
+      - generic [ref=e62]:
+        - button "收起侧栏" [expanded] [ref=e63] [cursor=pointer]
+        - generic [ref=e66]: 工作空间
+        - generic [aria-hidden] [ref=e67]: /
+        - generic [ref=e68]: 知识点详情
+      - button "快速查找，快捷键 Command 或 Control 加 K" [ref=e70] [cursor=pointer]:
+        - generic [ref=e73]: 搜索知识点、页面…
+        - generic [ref=e74]: ⌘ K
+    - main [ref=e75]:
+      - paragraph [ref=e76]: 知识点详情页面已打开
+      - generic [ref=e79]:
+        - region "我的下一步" [ref=e80]:
+          - generic [ref=e81]:
+            - heading "我的下一步" [level=2] [ref=e82]
+            - link "查看学习路线" [ref=e83] [cursor=pointer]:
+              - /url: /plan
+          - generic [ref=e84]:
+            - generic [ref=e85]:
+              - text: 框架方向
+              - combobox "框架方向" [ref=e86]:
+                - option "尚未选择" [selected]
+                - option "React"
+                - option "Vue"
+                - option "暂不进入框架"
+            - button "保存方向" [ref=e87] [cursor=pointer]
+          - paragraph [ref=e88]: 选择只影响推荐，不改变当前学习点、暂缓状态或阅读进度。
+          - status [ref=e89]: 请选择框架方向，或暂不进入框架。
+          - group [ref=e90]:
+            - generic "本次已审范围：共同基础与一个可选框架方向" [ref=e91] [cursor=pointer]
+          - link "浏览全部资料" [ref=e92] [cursor=pointer]:
+            - /url: /knowledge
+        - generic [ref=e93]:
+          - button "← 返回" [ref=e94] [cursor=pointer]
+          - generic [ref=e95]:
+            - paragraph [ref=e96]: 01 · Web 平台核心基础 · 异步、模块与宿主运行时
+            - heading [level=1] [ref=e97]:
+              - code [ref=e98]: JS-04
+              - text: 异步、Promise 与事件循环
+            - generic [ref=e99]:
+              - generic [ref=e100]: 未开始
+              - generic [ref=e101]: M0 · 未评估
+              - generic [ref=e102]: 编码验证型：理解机制后，用可运行的最小代码验证。
+              - generic [ref=e103]: 核心能力 · 全员必修
+              - generic "按 Baseline、目标浏览器和运行环境做能力检测与渐进增强。核心设计保持实现无关，避免把短期工具细节写入领域契约。" [ref=e104]: 稳定 · 可迁移 · 核验 2026-08-09
+          - generic [ref=e105]:
+            - button "设为当前学习" [ref=e106] [cursor=pointer]
+            - button "暂时不学" [ref=e107] [cursor=pointer]
+        - region "异步学习链试点" [ref=e108]:
+          - generic [ref=e109]:
+            - heading "异步学习链" [level=2] [ref=e110]
+            - generic [ref=e111]: 试点 · 按基础连接
+          - paragraph [ref=e112]: 先会等待结果，再理解执行顺序，最后处理失败与结束。批次只作导航分组；阅读、学完与掌握分别记录。
+          - list [ref=e113]:
+            - listitem [ref=e114]:
+              - strong [ref=e115]: PREJS-07 · Promise 与 await 入门
+              - generic [ref=e116]: 阅读辅助
+              - link "阅读讲义" [ref=e117] [cursor=pointer]:
+                - /url: /knowledge/materials/javascript-promises-and-cancellation.md/prejs-07
+            - listitem [ref=e118]:
+              - strong [ref=e119]: JS-04 · Promise 与事件循环
+              - generic [ref=e120]: 未开始
+              - link "查看详情与练习" [ref=e121] [cursor=pointer]:
+                - /url: /knowledge/JS-04
+              - link "阅读讲义" [ref=e122] [cursor=pointer]:
+                - /url: /knowledge/materials/js-04-async-promise-browser-event-loop.md/js-04
+            - listitem [ref=e123]:
+              - strong [ref=e124]: JS-05 · 异步错误与控制流
+              - generic [ref=e125]: 未开始
+              - link "查看详情与练习" [ref=e126] [cursor=pointer]:
+                - /url: /knowledge/JS-05
+              - link "阅读讲义" [ref=e127] [cursor=pointer]:
+                - /url: /knowledge/materials/js-05-promise-errors-async-control-flow.md/js-05
+          - status [ref=e128]: 学习 JS-04 前建议补齐下列基础；阅读记录只表示查阅情况，不等于掌握。
+          - list "待补基础" [ref=e129]:
+            - listitem [ref=e130]:
+              - link "PREJS-04 · 定时器与稍后回调" [ref=e131] [cursor=pointer]:
+                - /url: /knowledge/materials/javascript-scheduled-callbacks.md/prejs-04
+              - generic [ref=e132]: 阅读辅助。先区分调用函数和交给别人稍后调用。
+            - listitem [ref=e133]:
+              - link "PREJS-07 · Promise 与 await 入门" [ref=e134] [cursor=pointer]:
+                - /url: /knowledge/materials/javascript-promises-and-cancellation.md/prejs-07
+              - generic [ref=e135]: 阅读辅助。先能等待结果，再解释结果链和恢复时机。
+            - listitem [ref=e136]:
+              - link "JS-01 · 作用域与闭包" [ref=e137] [cursor=pointer]:
+                - /url: /knowledge/materials/js-01-execution-context-scope-closure.md/js-01
+              - generic [ref=e138]: 未开始。异步回调仍按普通函数规则查找变量。
+          - text: 已熟悉的短文可按需略读；这里的建议不切换当前学习点。其他路线仍使用兼容分组，尚未完成全库重排。
+        - group [ref=e139]:
+          - generic "推荐学习方式 编码验证型：理解机制后，用可运行的最小代码验证。 展开规则与预计投入" [ref=e140] [cursor=pointer]:
+            - generic [ref=e141]:
+              - generic [ref=e142]: 推荐学习方式
+              - strong [ref=e143]: 编码验证型：理解机制后，用可运行的最小代码验证。
+            - emphasis [ref=e144]: 展开规则与预计投入
+        - navigation [ref=e146]:
+          - button "学习资料" [ref=e147] [cursor=pointer]
+          - button "我的笔记" [ref=e148] [cursor=pointer]
+          - button [ref=e149] [cursor=pointer]:
+            - text: 掌握挑战
+            - emphasis [ref=e150]: 可选
+        - main [ref=e151]:
+          - article "学习资料" [ref=e153]:
+            - paragraph [ref=e154]:
+              - link "中文核心讲义：JS-04 未读" [ref=e155] [cursor=pointer]:
+                - /url: /knowledge/materials/js-04-async-promise-browser-event-loop.md/js-04
+                - text: 中文核心讲义：JS-04
+                - generic [ref=e156]: 未读
+              - text: 、
+              - link "中文｜MDN 微任务指南 ↗" [ref=e157] [cursor=pointer]:
+                - /url: https://developer.mozilla.org/zh-CN/docs/Web/API/HTML_DOM_API/Microtask_guide
+              - text: 。覆盖范围：结果链、执行器、任务与微任务、await 恢复、渲染机会、启动和等待、成功任务的并发限制与输入槽位。完整取消、清理和旧结果归 JS-05。资料核验（2026-10-29）：MDN 中文 Promise 指南的组合段落把拒绝误写为终止其他操作。正确含义是组合结果拒绝，其他操作仍继续；取消由支持信号的操作协作完成。以站内讲义、
+              - link "MDN 英文组合段落 ↗" [ref=e158] [cursor=pointer]:
+                - /url: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises#composition
+              - text: （英文原文，仅用于事实核验）与
+              - link "DOM 取消标准 ↗" [ref=e159] [cursor=pointer]:
+                - /url: https://dom.spec.whatwg.org/#aborting-ongoing-activities
+              - text: （英文原文，仅用于事实核验）为核验依据。英文资料不作为必读，不得作为独立首考题源。中文外链用于术语与入门，完整任务协议由站内讲义覆盖。
+          - complementary [ref=e160]:
+            - generic [ref=e161]:
+              - generic [ref=e162]: LEARNING ACTIVITIES
+              - heading "学完资料后，可以这样练" [level=2] [ref=e163]
+              - paragraph [ref=e164]: 每一项都给出实际任务，不再用没有入口的“项目时间”占位。
+            - article [ref=e165]:
+              - generic [ref=e166]: "01"
+              - generic [ref=e167]:
+                - heading [level=3] [ref=e168]:
+                  - text: 资料阅读与笔记
+                  - emphasis [ref=e169]: 学习完成条件
+                - paragraph [ref=e170]: 读完列出的资料，记录核心概念、仍有疑问的地方，以及至少一个边界或反例。
+                - generic [ref=e171]: 建议 90 分钟，可按实际情况调整
+            - article [ref=e172]:
+              - generic [ref=e173]: "02"
+              - generic [ref=e174]:
+                - heading [level=3] [ref=e175]:
+                  - text: 站内编码验证
+                  - emphasis [ref=e176]: 可选
+                - paragraph [ref=e177]: 实现成功任务的 runLimited，输入为四个手动完成的启动函数，limit=2，返回值分别为 10、20、30、40。启动 1、2，完成 2 并等待其消费者恢复，启动 3，完成 3 后启动 4，再完成 1、4；交付启动序列 1,2,3,4、完成序列 2,3,1,4、输入槽位结果 [10,20,30,40]、peak=2 与 active=0 的断言，以及空数组和非法上限测试
+                - generic [ref=e178]: 建议 285 分钟，可按实际情况调整
+                - button "在系统中开始并完成 →" [ref=e179] [cursor=pointer]
+        - generic [ref=e180]:
+          - generic [ref=e181]:
+            - text: LEARNING COMPLETION
+            - heading "读完资料并写好笔记了吗？" [level=2] [ref=e182]
+            - paragraph [ref=e183]: 这个按钮只记录学习完成，不声称已经掌握。
+          - button "我已阅读资料并完成笔记" [ref=e184] [cursor=pointer]
+        - generic [ref=e185]:
+          - generic [ref=e186]:
+            - heading "个人推荐操作" [level=2] [ref=e187]
+            - paragraph [ref=e188]: 与上方“我的下一步”使用同一规划结果。当前浏览点的基础单独说明，不改变个人方向。
+          - generic [ref=e189]: 当前没有自动下一步，请查看上方原因；可以调整方向、恢复暂缓点或浏览全部资料。
+  - button "关闭 Atlas AI 助手" [expanded]:
+    - generic [aria-hidden]: ✦
+    - generic:
+      - strong: Atlas AI
+      - generic: 总结 · 解释 · 查资料
+  - complementary "Atlas AI 学习助手" [ref=e190]:
+    - generic [ref=e191]:
+      - generic [ref=e192]:
+        - generic [aria-hidden] [ref=e193]: ✦
+        - generic [ref=e194]:
+          - heading "Atlas AI" [level=2] [ref=e195]
+          - paragraph [ref=e196]: 会判断与核验资料的学习助手
+      - generic [ref=e197]:
+        - button "宽屏阅读" [ref=e198] [cursor=pointer]: ↔
+        - button "新会话" [ref=e199] [cursor=pointer]: ＋
+        - button "历史会话" [ref=e200] [cursor=pointer]: ☷
+        - button "关闭助手" [ref=e201] [cursor=pointer]: ×
+    - generic [ref=e202]:
+      - generic [ref=e203]: 当前页
+      - strong [ref=e204]: JS-04 异步、Promise 与事件循环
+      - generic [ref=e205]: 1,573 字
+    - generic [ref=e206]:
+      - generic [aria-hidden] [ref=e207]: ◇
+      - paragraph [ref=e208]:
+        - strong [ref=e209]: 资料不是答案
+        - text: 页面、站内与网络内容都会先经过判断；发现冲突时，回答会明确核验或纠错。
+    - generic [ref=e211]:
+      - generic [aria-hidden] [ref=e212]: ✦
+      - heading "先抓重点，再展开。" [level=3] [ref=e213]
+      - paragraph [ref=e214]: 页面和检索资料只是信息来源。Atlas AI 会先理解、核验和重新组织，再给出自己的结论；发现错误或冲突时会明确指出。
+      - generic [ref=e215]:
+        - button "总结当前页 理解主线、核验结论，再覆盖重要细节" [ref=e216] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e217]: ≡
+          - strong [ref=e218]: 总结当前页
+          - generic [ref=e219]: 理解主线、核验结论，再覆盖重要细节
+        - button "解释选中内容 划词完成后可用" [disabled] [ref=e220]:
+          - generic [aria-hidden] [ref=e221]: “
+          - strong [ref=e222]: 解释选中内容
+          - generic [ref=e223]: 划词完成后可用
+    - generic [ref=e224]:
+      - generic [ref=e225]:
+        - textbox "结合当前页开始新问题…" [active] [ref=e226]
+        - button "发送问题" [disabled] [ref=e227] [cursor=pointer]: ↑
+      - paragraph [ref=e228]: 总结或解释会新建会话；旧会话可从历史中继续。
+```

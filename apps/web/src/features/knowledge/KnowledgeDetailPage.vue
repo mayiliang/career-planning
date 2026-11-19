@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ASSESSMENT_PENDING } from '@career-atlas/shared';
+import AssessmentReadiness from '@/components/AssessmentReadiness.vue';
+import PersonalLearningRoute from '@/components/PersonalLearningRoute.vue';
 import FrameworkEntry from '@/components/FrameworkEntry.vue';
 import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -21,6 +24,7 @@ type MaterialReading = Awaited<ReturnType<typeof apiClient.getMaterialReadingPro
 const materialReadingByKey = ref<Record<string, MaterialReading>>({});
 const materialsRoot = ref<HTMLElement | null>(null);
 const branches = ref<LearningBranch[]>([]);
+const routeRefreshRevision = ref(0);
 const loading = ref(true);
 const message = ref('');
 const error = ref('');
@@ -136,6 +140,12 @@ function decorateMaterialReadingStatuses() {
   });
 }
 
+async function restoreCurrent() {
+  await apiClient.restoreLearningPoint(code.value);
+  await load();
+  message.value = '已恢复此知识点，当前学习点保持不变';
+}
+
 async function focusCurrent() {
   await apiClient.focusLearningPoint(code.value);
   await load();
@@ -174,8 +184,16 @@ async function chooseBranch(branch: LearningBranch) {
 }
 
 async function deferBranch(branch: LearningBranch, scope: 'POINT' | 'BRANCH') {
-  await apiClient.saveRouteChoice({ sourceCode: code.value, targetCode: branch.code, state: 'DEFERRED', scope });
-  branches.value = await apiClient.getNextBranches(code.value);
+  const targetCode = code.value;
+  const isCurrentPage = captureNotePage(targetCode);
+  await apiClient.saveRouteChoice({ sourceCode: targetCode, targetCode: branch.code, state: 'DEFERRED', scope });
+  const [pointData, branchData] = await Promise.all([
+    apiClient.getKnowledgePoint(targetCode), apiClient.getNextBranches(targetCode),
+  ]);
+  if (!isCurrentPage()) return;
+  point.value = pointData;
+  branches.value = branchData;
+  routeRefreshRevision.value += 1;
   message.value = scope === 'BRANCH' ? '已暂缓这条支线，可随时从知识体系恢复' : '已把这个知识点放入稍后学习';
 }
 
@@ -231,6 +249,8 @@ onBeforeUnmount(() => {
     <div v-if="loading" class="state-card">正在打开学习内容…</div>
     <div v-else-if="error && !point" class="state-card error">{{ error }}<button @click="load">重试</button></div>
     <template v-else-if="point">
+      <PersonalLearningRoute :refresh-key="JSON.stringify([point.learningState, point.currentFocus, routeRefreshRevision])" @changed="load" />
+      <AssessmentReadiness :code="point.code" />
       <header class="point-hero">
         <button class="back" @click="router.back()">← 返回</button>
         <div class="hero-copy">
@@ -249,6 +269,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="hero-actions">
+          <button v-if="point.learningState === 'DEFERRED'" @click="restoreCurrent">恢复学习</button>
           <button v-if="point.learningState !== 'LEARNED'" class="primary" @click="focusCurrent">{{ point.currentFocus ? '正在学习' : '设为当前学习' }}</button>
           <button v-if="point.learningState !== 'LEARNED'" @click="deferCurrent">暂时不学</button>
           <button v-else @click="activeTab = 'mastery'">可选：掌握挑战</button>
@@ -341,7 +362,7 @@ onBeforeUnmount(() => {
             <button v-if="point.challengeProfile !== 'THEORY_ONLY'" :class="{ active: challengeMode === 'MIXED' }" @click="challengeMode = 'MIXED'">理论 + 实战</button>
           </div>
           <div class="ai-disclosure"><strong>开始前会先检查 AI</strong><span>挑战题目合同、本点学习资料、你的作答与帮助使用记录会发送给设置页中配置的 AI 服务商，用于出题、提示与评分；不会发送 API Key。</span></div>
-          <button class="primary launch" :disabled="point.learningState !== 'LEARNED' || launching" @click="launchChallenge">{{ launching ? '正在检查 AI…' : point.learningState !== 'LEARNED' ? '先标记为已学完' : '检查并开始这一级挑战 →' }}</button>
+          <button class="primary launch" :disabled="!!ASSESSMENT_PENDING[point.code] || point.learningState !== 'LEARNED' || launching" @click="launchChallenge">{{ ASSESSMENT_PENDING[point.code] ? '练习合同待修订' : launching ? '正在检查 AI…' : point.learningState !== 'LEARNED' ? '先标记为已学完' : '检查并开始这一级挑战 →' }}</button>
           <MarkdownRenderer class="criteria markdown-content" :source="point.passCriteriaMd" aria-label="通过标准" />
         </section>
       </main>
@@ -353,16 +374,16 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="branches-section">
-        <header><div><small>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? 'NEXT TRACK' : 'CONTINUE ROUTE' }}</small><h2>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '当前路线已完成，选择下一条学习方向' : '依据路线与前置继续学习' }}</h2><p>{{ branches[0]?.navigationKind === 'TRACK_CHOICE' ? '只有一条连续路线走完后才会出现选择；未选择的方向不会被放弃，完成所选路线后仍会再次出现。' : '异步链与框架入口优先解释未满足的硬前置；查看建议不会修改你的当前选择。其他内容暂沿兼容路线推荐。' }}</p></div></header>
+        <header><h2>个人推荐操作</h2><p>与上方“我的下一步”使用同一规划结果。当前浏览点的基础单独说明，不改变个人方向。</p></header>
         <div v-if="branches.length" class="branch-grid">
           <article v-for="branch in branches" :key="branch.code" :class="{ deferred: branch.routeChoice === 'DEFERRED' || branch.learningState === 'DEFERRED' }">
             <div><code>{{ branch.code }}</code><span>{{ branch.requiredPrerequisite ? '待补硬前置' : branch.navigationKind === 'CONTINUE' ? '建议继续' : '新路线入口' }}</span></div>
             <h3>{{ branch.title }}</h3><p>{{ branch.relationDescription || branch.learningApproach }}</p>
-            <dl><div><dt>路线</dt><dd>{{ branch.trackName }}</dd></div><div><dt>剩余</dt><dd>{{ branch.trackRemaining }} 个知识点</dd></div><div><dt>预计投入</dt><dd>当前点约 {{ branch.estimatedMinutes }} 分钟</dd></div><div><dt>暂缓影响</dt><dd>{{ branch.impactIfDeferred }}</dd></div></dl>
+            <dl><div><dt>路线</dt><dd>{{ branch.trackName }}</dd></div><div><dt>本次建议</dt><dd>当前这一步，非整条路线剩余量</dd></div><div><dt>预计投入</dt><dd>当前点约 {{ branch.estimatedMinutes }} 分钟</dd></div><div><dt>暂缓影响</dt><dd>{{ branch.impactIfDeferred }}</dd></div></dl>
             <footer><button v-if="branch.requiredPrerequisite" class="primary" @click="router.push(`/knowledge/${branch.code}`)">查看前置 →</button><button v-else class="primary" @click="chooseBranch(branch)">{{ branch.navigationKind === 'CONTINUE' ? '学习下一个 →' : '选择这条路线 →' }}</button><button @click="deferBranch(branch, 'POINT')">暂缓此知识点</button><button v-if="branch.navigationKind === 'TRACK_CHOICE'" @click="deferBranch(branch, 'BRANCH')">暂缓整条路线</button></footer>
           </article>
         </div>
-        <div v-else class="content-card empty">所有可继续的路线都已完成或被你主动暂缓。你仍可在知识体系中恢复任意知识点。</div>
+        <div v-else class="content-card empty">当前没有自动下一步，请查看上方原因；可以调整方向、恢复暂缓点或浏览全部资料。</div>
       </section>
     </template>
   </div>

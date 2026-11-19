@@ -1,3 +1,4 @@
+import { ASSESSMENT_PENDING } from '@career-atlas/shared';
 /**
  * 考核会话的生命周期、作答与渐进帮助。
  * 题目合同由 assessment/questions 构建，证据校验由 assessment/self-check 负责。
@@ -60,6 +61,8 @@ export async function createAssessmentSession(
   const existingSession = findActiveSession(request.knowledgePointCode);
   if (existingSession) return resumeSession(existingSession);
   
+  if (ASSESSMENT_PENDING[request.knowledgePointCode]) throw new Error(`练习合同待修订：${ASSESSMENT_PENDING[request.knowledgePointCode]} 暂不创建新的语义挑战，历史记录仍可查看。`);
+
   // 创建会话
   const session: NewAssessmentSession = {
     id: randomUUID(),

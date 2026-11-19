@@ -36,7 +36,7 @@ function label(code: string) {
         </li>
       </ul>
     </article>
-    <small>查阅不等于掌握；正文说明每项基础的用途。TS-03、Router 和跨框架对照不是入口门槛。全局交错路线仍是待替换的兼容现状。</small>
+    <small>查阅不等于掌握；正文说明每项基础的用途。TS-03、Router 和跨框架对照不是入口门槛。个人推荐只采用所选方向；旧分组仅供浏览。</small>
   </section>
 </template>
 <style scoped>

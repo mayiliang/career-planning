@@ -9,10 +9,12 @@ declare module 'vue' {
   export interface GlobalComponents {
     AiAssistant: typeof import('./components/AiAssistant.vue')['default']
     AppIcon: typeof import('./components/AppIcon.vue')['default']
+    AssessmentReadiness: typeof import('./components/AssessmentReadiness.vue')['default']
     AsyncPilotRoute: typeof import('./components/AsyncPilotRoute.vue')['default']
     BaseDialog: typeof import('./components/BaseDialog.vue')['default']
     FrameworkEntry: typeof import('./components/FrameworkEntry.vue')['default']
     MarkdownRenderer: typeof import('./components/MarkdownRenderer.vue')['default']
+    PersonalLearningRoute: typeof import('./components/PersonalLearningRoute.vue')['default']
     PracticeWorkspace: typeof import('./components/PracticeWorkspace.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

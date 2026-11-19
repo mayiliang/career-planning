@@ -1,0 +1,433 @@
+[
+  {
+    "trace": "blocked-session-trace.zip",
+    "largestEventGaps": [
+      {
+        "fromMs": 27077.757,
+        "toMs": 717937.176,
+        "gapMs": 690859.419,
+        "before": "log",
+        "after": "screencast-frame"
+      },
+      {
+        "fromMs": 23420.675,
+        "toMs": 23888.611,
+        "gapMs": 467.936,
+        "before": "screencast-frame",
+        "after": "screencast-frame"
+      },
+      {
+        "fromMs": 23969.291,
+        "toMs": 24369.521,
+        "gapMs": 400.23,
+        "before": "screencast-frame",
+        "after": "log"
+      }
+    ],
+    "apiRequests": [
+      {
+        "path": "system/health",
+        "status": 200,
+        "durationMs": 144.172
+      },
+      {
+        "path": "knowledge/points/JS-02",
+        "status": 200,
+        "durationMs": 11.844
+      },
+      {
+        "path": "notes/JS-02",
+        "status": 200,
+        "durationMs": 12.45
+      },
+      {
+        "path": "learning/points/JS-02/branches",
+        "status": 200,
+        "durationMs": 16.665
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 16.750999999999998
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 87.17099999999999
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 84.69500000000001
+      },
+      {
+        "path": "learning/points/JS-02/focus",
+        "status": 200,
+        "durationMs": 11.25
+      },
+      {
+        "path": "knowledge/points/JS-02",
+        "status": 200,
+        "durationMs": 22.610999999999997
+      },
+      {
+        "path": "notes/JS-02",
+        "status": 200,
+        "durationMs": 24.206
+      },
+      {
+        "path": "learning/points/JS-02/branches",
+        "status": 200,
+        "durationMs": 27.435000000000002
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 28.090999999999998
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 22.738
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 22.968
+      },
+      {
+        "path": "notes/JS-02",
+        "status": 200,
+        "durationMs": 16.515
+      },
+      {
+        "path": "learning/points/JS-02/complete",
+        "status": 200,
+        "durationMs": 15.453
+      },
+      {
+        "path": "knowledge/points/JS-02",
+        "status": 200,
+        "durationMs": 17.413999999999998
+      },
+      {
+        "path": "notes/JS-02",
+        "status": 200,
+        "durationMs": 17.829
+      },
+      {
+        "path": "learning/points/JS-02/branches",
+        "status": 200,
+        "durationMs": 23.581000000000003
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 23.451
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 91.80199999999999
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 91.559
+      },
+      {
+        "path": "system/ai/status",
+        "status": 200,
+        "durationMs": 10.961
+      },
+      {
+        "path": "assessments",
+        "status": 200,
+        "durationMs": 27.62
+      },
+      {
+        "path": "assessments/5dcd12c0-884b-4430-aecd-f9bc81de550a",
+        "status": 200,
+        "durationMs": 14.288
+      }
+    ]
+  },
+  {
+    "trace": "blocked-route-trace.zip",
+    "largestEventGaps": [
+      {
+        "fromMs": 729701.404,
+        "toMs": 1754926.129,
+        "gapMs": 1025224.725,
+        "before": "log",
+        "after": "after"
+      },
+      {
+        "fromMs": 721932.91,
+        "toMs": 722440.794,
+        "gapMs": 507.884,
+        "before": "before",
+        "after": "event"
+      },
+      {
+        "fromMs": 725297.186,
+        "toMs": 725763.932,
+        "gapMs": 466.746,
+        "before": "screencast-frame",
+        "after": "log"
+      }
+    ],
+    "apiRequests": [
+      {
+        "path": "system/health",
+        "status": 200,
+        "durationMs": 6.33
+      },
+      {
+        "path": "learning/workspace",
+        "status": 200,
+        "durationMs": 15.687
+      },
+      {
+        "path": "knowledge/points",
+        "status": 200,
+        "durationMs": 47.408
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 8.059000000000001
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 8.677
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 7.646000000000001
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 6.231
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 8.091
+      },
+      {
+        "path": "learning/workspace",
+        "status": 200,
+        "durationMs": 11.152
+      },
+      {
+        "path": "knowledge/points",
+        "status": 200,
+        "durationMs": 31.584999999999997
+      },
+      {
+        "path": "knowledge/points/JS-01",
+        "status": 200,
+        "durationMs": 7.774
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 9.635
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 10.138
+      },
+      {
+        "path": "system/health",
+        "status": 200,
+        "durationMs": 6.07
+      },
+      {
+        "path": "learning/workspace",
+        "status": 200,
+        "durationMs": 9.518
+      },
+      {
+        "path": "knowledge/points",
+        "status": 200,
+        "durationMs": 29.982
+      },
+      {
+        "path": "knowledge/points/JS-01",
+        "status": 200,
+        "durationMs": 6.716
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 9.991
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 10.332
+      },
+      {
+        "path": "system/health",
+        "status": 200,
+        "durationMs": 5.906
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 8.318999999999999
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 8.722
+      },
+      {
+        "path": "knowledge/points",
+        "status": 200,
+        "durationMs": 28.533
+      },
+      {
+        "path": "knowledge/points",
+        "status": 200,
+        "durationMs": 26.255000000000003
+      },
+      {
+        "path": "system/health",
+        "status": 200,
+        "durationMs": 5.984
+      },
+      {
+        "path": "knowledge/points/REACT-02",
+        "status": 200,
+        "durationMs": 8.972000000000001
+      },
+      {
+        "path": "notes/REACT-02",
+        "status": 200,
+        "durationMs": 9.899000000000001
+      },
+      {
+        "path": "learning/points/REACT-02/branches",
+        "status": 200,
+        "durationMs": 13.314
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 13.754
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 7.386
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 8.78
+      },
+      {
+        "path": "system/health",
+        "status": 200,
+        "durationMs": 6.383
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 9.192
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 10.589
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 8.455
+      },
+      {
+        "path": "knowledge/materials/react-02-component-boundaries-data-flow-composition.md/react-02",
+        "status": 200,
+        "durationMs": 16.47
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 5.917
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 7.273000000000001
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 13.841000000000001
+      },
+      {
+        "path": "knowledge/points/WEB-01",
+        "status": 200,
+        "durationMs": 9.797
+      },
+      {
+        "path": "notes/WEB-01",
+        "status": 200,
+        "durationMs": 10.836
+      },
+      {
+        "path": "learning/points/WEB-01/branches",
+        "status": 200,
+        "durationMs": 168.25300000000001
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 171.701
+      },
+      {
+        "path": "learning/route",
+        "status": 200,
+        "durationMs": 65.93299999999999
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 80.03800000000001
+      },
+      {
+        "path": "import/reset-learning-progress",
+        "status": 200,
+        "durationMs": 296.1590000001015
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 6.724999999976717
+      },
+      {
+        "path": "learning/preferences",
+        "status": 200,
+        "durationMs": 7.733000000007451
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 7.6239999999525025
+      },
+      {
+        "path": "knowledge/material-progress",
+        "status": 200,
+        "durationMs": 5.820999999996275
+      }
+    ]
+  }
+]

@@ -1,0 +1,1 @@
+{"version":9,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1794682274535,"monotonicTime":4995015.677,"sdkLanguage":"javascript","title":"ui-polish.spec.ts:22 › 搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点"}

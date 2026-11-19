@@ -17,7 +17,8 @@
       "guide": "react-04-effects-external-sync-cleanup.md",
       "anchor": "react-04",
       "prerequisites": [
-        "react-03-state-model-derived-controlled.md#react-03"
+        "react-03-state-model-derived-controlled.md#react-03",
+        "js-05-promise-errors-async-control-flow.md#js-05"
       ],
       "concepts": [
         {
@@ -101,7 +102,8 @@
       "guide": "vue-05-lifecycle-effects-async-recovery.md",
       "anchor": "vue-05",
       "prerequisites": [
-        "vue-04-typed-components-slots-model-teleport.md#vue-04"
+        "vue-04-typed-components-slots-model-teleport.md#vue-04",
+        "js-05-promise-errors-async-control-flow.md#js-05"
       ],
       "concepts": [
         {

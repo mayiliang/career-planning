@@ -1,0 +1,3218 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: ui-polish.spec.ts >> 主要页面适配桌面、平板和手机且无页面脚本错误
+- Location: e2e/ui-polish.spec.ts:133:1
+
+# Error details
+
+```
+Test timeout of 60000ms exceeded.
+```
+
+```
+Error: page.evaluate: Test timeout of 60000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=f11e3]:
+  - link "跳到主要内容" [ref=f11e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=f11e5]:
+    - list [ref=f11e8]:
+      - listitem [ref=f11e9]:
+        - link "学习台" [ref=f11e10] [cursor=pointer]:
+          - /url: /
+      - listitem [ref=f11e14]:
+        - link "知识体系" [ref=f11e15] [cursor=pointer]:
+          - /url: /knowledge/map
+      - listitem [ref=f11e19]:
+        - link "笔记中心" [ref=f11e20] [cursor=pointer]:
+          - /url: /notes
+      - listitem [ref=f11e24]:
+        - link "核心路线" [ref=f11e25] [cursor=pointer]:
+          - /url: /plan
+      - listitem [ref=f11e29]:
+        - link "求职支线" [ref=f11e30] [cursor=pointer]:
+          - /url: /jobs
+    - generic [ref=f11e34]:
+      - link "设置与数据" [ref=f11e35] [cursor=pointer]:
+        - /url: /settings
+      - generic "服务正常" [ref=f11e39]
+  - generic [ref=f11e41]:
+    - banner [ref=f11e42]:
+      - generic [ref=f11e43]:
+        - generic [ref=f11e44]: 工作空间
+        - generic [aria-hidden] [ref=f11e45]: /
+        - generic [ref=f11e46]: 知识
+      - button "快速查找，快捷键 Command 或 Control 加 K" [ref=f11e48] [cursor=pointer]:
+        - generic [ref=f11e51]: 搜索知识点、页面…
+        - generic [ref=f11e52]: ⌘ K
+    - main [ref=f11e53]:
+      - paragraph [ref=f11e54]: 知识页面已打开
+      - main [ref=f11e57]:
+        - paragraph [ref=f11e58]:
+          - text: 此处为知识浏览视图，旧顺序与关系不代表已审必修路线；个人建议请查看
+          - link "我的学习路线" [ref=f11e59] [cursor=pointer]:
+            - /url: /plan
+          - text: 。
+        - generic [ref=f11e60]:
+          - generic [ref=f11e61]:
+            - paragraph [ref=f11e62]: LEARNING INVENTORY · 2026
+            - heading "知识清单" [level=1] [ref=f11e63]
+            - paragraph [ref=f11e64]: 不是收藏夹，而是一条可验证的掌握路线。按前置关系学习，用首考与复测把理解固化为证据。
+          - generic [ref=f11e66]:
+            - strong [ref=f11e67]: 0%
+            - generic [ref=f11e68]: 严格掌握
+        - generic [ref=f11e69]:
+          - generic [ref=f11e70]:
+            - paragraph [ref=f11e71]: NEXT BEST ACTION
+            - generic [ref=f11e72]: 我的下一步
+            - heading [level=2] [ref=f11e73]:
+              - code [ref=f11e74]: JS-01
+              - text: 执行上下文、作用域与闭包
+            - paragraph [ref=f11e75]: 按当前偏好与学习记录推荐；可自由查阅其他资料。
+            - button "开始学习 ↗" [ref=f11e76] [cursor=pointer]:
+              - text: 开始学习
+              - generic [ref=f11e77]: ↗
+          - complementary [ref=f11e78]:
+            - text: 已审推荐范围
+            - paragraph [ref=f11e79]: 共同基础与一个可选框架方向。未选方向不计入必修；学完与考核掌握分别记录。
+            - list
+            - link "查看偏好与学习路线" [ref=f11e80] [cursor=pointer]:
+              - /url: /plan
+        - generic [ref=f11e81]:
+          - generic [ref=f11e82]:
+            - strong [ref=f11e83]: "223"
+            - generic [ref=f11e84]: 知识点
+          - generic [ref=f11e85]:
+            - strong [ref=f11e86]: "20"
+            - generic [ref=f11e87]: 能力领域
+          - generic [ref=f11e88]:
+            - strong [ref=f11e89]: "0"
+            - generic [ref=f11e90]: 正在推进
+          - generic [ref=f11e91]:
+            - strong [ref=f11e92]: "0"
+            - generic [ref=f11e93]: 严格掌握
+          - navigation [ref=f11e94]:
+            - button "打开体系脑图" [ref=f11e95] [cursor=pointer]
+            - button "查看关系图谱" [ref=f11e96] [cursor=pointer]
+        - generic [ref=f11e97]:
+          - generic [ref=f11e98]:
+            - generic [ref=f11e99]: ⌕
+            - searchbox "⌕" [ref=f11e100]
+          - combobox "按领域筛选" [ref=f11e101]:
+            - option "全部领域" [selected]
+            - option "01 · Web 平台核心基础"
+            - option "02 · TypeScript 与业务类型建模"
+            - option "03 · React 原理、状态、Hooks、路由与性能"
+            - option "04 · Umi/Max、Ant Design 与中后台应用"
+            - option "05 · 业务建模、权限与接口契约"
+            - option "06 · Git、工程化、测试、CI/CD 与发布质量"
+            - option "07 · 性能、移动 Web 与媒体交付"
+            - option "08 · 组件系统与多运行时交付"
+            - option "09 · Node.js 服务与接口工具"
+            - option "10 · 项目表达、技术方案与职业影响力"
+            - option "11 · Vue 3 项目开发"
+            - option "12 · AI 原生前端与模型应用工程"
+            - option "13 · Agent、MCP 与 AI 工具协议"
+            - option "14 · 浏览器 AI、本地推理与新 Web 平台"
+            - option "15 · AI 辅助研发、评审与工程治理"
+            - option "16 · Linux、Docker 与前端部署交付"
+            - option "17 · 现代渲染、数据层、实时协作与离线"
+            - option "18 · 图形可视化、增长内容、全球化与兼容治理专项"
+            - option "19 · 身份、隐私与 AI 风险治理"
+            - option "20 · 架构领导力与基础设施协作"
+          - combobox "按掌握状态筛选" [ref=f11e102]:
+            - option "全部状态" [selected]
+            - option "未开始"
+            - option "学习中"
+            - option "待首考"
+            - option "待复测"
+            - option "已掌握"
+            - option "需要重学"
+          - combobox "按能力层筛选" [ref=f11e103]:
+            - option "全部能力层" [selected]
+            - option "核心"
+            - option "应用"
+            - option "岗位专精"
+            - option "领导力"
+          - combobox "按要求级别筛选" [ref=f11e104]:
+            - option "全部要求" [selected]
+            - option "全员必修"
+            - option "主修必修"
+            - option "选修"
+          - combobox "按成熟度筛选" [ref=f11e105]:
+            - option "全部成熟度" [selected]
+            - option "稳定"
+            - option "演进中"
+            - option "实验性"
+          - combobox "按 AI 关系筛选" [ref=f11e106]:
+            - option "全部 AI 关系" [selected]
+            - option "非 AI 专属"
+            - option "AI 辅助"
+            - option "AI 原生"
+            - option "Agentic"
+          - combobox "按可移植性筛选" [ref=f11e107]:
+            - option "全部可移植性" [selected]
+            - option "可迁移"
+            - option "框架特定"
+            - option "厂商特定"
+            - option "平台特定"
+            - option "地区规则"
+          - combobox "按学习路线筛选" [ref=f11e108]:
+            - option "全部学习路线" [selected]
+            - option "React 路线"
+            - option "Vue 路线"
+            - option "Umi/Ant Design 路线"
+            - option "Agent/MCP 路线"
+          - combobox "按主题标签筛选" [ref=f11e109]:
+            - option "全部主题标签" [selected]
+            - option "组件平台"
+            - option "接口工程"
+            - option "工具链"
+            - option "平台工程"
+            - option "实时 AI"
+            - option "AI 工具链"
+            - option "工程领导力"
+            - option "Web 平台"
+            - option "无障碍"
+            - option "安全与隐私"
+            - option "性能与移动端"
+            - option "媒体工程"
+            - option "跨运行时"
+            - option "Node/BFF"
+            - option "数据与实时协作"
+            - option "浏览器 AI"
+            - option "图形可视化"
+            - option "增长内容与全球化"
+            - option "部署交付"
+            - option "视觉测试"
+          - generic [ref=f11e110]: 223 项
+        - generic [ref=f11e111]:
+          - button "JS-01 01 JavaScript 语言模型 核心 必修 推荐下一站 执行上下文、作用域与闭包 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e112] [cursor=pointer]:
+            - generic [ref=f11e115]:
+              - generic [ref=f11e116]:
+                - code [ref=f11e117]: JS-01
+                - generic [ref=f11e118]: "01"
+                - generic [ref=f11e119]: JavaScript 语言模型
+                - generic [ref=f11e120]: 核心
+                - generic [ref=f11e121]: 必修
+                - emphasis [ref=f11e122]: 推荐下一站
+              - strong [ref=f11e123]: 执行上下文、作用域与闭包
+              - generic [ref=f11e124]: 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e125]:
+              - text: 未开始
+              - generic [ref=f11e126]: →
+          - 'button "JS-02 01 JavaScript 语言模型 核心 必修 原型、对象模型与 `this` 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e127] [cursor=pointer]':
+            - generic [ref=f11e130]:
+              - generic [ref=f11e131]:
+                - code [ref=f11e132]: JS-02
+                - generic [ref=f11e133]: "01"
+                - generic [ref=f11e134]: JavaScript 语言模型
+                - generic [ref=f11e135]: 核心
+                - generic [ref=f11e136]: 必修
+              - strong [ref=f11e137]: "原型、对象模型与 `this`"
+              - generic [ref=f11e138]: 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e139]:
+              - text: 未开始
+              - generic [ref=f11e140]: →
+          - button "JS-03 01 JavaScript 语言模型 核心 必修 类型、相等、拷贝与不可变更新 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e141] [cursor=pointer]:
+            - generic [ref=f11e144]:
+              - generic [ref=f11e145]:
+                - code [ref=f11e146]: JS-03
+                - generic [ref=f11e147]: "01"
+                - generic [ref=f11e148]: JavaScript 语言模型
+                - generic [ref=f11e149]: 核心
+                - generic [ref=f11e150]: 必修
+              - strong [ref=f11e151]: 类型、相等、拷贝与不可变更新
+              - generic [ref=f11e152]: 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e153]:
+              - text: 未开始
+              - generic [ref=f11e154]: →
+          - button "JS-07 01 JavaScript 语言模型 核心 必修 迭代协议、元编程与资源生命周期 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e155] [cursor=pointer]:
+            - generic [ref=f11e158]:
+              - generic [ref=f11e159]:
+                - code [ref=f11e160]: JS-07
+                - generic [ref=f11e161]: "01"
+                - generic [ref=f11e162]: JavaScript 语言模型
+                - generic [ref=f11e163]: 核心
+                - generic [ref=f11e164]: 必修
+              - strong [ref=f11e165]: 迭代协议、元编程与资源生命周期
+              - generic [ref=f11e166]: 核心批次 B01 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e167]:
+              - text: 未开始
+              - generic [ref=f11e168]: →
+          - button "CS-01 01 计算机基础与数据处理 核心 必修 复杂度、数据规模与工程成本判断 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e169] [cursor=pointer]:
+            - generic [ref=f11e172]:
+              - generic [ref=f11e173]:
+                - code [ref=f11e174]: CS-01
+                - generic [ref=f11e175]: "01"
+                - generic [ref=f11e176]: 计算机基础与数据处理
+                - generic [ref=f11e177]: 核心
+                - generic [ref=f11e178]: 必修
+              - strong [ref=f11e179]: 复杂度、数据规模与工程成本判断
+              - generic [ref=f11e180]: 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e181]:
+              - text: 未开始
+              - generic [ref=f11e182]: →
+          - button "CS-02 01 计算机基础与数据处理 核心 必修 常用数据结构、算法模式与正确性 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e183] [cursor=pointer]:
+            - generic [ref=f11e186]:
+              - generic [ref=f11e187]:
+                - code [ref=f11e188]: CS-02
+                - generic [ref=f11e189]: "01"
+                - generic [ref=f11e190]: 计算机基础与数据处理
+                - generic [ref=f11e191]: 核心
+                - generic [ref=f11e192]: 必修
+              - strong [ref=f11e193]: 常用数据结构、算法模式与正确性
+              - generic [ref=f11e194]: 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e195]:
+              - text: 未开始
+              - generic [ref=f11e196]: →
+          - button "CS-03 01 计算机基础与数据处理 核心 必修 前端大数据、Worker 并行、增量计算与内存边界 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e197] [cursor=pointer]:
+            - generic [ref=f11e200]:
+              - generic [ref=f11e201]:
+                - code [ref=f11e202]: CS-03
+                - generic [ref=f11e203]: "01"
+                - generic [ref=f11e204]: 计算机基础与数据处理
+                - generic [ref=f11e205]: 核心
+                - generic [ref=f11e206]: 必修
+              - strong [ref=f11e207]: 前端大数据、Worker 并行、增量计算与内存边界
+              - generic [ref=f11e208]: 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e209]:
+              - text: 未开始
+              - generic [ref=f11e210]: →
+          - button "JS-04 01 异步、模块与宿主运行时 核心 必修 异步、Promise 与事件循环 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e211] [cursor=pointer]:
+            - generic [ref=f11e214]:
+              - generic [ref=f11e215]:
+                - code [ref=f11e216]: JS-04
+                - generic [ref=f11e217]: "01"
+                - generic [ref=f11e218]: 异步、模块与宿主运行时
+                - generic [ref=f11e219]: 核心
+                - generic [ref=f11e220]: 必修
+              - strong [ref=f11e221]: 异步、Promise 与事件循环
+              - generic [ref=f11e222]: 核心批次 B02 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e223]:
+              - text: 未开始
+              - generic [ref=f11e224]: →
+          - button "JS-05 01 异步、模块与宿主运行时 核心 必修 Promise 错误处理与异步控制流 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e225] [cursor=pointer]:
+            - generic [ref=f11e228]:
+              - generic [ref=f11e229]:
+                - code [ref=f11e230]: JS-05
+                - generic [ref=f11e231]: "01"
+                - generic [ref=f11e232]: 异步、模块与宿主运行时
+                - generic [ref=f11e233]: 核心
+                - generic [ref=f11e234]: 必修
+              - strong [ref=f11e235]: Promise 错误处理与异步控制流
+              - generic [ref=f11e236]: 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e237]:
+              - text: 未开始
+              - generic [ref=f11e238]: →
+          - button "JS-06 01 异步、模块与宿主运行时 核心 必修 ES Modules 与模块边界 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e239] [cursor=pointer]:
+            - generic [ref=f11e242]:
+              - generic [ref=f11e243]:
+                - code [ref=f11e244]: JS-06
+                - generic [ref=f11e245]: "01"
+                - generic [ref=f11e246]: 异步、模块与宿主运行时
+                - generic [ref=f11e247]: 核心
+                - generic [ref=f11e248]: 必修
+              - strong [ref=f11e249]: ES Modules 与模块边界
+              - generic [ref=f11e250]: 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e251]:
+              - text: 未开始
+              - generic [ref=f11e252]: →
+          - button "TS-01 02 类型基础与收窄 核心 必修 类型系统、结构化类型与严格模式 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e253] [cursor=pointer]:
+            - generic [ref=f11e256]:
+              - generic [ref=f11e257]:
+                - code [ref=f11e258]: TS-01
+                - generic [ref=f11e259]: "02"
+                - generic [ref=f11e260]: 类型基础与收窄
+                - generic [ref=f11e261]: 核心
+                - generic [ref=f11e262]: 必修
+              - strong [ref=f11e263]: 类型系统、结构化类型与严格模式
+              - generic [ref=f11e264]: 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e265]:
+              - text: 未开始
+              - generic [ref=f11e266]: →
+          - 'button "TS-02 02 类型基础与收窄 核心 必修 联合类型、收窄、`never` 与穷尽检查 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e267] [cursor=pointer]':
+            - generic [ref=f11e270]:
+              - generic [ref=f11e271]:
+                - code [ref=f11e272]: TS-02
+                - generic [ref=f11e273]: "02"
+                - generic [ref=f11e274]: 类型基础与收窄
+                - generic [ref=f11e275]: 核心
+                - generic [ref=f11e276]: 必修
+              - strong [ref=f11e277]: "联合类型、收窄、`never` 与穷尽检查"
+              - generic [ref=f11e278]: 核心批次 B03 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e279]:
+              - text: 未开始
+              - generic [ref=f11e280]: →
+          - 'button "TS-03 02 泛型与类型编程 核心 必修 泛型、约束、`keyof` 与索引访问 核心批次 B04 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e281] [cursor=pointer]':
+            - generic [ref=f11e284]:
+              - generic [ref=f11e285]:
+                - code [ref=f11e286]: TS-03
+                - generic [ref=f11e287]: "02"
+                - generic [ref=f11e288]: 泛型与类型编程
+                - generic [ref=f11e289]: 核心
+                - generic [ref=f11e290]: 必修
+              - strong [ref=f11e291]: "泛型、约束、`keyof` 与索引访问"
+              - generic [ref=f11e292]: 核心批次 B04 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e293]:
+              - text: 未开始
+              - generic [ref=f11e294]: →
+          - button "WEB-01 01 Web 标准与可访问性 核心 必修 HTML 语义、表单与可访问性基础 核心批次 B04 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e295] [cursor=pointer]:
+            - generic [ref=f11e298]:
+              - generic [ref=f11e299]:
+                - code [ref=f11e300]: WEB-01
+                - generic [ref=f11e301]: "01"
+                - generic [ref=f11e302]: Web 标准与可访问性
+                - generic [ref=f11e303]: 核心
+                - generic [ref=f11e304]: 必修
+              - strong [ref=f11e305]: HTML 语义、表单与可访问性基础
+              - generic [ref=f11e306]: 核心批次 B04 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e307]:
+              - text: 未开始
+              - generic [ref=f11e308]: →
+          - button "REACT-01 03 渲染与组件边界 应用 主修必修 渲染、组件纯度与 state snapshot 核心批次 B04 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e309] [cursor=pointer]:
+            - generic [ref=f11e312]:
+              - generic [ref=f11e313]:
+                - code [ref=f11e314]: REACT-01
+                - generic [ref=f11e315]: "03"
+                - generic [ref=f11e316]: 渲染与组件边界
+                - generic [ref=f11e317]: 应用
+                - generic [ref=f11e318]: 主修必修
+              - strong [ref=f11e319]: 渲染、组件纯度与 state snapshot
+              - generic [ref=f11e320]: 核心批次 B04 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e321]:
+              - text: 未开始
+              - generic [ref=f11e322]: →
+          - button "VUE-01 11 项目与响应式基础 应用 主修必修 Vite 脚手架、SFC 与项目结构 核心批次 B04 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e323] [cursor=pointer]:
+            - generic [ref=f11e326]:
+              - generic [ref=f11e327]:
+                - code [ref=f11e328]: VUE-01
+                - generic [ref=f11e329]: "11"
+                - generic [ref=f11e330]: 项目与响应式基础
+                - generic [ref=f11e331]: 应用
+                - generic [ref=f11e332]: 主修必修
+              - strong [ref=f11e333]: Vite 脚手架、SFC 与项目结构
+              - generic [ref=f11e334]: 核心批次 B04 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e335]:
+              - text: 未开始
+              - generic [ref=f11e336]: →
+          - 'button "VUE-02 11 项目与响应式基础 应用 主修必修 `ref`、`reactive`、`computed` 与响应式边界 核心批次 B04 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e337] [cursor=pointer]':
+            - generic [ref=f11e340]:
+              - generic [ref=f11e341]:
+                - code [ref=f11e342]: VUE-02
+                - generic [ref=f11e343]: "11"
+                - generic [ref=f11e344]: 项目与响应式基础
+                - generic [ref=f11e345]: 应用
+                - generic [ref=f11e346]: 主修必修
+              - strong [ref=f11e347]: "`ref`、`reactive`、`computed` 与响应式边界"
+              - generic [ref=f11e348]: 核心批次 B04 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e349]:
+              - text: 未开始
+              - generic [ref=f11e350]: →
+          - button "REACT-02 03 渲染与组件边界 应用 主修必修 组件边界、数据流与组合 核心批次 B05 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e351] [cursor=pointer]:
+            - generic [ref=f11e354]:
+              - generic [ref=f11e355]:
+                - code [ref=f11e356]: REACT-02
+                - generic [ref=f11e357]: "03"
+                - generic [ref=f11e358]: 渲染与组件边界
+                - generic [ref=f11e359]: 应用
+                - generic [ref=f11e360]: 主修必修
+              - strong [ref=f11e361]: 组件边界、数据流与组合
+              - generic [ref=f11e362]: 核心批次 B05 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e363]:
+              - text: 未开始
+              - generic [ref=f11e364]: →
+          - button "VUE-03 11 项目与响应式基础 应用 主修必修 模板语法、指令、事件与表单 核心批次 B05 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e365] [cursor=pointer]:
+            - generic [ref=f11e368]:
+              - generic [ref=f11e369]:
+                - code [ref=f11e370]: VUE-03
+                - generic [ref=f11e371]: "11"
+                - generic [ref=f11e372]: 项目与响应式基础
+                - generic [ref=f11e373]: 应用
+                - generic [ref=f11e374]: 主修必修
+              - strong [ref=f11e375]: 模板语法、指令、事件与表单
+              - generic [ref=f11e376]: 核心批次 B05 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e377]:
+              - text: 未开始
+              - generic [ref=f11e378]: →
+          - 'button "VUE-04 11 组件、副作用与逻辑复用 应用 主修必修 类型化组件契约、Slots、`v-model` 与 Teleport 核心批次 B05 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e379] [cursor=pointer]':
+            - generic [ref=f11e382]:
+              - generic [ref=f11e383]:
+                - code [ref=f11e384]: VUE-04
+                - generic [ref=f11e385]: "11"
+                - generic [ref=f11e386]: 组件、副作用与逻辑复用
+                - generic [ref=f11e387]: 应用
+                - generic [ref=f11e388]: 主修必修
+              - strong [ref=f11e389]: "类型化组件契约、Slots、`v-model` 与 Teleport"
+              - generic [ref=f11e390]: 核心批次 B05 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e391]:
+              - text: 未开始
+              - generic [ref=f11e392]: →
+          - button "REACT-03 03 状态、副作用与逻辑复用 应用 主修必修 状态建模、派生状态与受控模式 核心批次 B05 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e393] [cursor=pointer]:
+            - generic [ref=f11e396]:
+              - generic [ref=f11e397]:
+                - code [ref=f11e398]: REACT-03
+                - generic [ref=f11e399]: "03"
+                - generic [ref=f11e400]: 状态、副作用与逻辑复用
+                - generic [ref=f11e401]: 应用
+                - generic [ref=f11e402]: 主修必修
+              - strong [ref=f11e403]: 状态建模、派生状态与受控模式
+              - generic [ref=f11e404]: 核心批次 B05 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e405]:
+              - text: 未开始
+              - generic [ref=f11e406]: →
+          - button "REACT-04 03 状态、副作用与逻辑复用 应用 主修必修 Effect、外部同步与清理 核心批次 B06 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e407] [cursor=pointer]:
+            - generic [ref=f11e410]:
+              - generic [ref=f11e411]:
+                - code [ref=f11e412]: REACT-04
+                - generic [ref=f11e413]: "03"
+                - generic [ref=f11e414]: 状态、副作用与逻辑复用
+                - generic [ref=f11e415]: 应用
+                - generic [ref=f11e416]: 主修必修
+              - strong [ref=f11e417]: Effect、外部同步与清理
+              - generic [ref=f11e418]: 核心批次 B06 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e419]:
+              - text: 未开始
+              - generic [ref=f11e420]: →
+          - button "VUE-05 11 组件、副作用与逻辑复用 应用 主修必修 生命周期、副作用清理与异步恢复 核心批次 B06 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e421] [cursor=pointer]:
+            - generic [ref=f11e424]:
+              - generic [ref=f11e425]:
+                - code [ref=f11e426]: VUE-05
+                - generic [ref=f11e427]: "11"
+                - generic [ref=f11e428]: 组件、副作用与逻辑复用
+                - generic [ref=f11e429]: 应用
+                - generic [ref=f11e430]: 主修必修
+              - strong [ref=f11e431]: 生命周期、副作用清理与异步恢复
+              - generic [ref=f11e432]: 核心批次 B06 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e433]:
+              - text: 未开始
+              - generic [ref=f11e434]: →
+          - button "REACT-05 03 状态、副作用与逻辑复用 应用 主修必修 Hooks 规则与自定义 Hook 核心批次 B06 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e435] [cursor=pointer]:
+            - generic [ref=f11e438]:
+              - generic [ref=f11e439]:
+                - code [ref=f11e440]: REACT-05
+                - generic [ref=f11e441]: "03"
+                - generic [ref=f11e442]: 状态、副作用与逻辑复用
+                - generic [ref=f11e443]: 应用
+                - generic [ref=f11e444]: 主修必修
+              - strong [ref=f11e445]: Hooks 规则与自定义 Hook
+              - generic [ref=f11e446]: 核心批次 B06 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e447]:
+              - text: 未开始
+              - generic [ref=f11e448]: →
+          - button "VUE-06 11 组件、副作用与逻辑复用 应用 主修必修 Composable、依赖注入与逻辑复用 核心批次 B06 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e449] [cursor=pointer]:
+            - generic [ref=f11e452]:
+              - generic [ref=f11e453]:
+                - code [ref=f11e454]: VUE-06
+                - generic [ref=f11e455]: "11"
+                - generic [ref=f11e456]: 组件、副作用与逻辑复用
+                - generic [ref=f11e457]: 应用
+                - generic [ref=f11e458]: 主修必修
+              - strong [ref=f11e459]: Composable、依赖注入与逻辑复用
+              - generic [ref=f11e460]: 核心批次 B06 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e461]:
+              - text: 未开始
+              - generic [ref=f11e462]: →
+          - button "REACT-06 03 状态、副作用与逻辑复用 应用 主修必修 Reducer、Context 与跨组件状态 核心批次 B07 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e463] [cursor=pointer]:
+            - generic [ref=f11e466]:
+              - generic [ref=f11e467]:
+                - code [ref=f11e468]: REACT-06
+                - generic [ref=f11e469]: "03"
+                - generic [ref=f11e470]: 状态、副作用与逻辑复用
+                - generic [ref=f11e471]: 应用
+                - generic [ref=f11e472]: 主修必修
+              - strong [ref=f11e473]: Reducer、Context 与跨组件状态
+              - generic [ref=f11e474]: 核心批次 B07 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e475]:
+              - text: 未开始
+              - generic [ref=f11e476]: →
+          - button "VUE-08 11 路由、客户端状态与服务器状态 应用 主修必修 Pinia 与状态分层 核心批次 B07 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e477] [cursor=pointer]:
+            - generic [ref=f11e480]:
+              - generic [ref=f11e481]:
+                - code [ref=f11e482]: VUE-08
+                - generic [ref=f11e483]: "11"
+                - generic [ref=f11e484]: 路由、客户端状态与服务器状态
+                - generic [ref=f11e485]: 应用
+                - generic [ref=f11e486]: 主修必修
+              - strong [ref=f11e487]: Pinia 与状态分层
+              - generic [ref=f11e488]: 核心批次 B07 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e489]:
+              - text: 未开始
+              - generic [ref=f11e490]: →
+          - button "REACT-08 03 性能与可恢复体验 应用 主修必修 错误边界、异步 UI 与可恢复体验 核心批次 B07 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e491] [cursor=pointer]:
+            - generic [ref=f11e494]:
+              - generic [ref=f11e495]:
+                - code [ref=f11e496]: REACT-08
+                - generic [ref=f11e497]: "03"
+                - generic [ref=f11e498]: 性能与可恢复体验
+                - generic [ref=f11e499]: 应用
+                - generic [ref=f11e500]: 主修必修
+              - strong [ref=f11e501]: 错误边界、异步 UI 与可恢复体验
+              - generic [ref=f11e502]: 核心批次 B07 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e503]:
+              - text: 未开始
+              - generic [ref=f11e504]: →
+          - button "REACT-10 03 编译优化、服务端边界与路由 应用 主修必修 React 路由、数据路由与框架模式 核心批次 B07 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h45m 未开始 →" [ref=f11e505] [cursor=pointer]:
+            - generic [ref=f11e508]:
+              - generic [ref=f11e509]:
+                - code [ref=f11e510]: REACT-10
+                - generic [ref=f11e511]: "03"
+                - generic [ref=f11e512]: 编译优化、服务端边界与路由
+                - generic [ref=f11e513]: 应用
+                - generic [ref=f11e514]: 主修必修
+              - strong [ref=f11e515]: React 路由、数据路由与框架模式
+              - generic [ref=f11e516]: 核心批次 B07 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h45m
+            - generic [ref=f11e517]:
+              - text: 未开始
+              - generic [ref=f11e518]: →
+          - button "VUE-07 11 路由、客户端状态与服务器状态 应用 主修必修 Vue Router、类型化/文件路由与导航边界 核心批次 B08 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e519] [cursor=pointer]:
+            - generic [ref=f11e522]:
+              - generic [ref=f11e523]:
+                - code [ref=f11e524]: VUE-07
+                - generic [ref=f11e525]: "11"
+                - generic [ref=f11e526]: 路由、客户端状态与服务器状态
+                - generic [ref=f11e527]: 应用
+                - generic [ref=f11e528]: 主修必修
+              - strong [ref=f11e529]: Vue Router、类型化/文件路由与导航边界
+              - generic [ref=f11e530]: 核心批次 B08 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e531]:
+              - text: 未开始
+              - generic [ref=f11e532]: →
+          - button "REACT-07 03 性能与可恢复体验 应用 主修必修 性能测量、memo 与大列表 核心批次 B08 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e533] [cursor=pointer]:
+            - generic [ref=f11e536]:
+              - generic [ref=f11e537]:
+                - code [ref=f11e538]: REACT-07
+                - generic [ref=f11e539]: "03"
+                - generic [ref=f11e540]: 性能与可恢复体验
+                - generic [ref=f11e541]: 应用
+                - generic [ref=f11e542]: 主修必修
+              - strong [ref=f11e543]: 性能测量、memo 与大列表
+              - generic [ref=f11e544]: 核心批次 B08 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e545]:
+              - text: 未开始
+              - generic [ref=f11e546]: →
+          - button "VUE-10 11 测试、性能与全栈渲染 应用 主修必修 组件测试、性能与生产构建 核心批次 B08 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e547] [cursor=pointer]:
+            - generic [ref=f11e550]:
+              - generic [ref=f11e551]:
+                - code [ref=f11e552]: VUE-10
+                - generic [ref=f11e553]: "11"
+                - generic [ref=f11e554]: 测试、性能与全栈渲染
+                - generic [ref=f11e555]: 应用
+                - generic [ref=f11e556]: 主修必修
+              - strong [ref=f11e557]: 组件测试、性能与生产构建
+              - generic [ref=f11e558]: 核心批次 B08 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e559]:
+              - text: 未开始
+              - generic [ref=f11e560]: →
+          - button "REACT-09 03 编译优化、服务端边界与路由 应用 主修必修 React Compiler、服务端组件边界与安全升级 核心批次 B08 · 演进中 · 框架特定 · 路线 react · intermediate · 预计 7h 未开始 →" [ref=f11e561] [cursor=pointer]:
+            - generic [ref=f11e564]:
+              - generic [ref=f11e565]:
+                - code [ref=f11e566]: REACT-09
+                - generic [ref=f11e567]: "03"
+                - generic [ref=f11e568]: 编译优化、服务端边界与路由
+                - generic [ref=f11e569]: 应用
+                - generic [ref=f11e570]: 主修必修
+              - strong [ref=f11e571]: React Compiler、服务端组件边界与安全升级
+              - generic [ref=f11e572]: 核心批次 B08 · 演进中 · 框架特定 · 路线 react · intermediate · 预计 7h
+            - generic [ref=f11e573]:
+              - text: 未开始
+              - generic [ref=f11e574]: →
+          - button "VUE-11 11 测试、性能与全栈渲染 应用 主修必修 Nuxt 全栈渲染、数据获取与性能 核心批次 B08 · 演进中 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e575] [cursor=pointer]:
+            - generic [ref=f11e578]:
+              - generic [ref=f11e579]:
+                - code [ref=f11e580]: VUE-11
+                - generic [ref=f11e581]: "11"
+                - generic [ref=f11e582]: 测试、性能与全栈渲染
+                - generic [ref=f11e583]: 应用
+                - generic [ref=f11e584]: 主修必修
+              - strong [ref=f11e585]: Nuxt 全栈渲染、数据获取与性能
+              - generic [ref=f11e586]: 核心批次 B08 · 演进中 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e587]:
+              - text: 未开始
+              - generic [ref=f11e588]: →
+          - button "GIT-01 06 版本控制与协作 核心 必修 Git 对象模型、暂存区与安全恢复 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e589] [cursor=pointer]:
+            - generic [ref=f11e592]:
+              - generic [ref=f11e593]:
+                - code [ref=f11e594]: GIT-01
+                - generic [ref=f11e595]: "06"
+                - generic [ref=f11e596]: 版本控制与协作
+                - generic [ref=f11e597]: 核心
+                - generic [ref=f11e598]: 必修
+              - strong [ref=f11e599]: Git 对象模型、暂存区与安全恢复
+              - generic [ref=f11e600]: 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e601]:
+              - text: 未开始
+              - generic [ref=f11e602]: →
+          - button "GIT-02 06 版本控制与协作 核心 必修 分支、合并、变基与冲突处理 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e603] [cursor=pointer]:
+            - generic [ref=f11e606]:
+              - generic [ref=f11e607]:
+                - code [ref=f11e608]: GIT-02
+                - generic [ref=f11e609]: "06"
+                - generic [ref=f11e610]: 版本控制与协作
+                - generic [ref=f11e611]: 核心
+                - generic [ref=f11e612]: 必修
+              - strong [ref=f11e613]: 分支、合并、变基与冲突处理
+              - generic [ref=f11e614]: 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e615]:
+              - text: 未开始
+              - generic [ref=f11e616]: →
+          - button "GIT-03 06 版本控制与协作 核心 必修 协作工作流、提交治理与 AI Agent 隔离 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e617] [cursor=pointer]:
+            - generic [ref=f11e620]:
+              - generic [ref=f11e621]:
+                - code [ref=f11e622]: GIT-03
+                - generic [ref=f11e623]: "06"
+                - generic [ref=f11e624]: 版本控制与协作
+                - generic [ref=f11e625]: 核心
+                - generic [ref=f11e626]: 必修
+              - strong [ref=f11e627]: 协作工作流、提交治理与 AI Agent 隔离
+              - generic [ref=f11e628]: 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e629]:
+              - text: 未开始
+              - generic [ref=f11e630]: →
+          - button "DEBUG-01 01 网络与系统化诊断 核心 必修 浏览器、异步与生产环境系统化调试 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e631] [cursor=pointer]:
+            - generic [ref=f11e634]:
+              - generic [ref=f11e635]:
+                - code [ref=f11e636]: DEBUG-01
+                - generic [ref=f11e637]: "01"
+                - generic [ref=f11e638]: 网络与系统化诊断
+                - generic [ref=f11e639]: 核心
+                - generic [ref=f11e640]: 必修
+              - strong [ref=f11e641]: 浏览器、异步与生产环境系统化调试
+              - generic [ref=f11e642]: 核心批次 B09 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e643]:
+              - text: 未开始
+              - generic [ref=f11e644]: →
+          - button "ENG-01 06 构建与依赖工程 核心 必修 模块图、构建流程与产物分析 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e645] [cursor=pointer]:
+            - generic [ref=f11e648]:
+              - generic [ref=f11e649]:
+                - code [ref=f11e650]: ENG-01
+                - generic [ref=f11e651]: "06"
+                - generic [ref=f11e652]: 构建与依赖工程
+                - generic [ref=f11e653]: 核心
+                - generic [ref=f11e654]: 必修
+              - strong [ref=f11e655]: 模块图、构建流程与产物分析
+              - generic [ref=f11e656]: 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e657]:
+              - text: 未开始
+              - generic [ref=f11e658]: →
+          - button "ENG-02 06 构建与依赖工程 核心 必修 构建工具的开发模型、生产模型与环境差异 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e659] [cursor=pointer]:
+            - generic [ref=f11e662]:
+              - generic [ref=f11e663]:
+                - code [ref=f11e664]: ENG-02
+                - generic [ref=f11e665]: "06"
+                - generic [ref=f11e666]: 构建与依赖工程
+                - generic [ref=f11e667]: 核心
+                - generic [ref=f11e668]: 必修
+              - strong [ref=f11e669]: 构建工具的开发模型、生产模型与环境差异
+              - generic [ref=f11e670]: 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e671]:
+              - text: 未开始
+              - generic [ref=f11e672]: →
+          - button "ENG-03 06 构建与依赖工程 核心 必修 包管理、lockfile 与 workspace 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e673] [cursor=pointer]:
+            - generic [ref=f11e676]:
+              - generic [ref=f11e677]:
+                - code [ref=f11e678]: ENG-03
+                - generic [ref=f11e679]: "06"
+                - generic [ref=f11e680]: 构建与依赖工程
+                - generic [ref=f11e681]: 核心
+                - generic [ref=f11e682]: 必修
+              - strong [ref=f11e683]: 包管理、lockfile 与 workspace
+              - generic [ref=f11e684]: 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e685]:
+              - text: 未开始
+              - generic [ref=f11e686]: →
+          - button "ENG-05 06 质量门禁与测试体系 核心 必修 lint、format、typecheck 与提交门禁 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e687] [cursor=pointer]:
+            - generic [ref=f11e690]:
+              - generic [ref=f11e691]:
+                - code [ref=f11e692]: ENG-05
+                - generic [ref=f11e693]: "06"
+                - generic [ref=f11e694]: 质量门禁与测试体系
+                - generic [ref=f11e695]: 核心
+                - generic [ref=f11e696]: 必修
+              - strong [ref=f11e697]: lint、format、typecheck 与提交门禁
+              - generic [ref=f11e698]: 核心批次 B10 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e699]:
+              - text: 未开始
+              - generic [ref=f11e700]: →
+          - button "TEST-01 06 质量门禁与测试体系 核心 必修 单元测试、测试替身与覆盖边界 核心批次 B11 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e701] [cursor=pointer]:
+            - generic [ref=f11e704]:
+              - generic [ref=f11e705]:
+                - code [ref=f11e706]: TEST-01
+                - generic [ref=f11e707]: "06"
+                - generic [ref=f11e708]: 质量门禁与测试体系
+                - generic [ref=f11e709]: 核心
+                - generic [ref=f11e710]: 必修
+              - strong [ref=f11e711]: 单元测试、测试替身与覆盖边界
+              - generic [ref=f11e712]: 核心批次 B11 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e713]:
+              - text: 未开始
+              - generic [ref=f11e714]: →
+          - button "TEST-02 06 质量门禁与测试体系 应用 主修必修 React 组件测试 核心批次 B11 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h45m 未开始 →" [ref=f11e715] [cursor=pointer]:
+            - generic [ref=f11e718]:
+              - generic [ref=f11e719]:
+                - code [ref=f11e720]: TEST-02
+                - generic [ref=f11e721]: "06"
+                - generic [ref=f11e722]: 质量门禁与测试体系
+                - generic [ref=f11e723]: 应用
+                - generic [ref=f11e724]: 主修必修
+              - strong [ref=f11e725]: React 组件测试
+              - generic [ref=f11e726]: 核心批次 B11 · 稳定 · 框架特定 · 路线 react · intermediate · 预计 7h45m
+            - generic [ref=f11e727]:
+              - text: 未开始
+              - generic [ref=f11e728]: →
+          - button "TEST-03 06 质量门禁与测试体系 核心 必修 E2E、视觉回归、关键路径与测试隔离 核心批次 B11 · 稳定 · 可迁移 · 主题 visual-testing · intermediate · 预计 7h45m 未开始 →" [ref=f11e729] [cursor=pointer]:
+            - generic [ref=f11e732]:
+              - generic [ref=f11e733]:
+                - code [ref=f11e734]: TEST-03
+                - generic [ref=f11e735]: "06"
+                - generic [ref=f11e736]: 质量门禁与测试体系
+                - generic [ref=f11e737]: 核心
+                - generic [ref=f11e738]: 必修
+              - strong [ref=f11e739]: E2E、视觉回归、关键路径与测试隔离
+              - generic [ref=f11e740]: 核心批次 B11 · 稳定 · 可迁移 · 主题 visual-testing · intermediate · 预计 7h45m
+            - generic [ref=f11e741]:
+              - text: 未开始
+              - generic [ref=f11e742]: →
+          - button "CAREER-01 10 项目证据与复盘 应用 必修 项目复盘与 STAR/问题-方案-结果表达 核心批次 B11 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e743] [cursor=pointer]:
+            - generic [ref=f11e746]:
+              - generic [ref=f11e747]:
+                - code [ref=f11e748]: CAREER-01
+                - generic [ref=f11e749]: "10"
+                - generic [ref=f11e750]: 项目证据与复盘
+                - generic [ref=f11e751]: 应用
+                - generic [ref=f11e752]: 必修
+              - strong [ref=f11e753]: 项目复盘与 STAR/问题-方案-结果表达
+              - generic [ref=f11e754]: 核心批次 B11 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e755]:
+              - text: 未开始
+              - generic [ref=f11e756]: →
+          - button "CAREER-02 10 架构表达 应用 必修 架构图与系统边界 核心批次 B12 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e757] [cursor=pointer]:
+            - generic [ref=f11e760]:
+              - generic [ref=f11e761]:
+                - code [ref=f11e762]: CAREER-02
+                - generic [ref=f11e763]: "10"
+                - generic [ref=f11e764]: 架构表达
+                - generic [ref=f11e765]: 应用
+                - generic [ref=f11e766]: 必修
+              - strong [ref=f11e767]: 架构图与系统边界
+              - generic [ref=f11e768]: 核心批次 B12 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e769]:
+              - text: 未开始
+              - generic [ref=f11e770]: →
+          - button "CAREER-04 10 故障沟通与复盘 应用 必修 故障复盘与问题定位表达 核心批次 B12 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e771] [cursor=pointer]:
+            - generic [ref=f11e774]:
+              - generic [ref=f11e775]:
+                - code [ref=f11e776]: CAREER-04
+                - generic [ref=f11e777]: "10"
+                - generic [ref=f11e778]: 故障沟通与复盘
+                - generic [ref=f11e779]: 应用
+                - generic [ref=f11e780]: 必修
+              - strong [ref=f11e781]: 故障复盘与问题定位表达
+              - generic [ref=f11e782]: 核心批次 B12 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e783]:
+              - text: 未开始
+              - generic [ref=f11e784]: →
+          - button "CAREER-05 10 评审与技术推动 领导力 必修 代码评审、沟通与技术推动 核心批次 B12 · 稳定 · 可迁移 · 主题 engineering-leadership · intermediate · 预计 7h45m 未开始 →" [ref=f11e785] [cursor=pointer]:
+            - generic [ref=f11e788]:
+              - generic [ref=f11e789]:
+                - code [ref=f11e790]: CAREER-05
+                - generic [ref=f11e791]: "10"
+                - generic [ref=f11e792]: 评审与技术推动
+                - generic [ref=f11e793]: 领导力
+                - generic [ref=f11e794]: 必修
+              - strong [ref=f11e795]: 代码评审、沟通与技术推动
+              - generic [ref=f11e796]: 核心批次 B12 · 稳定 · 可迁移 · 主题 engineering-leadership · intermediate · 预计 7h45m
+            - generic [ref=f11e797]:
+              - text: 未开始
+              - generic [ref=f11e798]: →
+          - button "WEB-02 01 Web 标准与可访问性 核心 必修 CSS 布局、层叠与响应式 核心批次 B12 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e799] [cursor=pointer]:
+            - generic [ref=f11e802]:
+              - generic [ref=f11e803]:
+                - code [ref=f11e804]: WEB-02
+                - generic [ref=f11e805]: "01"
+                - generic [ref=f11e806]: Web 标准与可访问性
+                - generic [ref=f11e807]: 核心
+                - generic [ref=f11e808]: 必修
+              - strong [ref=f11e809]: CSS 布局、层叠与响应式
+              - generic [ref=f11e810]: 核心批次 B12 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e811]:
+              - text: 未开始
+              - generic [ref=f11e812]: →
+          - button "WEB-03 01 Web 标准与可访问性 核心 必修 现代 CSS 架构、容器查询与渐进增强 核心批次 B12 · 演进中 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e813] [cursor=pointer]:
+            - generic [ref=f11e816]:
+              - generic [ref=f11e817]:
+                - code [ref=f11e818]: WEB-03
+                - generic [ref=f11e819]: "01"
+                - generic [ref=f11e820]: Web 标准与可访问性
+                - generic [ref=f11e821]: 核心
+                - generic [ref=f11e822]: 必修
+              - strong [ref=f11e823]: 现代 CSS 架构、容器查询与渐进增强
+              - generic [ref=f11e824]: 核心批次 B12 · 演进中 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e825]:
+              - text: 未开始
+              - generic [ref=f11e826]: →
+          - button "A11Y-01 01 Web 标准与可访问性 核心 必修 WCAG 2.2、无障碍测试与工程治理 核心批次 B13 · 稳定 · 可迁移 · 主题 accessibility · intermediate · 预计 7h45m 未开始 →" [ref=f11e827] [cursor=pointer]:
+            - generic [ref=f11e830]:
+              - generic [ref=f11e831]:
+                - code [ref=f11e832]: A11Y-01
+                - generic [ref=f11e833]: "01"
+                - generic [ref=f11e834]: Web 标准与可访问性
+                - generic [ref=f11e835]: 核心
+                - generic [ref=f11e836]: 必修
+              - strong [ref=f11e837]: WCAG 2.2、无障碍测试与工程治理
+              - generic [ref=f11e838]: 核心批次 B13 · 稳定 · 可迁移 · 主题 accessibility · intermediate · 预计 7h45m
+            - generic [ref=f11e839]:
+              - text: 未开始
+              - generic [ref=f11e840]: →
+          - button "BROWSER-01 01 浏览器运行时与原生能力 核心 必修 渲染流水线、DOM 事件与存储 核心批次 B13 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e841] [cursor=pointer]:
+            - generic [ref=f11e844]:
+              - generic [ref=f11e845]:
+                - code [ref=f11e846]: BROWSER-01
+                - generic [ref=f11e847]: "01"
+                - generic [ref=f11e848]: 浏览器运行时与原生能力
+                - generic [ref=f11e849]: 核心
+                - generic [ref=f11e850]: 必修
+              - strong [ref=f11e851]: 渲染流水线、DOM 事件与存储
+              - generic [ref=f11e852]: 核心批次 B13 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e853]:
+              - text: 未开始
+              - generic [ref=f11e854]: →
+          - button "BROWSER-02 01 浏览器运行时与原生能力 核心 必修 观察器、调度、页面生命周期与多标签页协同 核心批次 B13 · 演进中 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e855] [cursor=pointer]:
+            - generic [ref=f11e858]:
+              - generic [ref=f11e859]:
+                - code [ref=f11e860]: BROWSER-02
+                - generic [ref=f11e861]: "01"
+                - generic [ref=f11e862]: 浏览器运行时与原生能力
+                - generic [ref=f11e863]: 核心
+                - generic [ref=f11e864]: 必修
+              - strong [ref=f11e865]: 观察器、调度、页面生命周期与多标签页协同
+              - generic [ref=f11e866]: 核心批次 B13 · 演进中 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e867]:
+              - text: 未开始
+              - generic [ref=f11e868]: →
+          - button "WEB-04 01 浏览器运行时与原生能力 核心 必修 原生分层 UI、视图过渡与渐进增强 核心批次 B13 · 演进中 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e869] [cursor=pointer]:
+            - generic [ref=f11e872]:
+              - generic [ref=f11e873]:
+                - code [ref=f11e874]: WEB-04
+                - generic [ref=f11e875]: "01"
+                - generic [ref=f11e876]: 浏览器运行时与原生能力
+                - generic [ref=f11e877]: 核心
+                - generic [ref=f11e878]: 必修
+              - strong [ref=f11e879]: 原生分层 UI、视图过渡与渐进增强
+              - generic [ref=f11e880]: 核心批次 B13 · 演进中 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e881]:
+              - text: 未开始
+              - generic [ref=f11e882]: →
+          - button "WEB-05 01 浏览器运行时与原生能力 核心 必修 Web Components、Shadow DOM 与跨框架互操作 核心批次 B14 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e883] [cursor=pointer]:
+            - generic [ref=f11e886]:
+              - generic [ref=f11e887]:
+                - code [ref=f11e888]: WEB-05
+                - generic [ref=f11e889]: "01"
+                - generic [ref=f11e890]: 浏览器运行时与原生能力
+                - generic [ref=f11e891]: 核心
+                - generic [ref=f11e892]: 必修
+              - strong [ref=f11e893]: Web Components、Shadow DOM 与跨框架互操作
+              - generic [ref=f11e894]: 核心批次 B14 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e895]:
+              - text: 未开始
+              - generic [ref=f11e896]: →
+          - button "NET-01 01 网络与系统化诊断 核心 必修 浏览器网络协议、Fetch 与请求可靠性 核心批次 B14 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e897] [cursor=pointer]:
+            - generic [ref=f11e900]:
+              - generic [ref=f11e901]:
+                - code [ref=f11e902]: NET-01
+                - generic [ref=f11e903]: "01"
+                - generic [ref=f11e904]: 网络与系统化诊断
+                - generic [ref=f11e905]: 核心
+                - generic [ref=f11e906]: 必修
+              - strong [ref=f11e907]: 浏览器网络协议、Fetch 与请求可靠性
+              - generic [ref=f11e908]: 核心批次 B14 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e909]:
+              - text: 未开始
+              - generic [ref=f11e910]: →
+          - button "SEC-01 01 Web 安全与可信边界 核心 必修 XSS、CSRF 与前端输入输出信任边界 核心批次 B14 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m 未开始 →" [ref=f11e911] [cursor=pointer]:
+            - generic [ref=f11e914]:
+              - generic [ref=f11e915]:
+                - code [ref=f11e916]: SEC-01
+                - generic [ref=f11e917]: "01"
+                - generic [ref=f11e918]: Web 安全与可信边界
+                - generic [ref=f11e919]: 核心
+                - generic [ref=f11e920]: 必修
+              - strong [ref=f11e921]: XSS、CSRF 与前端输入输出信任边界
+              - generic [ref=f11e922]: 核心批次 B14 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m
+            - generic [ref=f11e923]:
+              - text: 未开始
+              - generic [ref=f11e924]: →
+          - button "SEC-02 01 Web 安全与可信边界 核心 必修 CSP、Trusted Types 与安全违规报告 核心批次 B14 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m 未开始 →" [ref=f11e925] [cursor=pointer]:
+            - generic [ref=f11e928]:
+              - generic [ref=f11e929]:
+                - code [ref=f11e930]: SEC-02
+                - generic [ref=f11e931]: "01"
+                - generic [ref=f11e932]: Web 安全与可信边界
+                - generic [ref=f11e933]: 核心
+                - generic [ref=f11e934]: 必修
+              - strong [ref=f11e935]: CSP、Trusted Types 与安全违规报告
+              - generic [ref=f11e936]: 核心批次 B14 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m
+            - generic [ref=f11e937]:
+              - text: 未开始
+              - generic [ref=f11e938]: →
+          - button "SEC-04 01 Web 安全与可信边界 核心 必修 跨源隔离、嵌入式上下文与权限策略 核心批次 B15 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m 未开始 →" [ref=f11e939] [cursor=pointer]:
+            - generic [ref=f11e942]:
+              - generic [ref=f11e943]:
+                - code [ref=f11e944]: SEC-04
+                - generic [ref=f11e945]: "01"
+                - generic [ref=f11e946]: Web 安全与可信边界
+                - generic [ref=f11e947]: 核心
+                - generic [ref=f11e948]: 必修
+              - strong [ref=f11e949]: 跨源隔离、嵌入式上下文与权限策略
+              - generic [ref=f11e950]: 核心批次 B15 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m
+            - generic [ref=f11e951]:
+              - text: 未开始
+              - generic [ref=f11e952]: →
+          - button "SEC-03 01 Web 安全与可信边界 核心 必修 WebAuthn、Passkey 与安全认证体验 核心批次 B15 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m 未开始 →" [ref=f11e953] [cursor=pointer]:
+            - generic [ref=f11e956]:
+              - generic [ref=f11e957]:
+                - code [ref=f11e958]: SEC-03
+                - generic [ref=f11e959]: "01"
+                - generic [ref=f11e960]: Web 安全与可信边界
+                - generic [ref=f11e961]: 核心
+                - generic [ref=f11e962]: 必修
+              - strong [ref=f11e963]: WebAuthn、Passkey 与安全认证体验
+              - generic [ref=f11e964]: 核心批次 B15 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 7h30m
+            - generic [ref=f11e965]:
+              - text: 未开始
+              - generic [ref=f11e966]: →
+          - button "SEC-05 01 Web 安全与可信边界 核心 必修 Web Crypto、密钥生命周期与客户端密码学边界 核心批次 B15 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 8h30m 未开始 →" [ref=f11e967] [cursor=pointer]:
+            - generic [ref=f11e970]:
+              - generic [ref=f11e971]:
+                - code [ref=f11e972]: SEC-05
+                - generic [ref=f11e973]: "01"
+                - generic [ref=f11e974]: Web 安全与可信边界
+                - generic [ref=f11e975]: 核心
+                - generic [ref=f11e976]: 必修
+              - strong [ref=f11e977]: Web Crypto、密钥生命周期与客户端密码学边界
+              - generic [ref=f11e978]: 核心批次 B15 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 8h30m
+            - generic [ref=f11e979]:
+              - text: 未开始
+              - generic [ref=f11e980]: →
+          - button "TS-04 02 泛型与类型编程 核心 必修 映射类型、工具类型与模板字面量类型 核心批次 B15 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e981] [cursor=pointer]:
+            - generic [ref=f11e984]:
+              - generic [ref=f11e985]:
+                - code [ref=f11e986]: TS-04
+                - generic [ref=f11e987]: "02"
+                - generic [ref=f11e988]: 泛型与类型编程
+                - generic [ref=f11e989]: 核心
+                - generic [ref=f11e990]: 必修
+              - strong [ref=f11e991]: 映射类型、工具类型与模板字面量类型
+              - generic [ref=f11e992]: 核心批次 B15 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e993]:
+              - text: 未开始
+              - generic [ref=f11e994]: →
+          - 'button "TS-05 02 泛型与类型编程 核心 必修 条件类型、`infer` 与分布式行为 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e995] [cursor=pointer]':
+            - generic [ref=f11e998]:
+              - generic [ref=f11e999]:
+                - code [ref=f11e1000]: TS-05
+                - generic [ref=f11e1001]: "02"
+                - generic [ref=f11e1002]: 泛型与类型编程
+                - generic [ref=f11e1003]: 核心
+                - generic [ref=f11e1004]: 必修
+              - strong [ref=f11e1005]: "条件类型、`infer` 与分布式行为"
+              - generic [ref=f11e1006]: 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e1007]:
+              - text: 未开始
+              - generic [ref=f11e1008]: →
+          - button "TS-06 02 泛型与类型编程 核心 必修 函数、重载、协变逆变与组件 API 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e1009] [cursor=pointer]:
+            - generic [ref=f11e1012]:
+              - generic [ref=f11e1013]:
+                - code [ref=f11e1014]: TS-06
+                - generic [ref=f11e1015]: "02"
+                - generic [ref=f11e1016]: 泛型与类型编程
+                - generic [ref=f11e1017]: 核心
+                - generic [ref=f11e1018]: 必修
+              - strong [ref=f11e1019]: 函数、重载、协变逆变与组件 API
+              - generic [ref=f11e1020]: 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e1021]:
+              - text: 未开始
+              - generic [ref=f11e1022]: →
+          - button "TS-07 02 运行时契约与业务建模 核心 必修 接口契约、运行时校验与错误模型 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e1023] [cursor=pointer]:
+            - generic [ref=f11e1026]:
+              - generic [ref=f11e1027]:
+                - code [ref=f11e1028]: TS-07
+                - generic [ref=f11e1029]: "02"
+                - generic [ref=f11e1030]: 运行时契约与业务建模
+                - generic [ref=f11e1031]: 核心
+                - generic [ref=f11e1032]: 必修
+              - strong [ref=f11e1033]: 接口契约、运行时校验与错误模型
+              - generic [ref=f11e1034]: 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e1035]:
+              - text: 未开始
+              - generic [ref=f11e1036]: →
+          - button "TS-08 02 运行时契约与业务建模 应用 必修 业务状态与权限类型建模 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e1037] [cursor=pointer]:
+            - generic [ref=f11e1040]:
+              - generic [ref=f11e1041]:
+                - code [ref=f11e1042]: TS-08
+                - generic [ref=f11e1043]: "02"
+                - generic [ref=f11e1044]: 运行时契约与业务建模
+                - generic [ref=f11e1045]: 应用
+                - generic [ref=f11e1046]: 必修
+              - strong [ref=f11e1047]: 业务状态与权限类型建模
+              - generic [ref=f11e1048]: 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e1049]:
+              - text: 未开始
+              - generic [ref=f11e1050]: →
+          - button "TS-09 02 版本迁移与治理 核心 必修 TypeScript 版本迁移、模块语义与弃用治理 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m 未开始 →" [ref=f11e1051] [cursor=pointer]:
+            - generic [ref=f11e1054]:
+              - generic [ref=f11e1055]:
+                - code [ref=f11e1056]: TS-09
+                - generic [ref=f11e1057]: "02"
+                - generic [ref=f11e1058]: 版本迁移与治理
+                - generic [ref=f11e1059]: 核心
+                - generic [ref=f11e1060]: 必修
+              - strong [ref=f11e1061]: TypeScript 版本迁移、模块语义与弃用治理
+              - generic [ref=f11e1062]: 核心批次 B16 · 稳定 · 可迁移 · intermediate · 预计 6h45m
+            - generic [ref=f11e1063]:
+              - text: 未开始
+              - generic [ref=f11e1064]: →
+          - button "IDENTITY-01 19 身份与授权 核心 必修 Cookie、Session、Token 与浏览器身份边界 核心批次 B17 · 演进中 · 可迁移 · 主题 security-privacy · intermediate · 预计 6h15m 未开始 →" [ref=f11e1065] [cursor=pointer]:
+            - generic [ref=f11e1068]:
+              - generic [ref=f11e1069]:
+                - code [ref=f11e1070]: IDENTITY-01
+                - generic [ref=f11e1071]: "19"
+                - generic [ref=f11e1072]: 身份与授权
+                - generic [ref=f11e1073]: 核心
+                - generic [ref=f11e1074]: 必修
+              - strong [ref=f11e1075]: Cookie、Session、Token 与浏览器身份边界
+              - generic [ref=f11e1076]: 核心批次 B17 · 演进中 · 可迁移 · 主题 security-privacy · intermediate · 预计 6h15m
+            - generic [ref=f11e1077]:
+              - text: 未开始
+              - generic [ref=f11e1078]: →
+          - button "IDENTITY-02 19 身份与授权 核心 必修 OAuth 安全最佳实践、OIDC 与 PKCE 核心批次 B17 · 演进中 · 可迁移 · 主题 security-privacy · intermediate · 预计 6h15m 未开始 →" [ref=f11e1079] [cursor=pointer]:
+            - generic [ref=f11e1082]:
+              - generic [ref=f11e1083]:
+                - code [ref=f11e1084]: IDENTITY-02
+                - generic [ref=f11e1085]: "19"
+                - generic [ref=f11e1086]: 身份与授权
+                - generic [ref=f11e1087]: 核心
+                - generic [ref=f11e1088]: 必修
+              - strong [ref=f11e1089]: OAuth 安全最佳实践、OIDC 与 PKCE
+              - generic [ref=f11e1090]: 核心批次 B17 · 演进中 · 可迁移 · 主题 security-privacy · intermediate · 预计 6h15m
+            - generic [ref=f11e1091]:
+              - text: 未开始
+              - generic [ref=f11e1092]: →
+          - button "PRIVACY-01 19 隐私与区域合规 核心 必修 数据最小化、同意、留存与用户权利 核心批次 B17 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 6h15m 未开始 →" [ref=f11e1093] [cursor=pointer]:
+            - generic [ref=f11e1096]:
+              - generic [ref=f11e1097]:
+                - code [ref=f11e1098]: PRIVACY-01
+                - generic [ref=f11e1099]: "19"
+                - generic [ref=f11e1100]: 隐私与区域合规
+                - generic [ref=f11e1101]: 核心
+                - generic [ref=f11e1102]: 必修
+              - strong [ref=f11e1103]: 数据最小化、同意、留存与用户权利
+              - generic [ref=f11e1104]: 核心批次 B17 · 稳定 · 可迁移 · 主题 security-privacy · intermediate · 预计 6h15m
+            - generic [ref=f11e1105]:
+              - text: 未开始
+              - generic [ref=f11e1106]: →
+          - button "PRIVACY-02 19 隐私与区域合规 核心 必修 跨区域合规、数据分级与前端工程控制 核心批次 B17 · 稳定 · 地区规则 · 主题 security-privacy · intermediate · 预计 6h15m 未开始 →" [ref=f11e1107] [cursor=pointer]:
+            - generic [ref=f11e1110]:
+              - generic [ref=f11e1111]:
+                - code [ref=f11e1112]: PRIVACY-02
+                - generic [ref=f11e1113]: "19"
+                - generic [ref=f11e1114]: 隐私与区域合规
+                - generic [ref=f11e1115]: 核心
+                - generic [ref=f11e1116]: 必修
+              - strong [ref=f11e1117]: 跨区域合规、数据分级与前端工程控制
+              - generic [ref=f11e1118]: 核心批次 B17 · 稳定 · 地区规则 · 主题 security-privacy · intermediate · 预计 6h15m
+            - generic [ref=f11e1119]:
+              - text: 未开始
+              - generic [ref=f11e1120]: →
+          - button "NODE-01 09 Node.js 服务运行时 应用 必修 Node 运行时、事件循环与非阻塞 I/O 核心批次 B18 · 稳定 · 平台特定 · 主题 node-bff · intermediate · 预计 7h45m 未开始 →" [ref=f11e1121] [cursor=pointer]:
+            - generic [ref=f11e1124]:
+              - generic [ref=f11e1125]:
+                - code [ref=f11e1126]: NODE-01
+                - generic [ref=f11e1127]: "09"
+                - generic [ref=f11e1128]: Node.js 服务运行时
+                - generic [ref=f11e1129]: 应用
+                - generic [ref=f11e1130]: 必修
+              - strong [ref=f11e1131]: Node 运行时、事件循环与非阻塞 I/O
+              - generic [ref=f11e1132]: 核心批次 B18 · 稳定 · 平台特定 · 主题 node-bff · intermediate · 预计 7h45m
+            - generic [ref=f11e1133]:
+              - text: 未开始
+              - generic [ref=f11e1134]: →
+          - button "NODE-02 09 Node.js 服务运行时 应用 必修 文件、Stream、Buffer 与错误处理 核心批次 B18 · 稳定 · 平台特定 · 主题 node-bff · intermediate · 预计 7h45m 未开始 →" [ref=f11e1135] [cursor=pointer]:
+            - generic [ref=f11e1138]:
+              - generic [ref=f11e1139]:
+                - code [ref=f11e1140]: NODE-02
+                - generic [ref=f11e1141]: "09"
+                - generic [ref=f11e1142]: Node.js 服务运行时
+                - generic [ref=f11e1143]: 应用
+                - generic [ref=f11e1144]: 必修
+              - strong [ref=f11e1145]: 文件、Stream、Buffer 与错误处理
+              - generic [ref=f11e1146]: 核心批次 B18 · 稳定 · 平台特定 · 主题 node-bff · intermediate · 预计 7h45m
+            - generic [ref=f11e1147]:
+              - text: 未开始
+              - generic [ref=f11e1148]: →
+          - button "NODE-04 09 Node.js 服务运行时 应用 必修 Node.js HTTP 服务与 BFF 生产工程 核心批次 B18 · 稳定 · 平台特定 · 主题 node-bff · intermediate · 预计 7h45m 未开始 →" [ref=f11e1149] [cursor=pointer]:
+            - generic [ref=f11e1152]:
+              - generic [ref=f11e1153]:
+                - code [ref=f11e1154]: NODE-04
+                - generic [ref=f11e1155]: "09"
+                - generic [ref=f11e1156]: Node.js 服务运行时
+                - generic [ref=f11e1157]: 应用
+                - generic [ref=f11e1158]: 必修
+              - strong [ref=f11e1159]: Node.js HTTP 服务与 BFF 生产工程
+              - generic [ref=f11e1160]: 核心批次 B18 · 稳定 · 平台特定 · 主题 node-bff · intermediate · 预计 7h45m
+            - generic [ref=f11e1161]:
+              - text: 未开始
+              - generic [ref=f11e1162]: →
+          - button "AIDEV-01 15 AI 协作方法与验证 应用 必修 AI 协作规格上下文与代理执行闭环 核心批次 B18 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1163] [cursor=pointer]:
+            - generic [ref=f11e1166]:
+              - generic [ref=f11e1167]:
+                - code [ref=f11e1168]: AIDEV-01
+                - generic [ref=f11e1169]: "15"
+                - generic [ref=f11e1170]: AI 协作方法与验证
+                - generic [ref=f11e1171]: 应用
+                - generic [ref=f11e1172]: 必修
+              - strong [ref=f11e1173]: AI 协作规格上下文与代理执行闭环
+              - generic [ref=f11e1174]: 核心批次 B18 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m
+            - generic [ref=f11e1175]:
+              - text: 未开始
+              - generic [ref=f11e1176]: →
+          - button "AIDEV-02 15 AI 协作方法与验证 应用 必修 Context Engineering 与仓库指令 核心批次 B19 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1177] [cursor=pointer]:
+            - generic [ref=f11e1180]:
+              - generic [ref=f11e1181]:
+                - code [ref=f11e1182]: AIDEV-02
+                - generic [ref=f11e1183]: "15"
+                - generic [ref=f11e1184]: AI 协作方法与验证
+                - generic [ref=f11e1185]: 应用
+                - generic [ref=f11e1186]: 必修
+              - strong [ref=f11e1187]: Context Engineering 与仓库指令
+              - generic [ref=f11e1188]: 核心批次 B19 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m
+            - generic [ref=f11e1189]:
+              - text: 未开始
+              - generic [ref=f11e1190]: →
+          - button "AIDEV-03 15 AI 协作方法与验证 应用 必修 AI 生成代码的验证金字塔 核心批次 B19 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1191] [cursor=pointer]:
+            - generic [ref=f11e1194]:
+              - generic [ref=f11e1195]:
+                - code [ref=f11e1196]: AIDEV-03
+                - generic [ref=f11e1197]: "15"
+                - generic [ref=f11e1198]: AI 协作方法与验证
+                - generic [ref=f11e1199]: 应用
+                - generic [ref=f11e1200]: 必修
+              - strong [ref=f11e1201]: AI 生成代码的验证金字塔
+              - generic [ref=f11e1202]: 核心批次 B19 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m
+            - generic [ref=f11e1203]:
+              - text: 未开始
+              - generic [ref=f11e1204]: →
+          - button "BIZ-01 05 领域与状态建模 应用 必修 业务对象、关系与统一语言 核心批次 B19 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1205] [cursor=pointer]:
+            - generic [ref=f11e1208]:
+              - generic [ref=f11e1209]:
+                - code [ref=f11e1210]: BIZ-01
+                - generic [ref=f11e1211]: "05"
+                - generic [ref=f11e1212]: 领域与状态建模
+                - generic [ref=f11e1213]: 应用
+                - generic [ref=f11e1214]: 必修
+              - strong [ref=f11e1215]: 业务对象、关系与统一语言
+              - generic [ref=f11e1216]: 核心批次 B19 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1217]:
+              - text: 未开始
+              - generic [ref=f11e1218]: →
+          - button "BIZ-02 05 领域与状态建模 应用 必修 状态机与业务不变量 核心批次 B19 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1219] [cursor=pointer]:
+            - generic [ref=f11e1222]:
+              - generic [ref=f11e1223]:
+                - code [ref=f11e1224]: BIZ-02
+                - generic [ref=f11e1225]: "05"
+                - generic [ref=f11e1226]: 领域与状态建模
+                - generic [ref=f11e1227]: 应用
+                - generic [ref=f11e1228]: 必修
+              - strong [ref=f11e1229]: 状态机与业务不变量
+              - generic [ref=f11e1230]: 核心批次 B19 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1231]:
+              - text: 未开始
+              - generic [ref=f11e1232]: →
+          - button "BIZ-03 05 权限与接口契约 应用 必修 RBAC、ABAC 与数据权限 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1233] [cursor=pointer]:
+            - generic [ref=f11e1236]:
+              - generic [ref=f11e1237]:
+                - code [ref=f11e1238]: BIZ-03
+                - generic [ref=f11e1239]: "05"
+                - generic [ref=f11e1240]: 权限与接口契约
+                - generic [ref=f11e1241]: 应用
+                - generic [ref=f11e1242]: 必修
+              - strong [ref=f11e1243]: RBAC、ABAC 与数据权限
+              - generic [ref=f11e1244]: 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1245]:
+              - text: 未开始
+              - generic [ref=f11e1246]: →
+          - button "BIZ-04 05 权限与接口契约 应用 必修 API 契约、DTO 与前端模型 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1247] [cursor=pointer]:
+            - generic [ref=f11e1250]:
+              - generic [ref=f11e1251]:
+                - code [ref=f11e1252]: BIZ-04
+                - generic [ref=f11e1253]: "05"
+                - generic [ref=f11e1254]: 权限与接口契约
+                - generic [ref=f11e1255]: 应用
+                - generic [ref=f11e1256]: 必修
+              - strong [ref=f11e1257]: API 契约、DTO 与前端模型
+              - generic [ref=f11e1258]: 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1259]:
+              - text: 未开始
+              - generic [ref=f11e1260]: →
+          - button "BIZ-05 05 复杂业务流程与一致性 应用 必修 表单、表格、详情的状态一致性 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1261] [cursor=pointer]:
+            - generic [ref=f11e1264]:
+              - generic [ref=f11e1265]:
+                - code [ref=f11e1266]: BIZ-05
+                - generic [ref=f11e1267]: "05"
+                - generic [ref=f11e1268]: 复杂业务流程与一致性
+                - generic [ref=f11e1269]: 应用
+                - generic [ref=f11e1270]: 必修
+              - strong [ref=f11e1271]: 表单、表格、详情的状态一致性
+              - generic [ref=f11e1272]: 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1273]:
+              - text: 未开始
+              - generic [ref=f11e1274]: →
+          - button "BIZ-06 05 复杂业务流程与一致性 应用 必修 异步任务、导入导出与进度 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1275] [cursor=pointer]:
+            - generic [ref=f11e1278]:
+              - generic [ref=f11e1279]:
+                - code [ref=f11e1280]: BIZ-06
+                - generic [ref=f11e1281]: "05"
+                - generic [ref=f11e1282]: 复杂业务流程与一致性
+                - generic [ref=f11e1283]: 应用
+                - generic [ref=f11e1284]: 必修
+              - strong [ref=f11e1285]: 异步任务、导入导出与进度
+              - generic [ref=f11e1286]: 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1287]:
+              - text: 未开始
+              - generic [ref=f11e1288]: →
+          - button "BIZ-07 05 复杂业务流程与一致性 应用 必修 异常边界、幂等与一致性 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1289] [cursor=pointer]:
+            - generic [ref=f11e1292]:
+              - generic [ref=f11e1293]:
+                - code [ref=f11e1294]: BIZ-07
+                - generic [ref=f11e1295]: "05"
+                - generic [ref=f11e1296]: 复杂业务流程与一致性
+                - generic [ref=f11e1297]: 应用
+                - generic [ref=f11e1298]: 必修
+              - strong [ref=f11e1299]: 异常边界、幂等与一致性
+              - generic [ref=f11e1300]: 核心批次 B20 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1301]:
+              - text: 未开始
+              - generic [ref=f11e1302]: →
+          - button "BIZ-08 05 需求追踪与验收 应用 必修 需求到验收的可追踪性 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 7h15m 未开始 →" [ref=f11e1303] [cursor=pointer]:
+            - generic [ref=f11e1306]:
+              - generic [ref=f11e1307]:
+                - code [ref=f11e1308]: BIZ-08
+                - generic [ref=f11e1309]: "05"
+                - generic [ref=f11e1310]: 需求追踪与验收
+                - generic [ref=f11e1311]: 应用
+                - generic [ref=f11e1312]: 必修
+              - strong [ref=f11e1313]: 需求到验收的可追踪性
+              - generic [ref=f11e1314]: 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 7h15m
+            - generic [ref=f11e1315]:
+              - text: 未开始
+              - generic [ref=f11e1316]: →
+          - button "TEST-04 06 质量门禁与测试体系 核心 必修 API 契约兼容与消费者驱动契约测试 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1317] [cursor=pointer]:
+            - generic [ref=f11e1320]:
+              - generic [ref=f11e1321]:
+                - code [ref=f11e1322]: TEST-04
+                - generic [ref=f11e1323]: "06"
+                - generic [ref=f11e1324]: 质量门禁与测试体系
+                - generic [ref=f11e1325]: 核心
+                - generic [ref=f11e1326]: 必修
+              - strong [ref=f11e1327]: API 契约兼容与消费者驱动契约测试
+              - generic [ref=f11e1328]: 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1329]:
+              - text: 未开始
+              - generic [ref=f11e1330]: →
+          - button "RENDER-01 17 现代渲染与边缘运行时 应用 必修 SPA、SSR、SSG、ISR 与混合渲染决策 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1331] [cursor=pointer]:
+            - generic [ref=f11e1334]:
+              - generic [ref=f11e1335]:
+                - code [ref=f11e1336]: RENDER-01
+                - generic [ref=f11e1337]: "17"
+                - generic [ref=f11e1338]: 现代渲染与边缘运行时
+                - generic [ref=f11e1339]: 应用
+                - generic [ref=f11e1340]: 必修
+              - strong [ref=f11e1341]: SPA、SSR、SSG、ISR 与混合渲染决策
+              - generic [ref=f11e1342]: 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e1343]:
+              - text: 未开始
+              - generic [ref=f11e1344]: →
+          - button "RENDER-02 17 现代渲染与边缘运行时 应用 必修 流式 SSR、Hydration 与 Islands 架构 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1345] [cursor=pointer]:
+            - generic [ref=f11e1348]:
+              - generic [ref=f11e1349]:
+                - code [ref=f11e1350]: RENDER-02
+                - generic [ref=f11e1351]: "17"
+                - generic [ref=f11e1352]: 现代渲染与边缘运行时
+                - generic [ref=f11e1353]: 应用
+                - generic [ref=f11e1354]: 必修
+              - strong [ref=f11e1355]: 流式 SSR、Hydration 与 Islands 架构
+              - generic [ref=f11e1356]: 核心批次 B21 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e1357]:
+              - text: 未开始
+              - generic [ref=f11e1358]: →
+          - button "DATA-01 17 Server State 与一致性 应用 必修 Server State、缓存键、失效与请求去重 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1359] [cursor=pointer]:
+            - generic [ref=f11e1362]:
+              - generic [ref=f11e1363]:
+                - code [ref=f11e1364]: DATA-01
+                - generic [ref=f11e1365]: "17"
+                - generic [ref=f11e1366]: Server State 与一致性
+                - generic [ref=f11e1367]: 应用
+                - generic [ref=f11e1368]: 必修
+              - strong [ref=f11e1369]: Server State、缓存键、失效与请求去重
+              - generic [ref=f11e1370]: 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e1371]:
+              - text: 未开始
+              - generic [ref=f11e1372]: →
+          - button "DATA-02 17 Server State 与一致性 应用 必修 乐观更新、并发冲突与离线突变 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1373] [cursor=pointer]:
+            - generic [ref=f11e1376]:
+              - generic [ref=f11e1377]:
+                - code [ref=f11e1378]: DATA-02
+                - generic [ref=f11e1379]: "17"
+                - generic [ref=f11e1380]: Server State 与一致性
+                - generic [ref=f11e1381]: 应用
+                - generic [ref=f11e1382]: 必修
+              - strong [ref=f11e1383]: 乐观更新、并发冲突与离线突变
+              - generic [ref=f11e1384]: 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e1385]:
+              - text: 未开始
+              - generic [ref=f11e1386]: →
+          - button "REALTIME-01 17 实时消息与多人协作 应用 必修 SSE、WebSocket、WebTransport 与实时消息可靠性 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1387] [cursor=pointer]:
+            - generic [ref=f11e1390]:
+              - generic [ref=f11e1391]:
+                - code [ref=f11e1392]: REALTIME-01
+                - generic [ref=f11e1393]: "17"
+                - generic [ref=f11e1394]: 实时消息与多人协作
+                - generic [ref=f11e1395]: 应用
+                - generic [ref=f11e1396]: 必修
+              - strong [ref=f11e1397]: SSE、WebSocket、WebTransport 与实时消息可靠性
+              - generic [ref=f11e1398]: 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e1399]:
+              - text: 未开始
+              - generic [ref=f11e1400]: →
+          - button "COMP-01 08 组件与设计系统 核心 必修 组件职责、API 与组合设计 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e1401] [cursor=pointer]:
+            - generic [ref=f11e1404]:
+              - generic [ref=f11e1405]:
+                - code [ref=f11e1406]: COMP-01
+                - generic [ref=f11e1407]: "08"
+                - generic [ref=f11e1408]: 组件与设计系统
+                - generic [ref=f11e1409]: 核心
+                - generic [ref=f11e1410]: 必修
+              - strong [ref=f11e1411]: 组件职责、API 与组合设计
+              - generic [ref=f11e1412]: 核心批次 B22 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e1413]:
+              - text: 未开始
+              - generic [ref=f11e1414]: →
+          - button "COMP-02 08 组件与设计系统 核心 必修 受控/非受控、状态同步与命令式能力 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e1415] [cursor=pointer]:
+            - generic [ref=f11e1418]:
+              - generic [ref=f11e1419]:
+                - code [ref=f11e1420]: COMP-02
+                - generic [ref=f11e1421]: "08"
+                - generic [ref=f11e1422]: 组件与设计系统
+                - generic [ref=f11e1423]: 核心
+                - generic [ref=f11e1424]: 必修
+              - strong [ref=f11e1425]: 受控/非受控、状态同步与命令式能力
+              - generic [ref=f11e1426]: 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e1427]:
+              - text: 未开始
+              - generic [ref=f11e1428]: →
+          - button "UX-01 05 产品交互与可用性 核心 必修 交互设计、状态体验与可用性验证 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e1429] [cursor=pointer]:
+            - generic [ref=f11e1432]:
+              - generic [ref=f11e1433]:
+                - code [ref=f11e1434]: UX-01
+                - generic [ref=f11e1435]: "05"
+                - generic [ref=f11e1436]: 产品交互与可用性
+                - generic [ref=f11e1437]: 核心
+                - generic [ref=f11e1438]: 必修
+              - strong [ref=f11e1439]: 交互设计、状态体验与可用性验证
+              - generic [ref=f11e1440]: 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e1441]:
+              - text: 未开始
+              - generic [ref=f11e1442]: →
+          - button "ENG-08 06 交付、供应链与平台工程 核心 必修 软件供应链、SBOM 与制品可信 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1443] [cursor=pointer]:
+            - generic [ref=f11e1446]:
+              - generic [ref=f11e1447]:
+                - code [ref=f11e1448]: ENG-08
+                - generic [ref=f11e1449]: "06"
+                - generic [ref=f11e1450]: 交付、供应链与平台工程
+                - generic [ref=f11e1451]: 核心
+                - generic [ref=f11e1452]: 必修
+              - strong [ref=f11e1453]: 软件供应链、SBOM 与制品可信
+              - generic [ref=f11e1454]: 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1455]:
+              - text: 未开始
+              - generic [ref=f11e1456]: →
+          - button "LINUX-01 16 Linux 运行与排障基础 应用 必修 Linux 文件系统、权限与常用命令 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e1457] [cursor=pointer]:
+            - generic [ref=f11e1460]:
+              - generic [ref=f11e1461]:
+                - code [ref=f11e1462]: LINUX-01
+                - generic [ref=f11e1463]: "16"
+                - generic [ref=f11e1464]: Linux 运行与排障基础
+                - generic [ref=f11e1465]: 应用
+                - generic [ref=f11e1466]: 必修
+              - strong [ref=f11e1467]: Linux 文件系统、权限与常用命令
+              - generic [ref=f11e1468]: 核心批次 B23 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e1469]:
+              - text: 未开始
+              - generic [ref=f11e1470]: →
+          - button "LINUX-02 16 Linux 运行与排障基础 应用 必修 进程、端口、日志与网络诊断 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e1471] [cursor=pointer]:
+            - generic [ref=f11e1474]:
+              - generic [ref=f11e1475]:
+                - code [ref=f11e1476]: LINUX-02
+                - generic [ref=f11e1477]: "16"
+                - generic [ref=f11e1478]: Linux 运行与排障基础
+                - generic [ref=f11e1479]: 应用
+                - generic [ref=f11e1480]: 必修
+              - strong [ref=f11e1481]: 进程、端口、日志与网络诊断
+              - generic [ref=f11e1482]: 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e1483]:
+              - text: 未开始
+              - generic [ref=f11e1484]: →
+          - button "LINUX-03 16 Linux 运行与排障基础 应用 必修 Shell 脚本、环境变量与自动化任务 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e1485] [cursor=pointer]:
+            - generic [ref=f11e1488]:
+              - generic [ref=f11e1489]:
+                - code [ref=f11e1490]: LINUX-03
+                - generic [ref=f11e1491]: "16"
+                - generic [ref=f11e1492]: Linux 运行与排障基础
+                - generic [ref=f11e1493]: 应用
+                - generic [ref=f11e1494]: 必修
+              - strong [ref=f11e1495]: Shell 脚本、环境变量与自动化任务
+              - generic [ref=f11e1496]: 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e1497]:
+              - text: 未开始
+              - generic [ref=f11e1498]: →
+          - button "LINUX-04 16 Linux 运行与排障基础 应用 必修 服务器安全、SSH、用户与基础防护 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 7h 未开始 →" [ref=f11e1499] [cursor=pointer]:
+            - generic [ref=f11e1502]:
+              - generic [ref=f11e1503]:
+                - code [ref=f11e1504]: LINUX-04
+                - generic [ref=f11e1505]: "16"
+                - generic [ref=f11e1506]: Linux 运行与排障基础
+                - generic [ref=f11e1507]: 应用
+                - generic [ref=f11e1508]: 必修
+              - strong [ref=f11e1509]: 服务器安全、SSH、用户与基础防护
+              - generic [ref=f11e1510]: 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 7h
+            - generic [ref=f11e1511]:
+              - text: 未开始
+              - generic [ref=f11e1512]: →
+          - button "DOCKER-01 16 容器化基础与专项治理 应用 必修 镜像、容器、Dockerfile 与构建缓存 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e1513] [cursor=pointer]:
+            - generic [ref=f11e1516]:
+              - generic [ref=f11e1517]:
+                - code [ref=f11e1518]: DOCKER-01
+                - generic [ref=f11e1519]: "16"
+                - generic [ref=f11e1520]: 容器化基础与专项治理
+                - generic [ref=f11e1521]: 应用
+                - generic [ref=f11e1522]: 必修
+              - strong [ref=f11e1523]: 镜像、容器、Dockerfile 与构建缓存
+              - generic [ref=f11e1524]: 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e1525]:
+              - text: 未开始
+              - generic [ref=f11e1526]: →
+          - button "DOCKER-02 16 容器化基础与专项治理 应用 必修 Docker Compose、网络、数据卷与环境隔离 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e1527] [cursor=pointer]:
+            - generic [ref=f11e1530]:
+              - generic [ref=f11e1531]:
+                - code [ref=f11e1532]: DOCKER-02
+                - generic [ref=f11e1533]: "16"
+                - generic [ref=f11e1534]: 容器化基础与专项治理
+                - generic [ref=f11e1535]: 应用
+                - generic [ref=f11e1536]: 必修
+              - strong [ref=f11e1537]: Docker Compose、网络、数据卷与环境隔离
+              - generic [ref=f11e1538]: 核心批次 B24 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e1539]:
+              - text: 未开始
+              - generic [ref=f11e1540]: →
+          - button "ENG-06 06 交付、供应链与平台工程 核心 必修 CI/CD、制品晋级、发布与回滚 核心批次 B25 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1541] [cursor=pointer]:
+            - generic [ref=f11e1544]:
+              - generic [ref=f11e1545]:
+                - code [ref=f11e1546]: ENG-06
+                - generic [ref=f11e1547]: "06"
+                - generic [ref=f11e1548]: 交付、供应链与平台工程
+                - generic [ref=f11e1549]: 核心
+                - generic [ref=f11e1550]: 必修
+              - strong [ref=f11e1551]: CI/CD、制品晋级、发布与回滚
+              - generic [ref=f11e1552]: 核心批次 B25 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1553]:
+              - text: 未开始
+              - generic [ref=f11e1554]: →
+          - button "DEPLOY-01 16 Web 部署交付 应用 必修 Nginx、静态资源、反向代理、HTTPS 与 CDN 缓存 核心批次 B25 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e1555] [cursor=pointer]:
+            - generic [ref=f11e1558]:
+              - generic [ref=f11e1559]:
+                - code [ref=f11e1560]: DEPLOY-01
+                - generic [ref=f11e1561]: "16"
+                - generic [ref=f11e1562]: Web 部署交付
+                - generic [ref=f11e1563]: 应用
+                - generic [ref=f11e1564]: 必修
+              - strong [ref=f11e1565]: Nginx、静态资源、反向代理、HTTPS 与 CDN 缓存
+              - generic [ref=f11e1566]: 核心批次 B25 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e1567]:
+              - text: 未开始
+              - generic [ref=f11e1568]: →
+          - button "OBS-01 06 交付、供应链与平台工程 核心 必修 前端可观测性、SLO、告警与隐私边界 核心批次 B25 · 演进中 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1569] [cursor=pointer]:
+            - generic [ref=f11e1572]:
+              - generic [ref=f11e1573]:
+                - code [ref=f11e1574]: OBS-01
+                - generic [ref=f11e1575]: "06"
+                - generic [ref=f11e1576]: 交付、供应链与平台工程
+                - generic [ref=f11e1577]: 核心
+                - generic [ref=f11e1578]: 必修
+              - strong [ref=f11e1579]: 前端可观测性、SLO、告警与隐私边界
+              - generic [ref=f11e1580]: 核心批次 B25 · 演进中 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1581]:
+              - text: 未开始
+              - generic [ref=f11e1582]: →
+          - button "PERF-01 07 Web 性能工程 应用 必修 Core Web Vitals 与性能预算 核心批次 B25 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1583] [cursor=pointer]:
+            - generic [ref=f11e1586]:
+              - generic [ref=f11e1587]:
+                - code [ref=f11e1588]: PERF-01
+                - generic [ref=f11e1589]: "07"
+                - generic [ref=f11e1590]: Web 性能工程
+                - generic [ref=f11e1591]: 应用
+                - generic [ref=f11e1592]: 必修
+              - strong [ref=f11e1593]: Core Web Vitals 与性能预算
+              - generic [ref=f11e1594]: 核心批次 B25 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1595]:
+              - text: 未开始
+              - generic [ref=f11e1596]: →
+          - button "PERF-02 07 Web 性能工程 应用 必修 Network、资源加载与缓存优化 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1597] [cursor=pointer]:
+            - generic [ref=f11e1600]:
+              - generic [ref=f11e1601]:
+                - code [ref=f11e1602]: PERF-02
+                - generic [ref=f11e1603]: "07"
+                - generic [ref=f11e1604]: Web 性能工程
+                - generic [ref=f11e1605]: 应用
+                - generic [ref=f11e1606]: 必修
+              - strong [ref=f11e1607]: Network、资源加载与缓存优化
+              - generic [ref=f11e1608]: 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1609]:
+              - text: 未开始
+              - generic [ref=f11e1610]: →
+          - button "PERF-03 07 Web 性能工程 应用 必修 主线程、渲染、长任务与交互响应 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1611] [cursor=pointer]:
+            - generic [ref=f11e1614]:
+              - generic [ref=f11e1615]:
+                - code [ref=f11e1616]: PERF-03
+                - generic [ref=f11e1617]: "07"
+                - generic [ref=f11e1618]: Web 性能工程
+                - generic [ref=f11e1619]: 应用
+                - generic [ref=f11e1620]: 必修
+              - strong [ref=f11e1621]: 主线程、渲染、长任务与交互响应
+              - generic [ref=f11e1622]: 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1623]:
+              - text: 未开始
+              - generic [ref=f11e1624]: →
+          - button "PERF-04 07 Web 性能工程 应用 必修 内存、监听器与资源泄漏 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1625] [cursor=pointer]:
+            - generic [ref=f11e1628]:
+              - generic [ref=f11e1629]:
+                - code [ref=f11e1630]: PERF-04
+                - generic [ref=f11e1631]: "07"
+                - generic [ref=f11e1632]: Web 性能工程
+                - generic [ref=f11e1633]: 应用
+                - generic [ref=f11e1634]: 必修
+              - strong [ref=f11e1635]: 内存、监听器与资源泄漏
+              - generic [ref=f11e1636]: 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1637]:
+              - text: 未开始
+              - generic [ref=f11e1638]: →
+          - button "H5-01 07 移动 Web 与宿主适配 应用 必修 viewport、响应式、安全区与横竖屏 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1639] [cursor=pointer]:
+            - generic [ref=f11e1642]:
+              - generic [ref=f11e1643]:
+                - code [ref=f11e1644]: H5-01
+                - generic [ref=f11e1645]: "07"
+                - generic [ref=f11e1646]: 移动 Web 与宿主适配
+                - generic [ref=f11e1647]: 应用
+                - generic [ref=f11e1648]: 必修
+              - strong [ref=f11e1649]: viewport、响应式、安全区与横竖屏
+              - generic [ref=f11e1650]: 核心批次 B26 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1651]:
+              - text: 未开始
+              - generic [ref=f11e1652]: →
+          - button "H5-02 07 移动 Web 与宿主适配 应用 必修 滚动、软键盘、触控与手势冲突 核心批次 B27 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e1653] [cursor=pointer]:
+            - generic [ref=f11e1656]:
+              - generic [ref=f11e1657]:
+                - code [ref=f11e1658]: H5-02
+                - generic [ref=f11e1659]: "07"
+                - generic [ref=f11e1660]: 移动 Web 与宿主适配
+                - generic [ref=f11e1661]: 应用
+                - generic [ref=f11e1662]: 必修
+              - strong [ref=f11e1663]: 滚动、软键盘、触控与手势冲突
+              - generic [ref=f11e1664]: 核心批次 B27 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e1665]:
+              - text: 未开始
+              - generic [ref=f11e1666]: →
+          - button "MCP-01 13 MCP 核心模型 专精 主修必修 MCP Server、Tools/Resources/Prompts 与 Schema 核心模型 核心批次 B27 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1667] [cursor=pointer]:
+            - generic [ref=f11e1670]:
+              - generic [ref=f11e1671]:
+                - code [ref=f11e1672]: MCP-01
+                - generic [ref=f11e1673]: "13"
+                - generic [ref=f11e1674]: MCP 核心模型
+                - generic [ref=f11e1675]: 专精
+                - generic [ref=f11e1676]: 主修必修
+              - strong [ref=f11e1677]: MCP Server、Tools/Resources/Prompts 与 Schema 核心模型
+              - generic [ref=f11e1678]: 核心批次 B27 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e1679]:
+              - text: 未开始
+              - generic [ref=f11e1680]: →
+          - button "AIPROD-01 19 AI 产品风险与人工控制 应用 必修 AI 任务定义、模型选择与价值验证 核心批次 B27 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1681] [cursor=pointer]:
+            - generic [ref=f11e1684]:
+              - generic [ref=f11e1685]:
+                - code [ref=f11e1686]: AIPROD-01
+                - generic [ref=f11e1687]: "19"
+                - generic [ref=f11e1688]: AI 产品风险与人工控制
+                - generic [ref=f11e1689]: 应用
+                - generic [ref=f11e1690]: 必修
+              - strong [ref=f11e1691]: AI 任务定义、模型选择与价值验证
+              - generic [ref=f11e1692]: 核心批次 B27 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 6h15m
+            - generic [ref=f11e1693]:
+              - text: 未开始
+              - generic [ref=f11e1694]: →
+          - button "AIPROD-02 19 AI 产品风险与人工控制 应用 必修 高风险自动化分级、失败 UX 与 Human-in-the-loop 核心批次 B27 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 6h15m 未开始 →" [ref=f11e1695] [cursor=pointer]:
+            - generic [ref=f11e1698]:
+              - generic [ref=f11e1699]:
+                - code [ref=f11e1700]: AIPROD-02
+                - generic [ref=f11e1701]: "19"
+                - generic [ref=f11e1702]: AI 产品风险与人工控制
+                - generic [ref=f11e1703]: 应用
+                - generic [ref=f11e1704]: 必修
+              - strong [ref=f11e1705]: 高风险自动化分级、失败 UX 与 Human-in-the-loop
+              - generic [ref=f11e1706]: 核心批次 B27 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 6h15m
+            - generic [ref=f11e1707]:
+              - text: 未开始
+              - generic [ref=f11e1708]: →
+          - button "AISAFE-01 19 AI 系统安全与治理 专精 必修 输出校验、内容安全与 Guardrails 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · 主题 security-privacy · intermediate · 预计 6h15m 未开始 →" [ref=f11e1709] [cursor=pointer]:
+            - generic [ref=f11e1712]:
+              - generic [ref=f11e1713]:
+                - code [ref=f11e1714]: AISAFE-01
+                - generic [ref=f11e1715]: "19"
+                - generic [ref=f11e1716]: AI 系统安全与治理
+                - generic [ref=f11e1717]: 专精
+                - generic [ref=f11e1718]: 必修
+              - strong [ref=f11e1719]: 输出校验、内容安全与 Guardrails
+              - generic [ref=f11e1720]: 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · 主题 security-privacy · intermediate · 预计 6h15m
+            - generic [ref=f11e1721]:
+              - text: 未开始
+              - generic [ref=f11e1722]: →
+          - button "AISAFE-02 19 AI 系统安全与治理 专精 必修 AI 威胁建模、红队与滥用防护 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · 主题 security-privacy · intermediate · 预计 6h15m 未开始 →" [ref=f11e1723] [cursor=pointer]:
+            - generic [ref=f11e1726]:
+              - generic [ref=f11e1727]:
+                - code [ref=f11e1728]: AISAFE-02
+                - generic [ref=f11e1729]: "19"
+                - generic [ref=f11e1730]: AI 系统安全与治理
+                - generic [ref=f11e1731]: 专精
+                - generic [ref=f11e1732]: 必修
+              - strong [ref=f11e1733]: AI 威胁建模、红队与滥用防护
+              - generic [ref=f11e1734]: 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · 主题 security-privacy · intermediate · 预计 6h15m
+            - generic [ref=f11e1735]:
+              - text: 未开始
+              - generic [ref=f11e1736]: →
+          - button "AIGOV-01 19 AI 系统安全与治理 领导力 必修 数据来源、模型变更、审计与责任治理 核心批次 B28 · 演进中 · 地区规则 · AI 原生 · 主题 security-privacy / engineering-leadership · intermediate · 预计 6h15m 未开始 →" [ref=f11e1737] [cursor=pointer]:
+            - generic [ref=f11e1740]:
+              - generic [ref=f11e1741]:
+                - code [ref=f11e1742]: AIGOV-01
+                - generic [ref=f11e1743]: "19"
+                - generic [ref=f11e1744]: AI 系统安全与治理
+                - generic [ref=f11e1745]: 领导力
+                - generic [ref=f11e1746]: 必修
+              - strong [ref=f11e1747]: 数据来源、模型变更、审计与责任治理
+              - generic [ref=f11e1748]: 核心批次 B28 · 演进中 · 地区规则 · AI 原生 · 主题 security-privacy / engineering-leadership · intermediate · 预计 6h15m
+            - generic [ref=f11e1749]:
+              - text: 未开始
+              - generic [ref=f11e1750]: →
+          - button "AIAPP-01 12 模型交互与结构化契约 应用 必修 AI 产品运行时的模型接口、指令与上下文边界 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1751] [cursor=pointer]:
+            - generic [ref=f11e1754]:
+              - generic [ref=f11e1755]:
+                - code [ref=f11e1756]: AIAPP-01
+                - generic [ref=f11e1757]: "12"
+                - generic [ref=f11e1758]: 模型交互与结构化契约
+                - generic [ref=f11e1759]: 应用
+                - generic [ref=f11e1760]: 必修
+              - strong [ref=f11e1761]: AI 产品运行时的模型接口、指令与上下文边界
+              - generic [ref=f11e1762]: 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1763]:
+              - text: 未开始
+              - generic [ref=f11e1764]: →
+          - button "AIAPP-02 12 模型交互与结构化契约 应用 必修 流式响应、SSE 与增量渲染 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1765] [cursor=pointer]:
+            - generic [ref=f11e1768]:
+              - generic [ref=f11e1769]:
+                - code [ref=f11e1770]: AIAPP-02
+                - generic [ref=f11e1771]: "12"
+                - generic [ref=f11e1772]: 模型交互与结构化契约
+                - generic [ref=f11e1773]: 应用
+                - generic [ref=f11e1774]: 必修
+              - strong [ref=f11e1775]: 流式响应、SSE 与增量渲染
+              - generic [ref=f11e1776]: 核心批次 B28 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1777]:
+              - text: 未开始
+              - generic [ref=f11e1778]: →
+          - button "AIAPP-03 12 模型交互与结构化契约 应用 必修 结构化输出与 Schema 校验 核心批次 B29 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1779] [cursor=pointer]:
+            - generic [ref=f11e1782]:
+              - generic [ref=f11e1783]:
+                - code [ref=f11e1784]: AIAPP-03
+                - generic [ref=f11e1785]: "12"
+                - generic [ref=f11e1786]: 模型交互与结构化契约
+                - generic [ref=f11e1787]: 应用
+                - generic [ref=f11e1788]: 必修
+              - strong [ref=f11e1789]: 结构化输出与 Schema 校验
+              - generic [ref=f11e1790]: 核心批次 B29 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1791]:
+              - text: 未开始
+              - generic [ref=f11e1792]: →
+          - button "AIAPP-04 12 模型交互与结构化契约 应用 必修 Tool Calling 与前端工具结果呈现 核心批次 B29 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1793] [cursor=pointer]:
+            - generic [ref=f11e1796]:
+              - generic [ref=f11e1797]:
+                - code [ref=f11e1798]: AIAPP-04
+                - generic [ref=f11e1799]: "12"
+                - generic [ref=f11e1800]: 模型交互与结构化契约
+                - generic [ref=f11e1801]: 应用
+                - generic [ref=f11e1802]: 必修
+              - strong [ref=f11e1803]: Tool Calling 与前端工具结果呈现
+              - generic [ref=f11e1804]: 核心批次 B29 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1805]:
+              - text: 未开始
+              - generic [ref=f11e1806]: →
+          - button "AIAPP-05 12 生成式与 Agent UI 应用 必修 Generative UI 视图模型、宿主与安全边界 核心批次 B29 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1807] [cursor=pointer]:
+            - generic [ref=f11e1810]:
+              - generic [ref=f11e1811]:
+                - code [ref=f11e1812]: AIAPP-05
+                - generic [ref=f11e1813]: "12"
+                - generic [ref=f11e1814]: 生成式与 Agent UI
+                - generic [ref=f11e1815]: 应用
+                - generic [ref=f11e1816]: 必修
+              - strong [ref=f11e1817]: Generative UI 视图模型、宿主与安全边界
+              - generic [ref=f11e1818]: 核心批次 B29 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1819]:
+              - text: 未开始
+              - generic [ref=f11e1820]: →
+          - button "AIUI-01 12 生成式与 Agent UI 专精 主修必修 Agent UI 协议与 MCP Apps 互操作实现 核心批次 B29 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1821] [cursor=pointer]:
+            - generic [ref=f11e1824]:
+              - generic [ref=f11e1825]:
+                - code [ref=f11e1826]: AIUI-01
+                - generic [ref=f11e1827]: "12"
+                - generic [ref=f11e1828]: 生成式与 Agent UI
+                - generic [ref=f11e1829]: 专精
+                - generic [ref=f11e1830]: 主修必修
+              - strong [ref=f11e1831]: Agent UI 协议与 MCP Apps 互操作实现
+              - generic [ref=f11e1832]: 核心批次 B29 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e1833]:
+              - text: 未开始
+              - generic [ref=f11e1834]: →
+          - button "AIAPP-06 12 检索、安全、评估与可靠性 应用 必修 RAG、引用与来源可信度 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1835] [cursor=pointer]:
+            - generic [ref=f11e1838]:
+              - generic [ref=f11e1839]:
+                - code [ref=f11e1840]: AIAPP-06
+                - generic [ref=f11e1841]: "12"
+                - generic [ref=f11e1842]: 检索、安全、评估与可靠性
+                - generic [ref=f11e1843]: 应用
+                - generic [ref=f11e1844]: 必修
+              - strong [ref=f11e1845]: RAG、引用与来源可信度
+              - generic [ref=f11e1846]: 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1847]:
+              - text: 未开始
+              - generic [ref=f11e1848]: →
+          - button "AIAPP-07 12 检索、安全、评估与可靠性 应用 必修 Prompt Injection 与不可信内容边界 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1849] [cursor=pointer]:
+            - generic [ref=f11e1852]:
+              - generic [ref=f11e1853]:
+                - code [ref=f11e1854]: AIAPP-07
+                - generic [ref=f11e1855]: "12"
+                - generic [ref=f11e1856]: 检索、安全、评估与可靠性
+                - generic [ref=f11e1857]: 应用
+                - generic [ref=f11e1858]: 必修
+              - strong [ref=f11e1859]: Prompt Injection 与不可信内容边界
+              - generic [ref=f11e1860]: 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1861]:
+              - text: 未开始
+              - generic [ref=f11e1862]: →
+          - button "AIAPP-08 12 检索、安全、评估与可靠性 应用 必修 模型评估、生产可观测与回归门禁 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1863] [cursor=pointer]:
+            - generic [ref=f11e1866]:
+              - generic [ref=f11e1867]:
+                - code [ref=f11e1868]: AIAPP-08
+                - generic [ref=f11e1869]: "12"
+                - generic [ref=f11e1870]: 检索、安全、评估与可靠性
+                - generic [ref=f11e1871]: 应用
+                - generic [ref=f11e1872]: 必修
+              - strong [ref=f11e1873]: 模型评估、生产可观测与回归门禁
+              - generic [ref=f11e1874]: 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1875]:
+              - text: 未开始
+              - generic [ref=f11e1876]: →
+          - button "AIAPP-09 12 检索、安全、评估与可靠性 应用 必修 成本、配额、缓存与可靠性 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1877] [cursor=pointer]:
+            - generic [ref=f11e1880]:
+              - generic [ref=f11e1881]:
+                - code [ref=f11e1882]: AIAPP-09
+                - generic [ref=f11e1883]: "12"
+                - generic [ref=f11e1884]: 检索、安全、评估与可靠性
+                - generic [ref=f11e1885]: 应用
+                - generic [ref=f11e1886]: 必修
+              - strong [ref=f11e1887]: 成本、配额、缓存与可靠性
+              - generic [ref=f11e1888]: 核心批次 B30 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1889]:
+              - text: 未开始
+              - generic [ref=f11e1890]: →
+          - button "AIAPP-10 12 AI 体验与多模态制品 应用 必修 通用 AI 交互、信任与可恢复体验 核心批次 B31 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1891] [cursor=pointer]:
+            - generic [ref=f11e1894]:
+              - generic [ref=f11e1895]:
+                - code [ref=f11e1896]: AIAPP-10
+                - generic [ref=f11e1897]: "12"
+                - generic [ref=f11e1898]: AI 体验与多模态制品
+                - generic [ref=f11e1899]: 应用
+                - generic [ref=f11e1900]: 必修
+              - strong [ref=f11e1901]: 通用 AI 交互、信任与可恢复体验
+              - generic [ref=f11e1902]: 核心批次 B31 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1903]:
+              - text: 未开始
+              - generic [ref=f11e1904]: →
+          - button "AIAPP-12 12 会话与记忆 应用 必修 会话状态、上下文组装、压缩与持久化隐私 核心批次 B31 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1905] [cursor=pointer]:
+            - generic [ref=f11e1908]:
+              - generic [ref=f11e1909]:
+                - code [ref=f11e1910]: AIAPP-12
+                - generic [ref=f11e1911]: "12"
+                - generic [ref=f11e1912]: 会话与记忆
+                - generic [ref=f11e1913]: 应用
+                - generic [ref=f11e1914]: 必修
+              - strong [ref=f11e1915]: 会话状态、上下文组装、压缩与持久化隐私
+              - generic [ref=f11e1916]: 核心批次 B31 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1917]:
+              - text: 未开始
+              - generic [ref=f11e1918]: →
+          - button "AIAPP-13 12 会话与记忆 应用 必修 长期记忆、个性化与可遗忘治理 核心批次 B31 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m 未开始 →" [ref=f11e1919] [cursor=pointer]:
+            - generic [ref=f11e1922]:
+              - generic [ref=f11e1923]:
+                - code [ref=f11e1924]: AIAPP-13
+                - generic [ref=f11e1925]: "12"
+                - generic [ref=f11e1926]: 会话与记忆
+                - generic [ref=f11e1927]: 应用
+                - generic [ref=f11e1928]: 必修
+              - strong [ref=f11e1929]: 长期记忆、个性化与可遗忘治理
+              - generic [ref=f11e1930]: 核心批次 B31 · 演进中 · 可迁移 · AI 原生 · intermediate · 预计 8h30m
+            - generic [ref=f11e1931]:
+              - text: 未开始
+              - generic [ref=f11e1932]: →
+          - button "AGENT-01 13 Agent 循环与停止条件 专精 主修必修 Agent Loop、计划与停止条件 核心批次 B31 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1933] [cursor=pointer]:
+            - generic [ref=f11e1936]:
+              - generic [ref=f11e1937]:
+                - code [ref=f11e1938]: AGENT-01
+                - generic [ref=f11e1939]: "13"
+                - generic [ref=f11e1940]: Agent 循环与停止条件
+                - generic [ref=f11e1941]: 专精
+                - generic [ref=f11e1942]: 主修必修
+              - strong [ref=f11e1943]: Agent Loop、计划与停止条件
+              - generic [ref=f11e1944]: 核心批次 B31 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e1945]:
+              - text: 未开始
+              - generic [ref=f11e1946]: →
+          - button "AGENT-03 13 MCP 传输与客户端兼容 专精 主修必修 MCP 传输、显式状态与跨版本兼容 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1947] [cursor=pointer]:
+            - generic [ref=f11e1950]:
+              - generic [ref=f11e1951]:
+                - code [ref=f11e1952]: AGENT-03
+                - generic [ref=f11e1953]: "13"
+                - generic [ref=f11e1954]: MCP 传输与客户端兼容
+                - generic [ref=f11e1955]: 专精
+                - generic [ref=f11e1956]: 主修必修
+              - strong [ref=f11e1957]: MCP 传输、显式状态与跨版本兼容
+              - generic [ref=f11e1958]: 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e1959]:
+              - text: 未开始
+              - generic [ref=f11e1960]: →
+          - button "AGENT-04 13 MCP 传输与客户端兼容 专精 主修必修 MCP Client、服务发现与版本兼容 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1961] [cursor=pointer]:
+            - generic [ref=f11e1964]:
+              - generic [ref=f11e1965]:
+                - code [ref=f11e1966]: AGENT-04
+                - generic [ref=f11e1967]: "13"
+                - generic [ref=f11e1968]: MCP 传输与客户端兼容
+                - generic [ref=f11e1969]: 专精
+                - generic [ref=f11e1970]: 主修必修
+              - strong [ref=f11e1971]: MCP Client、服务发现与版本兼容
+              - generic [ref=f11e1972]: 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e1973]:
+              - text: 未开始
+              - generic [ref=f11e1974]: →
+          - button "AGENT-05 13 Agent 人工控制与长任务 专精 主修必修 Human-in-the-loop 与高风险审批 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1975] [cursor=pointer]:
+            - generic [ref=f11e1978]:
+              - generic [ref=f11e1979]:
+                - code [ref=f11e1980]: AGENT-05
+                - generic [ref=f11e1981]: "13"
+                - generic [ref=f11e1982]: Agent 人工控制与长任务
+                - generic [ref=f11e1983]: 专精
+                - generic [ref=f11e1984]: 主修必修
+              - strong [ref=f11e1985]: Human-in-the-loop 与高风险审批
+              - generic [ref=f11e1986]: 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e1987]:
+              - text: 未开始
+              - generic [ref=f11e1988]: →
+          - button "AGENT-06 13 Agent 人工控制与长任务 专精 主修必修 Tasks 扩展、长任务、恢复与幂等 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e1989] [cursor=pointer]:
+            - generic [ref=f11e1992]:
+              - generic [ref=f11e1993]:
+                - code [ref=f11e1994]: AGENT-06
+                - generic [ref=f11e1995]: "13"
+                - generic [ref=f11e1996]: Agent 人工控制与长任务
+                - generic [ref=f11e1997]: 专精
+                - generic [ref=f11e1998]: 主修必修
+              - strong [ref=f11e1999]: Tasks 扩展、长任务、恢复与幂等
+              - generic [ref=f11e2000]: 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e2001]:
+              - text: 未开始
+              - generic [ref=f11e2002]: →
+          - button "AGENT-07 13 多 Agent 与跨组织协作 专精 主修必修 多 Agent 协作与上下文隔离 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e2003] [cursor=pointer]:
+            - generic [ref=f11e2006]:
+              - generic [ref=f11e2007]:
+                - code [ref=f11e2008]: AGENT-07
+                - generic [ref=f11e2009]: "13"
+                - generic [ref=f11e2010]: 多 Agent 与跨组织协作
+                - generic [ref=f11e2011]: 专精
+                - generic [ref=f11e2012]: 主修必修
+              - strong [ref=f11e2013]: 多 Agent 协作与上下文隔离
+              - generic [ref=f11e2014]: 核心批次 B32 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e2015]:
+              - text: 未开始
+              - generic [ref=f11e2016]: →
+          - button "AGENT-08 13 工具体验、可观测性与运行安全 专精 主修必修 工具描述、Schema 与可发现性 核心批次 B33 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e2017] [cursor=pointer]:
+            - generic [ref=f11e2020]:
+              - generic [ref=f11e2021]:
+                - code [ref=f11e2022]: AGENT-08
+                - generic [ref=f11e2023]: "13"
+                - generic [ref=f11e2024]: 工具体验、可观测性与运行安全
+                - generic [ref=f11e2025]: 专精
+                - generic [ref=f11e2026]: 主修必修
+              - strong [ref=f11e2027]: 工具描述、Schema 与可发现性
+              - generic [ref=f11e2028]: 核心批次 B33 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e2029]:
+              - text: 未开始
+              - generic [ref=f11e2030]: →
+          - button "AGENT-09 13 工具体验、可观测性与运行安全 专精 主修必修 Agent 可观测性与回放 核心批次 B33 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e2031] [cursor=pointer]:
+            - generic [ref=f11e2034]:
+              - generic [ref=f11e2035]:
+                - code [ref=f11e2036]: AGENT-09
+                - generic [ref=f11e2037]: "13"
+                - generic [ref=f11e2038]: 工具体验、可观测性与运行安全
+                - generic [ref=f11e2039]: 专精
+                - generic [ref=f11e2040]: 主修必修
+              - strong [ref=f11e2041]: Agent 可观测性与回放
+              - generic [ref=f11e2042]: 核心批次 B33 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e2043]:
+              - text: 未开始
+              - generic [ref=f11e2044]: →
+          - button "AGENT-10 13 工具体验、可观测性与运行安全 专精 主修必修 Agent 身份、授权、工具权限与运行隔离 核心批次 B33 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e2045] [cursor=pointer]:
+            - generic [ref=f11e2048]:
+              - generic [ref=f11e2049]:
+                - code [ref=f11e2050]: AGENT-10
+                - generic [ref=f11e2051]: "13"
+                - generic [ref=f11e2052]: 工具体验、可观测性与运行安全
+                - generic [ref=f11e2053]: 专精
+                - generic [ref=f11e2054]: 主修必修
+              - strong [ref=f11e2055]: Agent 身份、授权、工具权限与运行隔离
+              - generic [ref=f11e2056]: 核心批次 B33 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e2057]:
+              - text: 未开始
+              - generic [ref=f11e2058]: →
+          - button "AIDEV-04 15 AI 代码评审 应用 必修 AI Code Review 与风险分级 核心批次 B33 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m 未开始 →" [ref=f11e2059] [cursor=pointer]:
+            - generic [ref=f11e2062]:
+              - generic [ref=f11e2063]:
+                - code [ref=f11e2064]: AIDEV-04
+                - generic [ref=f11e2065]: "15"
+                - generic [ref=f11e2066]: AI 代码评审
+                - generic [ref=f11e2067]: 应用
+                - generic [ref=f11e2068]: 必修
+              - strong [ref=f11e2069]: AI Code Review 与风险分级
+              - generic [ref=f11e2070]: 核心批次 B33 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m
+            - generic [ref=f11e2071]:
+              - text: 未开始
+              - generic [ref=f11e2072]: →
+          - button "AIDEV-07 15 AI 依赖安全与效能治理 应用 必修 AI 建议依赖与生成代码来源安全 核心批次 B34 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m 未开始 →" [ref=f11e2073] [cursor=pointer]:
+            - generic [ref=f11e2076]:
+              - generic [ref=f11e2077]:
+                - code [ref=f11e2078]: AIDEV-07
+                - generic [ref=f11e2079]: "15"
+                - generic [ref=f11e2080]: AI 依赖安全与效能治理
+                - generic [ref=f11e2081]: 应用
+                - generic [ref=f11e2082]: 必修
+              - strong [ref=f11e2083]: AI 建议依赖与生成代码来源安全
+              - generic [ref=f11e2084]: 核心批次 B34 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m
+            - generic [ref=f11e2085]:
+              - text: 未开始
+              - generic [ref=f11e2086]: →
+          - button "AIDEV-10 15 专项 AI 工具链 应用 必修 AI 研发工具准入、数据与团队治理 核心批次 B34 · 演进中 · 可迁移 · AI 辅助 · 主题 engineering-leadership · intermediate · 预计 8h30m 未开始 →" [ref=f11e2087] [cursor=pointer]:
+            - generic [ref=f11e2090]:
+              - generic [ref=f11e2091]:
+                - code [ref=f11e2092]: AIDEV-10
+                - generic [ref=f11e2093]: "15"
+                - generic [ref=f11e2094]: 专项 AI 工具链
+                - generic [ref=f11e2095]: 应用
+                - generic [ref=f11e2096]: 必修
+              - strong [ref=f11e2097]: AI 研发工具准入、数据与团队治理
+              - generic [ref=f11e2098]: 核心批次 B34 · 演进中 · 可迁移 · AI 辅助 · 主题 engineering-leadership · intermediate · 预计 8h30m
+            - generic [ref=f11e2099]:
+              - text: 未开始
+              - generic [ref=f11e2100]: →
+          - button "COMPAT-01 18 跨浏览器兼容治理 核心 必修 Baseline、渐进增强与跨浏览器真机测试 核心批次 B34 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2101] [cursor=pointer]:
+            - generic [ref=f11e2104]:
+              - generic [ref=f11e2105]:
+                - code [ref=f11e2106]: COMPAT-01
+                - generic [ref=f11e2107]: "18"
+                - generic [ref=f11e2108]: 跨浏览器兼容治理
+                - generic [ref=f11e2109]: 核心
+                - generic [ref=f11e2110]: 必修
+              - strong [ref=f11e2111]: Baseline、渐进增强与跨浏览器真机测试
+              - generic [ref=f11e2112]: 核心批次 B34 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2113]:
+              - text: 未开始
+              - generic [ref=f11e2114]: →
+          - button "ARCH-01 20 架构决策与演进治理 领导力 必修 质量属性、约束与架构权衡 核心批次 B34 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2115] [cursor=pointer]:
+            - generic [ref=f11e2118]:
+              - generic [ref=f11e2119]:
+                - code [ref=f11e2120]: ARCH-01
+                - generic [ref=f11e2121]: "20"
+                - generic [ref=f11e2122]: 架构决策与演进治理
+                - generic [ref=f11e2123]: 领导力
+                - generic [ref=f11e2124]: 必修
+              - strong [ref=f11e2125]: 质量属性、约束与架构权衡
+              - generic [ref=f11e2126]: 核心批次 B34 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2127]:
+              - text: 未开始
+              - generic [ref=f11e2128]: →
+          - button "ARCH-02 20 架构决策与演进治理 领导力 必修 技术方案、ADR 与架构评审 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2129] [cursor=pointer]:
+            - generic [ref=f11e2132]:
+              - generic [ref=f11e2133]:
+                - code [ref=f11e2134]: ARCH-02
+                - generic [ref=f11e2135]: "20"
+                - generic [ref=f11e2136]: 架构决策与演进治理
+                - generic [ref=f11e2137]: 领导力
+                - generic [ref=f11e2138]: 必修
+              - strong [ref=f11e2139]: 技术方案、ADR 与架构评审
+              - generic [ref=f11e2140]: 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2141]:
+              - text: 未开始
+              - generic [ref=f11e2142]: →
+          - button "ARCH-03 20 架构决策与演进治理 领导力 必修 渐进迁移、Strangler 与兼容层 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2143] [cursor=pointer]:
+            - generic [ref=f11e2146]:
+              - generic [ref=f11e2147]:
+                - code [ref=f11e2148]: ARCH-03
+                - generic [ref=f11e2149]: "20"
+                - generic [ref=f11e2150]: 架构决策与演进治理
+                - generic [ref=f11e2151]: 领导力
+                - generic [ref=f11e2152]: 必修
+              - strong [ref=f11e2153]: 渐进迁移、Strangler 与兼容层
+              - generic [ref=f11e2154]: 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2155]:
+              - text: 未开始
+              - generic [ref=f11e2156]: →
+          - button "ARCH-04 20 架构决策与演进治理 领导力 必修 技术债识别、优先级与偿还治理 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2157] [cursor=pointer]:
+            - generic [ref=f11e2160]:
+              - generic [ref=f11e2161]:
+                - code [ref=f11e2162]: ARCH-04
+                - generic [ref=f11e2163]: "20"
+                - generic [ref=f11e2164]: 架构决策与演进治理
+                - generic [ref=f11e2165]: 领导力
+                - generic [ref=f11e2166]: 必修
+              - strong [ref=f11e2167]: 技术债识别、优先级与偿还治理
+              - generic [ref=f11e2168]: 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2169]:
+              - text: 未开始
+              - generic [ref=f11e2170]: →
+          - button "ARCH-05 20 架构决策与演进治理 领导力 必修 框架选型、生命周期与跨框架迁移 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e2171] [cursor=pointer]:
+            - generic [ref=f11e2174]:
+              - generic [ref=f11e2175]:
+                - code [ref=f11e2176]: ARCH-05
+                - generic [ref=f11e2177]: "20"
+                - generic [ref=f11e2178]: 架构决策与演进治理
+                - generic [ref=f11e2179]: 领导力
+                - generic [ref=f11e2180]: 必修
+              - strong [ref=f11e2181]: 框架选型、生命周期与跨框架迁移
+              - generic [ref=f11e2182]: 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e2183]:
+              - text: 未开始
+              - generic [ref=f11e2184]: →
+          - button "LEAD-01 20 技术领导力 领导力 必修 技术路线、跨团队推动与影响力 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2185] [cursor=pointer]:
+            - generic [ref=f11e2188]:
+              - generic [ref=f11e2189]:
+                - code [ref=f11e2190]: LEAD-01
+                - generic [ref=f11e2191]: "20"
+                - generic [ref=f11e2192]: 技术领导力
+                - generic [ref=f11e2193]: 领导力
+                - generic [ref=f11e2194]: 必修
+              - strong [ref=f11e2195]: 技术路线、跨团队推动与影响力
+              - generic [ref=f11e2196]: 核心批次 B35 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2197]:
+              - text: 未开始
+              - generic [ref=f11e2198]: →
+          - button "AGENT-11 13 多 Agent 与跨组织协作 专精 选修 A2A 协议、Agent Card 与跨组织协作 专项路线 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m 未开始 →" [ref=f11e2199] [cursor=pointer]:
+            - generic [ref=f11e2202]:
+              - generic [ref=f11e2203]:
+                - code [ref=f11e2204]: AGENT-11
+                - generic [ref=f11e2205]: "13"
+                - generic [ref=f11e2206]: 多 Agent 与跨组织协作
+                - generic [ref=f11e2207]: 专精
+                - generic [ref=f11e2208]: 选修
+              - strong [ref=f11e2209]: A2A 协议、Agent Card 与跨组织协作
+              - generic [ref=f11e2210]: 专项路线 · 演进中 · 可迁移 · Agentic · 路线 agent-mcp · intermediate · 预计 8h30m
+            - generic [ref=f11e2211]:
+              - text: 未开始
+              - generic [ref=f11e2212]: →
+          - button "AIAPP-11 12 AI 体验与多模态制品 应用 选修 实时多模态与语音 Agent 交互编排 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 realtime-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e2213] [cursor=pointer]:
+            - generic [ref=f11e2216]:
+              - generic [ref=f11e2217]:
+                - code [ref=f11e2218]: AIAPP-11
+                - generic [ref=f11e2219]: "12"
+                - generic [ref=f11e2220]: AI 体验与多模态制品
+                - generic [ref=f11e2221]: 应用
+                - generic [ref=f11e2222]: 选修
+              - strong [ref=f11e2223]: 实时多模态与语音 Agent 交互编排
+              - generic [ref=f11e2224]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 realtime-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e2225]:
+              - text: 未开始
+              - generic [ref=f11e2226]: →
+          - button "AIDEV-06 15 确定性代码变换工具链 专精 选修 AI 生成代码的 AST 确定性约束与改写 专项路线 · 演进中 · 可迁移 · AI 辅助 · 主题 ai-tooling · intermediate · 预计 8h30m 未开始 →" [ref=f11e2227] [cursor=pointer]:
+            - generic [ref=f11e2230]:
+              - generic [ref=f11e2231]:
+                - code [ref=f11e2232]: AIDEV-06
+                - generic [ref=f11e2233]: "15"
+                - generic [ref=f11e2234]: 确定性代码变换工具链
+                - generic [ref=f11e2235]: 专精
+                - generic [ref=f11e2236]: 选修
+              - strong [ref=f11e2237]: AI 生成代码的 AST 确定性约束与改写
+              - generic [ref=f11e2238]: 专项路线 · 演进中 · 可迁移 · AI 辅助 · 主题 ai-tooling · intermediate · 预计 8h30m
+            - generic [ref=f11e2239]:
+              - text: 未开始
+              - generic [ref=f11e2240]: →
+          - button "AIDEV-08 15 AI 依赖安全与效能治理 应用 选修 AI 研发指标与真实提效评估 专项路线 · 演进中 · 可迁移 · AI 辅助 · 主题 engineering-leadership · intermediate · 预计 8h30m 未开始 →" [ref=f11e2241] [cursor=pointer]:
+            - generic [ref=f11e2244]:
+              - generic [ref=f11e2245]:
+                - code [ref=f11e2246]: AIDEV-08
+                - generic [ref=f11e2247]: "15"
+                - generic [ref=f11e2248]: AI 依赖安全与效能治理
+                - generic [ref=f11e2249]: 应用
+                - generic [ref=f11e2250]: 选修
+              - strong [ref=f11e2251]: AI 研发指标与真实提效评估
+              - generic [ref=f11e2252]: 专项路线 · 演进中 · 可迁移 · AI 辅助 · 主题 engineering-leadership · intermediate · 预计 8h30m
+            - generic [ref=f11e2253]:
+              - text: 未开始
+              - generic [ref=f11e2254]: →
+          - button "AIDEV-09 15 专项 AI 工具链 应用 选修 设计稿到代码与视觉验收 专项路线 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m 未开始 →" [ref=f11e2255] [cursor=pointer]:
+            - generic [ref=f11e2258]:
+              - generic [ref=f11e2259]:
+                - code [ref=f11e2260]: AIDEV-09
+                - generic [ref=f11e2261]: "15"
+                - generic [ref=f11e2262]: 专项 AI 工具链
+                - generic [ref=f11e2263]: 应用
+                - generic [ref=f11e2264]: 选修
+              - strong [ref=f11e2265]: 设计稿到代码与视觉验收
+              - generic [ref=f11e2266]: 专项路线 · 演进中 · 可迁移 · AI 辅助 · intermediate · 预计 8h30m
+            - generic [ref=f11e2267]:
+              - text: 未开始
+              - generic [ref=f11e2268]: →
+          - button "AIDEV-11 15 专项 AI 工具链 专精 选修 AI 驱动的浏览器运行时调试与证据闭环 专项路线 · 演进中 · 可迁移 · AI 辅助 · 主题 ai-tooling · intermediate · 预计 8h30m 未开始 →" [ref=f11e2269] [cursor=pointer]:
+            - generic [ref=f11e2272]:
+              - generic [ref=f11e2273]:
+                - code [ref=f11e2274]: AIDEV-11
+                - generic [ref=f11e2275]: "15"
+                - generic [ref=f11e2276]: 专项 AI 工具链
+                - generic [ref=f11e2277]: 专精
+                - generic [ref=f11e2278]: 选修
+              - strong [ref=f11e2279]: AI 驱动的浏览器运行时调试与证据闭环
+              - generic [ref=f11e2280]: 专项路线 · 演进中 · 可迁移 · AI 辅助 · 主题 ai-tooling · intermediate · 预计 8h30m
+            - generic [ref=f11e2281]:
+              - text: 未开始
+              - generic [ref=f11e2282]: →
+          - button "AIMEDIA-01 12 AI 体验与多模态制品 应用 选修 生成式图像、视频与音频制品工作流 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 media · intermediate · 预计 8h45m 未开始 →" [ref=f11e2283] [cursor=pointer]:
+            - generic [ref=f11e2286]:
+              - generic [ref=f11e2287]:
+                - code [ref=f11e2288]: AIMEDIA-01
+                - generic [ref=f11e2289]: "12"
+                - generic [ref=f11e2290]: AI 体验与多模态制品
+                - generic [ref=f11e2291]: 应用
+                - generic [ref=f11e2292]: 选修
+              - strong [ref=f11e2293]: 生成式图像、视频与音频制品工作流
+              - generic [ref=f11e2294]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 media · intermediate · 预计 8h45m
+            - generic [ref=f11e2295]:
+              - text: 未开始
+              - generic [ref=f11e2296]: →
+          - button "ANALYTICS-01 18 产品分析与实验 专精 选修 埋点模型、数据质量与可观测产品指标 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2297] [cursor=pointer]:
+            - generic [ref=f11e2300]:
+              - generic [ref=f11e2301]:
+                - code [ref=f11e2302]: ANALYTICS-01
+                - generic [ref=f11e2303]: "18"
+                - generic [ref=f11e2304]: 产品分析与实验
+                - generic [ref=f11e2305]: 专精
+                - generic [ref=f11e2306]: 选修
+              - strong [ref=f11e2307]: 埋点模型、数据质量与可观测产品指标
+              - generic [ref=f11e2308]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2309]:
+              - text: 未开始
+              - generic [ref=f11e2310]: →
+          - button "ANTD-01 04 中后台交互组件 专精 主修必修 Form 数据流、联动与校验 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e2311] [cursor=pointer]:
+            - generic [ref=f11e2314]:
+              - generic [ref=f11e2315]:
+                - code [ref=f11e2316]: ANTD-01
+                - generic [ref=f11e2317]: "04"
+                - generic [ref=f11e2318]: 中后台交互组件
+                - generic [ref=f11e2319]: 专精
+                - generic [ref=f11e2320]: 主修必修
+              - strong [ref=f11e2321]: Form 数据流、联动与校验
+              - generic [ref=f11e2322]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e2323]:
+              - text: 未开始
+              - generic [ref=f11e2324]: →
+          - button "ANTD-02 04 中后台交互组件 专精 主修必修 Table/ProTable 查询、分页与导出 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e2325] [cursor=pointer]:
+            - generic [ref=f11e2328]:
+              - generic [ref=f11e2329]:
+                - code [ref=f11e2330]: ANTD-02
+                - generic [ref=f11e2331]: "04"
+                - generic [ref=f11e2332]: 中后台交互组件
+                - generic [ref=f11e2333]: 专精
+                - generic [ref=f11e2334]: 主修必修
+              - strong [ref=f11e2335]: Table/ProTable 查询、分页与导出
+              - generic [ref=f11e2336]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e2337]:
+              - text: 未开始
+              - generic [ref=f11e2338]: →
+          - button "ANTD-03 04 中后台交互组件 专精 主修必修 Modal、Drawer、详情与反馈 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e2339] [cursor=pointer]:
+            - generic [ref=f11e2342]:
+              - generic [ref=f11e2343]:
+                - code [ref=f11e2344]: ANTD-03
+                - generic [ref=f11e2345]: "04"
+                - generic [ref=f11e2346]: 中后台交互组件
+                - generic [ref=f11e2347]: 专精
+                - generic [ref=f11e2348]: 主修必修
+              - strong [ref=f11e2349]: Modal、Drawer、详情与反馈
+              - generic [ref=f11e2350]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e2351]:
+              - text: 未开始
+              - generic [ref=f11e2352]: →
+          - button "ANTD-04 04 移动业务组件 专精 选修 Ant Design Mobile 与移动业务组件 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · 主题 performance-mobile · intermediate · 预计 7h 未开始 →" [ref=f11e2353] [cursor=pointer]:
+            - generic [ref=f11e2356]:
+              - generic [ref=f11e2357]:
+                - code [ref=f11e2358]: ANTD-04
+                - generic [ref=f11e2359]: "04"
+                - generic [ref=f11e2360]: 移动业务组件
+                - generic [ref=f11e2361]: 专精
+                - generic [ref=f11e2362]: 选修
+              - strong [ref=f11e2363]: Ant Design Mobile 与移动业务组件
+              - generic [ref=f11e2364]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · 主题 performance-mobile · intermediate · 预计 7h
+            - generic [ref=f11e2365]:
+              - text: 未开始
+              - generic [ref=f11e2366]: →
+          - button "API-01 09 命令行与接口工具 专精 选修 OpenAPI/YAML 解析与规范化 专项路线 · 稳定 · 可迁移 · 主题 api-engineering · intermediate · 预计 7h45m 未开始 →" [ref=f11e2367] [cursor=pointer]:
+            - generic [ref=f11e2370]:
+              - generic [ref=f11e2371]:
+                - code [ref=f11e2372]: API-01
+                - generic [ref=f11e2373]: "09"
+                - generic [ref=f11e2374]: 命令行与接口工具
+                - generic [ref=f11e2375]: 专精
+                - generic [ref=f11e2376]: 选修
+              - strong [ref=f11e2377]: OpenAPI/YAML 解析与规范化
+              - generic [ref=f11e2378]: 专项路线 · 稳定 · 可迁移 · 主题 api-engineering · intermediate · 预计 7h45m
+            - generic [ref=f11e2379]:
+              - text: 未开始
+              - generic [ref=f11e2380]: →
+          - button "API-02 09 命令行与接口工具 专精 选修 类型推断、代码生成与可维护输出 专项路线 · 稳定 · 可迁移 · 主题 api-engineering · intermediate · 预计 7h45m 未开始 →" [ref=f11e2381] [cursor=pointer]:
+            - generic [ref=f11e2384]:
+              - generic [ref=f11e2385]:
+                - code [ref=f11e2386]: API-02
+                - generic [ref=f11e2387]: "09"
+                - generic [ref=f11e2388]: 命令行与接口工具
+                - generic [ref=f11e2389]: 专精
+                - generic [ref=f11e2390]: 选修
+              - strong [ref=f11e2391]: 类型推断、代码生成与可维护输出
+              - generic [ref=f11e2392]: 专项路线 · 稳定 · 可迁移 · 主题 api-engineering · intermediate · 预计 7h45m
+            - generic [ref=f11e2393]:
+              - text: 未开始
+              - generic [ref=f11e2394]: →
+          - button "BACKEND-01 20 后端协作素养 专精 选修 SQL、事务、索引与前端数据模型 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2395] [cursor=pointer]:
+            - generic [ref=f11e2398]:
+              - generic [ref=f11e2399]:
+                - code [ref=f11e2400]: BACKEND-01
+                - generic [ref=f11e2401]: "20"
+                - generic [ref=f11e2402]: 后端协作素养
+                - generic [ref=f11e2403]: 专精
+                - generic [ref=f11e2404]: 选修
+              - strong [ref=f11e2405]: SQL、事务、索引与前端数据模型
+              - generic [ref=f11e2406]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2407]:
+              - text: 未开始
+              - generic [ref=f11e2408]: →
+          - button "BACKEND-02 20 后端协作素养 专精 选修 消息队列、异步任务与幂等消费 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2409] [cursor=pointer]:
+            - generic [ref=f11e2412]:
+              - generic [ref=f11e2413]:
+                - code [ref=f11e2414]: BACKEND-02
+                - generic [ref=f11e2415]: "20"
+                - generic [ref=f11e2416]: 后端协作素养
+                - generic [ref=f11e2417]: 专精
+                - generic [ref=f11e2418]: 选修
+              - strong [ref=f11e2419]: 消息队列、异步任务与幂等消费
+              - generic [ref=f11e2420]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2421]:
+              - text: 未开始
+              - generic [ref=f11e2422]: →
+          - button "BACKEND-03 20 后端协作素养 专精 选修 对象存储签名、生命周期与 CDN 服务边界 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2423] [cursor=pointer]:
+            - generic [ref=f11e2426]:
+              - generic [ref=f11e2427]:
+                - code [ref=f11e2428]: BACKEND-03
+                - generic [ref=f11e2429]: "20"
+                - generic [ref=f11e2430]: 后端协作素养
+                - generic [ref=f11e2431]: 专精
+                - generic [ref=f11e2432]: 选修
+              - strong [ref=f11e2433]: 对象存储签名、生命周期与 CDN 服务边界
+              - generic [ref=f11e2434]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2435]:
+              - text: 未开始
+              - generic [ref=f11e2436]: →
+          - button "CAREER-06 10 面试、教学与影响力 领导力 选修 面试、教学与技术影响力 专项路线 · 稳定 · 可迁移 · 主题 engineering-leadership · intermediate · 预计 4h15m 未开始 →" [ref=f11e2437] [cursor=pointer]:
+            - generic [ref=f11e2440]:
+              - generic [ref=f11e2441]:
+                - code [ref=f11e2442]: CAREER-06
+                - generic [ref=f11e2443]: "10"
+                - generic [ref=f11e2444]: 面试、教学与影响力
+                - generic [ref=f11e2445]: 领导力
+                - generic [ref=f11e2446]: 选修
+              - strong [ref=f11e2447]: 面试、教学与技术影响力
+              - generic [ref=f11e2448]: 专项路线 · 稳定 · 可迁移 · 主题 engineering-leadership · intermediate · 预计 4h15m
+            - generic [ref=f11e2449]:
+              - text: 未开始
+              - generic [ref=f11e2450]: →
+          - button "CLOUD-01 20 云交付与可持续性 专精 选修 云交付拓扑、平台协作与 Kubernetes 素养 专项路线 · 演进中 · 可迁移 · 主题 deployment · intermediate · 预计 6h15m 未开始 →" [ref=f11e2451] [cursor=pointer]:
+            - generic [ref=f11e2454]:
+              - generic [ref=f11e2455]:
+                - code [ref=f11e2456]: CLOUD-01
+                - generic [ref=f11e2457]: "20"
+                - generic [ref=f11e2458]: 云交付与可持续性
+                - generic [ref=f11e2459]: 专精
+                - generic [ref=f11e2460]: 选修
+              - strong [ref=f11e2461]: 云交付拓扑、平台协作与 Kubernetes 素养
+              - generic [ref=f11e2462]: 专项路线 · 演进中 · 可迁移 · 主题 deployment · intermediate · 预计 6h15m
+            - generic [ref=f11e2463]:
+              - text: 未开始
+              - generic [ref=f11e2464]: →
+          - button "COLLAB-01 17 实时消息与多人协作 专精 选修 CRDT、OT、Presence 与多人协作一致性 专项路线 · 演进中 · 可迁移 · 主题 data-realtime · intermediate · 预计 6h15m 未开始 →" [ref=f11e2465] [cursor=pointer]:
+            - generic [ref=f11e2468]:
+              - generic [ref=f11e2469]:
+                - code [ref=f11e2470]: COLLAB-01
+                - generic [ref=f11e2471]: "17"
+                - generic [ref=f11e2472]: 实时消息与多人协作
+                - generic [ref=f11e2473]: 专精
+                - generic [ref=f11e2474]: 选修
+              - strong [ref=f11e2475]: CRDT、OT、Presence 与多人协作一致性
+              - generic [ref=f11e2476]: 专项路线 · 演进中 · 可迁移 · 主题 data-realtime · intermediate · 预计 6h15m
+            - generic [ref=f11e2477]:
+              - text: 未开始
+              - generic [ref=f11e2478]: →
+          - button "COMP-03 08 组件平台与配置化交付 专精 选修 文档、示例、测试与版本治理 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e2479] [cursor=pointer]:
+            - generic [ref=f11e2482]:
+              - generic [ref=f11e2483]:
+                - code [ref=f11e2484]: COMP-03
+                - generic [ref=f11e2485]: "08"
+                - generic [ref=f11e2486]: 组件平台与配置化交付
+                - generic [ref=f11e2487]: 专精
+                - generic [ref=f11e2488]: 选修
+              - strong [ref=f11e2489]: 文档、示例、测试与版本治理
+              - generic [ref=f11e2490]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e2491]:
+              - text: 未开始
+              - generic [ref=f11e2492]: →
+          - button "CONTENT-01 18 内容、SEO 与编辑体验 专精 选修 内容模型、CMS、Markdown/MDX 与搜索 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 6h15m 未开始 →" [ref=f11e2493] [cursor=pointer]:
+            - generic [ref=f11e2496]:
+              - generic [ref=f11e2497]:
+                - code [ref=f11e2498]: CONTENT-01
+                - generic [ref=f11e2499]: "18"
+                - generic [ref=f11e2500]: 内容、SEO 与编辑体验
+                - generic [ref=f11e2501]: 专精
+                - generic [ref=f11e2502]: 选修
+              - strong [ref=f11e2503]: 内容模型、CMS、Markdown/MDX 与搜索
+              - generic [ref=f11e2504]: 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 6h15m
+            - generic [ref=f11e2505]:
+              - text: 未开始
+              - generic [ref=f11e2506]: →
+          - button "DOCKER-03 16 容器化基础与专项治理 专精 选修 容器内调试、资源限制与生产运行边界 专项路线 · 稳定 · 可迁移 · 主题 deployment · intermediate · 预计 8h 未开始 →" [ref=f11e2507] [cursor=pointer]:
+            - generic [ref=f11e2510]:
+              - generic [ref=f11e2511]:
+                - code [ref=f11e2512]: DOCKER-03
+                - generic [ref=f11e2513]: "16"
+                - generic [ref=f11e2514]: 容器化基础与专项治理
+                - generic [ref=f11e2515]: 专精
+                - generic [ref=f11e2516]: 选修
+              - strong [ref=f11e2517]: 容器内调试、资源限制与生产运行边界
+              - generic [ref=f11e2518]: 专项路线 · 稳定 · 可迁移 · 主题 deployment · intermediate · 预计 8h
+            - generic [ref=f11e2519]:
+              - text: 未开始
+              - generic [ref=f11e2520]: →
+          - button "DOCKER-04 16 容器化基础与专项治理 专精 选修 容器镜像安全、扫描与制品可信 专项路线 · 稳定 · 可迁移 · 主题 deployment · intermediate · 预计 8h 未开始 →" [ref=f11e2521] [cursor=pointer]:
+            - generic [ref=f11e2524]:
+              - generic [ref=f11e2525]:
+                - code [ref=f11e2526]: DOCKER-04
+                - generic [ref=f11e2527]: "16"
+                - generic [ref=f11e2528]: 容器化基础与专项治理
+                - generic [ref=f11e2529]: 专精
+                - generic [ref=f11e2530]: 选修
+              - strong [ref=f11e2531]: 容器镜像安全、扫描与制品可信
+              - generic [ref=f11e2532]: 专项路线 · 稳定 · 可迁移 · 主题 deployment · intermediate · 预计 8h
+            - generic [ref=f11e2533]:
+              - text: 未开始
+              - generic [ref=f11e2534]: →
+          - button "DS-01 08 组件与设计系统 专精 选修 Design Token、主题与一致性 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e2535] [cursor=pointer]:
+            - generic [ref=f11e2538]:
+              - generic [ref=f11e2539]:
+                - code [ref=f11e2540]: DS-01
+                - generic [ref=f11e2541]: "08"
+                - generic [ref=f11e2542]: 组件与设计系统
+                - generic [ref=f11e2543]: 专精
+                - generic [ref=f11e2544]: 选修
+              - strong [ref=f11e2545]: Design Token、主题与一致性
+              - generic [ref=f11e2546]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e2547]:
+              - text: 未开始
+              - generic [ref=f11e2548]: →
+          - button "DX-01 06 交付、供应链与平台工程 专精 选修 前端平台工程、Golden Path 与开发者体验 专项路线 · 稳定 · 可迁移 · 主题 platform-engineering · intermediate · 预计 8h 未开始 →" [ref=f11e2549] [cursor=pointer]:
+            - generic [ref=f11e2552]:
+              - generic [ref=f11e2553]:
+                - code [ref=f11e2554]: DX-01
+                - generic [ref=f11e2555]: "06"
+                - generic [ref=f11e2556]: 交付、供应链与平台工程
+                - generic [ref=f11e2557]: 专精
+                - generic [ref=f11e2558]: 选修
+              - strong [ref=f11e2559]: 前端平台工程、Golden Path 与开发者体验
+              - generic [ref=f11e2560]: 专项路线 · 稳定 · 可迁移 · 主题 platform-engineering · intermediate · 预计 8h
+            - generic [ref=f11e2561]:
+              - text: 未开始
+              - generic [ref=f11e2562]: →
+          - button "EDGE-01 17 现代渲染与边缘运行时 专精 选修 Edge Runtime、Serverless 执行约束与部署边界 专项路线 · 演进中 · 平台特定 · 主题 deployment · intermediate · 预计 6h15m 未开始 →" [ref=f11e2563] [cursor=pointer]:
+            - generic [ref=f11e2566]:
+              - generic [ref=f11e2567]:
+                - code [ref=f11e2568]: EDGE-01
+                - generic [ref=f11e2569]: "17"
+                - generic [ref=f11e2570]: 现代渲染与边缘运行时
+                - generic [ref=f11e2571]: 专精
+                - generic [ref=f11e2572]: 选修
+              - strong [ref=f11e2573]: Edge Runtime、Serverless 执行约束与部署边界
+              - generic [ref=f11e2574]: 专项路线 · 演进中 · 平台特定 · 主题 deployment · intermediate · 预计 6h15m
+            - generic [ref=f11e2575]:
+              - text: 未开始
+              - generic [ref=f11e2576]: →
+          - button "EDITOR-01 18 内容、SEO 与编辑体验 专精 选修 复杂编辑器、输入法与 AI 创作界面 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 8h 未开始 →" [ref=f11e2577] [cursor=pointer]:
+            - generic [ref=f11e2580]:
+              - generic [ref=f11e2581]:
+                - code [ref=f11e2582]: EDITOR-01
+                - generic [ref=f11e2583]: "18"
+                - generic [ref=f11e2584]: 内容、SEO 与编辑体验
+                - generic [ref=f11e2585]: 专精
+                - generic [ref=f11e2586]: 选修
+              - strong [ref=f11e2587]: 复杂编辑器、输入法与 AI 创作界面
+              - generic [ref=f11e2588]: 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 8h
+            - generic [ref=f11e2589]:
+              - text: 未开始
+              - generic [ref=f11e2590]: →
+          - button "EMBED-01 08 嵌入式与跨运行时交付 专精 选修 嵌入式前端 SDK、第三方宿主与多租户隔离 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e2591] [cursor=pointer]:
+            - generic [ref=f11e2594]:
+              - generic [ref=f11e2595]:
+                - code [ref=f11e2596]: EMBED-01
+                - generic [ref=f11e2597]: "08"
+                - generic [ref=f11e2598]: 嵌入式与跨运行时交付
+                - generic [ref=f11e2599]: 专精
+                - generic [ref=f11e2600]: 选修
+              - strong [ref=f11e2601]: 嵌入式前端 SDK、第三方宿主与多租户隔离
+              - generic [ref=f11e2602]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e2603]:
+              - text: 未开始
+              - generic [ref=f11e2604]: →
+          - button "ENG-04 06 构建与依赖工程 专精 选修 组件库构建、CJS/ESM、types 与 exports 专项路线 · 稳定 · 可迁移 · 主题 component-platform · intermediate · 预计 7h45m 未开始 →" [ref=f11e2605] [cursor=pointer]:
+            - generic [ref=f11e2608]:
+              - generic [ref=f11e2609]:
+                - code [ref=f11e2610]: ENG-04
+                - generic [ref=f11e2611]: "06"
+                - generic [ref=f11e2612]: 构建与依赖工程
+                - generic [ref=f11e2613]: 专精
+                - generic [ref=f11e2614]: 选修
+              - strong [ref=f11e2615]: 组件库构建、CJS/ESM、types 与 exports
+              - generic [ref=f11e2616]: 专项路线 · 稳定 · 可迁移 · 主题 component-platform · intermediate · 预计 7h45m
+            - generic [ref=f11e2617]:
+              - text: 未开始
+              - generic [ref=f11e2618]: →
+          - button "ENG-07 06 构建与依赖工程 专精 选修 构建工具链演进、兼容迁移与回滚 专项路线 · 演进中 · 可迁移 · 主题 tooling · intermediate · 预计 7h45m 未开始 →" [ref=f11e2619] [cursor=pointer]:
+            - generic [ref=f11e2622]:
+              - generic [ref=f11e2623]:
+                - code [ref=f11e2624]: ENG-07
+                - generic [ref=f11e2625]: "06"
+                - generic [ref=f11e2626]: 构建与依赖工程
+                - generic [ref=f11e2627]: 专精
+                - generic [ref=f11e2628]: 选修
+              - strong [ref=f11e2629]: 构建工具链演进、兼容迁移与回滚
+              - generic [ref=f11e2630]: 专项路线 · 演进中 · 可迁移 · 主题 tooling · intermediate · 预计 7h45m
+            - generic [ref=f11e2631]:
+              - text: 未开始
+              - generic [ref=f11e2632]: →
+          - button "EXP-01 18 产品分析与实验 专精 选修 Feature Flag、运行时曝光与实验配置治理 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2633] [cursor=pointer]:
+            - generic [ref=f11e2636]:
+              - generic [ref=f11e2637]:
+                - code [ref=f11e2638]: EXP-01
+                - generic [ref=f11e2639]: "18"
+                - generic [ref=f11e2640]: 产品分析与实验
+                - generic [ref=f11e2641]: 专精
+                - generic [ref=f11e2642]: 选修
+              - strong [ref=f11e2643]: Feature Flag、运行时曝光与实验配置治理
+              - generic [ref=f11e2644]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2645]:
+              - text: 未开始
+              - generic [ref=f11e2646]: →
+          - button "EXP-02 18 产品分析与实验 专精 选修 A/B Test、统计推断与实验护栏 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2647] [cursor=pointer]:
+            - generic [ref=f11e2650]:
+              - generic [ref=f11e2651]:
+                - code [ref=f11e2652]: EXP-02
+                - generic [ref=f11e2653]: "18"
+                - generic [ref=f11e2654]: 产品分析与实验
+                - generic [ref=f11e2655]: 专精
+                - generic [ref=f11e2656]: 选修
+              - strong [ref=f11e2657]: A/B Test、统计推断与实验护栏
+              - generic [ref=f11e2658]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2659]:
+              - text: 未开始
+              - generic [ref=f11e2660]: →
+          - button "GQL-01 17 数据接口专项 专精 选修 GraphQL Schema、缓存与前端契约 专项路线 · 稳定 · 可迁移 · 主题 data-realtime · intermediate · 预计 6h15m 未开始 →" [ref=f11e2661] [cursor=pointer]:
+            - generic [ref=f11e2664]:
+              - generic [ref=f11e2665]:
+                - code [ref=f11e2666]: GQL-01
+                - generic [ref=f11e2667]: "17"
+                - generic [ref=f11e2668]: 数据接口专项
+                - generic [ref=f11e2669]: 专精
+                - generic [ref=f11e2670]: 选修
+              - strong [ref=f11e2671]: GraphQL Schema、缓存与前端契约
+              - generic [ref=f11e2672]: 专项路线 · 稳定 · 可迁移 · 主题 data-realtime · intermediate · 预计 6h15m
+            - generic [ref=f11e2673]:
+              - text: 未开始
+              - generic [ref=f11e2674]: →
+          - button "GRAPHICS-01 18 图形与数据可视化 专精 选修 SVG、Canvas 2D 与图形选择 专项路线 · 稳定 · 可迁移 · 主题 graphics-viz · intermediate · 预计 6h15m 未开始 →" [ref=f11e2675] [cursor=pointer]:
+            - generic [ref=f11e2678]:
+              - generic [ref=f11e2679]:
+                - code [ref=f11e2680]: GRAPHICS-01
+                - generic [ref=f11e2681]: "18"
+                - generic [ref=f11e2682]: 图形与数据可视化
+                - generic [ref=f11e2683]: 专精
+                - generic [ref=f11e2684]: 选修
+              - strong [ref=f11e2685]: SVG、Canvas 2D 与图形选择
+              - generic [ref=f11e2686]: 专项路线 · 稳定 · 可迁移 · 主题 graphics-viz · intermediate · 预计 6h15m
+            - generic [ref=f11e2687]:
+              - text: 未开始
+              - generic [ref=f11e2688]: →
+          - button "GRAPHICS-02 18 图形与数据可视化 专精 选修 WebGL/WebGPU 渲染管线与资源管理 专项路线 · 演进中 · 可迁移 · 主题 graphics-viz · intermediate · 预计 6h15m 未开始 →" [ref=f11e2689] [cursor=pointer]:
+            - generic [ref=f11e2692]:
+              - generic [ref=f11e2693]:
+                - code [ref=f11e2694]: GRAPHICS-02
+                - generic [ref=f11e2695]: "18"
+                - generic [ref=f11e2696]: 图形与数据可视化
+                - generic [ref=f11e2697]: 专精
+                - generic [ref=f11e2698]: 选修
+              - strong [ref=f11e2699]: WebGL/WebGPU 渲染管线与资源管理
+              - generic [ref=f11e2700]: 专项路线 · 演进中 · 可迁移 · 主题 graphics-viz · intermediate · 预计 6h15m
+            - generic [ref=f11e2701]:
+              - text: 未开始
+              - generic [ref=f11e2702]: →
+          - button "H5-03 07 移动 Web 与宿主适配 专精 选修 移动 Web 定位、地图与设备权限 专项路线 · 稳定 · 可迁移 · 主题 performance-mobile · intermediate · 预计 7h45m 未开始 →" [ref=f11e2703] [cursor=pointer]:
+            - generic [ref=f11e2706]:
+              - generic [ref=f11e2707]:
+                - code [ref=f11e2708]: H5-03
+                - generic [ref=f11e2709]: "07"
+                - generic [ref=f11e2710]: 移动 Web 与宿主适配
+                - generic [ref=f11e2711]: 专精
+                - generic [ref=f11e2712]: 选修
+              - strong [ref=f11e2713]: 移动 Web 定位、地图与设备权限
+              - generic [ref=f11e2714]: 专项路线 · 稳定 · 可迁移 · 主题 performance-mobile · intermediate · 预计 7h45m
+            - generic [ref=f11e2715]:
+              - text: 未开始
+              - generic [ref=f11e2716]: →
+          - button "H5-04 07 大文件传输 专精 选修 浏览器大文件传输、分片与断点恢复 专项路线 · 稳定 · 可迁移 · 主题 node-bff · intermediate · 预计 7h15m 未开始 →" [ref=f11e2717] [cursor=pointer]:
+            - generic [ref=f11e2720]:
+              - generic [ref=f11e2721]:
+                - code [ref=f11e2722]: H5-04
+                - generic [ref=f11e2723]: "07"
+                - generic [ref=f11e2724]: 大文件传输
+                - generic [ref=f11e2725]: 专精
+                - generic [ref=f11e2726]: 选修
+              - strong [ref=f11e2727]: 浏览器大文件传输、分片与断点恢复
+              - generic [ref=f11e2728]: 专项路线 · 稳定 · 可迁移 · 主题 node-bff · intermediate · 预计 7h15m
+            - generic [ref=f11e2729]:
+              - text: 未开始
+              - generic [ref=f11e2730]: →
+          - button "HYBRID-01 07 移动 Web 与宿主适配 专精 选修 企业微信/钉钉 SDK 与容器差异 专项路线 · 稳定 · 厂商特定 · 主题 runtime-cross-platform · intermediate · 预计 7h45m 未开始 →" [ref=f11e2731] [cursor=pointer]:
+            - generic [ref=f11e2734]:
+              - generic [ref=f11e2735]:
+                - code [ref=f11e2736]: HYBRID-01
+                - generic [ref=f11e2737]: "07"
+                - generic [ref=f11e2738]: 移动 Web 与宿主适配
+                - generic [ref=f11e2739]: 专精
+                - generic [ref=f11e2740]: 选修
+              - strong [ref=f11e2741]: 企业微信/钉钉 SDK 与容器差异
+              - generic [ref=f11e2742]: 专项路线 · 稳定 · 厂商特定 · 主题 runtime-cross-platform · intermediate · 预计 7h45m
+            - generic [ref=f11e2743]:
+              - text: 未开始
+              - generic [ref=f11e2744]: →
+          - button "I18N-01 18 国际化与本地化 专精 选修 本地化、文本方向与可翻译 UI 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 6h15m 未开始 →" [ref=f11e2745] [cursor=pointer]:
+            - generic [ref=f11e2748]:
+              - generic [ref=f11e2749]:
+                - code [ref=f11e2750]: I18N-01
+                - generic [ref=f11e2751]: "18"
+                - generic [ref=f11e2752]: 国际化与本地化
+                - generic [ref=f11e2753]: 专精
+                - generic [ref=f11e2754]: 选修
+              - strong [ref=f11e2755]: 本地化、文本方向与可翻译 UI
+              - generic [ref=f11e2756]: 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 6h15m
+            - generic [ref=f11e2757]:
+              - text: 未开始
+              - generic [ref=f11e2758]: →
+          - button "I18N-02 18 国际化与本地化 专精 选修 Temporal、时区、日历、数字与货币 专项路线 · 演进中 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 6h15m 未开始 →" [ref=f11e2759] [cursor=pointer]:
+            - generic [ref=f11e2762]:
+              - generic [ref=f11e2763]:
+                - code [ref=f11e2764]: I18N-02
+                - generic [ref=f11e2765]: "18"
+                - generic [ref=f11e2766]: 国际化与本地化
+                - generic [ref=f11e2767]: 专精
+                - generic [ref=f11e2768]: 选修
+              - strong [ref=f11e2769]: Temporal、时区、日历、数字与货币
+              - generic [ref=f11e2770]: 专项路线 · 演进中 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 6h15m
+            - generic [ref=f11e2771]:
+              - text: 未开始
+              - generic [ref=f11e2772]: →
+          - button "LOCALFIRST-01 17 离线、本地优先与应用能力 专精 选修 本地优先数据、浏览器数据库与同步引擎 专项路线 · 稳定 · 可迁移 · 主题 data-realtime · intermediate · 预计 8h 未开始 →" [ref=f11e2773] [cursor=pointer]:
+            - generic [ref=f11e2776]:
+              - generic [ref=f11e2777]:
+                - code [ref=f11e2778]: LOCALFIRST-01
+                - generic [ref=f11e2779]: "17"
+                - generic [ref=f11e2780]: 离线、本地优先与应用能力
+                - generic [ref=f11e2781]: 专精
+                - generic [ref=f11e2782]: 选修
+              - strong [ref=f11e2783]: 本地优先数据、浏览器数据库与同步引擎
+              - generic [ref=f11e2784]: 专项路线 · 稳定 · 可迁移 · 主题 data-realtime · intermediate · 预计 8h
+            - generic [ref=f11e2785]:
+              - text: 未开始
+              - generic [ref=f11e2786]: →
+          - button "MEDIA-01 07 专业媒体工程 专精 选修 专业 Web 播放、编解码、DRM 与质量治理 专项路线 · 演进中 · 可迁移 · 主题 media · intermediate · 预计 8h 未开始 →" [ref=f11e2787] [cursor=pointer]:
+            - generic [ref=f11e2790]:
+              - generic [ref=f11e2791]:
+                - code [ref=f11e2792]: MEDIA-01
+                - generic [ref=f11e2793]: "07"
+                - generic [ref=f11e2794]: 专业媒体工程
+                - generic [ref=f11e2795]: 专精
+                - generic [ref=f11e2796]: 选修
+              - strong [ref=f11e2797]: 专业 Web 播放、编解码、DRM 与质量治理
+              - generic [ref=f11e2798]: 专项路线 · 演进中 · 可迁移 · 主题 media · intermediate · 预计 8h
+            - generic [ref=f11e2799]:
+              - text: 未开始
+              - generic [ref=f11e2800]: →
+          - button "MEDIA-02 07 专业媒体工程 专精 选修 媒体采集、WebRTC 与实时音频处理 专项路线 · 演进中 · 可迁移 · 主题 media · intermediate · 预计 8h 未开始 →" [ref=f11e2801] [cursor=pointer]:
+            - generic [ref=f11e2804]:
+              - generic [ref=f11e2805]:
+                - code [ref=f11e2806]: MEDIA-02
+                - generic [ref=f11e2807]: "07"
+                - generic [ref=f11e2808]: 专业媒体工程
+                - generic [ref=f11e2809]: 专精
+                - generic [ref=f11e2810]: 选修
+              - strong [ref=f11e2811]: 媒体采集、WebRTC 与实时音频处理
+              - generic [ref=f11e2812]: 专项路线 · 演进中 · 可迁移 · 主题 media · intermediate · 预计 8h
+            - generic [ref=f11e2813]:
+              - text: 未开始
+              - generic [ref=f11e2814]: →
+          - button "MOBILE-01 08 嵌入式与跨运行时交付 专精 选修 跨平台原生前端、Native Bridge 与应用生命周期 专项路线 · 稳定 · 平台特定 · 主题 runtime-cross-platform · intermediate · 预计 8h 未开始 →" [ref=f11e2815] [cursor=pointer]:
+            - generic [ref=f11e2818]:
+              - generic [ref=f11e2819]:
+                - code [ref=f11e2820]: MOBILE-01
+                - generic [ref=f11e2821]: "08"
+                - generic [ref=f11e2822]: 嵌入式与跨运行时交付
+                - generic [ref=f11e2823]: 专精
+                - generic [ref=f11e2824]: 选修
+              - strong [ref=f11e2825]: 跨平台原生前端、Native Bridge 与应用生命周期
+              - generic [ref=f11e2826]: 专项路线 · 稳定 · 平台特定 · 主题 runtime-cross-platform · intermediate · 预计 8h
+            - generic [ref=f11e2827]:
+              - text: 未开始
+              - generic [ref=f11e2828]: →
+          - button "NODE-03 09 命令行与接口工具 专精 选修 CLI 参数、退出码与用户体验 专项路线 · 稳定 · 平台特定 · 主题 tooling · intermediate · 预计 7h45m 未开始 →" [ref=f11e2829] [cursor=pointer]:
+            - generic [ref=f11e2832]:
+              - generic [ref=f11e2833]:
+                - code [ref=f11e2834]: NODE-03
+                - generic [ref=f11e2835]: "09"
+                - generic [ref=f11e2836]: 命令行与接口工具
+                - generic [ref=f11e2837]: 专精
+                - generic [ref=f11e2838]: 选修
+              - strong [ref=f11e2839]: CLI 参数、退出码与用户体验
+              - generic [ref=f11e2840]: 专项路线 · 稳定 · 平台特定 · 主题 tooling · intermediate · 预计 7h45m
+            - generic [ref=f11e2841]:
+              - text: 未开始
+              - generic [ref=f11e2842]: →
+          - button "PLATFORM-01 08 组件平台与配置化交付 专精 选修 Schema 与配置化页面 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e2843] [cursor=pointer]:
+            - generic [ref=f11e2846]:
+              - generic [ref=f11e2847]:
+                - code [ref=f11e2848]: PLATFORM-01
+                - generic [ref=f11e2849]: "08"
+                - generic [ref=f11e2850]: 组件平台与配置化交付
+                - generic [ref=f11e2851]: 专精
+                - generic [ref=f11e2852]: 选修
+              - strong [ref=f11e2853]: Schema 与配置化页面
+              - generic [ref=f11e2854]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e2855]:
+              - text: 未开始
+              - generic [ref=f11e2856]: →
+          - button "PLATFORM-02 08 应用平台与多团队集成 专精 选修 微前端拆分、隔离、通信与部署 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e2857] [cursor=pointer]:
+            - generic [ref=f11e2860]:
+              - generic [ref=f11e2861]:
+                - code [ref=f11e2862]: PLATFORM-02
+                - generic [ref=f11e2863]: "08"
+                - generic [ref=f11e2864]: 应用平台与多团队集成
+                - generic [ref=f11e2865]: 专精
+                - generic [ref=f11e2866]: 选修
+              - strong [ref=f11e2867]: 微前端拆分、隔离、通信与部署
+              - generic [ref=f11e2868]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e2869]:
+              - text: 未开始
+              - generic [ref=f11e2870]: →
+          - button "PLATFORM-03 08 应用平台与多团队集成 专精 选修 物料平台、采用率与治理 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h 未开始 →" [ref=f11e2871] [cursor=pointer]:
+            - generic [ref=f11e2874]:
+              - generic [ref=f11e2875]:
+                - code [ref=f11e2876]: PLATFORM-03
+                - generic [ref=f11e2877]: "08"
+                - generic [ref=f11e2878]: 应用平台与多团队集成
+                - generic [ref=f11e2879]: 专精
+                - generic [ref=f11e2880]: 选修
+              - strong [ref=f11e2881]: 物料平台、采用率与治理
+              - generic [ref=f11e2882]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 8h
+            - generic [ref=f11e2883]:
+              - text: 未开始
+              - generic [ref=f11e2884]: →
+          - button "PWA-01 17 离线、本地优先与应用能力 专精 选修 Service Worker、离线缓存与版本迁移 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e2885] [cursor=pointer]:
+            - generic [ref=f11e2888]:
+              - generic [ref=f11e2889]:
+                - code [ref=f11e2890]: PWA-01
+                - generic [ref=f11e2891]: "17"
+                - generic [ref=f11e2892]: 离线、本地优先与应用能力
+                - generic [ref=f11e2893]: 专精
+                - generic [ref=f11e2894]: 选修
+              - strong [ref=f11e2895]: Service Worker、离线缓存与版本迁移
+              - generic [ref=f11e2896]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e2897]:
+              - text: 未开始
+              - generic [ref=f11e2898]: →
+          - button "PWA-02 17 离线、本地优先与应用能力 专精 选修 Web App Manifest、安装、推送与后台能力 专项路线 · 演进中 · 可迁移 · intermediate · 预计 7h45m 未开始 →" [ref=f11e2899] [cursor=pointer]:
+            - generic [ref=f11e2902]:
+              - generic [ref=f11e2903]:
+                - code [ref=f11e2904]: PWA-02
+                - generic [ref=f11e2905]: "17"
+                - generic [ref=f11e2906]: 离线、本地优先与应用能力
+                - generic [ref=f11e2907]: 专精
+                - generic [ref=f11e2908]: 选修
+              - strong [ref=f11e2909]: Web App Manifest、安装、推送与后台能力
+              - generic [ref=f11e2910]: 专项路线 · 演进中 · 可迁移 · intermediate · 预计 7h45m
+            - generic [ref=f11e2911]:
+              - text: 未开始
+              - generic [ref=f11e2912]: →
+          - button "RUNTIME-01 08 嵌入式与跨运行时交付 专精 选修 浏览器扩展、小程序与受限 Web 容器 专项路线 · 稳定 · 平台特定 · 主题 runtime-cross-platform · intermediate · 预计 8h 未开始 →" [ref=f11e2913] [cursor=pointer]:
+            - generic [ref=f11e2916]:
+              - generic [ref=f11e2917]:
+                - code [ref=f11e2918]: RUNTIME-01
+                - generic [ref=f11e2919]: "08"
+                - generic [ref=f11e2920]: 嵌入式与跨运行时交付
+                - generic [ref=f11e2921]: 专精
+                - generic [ref=f11e2922]: 选修
+              - strong [ref=f11e2923]: 浏览器扩展、小程序与受限 Web 容器
+              - generic [ref=f11e2924]: 专项路线 · 稳定 · 平台特定 · 主题 runtime-cross-platform · intermediate · 预计 8h
+            - generic [ref=f11e2925]:
+              - text: 未开始
+              - generic [ref=f11e2926]: →
+          - button "RUNTIME-02 08 嵌入式与跨运行时交付 专精 选修 Electron/Tauri 桌面前端、安全桥接与分发 专项路线 · 稳定 · 平台特定 · 主题 runtime-cross-platform · intermediate · 预计 8h 未开始 →" [ref=f11e2927] [cursor=pointer]:
+            - generic [ref=f11e2930]:
+              - generic [ref=f11e2931]:
+                - code [ref=f11e2932]: RUNTIME-02
+                - generic [ref=f11e2933]: "08"
+                - generic [ref=f11e2934]: 嵌入式与跨运行时交付
+                - generic [ref=f11e2935]: 专精
+                - generic [ref=f11e2936]: 选修
+              - strong [ref=f11e2937]: Electron/Tauri 桌面前端、安全桥接与分发
+              - generic [ref=f11e2938]: 专项路线 · 稳定 · 平台特定 · 主题 runtime-cross-platform · intermediate · 预计 8h
+            - generic [ref=f11e2939]:
+              - text: 未开始
+              - generic [ref=f11e2940]: →
+          - button "SEO-01 18 内容、SEO 与编辑体验 专精 选修 技术 SEO、抓取索引与内容可发现性 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 7h 未开始 →" [ref=f11e2941] [cursor=pointer]:
+            - generic [ref=f11e2944]:
+              - generic [ref=f11e2945]:
+                - code [ref=f11e2946]: SEO-01
+                - generic [ref=f11e2947]: "18"
+                - generic [ref=f11e2948]: 内容、SEO 与编辑体验
+                - generic [ref=f11e2949]: 专精
+                - generic [ref=f11e2950]: 选修
+              - strong [ref=f11e2951]: 技术 SEO、抓取索引与内容可发现性
+              - generic [ref=f11e2952]: 专项路线 · 稳定 · 可迁移 · 主题 growth-content-i18n · intermediate · 预计 7h
+            - generic [ref=f11e2953]:
+              - text: 未开始
+              - generic [ref=f11e2954]: →
+          - button "SUSTAIN-01 20 云交付与可持续性 领导力 选修 Web 与 AI 可持续性、能效与碳感知工程 专项路线 · 演进中 · 可迁移 · 主题 engineering-leadership · intermediate · 预计 7h45m 未开始 →" [ref=f11e2955] [cursor=pointer]:
+            - generic [ref=f11e2958]:
+              - generic [ref=f11e2959]:
+                - code [ref=f11e2960]: SUSTAIN-01
+                - generic [ref=f11e2961]: "20"
+                - generic [ref=f11e2962]: 云交付与可持续性
+                - generic [ref=f11e2963]: 领导力
+                - generic [ref=f11e2964]: 选修
+              - strong [ref=f11e2965]: Web 与 AI 可持续性、能效与碳感知工程
+              - generic [ref=f11e2966]: 专项路线 · 演进中 · 可迁移 · 主题 engineering-leadership · intermediate · 预计 7h45m
+            - generic [ref=f11e2967]:
+              - text: 未开始
+              - generic [ref=f11e2968]: →
+          - button "UMI-01 04 应用初始化与路由 专精 主修必修 路由、布局与页面生命周期 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e2969] [cursor=pointer]:
+            - generic [ref=f11e2972]:
+              - generic [ref=f11e2973]:
+                - code [ref=f11e2974]: UMI-01
+                - generic [ref=f11e2975]: "04"
+                - generic [ref=f11e2976]: 应用初始化与路由
+                - generic [ref=f11e2977]: 专精
+                - generic [ref=f11e2978]: 主修必修
+              - strong [ref=f11e2979]: 路由、布局与页面生命周期
+              - generic [ref=f11e2980]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e2981]:
+              - text: 未开始
+              - generic [ref=f11e2982]: →
+          - button "UMI-02 04 应用初始化与路由 专精 主修必修 initialState、运行时配置与应用初始化 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e2983] [cursor=pointer]:
+            - generic [ref=f11e2986]:
+              - generic [ref=f11e2987]:
+                - code [ref=f11e2988]: UMI-02
+                - generic [ref=f11e2989]: "04"
+                - generic [ref=f11e2990]: 应用初始化与路由
+                - generic [ref=f11e2991]: 专精
+                - generic [ref=f11e2992]: 主修必修
+              - strong [ref=f11e2993]: initialState、运行时配置与应用初始化
+              - generic [ref=f11e2994]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e2995]:
+              - text: 未开始
+              - generic [ref=f11e2996]: →
+          - button "UMI-03 04 请求、错误与权限 专精 主修必修 请求层、错误处理与取消 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e2997] [cursor=pointer]:
+            - generic [ref=f11e3000]:
+              - generic [ref=f11e3001]:
+                - code [ref=f11e3002]: UMI-03
+                - generic [ref=f11e3003]: "04"
+                - generic [ref=f11e3004]: 请求、错误与权限
+                - generic [ref=f11e3005]: 专精
+                - generic [ref=f11e3006]: 主修必修
+              - strong [ref=f11e3007]: 请求层、错误处理与取消
+              - generic [ref=f11e3008]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e3009]:
+              - text: 未开始
+              - generic [ref=f11e3010]: →
+          - button "UMI-04 04 请求、错误与权限 专精 主修必修 页面、按钮与数据权限 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h 未开始 →" [ref=f11e3011] [cursor=pointer]:
+            - generic [ref=f11e3014]:
+              - generic [ref=f11e3015]:
+                - code [ref=f11e3016]: UMI-04
+                - generic [ref=f11e3017]: "04"
+                - generic [ref=f11e3018]: 请求、错误与权限
+                - generic [ref=f11e3019]: 专精
+                - generic [ref=f11e3020]: 主修必修
+              - strong [ref=f11e3021]: 页面、按钮与数据权限
+              - generic [ref=f11e3022]: 专项路线 · 稳定 · 框架特定 · 路线 umi-antd · intermediate · 预计 7h
+            - generic [ref=f11e3023]:
+              - text: 未开始
+              - generic [ref=f11e3024]: →
+          - button "VIS-01 18 图形与数据可视化 专精 选修 数据可视化语义、交互与性能 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m 未开始 →" [ref=f11e3025] [cursor=pointer]:
+            - generic [ref=f11e3028]:
+              - generic [ref=f11e3029]:
+                - code [ref=f11e3030]: VIS-01
+                - generic [ref=f11e3031]: "18"
+                - generic [ref=f11e3032]: 图形与数据可视化
+                - generic [ref=f11e3033]: 专精
+                - generic [ref=f11e3034]: 选修
+              - strong [ref=f11e3035]: 数据可视化语义、交互与性能
+              - generic [ref=f11e3036]: 专项路线 · 稳定 · 可迁移 · intermediate · 预计 6h15m
+            - generic [ref=f11e3037]:
+              - text: 未开始
+              - generic [ref=f11e3038]: →
+          - button "VUE-09 11 路由、客户端状态与服务器状态 应用 选修 Vue Query 与服务器状态 专项路线 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h 未开始 →" [ref=f11e3039] [cursor=pointer]:
+            - generic [ref=f11e3042]:
+              - generic [ref=f11e3043]:
+                - code [ref=f11e3044]: VUE-09
+                - generic [ref=f11e3045]: "11"
+                - generic [ref=f11e3046]: 路由、客户端状态与服务器状态
+                - generic [ref=f11e3047]: 应用
+                - generic [ref=f11e3048]: 选修
+              - strong [ref=f11e3049]: Vue Query 与服务器状态
+              - generic [ref=f11e3050]: 专项路线 · 稳定 · 框架特定 · 路线 vue · intermediate · 预计 7h
+            - generic [ref=f11e3051]:
+              - text: 未开始
+              - generic [ref=f11e3052]: →
+          - button "WASM-01 01 异步、模块与宿主运行时 专精 选修 WebAssembly 通用运行时、宿主边界与工程化 专项路线 · 演进中 · 平台特定 · 主题 web-platform · intermediate · 预计 8h30m 未开始 →" [ref=f11e3053] [cursor=pointer]:
+            - generic [ref=f11e3056]:
+              - generic [ref=f11e3057]:
+                - code [ref=f11e3058]: WASM-01
+                - generic [ref=f11e3059]: "01"
+                - generic [ref=f11e3060]: 异步、模块与宿主运行时
+                - generic [ref=f11e3061]: 专精
+                - generic [ref=f11e3062]: 选修
+              - strong [ref=f11e3063]: WebAssembly 通用运行时、宿主边界与工程化
+              - generic [ref=f11e3064]: 专项路线 · 演进中 · 平台特定 · 主题 web-platform · intermediate · 预计 8h30m
+            - generic [ref=f11e3065]:
+              - text: 未开始
+              - generic [ref=f11e3066]: →
+          - button "WEBAGENT-01 14 Agent 可操作 Web 专精 选修 Agent 可操作 Web、WebMCP 与渐进增强 专项路线 · 实验性 · 可迁移 · Agentic · 路线 agent-mcp · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3067] [cursor=pointer]:
+            - generic [ref=f11e3070]:
+              - generic [ref=f11e3071]:
+                - code [ref=f11e3072]: WEBAGENT-01
+                - generic [ref=f11e3073]: "14"
+                - generic [ref=f11e3074]: Agent 可操作 Web
+                - generic [ref=f11e3075]: 专精
+                - generic [ref=f11e3076]: 选修
+              - strong [ref=f11e3077]: Agent 可操作 Web、WebMCP 与渐进增强
+              - generic [ref=f11e3078]: 专项路线 · 实验性 · 可迁移 · Agentic · 路线 agent-mcp · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3079]:
+              - text: 未开始
+              - generic [ref=f11e3080]: →
+          - button "WEBAI-01 14 浏览器 AI 能力与推理后端 专精 选修 Chrome Built-in AI API、分级可用性与能力检测 专项路线 · 演进中 · 厂商特定 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3081] [cursor=pointer]:
+            - generic [ref=f11e3084]:
+              - generic [ref=f11e3085]:
+                - code [ref=f11e3086]: WEBAI-01
+                - generic [ref=f11e3087]: "14"
+                - generic [ref=f11e3088]: 浏览器 AI 能力与推理后端
+                - generic [ref=f11e3089]: 专精
+                - generic [ref=f11e3090]: 选修
+              - strong [ref=f11e3091]: Chrome Built-in AI API、分级可用性与能力检测
+              - generic [ref=f11e3092]: 专项路线 · 演进中 · 厂商特定 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3093]:
+              - text: 未开始
+              - generic [ref=f11e3094]: →
+          - button "WEBAI-02 14 浏览器 AI 能力与推理后端 专精 选修 WebGPU 计算管线、张量与 AI 推理后端 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3095] [cursor=pointer]:
+            - generic [ref=f11e3098]:
+              - generic [ref=f11e3099]:
+                - code [ref=f11e3100]: WEBAI-02
+                - generic [ref=f11e3101]: "14"
+                - generic [ref=f11e3102]: 浏览器 AI 能力与推理后端
+                - generic [ref=f11e3103]: 专精
+                - generic [ref=f11e3104]: 选修
+              - strong [ref=f11e3105]: WebGPU 计算管线、张量与 AI 推理后端
+              - generic [ref=f11e3106]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3107]:
+              - text: 未开始
+              - generic [ref=f11e3108]: →
+          - button "WEBAI-03 14 浏览器 AI 能力与推理后端 专精 选修 WebAssembly、SIMD 与推理性能 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3109] [cursor=pointer]:
+            - generic [ref=f11e3112]:
+              - generic [ref=f11e3113]:
+                - code [ref=f11e3114]: WEBAI-03
+                - generic [ref=f11e3115]: "14"
+                - generic [ref=f11e3116]: 浏览器 AI 能力与推理后端
+                - generic [ref=f11e3117]: 专精
+                - generic [ref=f11e3118]: 选修
+              - strong [ref=f11e3119]: WebAssembly、SIMD 与推理性能
+              - generic [ref=f11e3120]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3121]:
+              - text: 未开始
+              - generic [ref=f11e3122]: →
+          - button "WEBAI-04 14 本地 AI 应用工程 专精 选修 AI 推理 Worker、任务池与主线程响应 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3123] [cursor=pointer]:
+            - generic [ref=f11e3126]:
+              - generic [ref=f11e3127]:
+                - code [ref=f11e3128]: WEBAI-04
+                - generic [ref=f11e3129]: "14"
+                - generic [ref=f11e3130]: 本地 AI 应用工程
+                - generic [ref=f11e3131]: 专精
+                - generic [ref=f11e3132]: 选修
+              - strong [ref=f11e3133]: AI 推理 Worker、任务池与主线程响应
+              - generic [ref=f11e3134]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3135]:
+              - text: 未开始
+              - generic [ref=f11e3136]: →
+          - button "WEBAI-05 14 本地 AI 应用工程 专精 选修 浏览器模型下载、缓存与版本管理 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3137] [cursor=pointer]:
+            - generic [ref=f11e3140]:
+              - generic [ref=f11e3141]:
+                - code [ref=f11e3142]: WEBAI-05
+                - generic [ref=f11e3143]: "14"
+                - generic [ref=f11e3144]: 本地 AI 应用工程
+                - generic [ref=f11e3145]: 专精
+                - generic [ref=f11e3146]: 选修
+              - strong [ref=f11e3147]: 浏览器模型下载、缓存与版本管理
+              - generic [ref=f11e3148]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3149]:
+              - text: 未开始
+              - generic [ref=f11e3150]: →
+          - button "WEBAI-06 14 本地 AI 应用工程 专精 选修 本地 Embedding 与语义搜索 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3151] [cursor=pointer]:
+            - generic [ref=f11e3154]:
+              - generic [ref=f11e3155]:
+                - code [ref=f11e3156]: WEBAI-06
+                - generic [ref=f11e3157]: "14"
+                - generic [ref=f11e3158]: 本地 AI 应用工程
+                - generic [ref=f11e3159]: 专精
+                - generic [ref=f11e3160]: 选修
+              - strong [ref=f11e3161]: 本地 Embedding 与语义搜索
+              - generic [ref=f11e3162]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3163]:
+              - text: 未开始
+              - generic [ref=f11e3164]: →
+          - button "WEBAI-07 14 本地 AI 应用工程 专精 选修 多模态输入、媒体管线与隐私 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3165] [cursor=pointer]:
+            - generic [ref=f11e3168]:
+              - generic [ref=f11e3169]:
+                - code [ref=f11e3170]: WEBAI-07
+                - generic [ref=f11e3171]: "14"
+                - generic [ref=f11e3172]: 本地 AI 应用工程
+                - generic [ref=f11e3173]: 专精
+                - generic [ref=f11e3174]: 选修
+              - strong [ref=f11e3175]: 多模态输入、媒体管线与隐私
+              - generic [ref=f11e3176]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3177]:
+              - text: 未开始
+              - generic [ref=f11e3178]: →
+          - button "WEBAI-08 14 本地 AI 应用工程 专精 选修 混合推理与端云路由 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3179] [cursor=pointer]:
+            - generic [ref=f11e3182]:
+              - generic [ref=f11e3183]:
+                - code [ref=f11e3184]: WEBAI-08
+                - generic [ref=f11e3185]: "14"
+                - generic [ref=f11e3186]: 本地 AI 应用工程
+                - generic [ref=f11e3187]: 专精
+                - generic [ref=f11e3188]: 选修
+              - strong [ref=f11e3189]: 混合推理与端云路由
+              - generic [ref=f11e3190]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3191]:
+              - text: 未开始
+              - generic [ref=f11e3192]: →
+          - button "WEBAI-09 14 本地 AI 应用工程 专精 选修 离线 AI 作业、Outbox 与恢复同步 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3193] [cursor=pointer]:
+            - generic [ref=f11e3196]:
+              - generic [ref=f11e3197]:
+                - code [ref=f11e3198]: WEBAI-09
+                - generic [ref=f11e3199]: "14"
+                - generic [ref=f11e3200]: 本地 AI 应用工程
+                - generic [ref=f11e3201]: 专精
+                - generic [ref=f11e3202]: 选修
+              - strong [ref=f11e3203]: 离线 AI 作业、Outbox 与恢复同步
+              - generic [ref=f11e3204]: 专项路线 · 演进中 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3205]:
+              - text: 未开始
+              - generic [ref=f11e3206]: →
+          - button "WEBAI-10 14 本地 AI 应用工程 专精 选修 本地 AI 性能、能耗与可访问性 专项路线 · 稳定 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3207] [cursor=pointer]:
+            - generic [ref=f11e3210]:
+              - generic [ref=f11e3211]:
+                - code [ref=f11e3212]: WEBAI-10
+                - generic [ref=f11e3213]: "14"
+                - generic [ref=f11e3214]: 本地 AI 应用工程
+                - generic [ref=f11e3215]: 专精
+                - generic [ref=f11e3216]: 选修
+              - strong [ref=f11e3217]: 本地 AI 性能、能耗与可访问性
+              - generic [ref=f11e3218]: 专项路线 · 稳定 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3219]:
+              - text: 未开始
+              - generic [ref=f11e3220]: →
+          - button "WEBAI-11 14 浏览器 AI 能力与推理后端 专精 选修 WebNN 图计算、抽象设备偏好与推理后端 专项路线 · 实验性 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m 未开始 →" [ref=f11e3221] [cursor=pointer]:
+            - generic [ref=f11e3224]:
+              - generic [ref=f11e3225]:
+                - code [ref=f11e3226]: WEBAI-11
+                - generic [ref=f11e3227]: "14"
+                - generic [ref=f11e3228]: 浏览器 AI 能力与推理后端
+                - generic [ref=f11e3229]: 专精
+                - generic [ref=f11e3230]: 选修
+              - strong [ref=f11e3231]: WebNN 图计算、抽象设备偏好与推理后端
+              - generic [ref=f11e3232]: 专项路线 · 实验性 · 可迁移 · AI 原生 · 主题 browser-ai · intermediate · 预计 8h30m
+            - generic [ref=f11e3233]:
+              - text: 未开始
+              - generic [ref=f11e3234]: →
+  - button "打开 Atlas AI 助手" [ref=f11e3235] [cursor=pointer]:
+    - generic [aria-hidden] [ref=f11e3236]: ✦
+    - generic [ref=f11e3237]:
+      - strong [ref=f11e3238]: Atlas AI
+      - generic [ref=f11e3239]: 总结 · 解释 · 查资料
+```
+
+# Test source
+
+```ts
+  43  |   await input.fill('无匹配的知识点 xyz987');
+  44  |   await expect(page.getByText('没有匹配结果')).toBeVisible();
+  45  |   await input.fill('VUE-11');
+  46  |   await expect(results.getByRole('option', { name: /VUE-11/ })).toBeVisible();
+  47  |   await input.press('Escape');
+  48  |   await expect(trigger).toBeFocused();
+  49  |   await trigger.click();
+  50  |   await input.press('Tab');
+  51  |   await expect(page.getByRole('button', { name: '关闭快速查找' })).toBeFocused();
+  52  |   await page.keyboard.press('Enter');
+  53  |   await expect(page.getByRole('dialog', { name: '快速查找' })).not.toBeVisible();
+  54  |   await expect(page).toHaveURL(/\/$/);
+  55  | });
+  56  | 
+  57  | test('打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存', async ({ page }) => {
+  58  |   const response = await page.request.get('/api/v1/knowledge/points');
+  59  |   const { data } = await response.json() as { data: { items: Array<{ code: string; title: string }> } };
+  60  |   const target = data.items.at(-1)!;
+  61  |   expect(data.items.findIndex((point) => point.code === target.code)).toBeGreaterThan(60);
+  62  |   let saveCount = 0;
+  63  |   await page.route('**/api/v1/learning/checkins/*', async (route) => {
+  64  |     saveCount++;
+  65  |     if (saveCount === 1) {
+  66  |       await route.fulfill({ status: 503, json: { error: { code: 'UNAVAILABLE', message: '测试：暂时无法保存，请重试', retryable: true }, meta: { requestId: 'ui-checkin-failure' } } });
+  67  |       return;
+  68  |     }
+  69  |     const body = route.request().postDataJSON();
+  70  |     expect(body.pointCodes).toContain(target.code);
+  71  |     expect(body.summaryMd).toBe('这次学习的关键收获');
+  72  |     await route.fulfill({ json: { data: { ...body, id: 'ui-checkin', checkinDate: '2026-09-06', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), points: [{ code: target.code, title: target.title, activity: 'LEARN' }] }, meta: { requestId: 'ui-checkin-success' } } });
+  73  |   });
+  74  |   await page.goto('/');
+  75  |   await page.getByRole('button', { name: /记录今日学习|修改今日打卡/ }).click();
+  76  |   const dialog = page.getByRole('dialog', { name: '今天实际学了什么？' });
+  77  |   await dialog.getByRole('searchbox', { name: '搜索打卡知识点' }).fill(target.code);
+  78  |   const point = dialog.getByRole('group', { name: '可选知识点' }).getByRole('button', { name: new RegExp(target.code) });
+  79  |   await point.click();
+  80  |   await expect(point).toHaveAttribute('aria-pressed', 'true');
+  81  |   await dialog.getByRole('searchbox').fill('');
+  82  |   await dialog.getByRole('button', { name: /只看已选/ }).click();
+  83  |   await expect(dialog.getByRole('group', { name: '可选知识点' }).getByRole('button')).toContainText([target.code]);
+  84  |   await dialog.getByLabel('今日学习记录', { exact: true }).fill('这次学习的关键收获');
+  85  |   await dialog.getByLabel('实际投入（分钟）').fill('-1');
+  86  |   await dialog.getByRole('button', { name: '保存今日打卡' }).click();
+  87  |   await expect(dialog.getByRole('alert')).toContainText('0–1440');
+  88  |   expect(saveCount).toBe(0);
+  89  |   await dialog.getByLabel('实际投入（分钟）').fill('25');
+  90  |   await dialog.getByRole('button', { name: '保存今日打卡' }).click();
+  91  |   await expect(dialog.getByRole('alert')).toContainText('暂时无法保存');
+  92  |   await expect(dialog.getByLabel('今日学习记录', { exact: true })).toHaveValue('这次学习的关键收获');
+  93  |   await dialog.getByRole('button', { name: '保存今日打卡' }).click();
+  94  |   await expect(dialog).not.toBeVisible();
+  95  |   await expect(page.getByRole('status').filter({ hasText: '今日学习已记录' })).toBeVisible();
+  96  |   expect(saveCount).toBe(2);
+  97  | });
+  98  | 
+  99  | test('矮屏弹窗固定操作区且不会被 AI 入口盖住', async ({ page }) => {
+  100 |   await page.setViewportSize({ width: 390, height: 600 });
+  101 |   await page.goto('/');
+  102 |   const trigger = page.getByRole('button', { name: /记录今日学习|修改今日打卡/ });
+  103 |   await trigger.click();
+  104 |   const dialog = page.getByRole('dialog', { name: '今天实际学了什么？' });
+  105 |   const box = await dialog.boundingBox();
+  106 |   expect(box!.y).toBeGreaterThanOrEqual(0);
+  107 |   expect(box!.y + box!.height).toBeLessThanOrEqual(600);
+  108 |   await expect(dialog.getByRole('button', { name: '保存今日打卡' })).toBeInViewport();
+  109 |   await page.keyboard.press('Control+k');
+  110 |   await expect(page.getByRole('dialog')).toHaveCount(1);
+  111 |   await page.screenshot({ path: '../../tmp/ui-review/checkin-mobile.png' });
+  112 |   await dialog.getByRole('button', { name: '取消', exact: true }).click();
+  113 |   await expect(trigger).toBeFocused();
+  114 | });
+  115 | 
+  116 | test('开始学习失败有明确反馈并恢复可操作状态', async ({ page }) => {
+  117 |   expect((await page.request.post('/api/v1/import/reset-learning-progress', { data: {} })).ok()).toBe(true);
+  118 |   const preference = (await (await page.request.get('/api/v1/learning/preferences')).json()).data;
+  119 |   expect((await page.request.put('/api/v1/learning/preferences', {
+  120 |     data: { frameworkChoice: 'NONE', expectedRevision: preference.revision },
+  121 |   })).ok()).toBe(true);
+  122 |   const workspace = (await (await page.request.get('/api/v1/learning/workspace')).json()).data;
+  123 |   expect(workspace.current).toBeNull();
+  124 |   expect(workspace.suggested.code).toBe('JS-01');
+  125 |   await page.route('**/api/v1/learning/points/*/focus', (route) => route.fulfill({ status: 503, json: { error: { code: 'UNAVAILABLE', message: '暂时无法开始，请重试', retryable: true }, meta: { requestId: 'ui-focus-failure' } } }));
+  126 |   await page.goto('/');
+  127 |   const start = page.getByRole('button', { name: '开始这项具体任务 →' });
+  128 |   await start.click();
+  129 |   await expect(page.getByRole('alert')).toContainText('暂时无法开始');
+  130 |   await expect(start).toBeEnabled();
+  131 | });
+  132 | 
+  133 | test('主要页面适配桌面、平板和手机且无页面脚本错误', async ({ page }) => {
+  134 |   test.setTimeout(60_000);
+  135 |   const errors: string[] = [];
+  136 |   page.on('pageerror', (error) => errors.push(error.message));
+  137 |   for (const width of [1440, 1024, 390, 320]) {
+  138 |     await page.setViewportSize({ width, height: 900 });
+  139 |     for (const path of ['/', '/knowledge/map', '/knowledge', '/knowledge/graph', '/notes', '/plan', '/jobs', '/settings', '/knowledge/WEB-01']) {
+  140 |       await page.goto(path);
+  141 |       await expect(page.locator('.route-shell h1').first()).toBeVisible();
+  142 |       await page.waitForLoadState('networkidle');
+> 143 |       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width}px ${path} 横向溢出`).toBeLessThanOrEqual(1);
+      |                         ^ Error: page.evaluate: Test timeout of 60000ms exceeded.
+  144 |       if (path === '/' && [1440, 390].includes(width)) await page.screenshot({ path: `../../tmp/ui-review/learning-${width}.png`, fullPage: true });
+  145 |     }
+  146 |   }
+  147 |   expect(errors).toEqual([]);
+  148 | });
+  149 | 
+```

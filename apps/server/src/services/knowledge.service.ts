@@ -1,4 +1,5 @@
-import { practiceActivityId } from '@career-atlas/shared';
+import { getLearningRoute } from './learning/routes.js';
+import { practiceActivityId, ROUTE_OUTCOME_TEXT, type LearningRoute } from '@career-atlas/shared';
 /**
  * 知识点服务
  * 
@@ -11,7 +12,7 @@ import { practiceActivityId } from '@career-atlas/shared';
 import { eq, and, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { db, rawDb } from '../db/index.js';
+import { db } from '../db/index.js';
 import { knowledgePoints, knowledgeDomains, masteryEvents } from '../db/schema.js';
 import type { KnowledgeStatus } from '@career-atlas/shared';
 import { KNOWLEDGE_ROUTE_INDEX } from './knowledge-relations.service.js';
@@ -85,6 +86,7 @@ export interface KnowledgePointListItem {
 }
 
 export interface KnowledgeRecommendation {
+  route: LearningRoute;
   action: 'LEARN' | 'CONTINUE' | 'ASSESS' | 'RETEST' | 'RELEARN' | 'COMPLETE';
   readiness: 'READY' | 'BLOCKED' | 'COMPLETE';
   reason: string;
@@ -405,77 +407,15 @@ function strictPracticeStarterCode(
   return `// ${point.code} ${point.title}\n// 首考题 3 原文：${minimumOutput}\n// 首考题 4 原文：${constrainedDebugging}\n// 把题目给定的具体 fixture 写入 fixedInput；不要把预期替换成通用 PASS/CONTROLLED。\nconst fixedInput = Object.freeze({ /* 填写首考题 3 的固定输入 */ });\nconst expected = Object.freeze({ /* 填写题目要求的具体预期 */ });\n\nfunction solve(input) {\n  // 根据学习资料实现首考题 3。\n  throw new Error('TODO');\n}\n\nlet actual;\ntry {\n  actual = solve(fixedInput);\n  console.log({ fixedInput, expected, actual });\n  console.assert(JSON.stringify(actual) === JSON.stringify(expected), '实际输出与首考题 3 的具体预期不一致');\n} catch (error) {\n  console.error({ fixedInput, expected, error: String(error) });\n  throw error;\n}\n`;
 }
 
-/**
- * 给出唯一、可解释的下一最佳行动。优先处理复测和首考，再继续已开始的学习，
- * 最后从所有前置已掌握的节点中选择路径最靠前的一项。
- */
+/** 兼容旧推荐 DTO；下一步与空态完全委托统一学习规划。 */
 export async function getKnowledgeRecommendation(): Promise<KnowledgeRecommendation> {
+  const route = getLearningRoute();
   const { items } = await getKnowledgePoints({});
-  const activeItems = items.filter((item) => item.status !== 'MASTERED');
-  if (activeItems.length === 0) {
-    return {
-      action: 'COMPLETE', readiness: 'COMPLETE', reason: '全部知识点已经通过严格掌握闭环。',
-      point: null, blockers: [], prerequisiteProgress: { mastered: 0, total: 0 }, routePosition: null,
-    };
-  }
+  const point = items.find(item => item.code === route.next?.code) ?? null;
+  return { route, action: route.next?.kind === 'CONTINUE' ? 'CONTINUE' : point ? 'LEARN' : 'COMPLETE',
+    readiness: point ? 'READY' : ['AUDITED_CHAIN_COMPLETE', 'NO_RECOMMENDATION'].includes(route.outcome) ? 'COMPLETE' : 'BLOCKED',
+    reason: ROUTE_OUTCOME_TEXT[route.outcome], point, blockers: [], prerequisiteProgress: { mastered: 0, total: 0 }, routePosition: null };
 
-  const prerequisiteRows = rawDb.prepare(`
-    SELECT target.code AS targetCode, source.code, source.title, source.status
-    FROM knowledge_edges edge
-    JOIN knowledge_points source ON source.id = edge.source_point_id
-    JOIN knowledge_points target ON target.id = edge.target_point_id
-    WHERE edge.type = 'PREREQUISITE'
-    ORDER BY edge.weight DESC, source.code ASC
-  `).all() as Array<{ targetCode: string; code: string; title: string; status: KnowledgeStatus }>;
-  const prerequisites = new Map<string, Array<{ code: string; title: string; status: KnowledgeStatus }>>();
-  for (const row of prerequisiteRows) prerequisites.set(row.targetCode, [...(prerequisites.get(row.targetCode) ?? []), row]);
-
-  const statePriority: Record<KnowledgeStatus, number> = {
-    FIRST_PASS_PENDING_RETEST: 0,
-    SELF_MASTERED: 1,
-    NEEDS_RELEARNING: 2,
-    LEARNING: 3,
-    NOT_STARTED: 4,
-    MASTERED: 9,
-  };
-  const candidates = activeItems.map((point) => {
-    const allPrerequisites = prerequisites.get(point.code) ?? [];
-    const blockers = allPrerequisites.filter((item) => item.status !== 'MASTERED');
-    // 已开始或自评掌握也不能绕过前置闸门，避免形成“孤岛式掌握”。
-    const stateReady = blockers.length === 0;
-    return { point, allPrerequisites, blockers, stateReady };
-  }).sort((left, right) => {
-    const readinessDifference = Number(right.stateReady) - Number(left.stateReady);
-    if (readinessDifference) return readinessDifference;
-    const stateDifference = statePriority[left.point.status] - statePriority[right.point.status];
-    return stateDifference || left.point.routeOrder - right.point.routeOrder;
-  });
-  const selected = candidates[0]!;
-  const actionByStatus: Record<KnowledgeStatus, KnowledgeRecommendation['action']> = {
-    NOT_STARTED: 'LEARN', LEARNING: 'CONTINUE', SELF_MASTERED: 'ASSESS',
-    FIRST_PASS_PENDING_RETEST: 'RETEST', MASTERED: 'COMPLETE', NEEDS_RELEARNING: 'RELEARN',
-  };
-  const reasonByAction: Record<KnowledgeRecommendation['action'], string> = {
-    LEARN: selected.stateReady ? '前置知识已经就绪，这是推荐路径中最靠前的未开始节点。' : '当前路径暂时被前置知识阻塞，先完成下方节点。',
-    CONTINUE: '你已经开始学习，优先完成当前上下文能降低切换成本。',
-    ASSESS: '你已完成自评，需要用严格首考把理解转成可验证证据。',
-    RETEST: '首次考核已通过，完成复测后才会正式进入已掌握状态。',
-    RELEARN: '最近一次严格考核未通过，先补齐薄弱点再重新挑战。',
-    COMPLETE: '全部知识点已经通过严格掌握闭环。',
-  };
-  const route = KNOWLEDGE_ROUTE_INDEX.get(selected.point.code);
-  return {
-    action: actionByStatus[selected.point.status],
-    readiness: selected.stateReady ? 'READY' : 'BLOCKED',
-    reason: reasonByAction[actionByStatus[selected.point.status]],
-    point: selected.point,
-    blockers: selected.blockers,
-    prerequisiteProgress: {
-      mastered: selected.allPrerequisites.length - selected.blockers.length,
-      total: selected.allPrerequisites.length,
-    },
-    routePosition: route ? { week: route.week, index: selected.point.routeOrder + 1, total: KNOWLEDGE_ROUTE_INDEX.size } : null,
-  };
 }
 
 /**

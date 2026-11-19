@@ -9,6 +9,7 @@
 ### 学习前先确认
 
 - 直接前置：[VUE-04 类型化组件、Slot、Model 与 Teleport](../chinese-guides/vue-04-typed-components-slots-model-teleport.md#vue-04)。先理解父子组件的输入、修改意图与 DOM 归属。
+- 直接前置：[JS-05 异步错误与控制流](../chinese-guides/js-05-promise-errors-async-control-flow.md#js-05)。先能说明等待对象、错误出口、取消协作与旧结果资格；熟悉这些能力可按需回看，不要求先通过整篇考核。
 
 使用 Vue 3.5 + TypeScript 的 Vite 项目。单文件例子分别替换 `src/App.vue`；多文件例子按小节给出的文件名放在一起，每组独立运行。网络和加载失败通过本地延迟模拟，避免依赖真实服务。
 

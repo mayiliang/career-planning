@@ -1,6 +1,6 @@
-import { ASYNC_PILOT_NODES, FRAMEWORK_ENTRY_NODES } from '@career-atlas/shared';
+import { LEGACY_ROUTE_MAP } from './learning/legacy-route-map.js';
+import { AUDITED_PREREQUISITES, LEARNING_ROUTE_VERSION, FRAMEWORK_ENTRY_NODES } from '@career-atlas/shared';
 import { randomUUID } from 'crypto';
-import { resolvePointTaxonomy } from '@career-atlas/content-parser';
 import { rawDb } from '../db/index.js';
 
 export type RelationDefinition = {
@@ -12,8 +12,8 @@ export type RelationDefinition = {
 };
 
 /**
- * 每个领域的推荐阅读顺序，只用于路线编排和图谱展示。
- * 推荐顺序不等于硬前置；真正的前置关系只在 explicitPrerequisites 中声明。
+ * 冻结的旧领域分组，只用于兼容浏览与旧 BRANCH 操作。
+ * 个人推荐只读共享 AUDITED_PREREQUISITES；未审关系不参与规划。
  */
 export const KNOWLEDGE_PATHS: string[][] = [
   ['JS-01', 'JS-02', 'JS-03', 'JS-07', 'CS-01', 'CS-02', 'CS-03', 'JS-04', 'JS-05', 'JS-06', 'WASM-01', 'WEB-01', 'WEB-02', 'WEB-03', 'A11Y-01', 'BROWSER-01', 'BROWSER-02', 'WEB-04', 'WEB-05', 'NET-01', 'DEBUG-01', 'SEC-01', 'SEC-02', 'SEC-04', 'SEC-03', 'SEC-05'],
@@ -38,126 +38,15 @@ export const KNOWLEDGE_PATHS: string[][] = [
   ['ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'ARCH-05', 'LEAD-01', 'BACKEND-01', 'BACKEND-02', 'BACKEND-03', 'CLOUD-01', 'SUSTAIN-01'],
 ];
 
-/**
- * React 与 Vue 共用同一框架阶段并交错出现，避免按领域文件顺序把 Vue
- * 隐式放在 React 之后；VUE-09 仍是按项目需要选择的服务器状态库专项。
- */
-export const FRAMEWORK_ROUTE_CANDIDATES = [
-  'REACT-01', 'VUE-01', 'VUE-02',
-  'REACT-02', 'VUE-03', 'VUE-04', 'REACT-03',
-  'REACT-04', 'VUE-05', 'REACT-05', 'VUE-06',
-  'REACT-06', 'VUE-08',
-  'REACT-08', 'REACT-10', 'VUE-07',
-  'REACT-07', 'VUE-10',
-  'REACT-09', 'VUE-11',
-  'VUE-09',
-] as const;
-
-/**
- * 求职优先路线只把会阻塞框架理解的底座放在 React/Vue 之前。
- * B01～B03 保留已经验证过的 JavaScript、复杂度、异步、模块与 TypeScript 主线；
- * 再补语义化 Web 基础，避免先学完整个平台/安全体系才接触框架。
- */
-const JOB_FIRST_FOUNDATION_CANDIDATES = [
-  'JS-01', 'JS-02', 'JS-03', 'JS-07',
-  'CS-01', 'CS-02', 'CS-03', 'JS-04',
-  'JS-05', 'JS-06',
-  'TS-01', 'TS-02', 'TS-03',
-  'WEB-01',
-] as const;
-
-/**
- * 框架之后优先形成投递和面试可展示的工程证据：版本协作、构建、测试、
- * 故障表达与代码评审。它们仍是知识点，不生成泛化的“面试周”占位任务。
- */
-const JOB_INTERVIEW_EVIDENCE_CANDIDATES = [
-  'GIT-01', 'GIT-02', 'GIT-03', 'DEBUG-01',
-  'ENG-01', 'ENG-02', 'ENG-03', 'ENG-05',
-  'TEST-01', 'TEST-02', 'TEST-03',
-  'CAREER-01', 'CAREER-02', 'CAREER-04', 'CAREER-05',
-] as const;
-
-const EARLY_ROUTE_CODES = new Set<string>([
-  ...JOB_FIRST_FOUNDATION_CANDIDATES,
-  ...FRAMEWORK_ROUTE_CANDIDATES,
-  ...JOB_INTERVIEW_EVIDENCE_CANDIDATES,
-]);
-
-/**
- * 完整候选顺序用于知识图谱和分支编排；默认核心路线只纳入全员必修，
- * 加上同等优先的 React、Vue 与 Agent/MCP 主修轨，避免把其他专项误标成必修。
- */
-const COMPLETE_ROUTE_CANDIDATES = [
-  ...JOB_FIRST_FOUNDATION_CANDIDATES,
-  ...FRAMEWORK_ROUTE_CANDIDATES,
-  ...JOB_INTERVIEW_EVIDENCE_CANDIDATES,
-  ...(KNOWLEDGE_PATHS[0] ?? []).filter((code) => !EARLY_ROUTE_CODES.has(code)),
-  ...(KNOWLEDGE_PATHS[1] ?? []).filter((code) => !EARLY_ROUTE_CODES.has(code)),
-  'IDENTITY-01', 'IDENTITY-02', 'PRIVACY-01', 'PRIVACY-02',
-  'NODE-01', 'NODE-02', 'NODE-04', 'NODE-03', 'API-01',
-  'ENG-04',
-  'AIDEV-01', 'AIDEV-02', 'AIDEV-03',
-  'BIZ-01', 'BIZ-02', 'BIZ-03',
-  ...(KNOWLEDGE_PATHS[3] ?? []),
-  'BIZ-04', 'BIZ-05', 'BIZ-06', 'BIZ-07', 'BIZ-08', 'TEST-04',
-  ...(KNOWLEDGE_PATHS[16] ?? []),
-  ...(KNOWLEDGE_PATHS[7] ?? []).filter((code) => code !== 'MOBILE-01'),
-  'EDITOR-01',
-  'ENG-08', 'ENG-07',
-  ...(KNOWLEDGE_PATHS[15] ?? []).filter((code) => code !== 'DEPLOY-01'),
-  'ENG-06', 'DEPLOY-01', 'OBS-01', 'DX-01',
-  ...(KNOWLEDGE_PATHS[6] ?? []),
-  'MOBILE-01',
-  'BACKEND-01', 'BACKEND-02', 'BACKEND-03', 'CLOUD-01',
-  'API-02', 'MCP-01',
-  'AIPROD-01', 'AIPROD-02', 'AISAFE-01', 'AISAFE-02', 'AIGOV-01',
-  ...(KNOWLEDGE_PATHS[11] ?? []),
-  ...(KNOWLEDGE_PATHS[12] ?? []).filter((code) => code !== 'MCP-01'),
-  ...(KNOWLEDGE_PATHS[13] ?? []),
-  'AIDEV-04', 'AIDEV-06', 'AIDEV-07', 'AIDEV-08', 'AIDEV-09', 'AIDEV-10', 'AIDEV-11',
-  ...(KNOWLEDGE_PATHS[17] ?? []).filter((code) => code !== 'EDITOR-01'),
-  'ARCH-01', 'ARCH-02', 'ARCH-03', 'ARCH-04', 'ARCH-05', 'LEAD-01', 'SUSTAIN-01',
-  ...(KNOWLEDGE_PATHS[9] ?? []).filter((code) => !EARLY_ROUTE_CODES.has(code)),
-];
-
-const DOMAIN_CODE_BY_POINT = new Map(
-  KNOWLEDGE_PATHS.flatMap((path, index) => path.map((code) => [code, String(index + 1).padStart(2, '0')] as const)),
-);
-export const DEFAULT_TRACK_IDS = new Set(['react', 'vue', 'agent-mcp']);
-const PLAN_ROUTE = COMPLETE_ROUTE_CANDIDATES.filter((code) => {
-  const domainCode = DOMAIN_CODE_BY_POINT.get(code);
-  if (!domainCode) throw new Error(`默认路线包含未知知识点：${code}`);
-  const taxonomy = resolvePointTaxonomy(code, domainCode);
-  return taxonomy.requirementLevel === 'REQUIRED'
-    || (taxonomy.requirementLevel === 'TRACK_REQUIRED'
-      && taxonomy.trackIds.some((trackId) => DEFAULT_TRACK_IDS.has(trackId)));
-});
-
-/**
- * 默认主干压缩为 35 个连续学习批次。批次只表达顺序与一组可连续推进的
- * 知识点，不承诺固定周历；旧 API/数据库仍沿用 planWeek 字段以避免迁移。
- */
+/** 旧字段仅保留浏览兼容；没有默认必修框架，个人方向由独立偏好选择。 */
+export const DEFAULT_TRACK_IDS = new Set<string>();
 export const CORE_ROUTE_BATCH_COUNT = 35;
 export const CONTENT_PLAN_WEEK_COUNT = CORE_ROUTE_BATCH_COUNT;
 export const LEARNING_WEEK_PATHS: Record<number, string[]> = {};
-for (let week = 1; week <= CONTENT_PLAN_WEEK_COUNT; week++) {
-  const start = Math.floor(((week - 1) * PLAN_ROUTE.length) / CONTENT_PLAN_WEEK_COUNT);
-  const end = Math.floor((week * PLAN_ROUTE.length) / CONTENT_PLAN_WEEK_COUNT);
-  LEARNING_WEEK_PATHS[week] = PLAN_ROUTE.slice(start, end);
-}
-let globalRouteOrder = 0;
-/** 所有推荐入口共用的唯一顺序；每个知识点只出现一次。 */
-export const RECOMMENDED_KNOWLEDGE_ROUTE = Object.entries(LEARNING_WEEK_PATHS)
-  .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
-  .flatMap(([, path]) => path);
-export const KNOWLEDGE_ROUTE_INDEX = new Map(
-  Object.entries(LEARNING_WEEK_PATHS)
-    .filter(([week]) => Number(week) <= CONTENT_PLAN_WEEK_COUNT)
-    .flatMap(([week, path]) => path.map((code) => [code, {
-      week: Number(week),
-      order: globalRouteOrder++,
-    }] as const)),
-);
+for (const row of LEGACY_ROUTE_MAP) (LEARNING_WEEK_PATHS[row.week] ??= []).push(row.code);
+export const RECOMMENDED_KNOWLEDGE_ROUTE = LEGACY_ROUTE_MAP.map(row => row.code);
+export const KNOWLEDGE_ROUTE_INDEX = new Map(LEGACY_ROUTE_MAP.map(row => [row.code, { week: row.week, order: row.order }]));
+export const FRAMEWORK_ROUTE_CANDIDATES = RECOMMENDED_KNOWLEDGE_ROUTE.filter(code => /^(REACT|VUE)-/.test(code));
 
 const explicitPrerequisites: Array<[string, string, string]> = [
   ['GIT-01', 'GIT-02', '分支集成和冲突恢复建立在对象、引用与暂存区模型之上'],
@@ -478,17 +367,15 @@ const relatedPairs: Array<[string, string, string]> = [
 ];
 
 export function buildRelationDefinitions(): RelationDefinition[] {
-  const definitions: RelationDefinition[] = ASYNC_PILOT_NODES.flatMap(node => node.prerequisites
-    .filter(code => ASYNC_PILOT_NODES.find(item => item.code === code)?.kind === 'POINT' && node.kind === 'POINT')
-    .map(source => ({ source, target: node.code, type: 'PREREQUISITE' as const, description: node.reason, weight: 9 })));
+  const definitions: RelationDefinition[] = Object.entries(AUDITED_PREREQUISITES).flatMap(([target, prerequisites]) => prerequisites.map(source => ({ source, target, type: 'PREREQUISITE' as const, description: '已审学习基础；阅读与自主标记学完不受考核门禁限制。', weight: 9 })));
   for (const node of FRAMEWORK_ENTRY_NODES) {
     definitions.push({ source: 'JS-06', target: node.code, type: 'RELATED', description: '推荐补读静态模块导入；入口就地讲解最小用法，不要求先完成动态导入与异步链。', weight: 6 });
-    for (const source of node.prerequisites) definitions.push({ source, target: node.code, type: 'PREREQUISITE', description: '框架入口必需基础；具体概念与补学范围见入口合同。', weight: 9 });
   }
   for (const [source, target, description] of explicitPrerequisites) {
-    if (FRAMEWORK_ENTRY_NODES.some(node => node.code === target)) continue;
+    if (target in AUDITED_PREREQUISITES) continue;
     definitions.push({ source, target, type: 'PREREQUISITE', description, weight: 9 });
   }
+  definitions.push({ source: 'JS-07', target: 'VUE-02', type: 'RELATED', description: '代理机制可选补读，不是整篇前置。', weight: 6 });
   for (const [source, target, description] of relatedPairs) {
     definitions.push({ source, target, type: 'RELATED', description, weight: 6 });
     definitions.push({ source: target, target: source, type: 'RELATED', description, weight: 6 });
@@ -501,56 +388,37 @@ export function buildRelationDefinitions(): RelationDefinition[] {
 }
 
 /** 启动时幂等补齐关系，保留数据库中已有的人工关系。 */
-export function syncKnowledgeRelations(): { total: number; inserted: number; skipped: number } {
-  const points = rawDb.prepare('SELECT id, code FROM knowledge_points').all() as Array<{ id: string; code: string }>;
-  const pointIds = new Map(points.map((point) => [point.code, point.id]));
-  const definitions = buildRelationDefinitions();
-  const definitionKeys = new Set(definitions.map((relation) => `${relation.source}:${relation.target}:${relation.type}`));
-  // 一旦一组能力被降级为 RELATED，就清理历史库中同方向或反方向的旧硬前置，避免双重语义。
-  const relatedKeys = new Set(relatedPairs.flatMap(([source, target]) => [
-    `${source}:${target}`,
-    `${target}:${source}`,
-  ]));
-  const prerequisiteRows = rawDb.prepare(`
-    SELECT edge.id, source.code AS source, target.code AS target
-    FROM knowledge_edges edge
-    JOIN knowledge_points source ON source.id = edge.source_point_id
-    JOIN knowledge_points target ON target.id = edge.target_point_id
-    WHERE edge.type = 'PREREQUISITE'
-  `).all() as Array<{ id: string; source: string; target: string }>;
-  const remove = rawDb.prepare('DELETE FROM knowledge_edges WHERE id = ?');
-  for (const row of prerequisiteRows) {
-    if (relatedKeys.has(`${row.source}:${row.target}`)) remove.run(row.id);
-  }
-  // 领域路径重排时删除已失效的自动相邻关系；非自动描述的人工关系继续保留。
-  const autoRows = rawDb.prepare(`
-    SELECT edge.id, source.code AS source, target.code AS target, edge.type
-    FROM knowledge_edges edge
-    JOIN knowledge_points source ON source.id = edge.source_point_id
-    JOIN knowledge_points target ON target.id = edge.target_point_id
-    WHERE edge.description LIKE '建议先掌握 %'
-  `).all() as Array<{ id: string; source: string; target: string; type: RelationDefinition['type'] }>;
-  for (const row of autoRows) {
-    if (!definitionKeys.has(`${row.source}:${row.target}:${row.type}`)) remove.run(row.id);
-  }
-  const existingRows = rawDb.prepare('SELECT source_point_id AS sourceId, target_point_id AS targetId, type FROM knowledge_edges').all() as Array<{ sourceId: string; targetId: string; type: string }>;
-  const existing = new Set(existingRows.map((edge) => `${edge.sourceId}:${edge.targetId}:${edge.type}`));
-  const insert = rawDb.prepare(`
-    INSERT INTO knowledge_edges (id, source_point_id, target_point_id, type, description, weight, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  let inserted = 0;
-  rawDb.transaction(() => {
+export function syncKnowledgeRelations(afterDelete?: () => void): { total: number; inserted: number; skipped: number } {
+  return rawDb.transaction(() => {
+    const points = rawDb.prepare('SELECT id, code FROM knowledge_points').all() as Array<{ id: string; code: string }>;
+    const pointIds = new Map(points.map(point => [point.code, point.id]));
+    const definitions = buildRelationDefinitions();
+    const rows = rawDb.prepare(`SELECT edge.id, source.code AS source, target.code AS target, edge.type, edge.description, edge.origin
+      FROM knowledge_edges edge JOIN knowledge_points source ON source.id = edge.source_point_id
+      JOIN knowledge_points target ON target.id = edge.target_point_id`).all() as Array<{ id: string; source: string; target: string; type: string; description: string; origin: string }>;
+    const remove = rawDb.prepare('DELETE FROM knowledge_edges WHERE id = ?');
+    for (const row of rows) {
+      // 来源不明只在 code/type/完整描述与已知历史自动合同相等时识别；人工说明不作模糊匹配。
+      const legacy = row.origin === 'UNKNOWN' && (
+        row.type === 'PREREQUISITE' && explicitPrerequisites.some(([source, target, description]) => source === row.source && target === row.target && description === row.description)
+        || row.type === 'PREREQUISITE' && FRAMEWORK_ENTRY_NODES.some(node => node.code === row.target && [...node.prerequisites, 'JS-06'].includes(row.source) && row.description === '框架入口必需基础；具体概念与补学范围见入口合同。')
+      );
+      const replacement = definitions.find(def => def.source === row.source && def.target === row.target && def.type === row.type);
+      if ((row.origin === 'AUTO_CONTRACT' || legacy) && (!replacement || replacement.description !== row.description)) remove.run(row.id);
+    }
+    afterDelete?.();
+    const existingRows = rawDb.prepare('SELECT source_point_id AS sourceId, target_point_id AS targetId, type FROM knowledge_edges').all() as Array<{ sourceId: string; targetId: string; type: string }>;
+    const existing = new Set(existingRows.map(edge => `${edge.sourceId}:${edge.targetId}:${edge.type}`));
+    const insert = rawDb.prepare('INSERT INTO knowledge_edges (id, source_point_id, target_point_id, type, description, weight, created_at, origin, contract_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    let inserted = 0;
     for (const relation of definitions) {
-      const sourceId = pointIds.get(relation.source);
-      const targetId = pointIds.get(relation.target);
+      const sourceId = pointIds.get(relation.source), targetId = pointIds.get(relation.target);
       if (!sourceId || !targetId) continue;
       const key = `${sourceId}:${targetId}:${relation.type}`;
       if (existing.has(key)) continue;
-      insert.run(randomUUID(), sourceId, targetId, relation.type, relation.description, relation.weight, new Date().toISOString());
-      existing.add(key);
-      inserted++;
+      insert.run(randomUUID(), sourceId, targetId, relation.type, relation.description, relation.weight, new Date().toISOString(), 'AUTO_CONTRACT', LEARNING_ROUTE_VERSION);
+      existing.add(key); inserted++;
     }
+    return { total: definitions.length, inserted, skipped: definitions.length - inserted };
   })();
-  return { total: definitions.length, inserted, skipped: definitions.length - inserted };
 }

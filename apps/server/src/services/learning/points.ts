@@ -46,7 +46,7 @@ export function enrichPoint(point: PointRow) {
   const route = KNOWLEDGE_ROUTE_INDEX.get(point.code);
   return {
     ...point,
-    // 不回退到旧数据库周次，避免专项点重新混入求职优先核心路线。
+    // legacy 浏览分组；个人下一步由独立规划器决定。
     planWeek: route?.week ?? null,
     currentFocus: Boolean(point.currentFocus),
     masteryLevel: Math.max(0, Math.min(4, point.masteryLevel || 0)),

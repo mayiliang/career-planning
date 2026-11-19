@@ -1,0 +1,29 @@
+{"version":9,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1794679778674,"monotonicTime":2499154.314,"sdkLanguage":"javascript","title":"framework-route.spec.ts:7 › 独立方向、统一下一步、保留焦点、阅读辅助与空态"}
+{"type":"before","callId":"call@56","startTime":2499423.883,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/import/reset-learning-progress","method":"POST","jsonData":"{}"},"stepId":"pw:api@29"}
+{"type":"log","callId":"call@56","time":2499429.917,"message":"→ POST http://127.0.0.1:42731/api/v1/import/reset-learning-progress"}
+{"type":"log","callId":"call@56","time":2499429.968,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@56","time":2499429.978,"message":"  accept: */*"}
+{"type":"log","callId":"call@56","time":2499429.986,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@56","time":2499429.993,"message":"  content-type: application/json"}
+{"type":"log","callId":"call@56","time":2499430.006,"message":"  content-length: 2"}
+{"type":"log","callId":"call@56","time":2499603.943,"message":"← 200 OK"}
+{"type":"log","callId":"call@56","time":2499603.962,"message":"  vary: Origin"}
+{"type":"log","callId":"call@56","time":2499603.966,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@56","time":2499603.969,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@56","time":2499603.972,"message":"  content-length: 437"}
+{"type":"log","callId":"call@56","time":2499603.975,"message":"  date: Sat, 14 Nov 2026 18:09:39 GMT"}
+{"type":"log","callId":"call@56","time":2499603.978,"message":"  connection: close"}
+{"type":"after","callId":"call@56","endTime":2499604.132,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/import/reset-learning-progress","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"437"},{"name":"date","value":"Sat, 14 Nov 2026 18:09:39 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794679778949,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":2.4259999999776483,"requestStart":2.4259999999776483,"responseStart":174.12599999969825},"responseEndTiming":174.61499999975786,"fetchUid":"78b6e5e097f881f64b4a0a4ffaee45df"}}}
+{"type":"before","callId":"call@58","startTime":2499606.712,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/learning/preferences","method":"GET"},"stepId":"pw:api@30"}
+{"type":"log","callId":"call@58","time":2499609.478,"message":"→ GET http://127.0.0.1:42731/api/v1/learning/preferences"}
+{"type":"log","callId":"call@58","time":2499609.507,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@58","time":2499609.51,"message":"  accept: */*"}
+{"type":"log","callId":"call@58","time":2499609.513,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@58","time":3503888.994,"message":"← 200 OK"}
+{"type":"log","callId":"call@58","time":3503889.013,"message":"  vary: Origin"}
+{"type":"log","callId":"call@58","time":3503889.019,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@58","time":3503889.024,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@58","time":3503889.03,"message":"  content-length: 118"}
+{"type":"log","callId":"call@58","time":3503889.034,"message":"  date: Sat, 14 Nov 2026 18:26:23 GMT"}
+{"type":"log","callId":"call@58","time":3503889.04,"message":"  connection: close"}
+{"type":"after","callId":"call@58","endTime":3503889.253,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/learning/preferences","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"118"},{"name":"date","value":"Sat, 14 Nov 2026 18:26:23 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794679779129,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":1.3300000000745058,"requestStart":1.3300000000745058,"responseStart":1004278.9810000001},"responseEndTiming":1004279.6489999997,"fetchUid":"9523c7c0f8df10cb1689435ba5b1f6ef"}}}

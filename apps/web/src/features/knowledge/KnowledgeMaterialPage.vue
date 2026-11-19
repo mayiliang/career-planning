@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AssessmentReadiness from '@/components/AssessmentReadiness.vue';
+import PersonalLearningRoute from '@/components/PersonalLearningRoute.vue';
 import FrameworkEntry from '@/components/FrameworkEntry.vue';
 import { pilotNode, pilotMaterialHref, ASYNC_PILOT_CHAIN } from '@career-atlas/shared';
 import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
@@ -453,6 +455,8 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="material-page" :class="{ 'without-toc': Boolean(material) && headings.length === 0, 'is-catalog': Boolean(chapter) }">
+    <PersonalLearningRoute />
+    <AssessmentReadiness v-if="chapter" :code="chapter.id" />
     <div class="reading-progress" aria-hidden="true"><i :style="{ width: `${readingProgress}%` }"></i></div>
     <nav class="page-actions" aria-label="讲义操作">
       <button class="back-link" type="button" @click="returnToReading">← 返回上一页</button>
@@ -470,7 +474,7 @@ onBeforeUnmount(() => {
       <nav v-if="chapter && batch" class="batch-switch" aria-label="切换学习批次">
         <RouterLink v-for="item in learningMaterialCatalogs" :key="item.batch" :to="chapterHref(item.chapters[0]!)" :aria-current="item.batch === batch.batch ? 'true' : undefined">{{ item.batch }}</RouterLink>
       </nav>
-      <nav v-if="chapter && batch" class="batch-path" :aria-label="`${batch.batch} 阅读路线`">
+      <nav v-if="chapter && batch" class="batch-path" :aria-label="`${batch.batch} 旧分组浏览`">
         <div><span>{{ batch.batch }} · 兼容阅读分组</span><strong>{{ batch.title }}</strong></div>
         <ol :style="{ '--chapter-count': batch.chapters.length }">
           <li v-for="(item, index) in batch.chapters" :key="item.id">
@@ -536,8 +540,8 @@ onBeforeUnmount(() => {
             <RouterLink v-if="pilot?.kind === 'POINT'" :to="`/knowledge/${pilot.code}`">返回详情与练习 →</RouterLink>
           </nav>
           <nav v-else-if="chapter" class="chapter-pagination" aria-label="继续学习">
-            <RouterLink v-if="previousChapter" :to="chapterHref(previousChapter)"><small>← 上一篇</small><strong>{{ previousChapter.title }}</strong></RouterLink>
-            <RouterLink v-if="nextChapter" :to="chapterHref(nextChapter)"><small>接着读 →</small><strong>{{ nextChapter.title }}</strong></RouterLink>
+            <RouterLink v-if="previousChapter" :to="chapterHref(previousChapter)"><small>← 同组上一篇</small><strong>{{ previousChapter.title }}</strong></RouterLink>
+            <RouterLink v-if="nextChapter" :to="chapterHref(nextChapter)"><small>同组下一篇 →</small><strong>{{ nextChapter.title }}</strong></RouterLink>
             <RouterLink v-else :to="`/knowledge/${chapter.id}`"><small>{{ batch?.batch }} · 最后一篇</small><strong>返回知识点，整理理解 →</strong></RouterLink>
           </nav>
           <footer>

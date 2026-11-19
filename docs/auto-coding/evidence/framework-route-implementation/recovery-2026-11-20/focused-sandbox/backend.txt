@@ -1,0 +1,5 @@
+{"level":30,"time":1795108701701,"pid":7586,"hostname":"bobdeMacBook-Air.local","knowledgePoints":223,"planCreated":false,"planItems":0,"knowledgeRelations":400,"normalizedPlanTimes":0,"msg":"本地数据初始化完成"}
+{"level":30,"time":1795108701715,"pid":7586,"hostname":"bobdeMacBook-Air.local","msg":"Server listening at http://127.0.0.1:42730"}
+{"level":30,"time":1795108701824,"pid":7586,"hostname":"bobdeMacBook-Air.local","reqId":"req-1","req":{"method":"GET","url":"/api/v1/system/health","host":"127.0.0.1:42730","remoteAddress":"127.0.0.1","remotePort":49670},"msg":"incoming request"}
+{"level":30,"time":1795108701834,"pid":7586,"hostname":"bobdeMacBook-Air.local","reqId":"req-1","res":{"statusCode":200},"responseTime":8.971290999999837,"msg":"request completed"}
+{"level":30,"time":1795108713254,"pid":7586,"hostname":"bobdeMacBook-Air.local","reason":"SIGTERM","msg":"准备关闭服务"}

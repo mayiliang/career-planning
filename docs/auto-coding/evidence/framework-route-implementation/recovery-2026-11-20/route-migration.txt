@@ -1,0 +1,12 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/server
+
+ ✓ src/db/framework-route-migration.test.ts (1 test) 138ms
+ ✓ src/services/learning/route-contract.test.ts (29 tests) 1200ms
+   ✓ 生产规划器与隔离记录兼容 > 重复导入保留全部已有个人表字段与偏好 353ms
+
+ Test Files  2 passed (2)
+      Tests  30 passed (30)
+   Start at  01:17:57
+   Duration  3.78s (transform 760ms, setup 1.33s, collect 1.38s, tests 1.34s, environment 1ms, prepare 416ms)
+

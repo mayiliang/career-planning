@@ -1,3 +1,4 @@
+import { LearningRouteSchema } from './learning';
 /** 知识点、学习资料与关系图谱：运行时响应校验与业务接口。 */
 import { z } from 'zod';
 import { request } from '../http';
@@ -44,6 +45,7 @@ const KnowledgePointListItemSchema = z.object({
 });
 
 const KnowledgeRecommendationSchema = z.object({
+  route: LearningRouteSchema,
   action: z.enum(['LEARN', 'CONTINUE', 'ASSESS', 'RETEST', 'RELEARN', 'COMPLETE']),
   readiness: z.enum(['READY', 'BLOCKED', 'COMPLETE']),
   reason: z.string(),

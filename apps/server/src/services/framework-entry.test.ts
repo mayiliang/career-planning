@@ -12,7 +12,7 @@ import { buildAsyncPilotContext } from './async-pilot-context.js';
 import * as contextModule from './async-pilot-context.js';
 import { asyncGradingSources } from './async-pilot-contract.js';
 import { buildRelationDefinitions, syncKnowledgeRelations } from './knowledge-relations.service.js';
-import { planNextRoute } from './learning/routes.js';
+import { planLearningRoute } from './learning/routes.js';
 import { createAssessmentSession, getAssessmentSession } from './assessment.service.js';
 import { listPracticeAttempts, savePracticeAttempt, validatePracticeAttempt } from './practice.service.js';
 import { PRACTICE_SECTION_HEADINGS } from './learning-content.service.js';
@@ -41,7 +41,9 @@ describe('框架入口合同', () => {
       const states = new Map<string, 'LEARNING' | 'LEARNED' | 'DEFERRED'>([[node.code, 'LEARNING'], ...node.prerequisites.map(c => [c, 'LEARNED'] as const)]);
       states.set(node.prerequisites[0], 'DEFERRED');
       const before = [...states];
-      expect(planNextRoute(node.code, states)[0]).toMatchObject({ code: node.prerequisites[0], kind: 'PREREQUISITE' });
+      const route = planLearningRoute({ frameworkChoice: node.code === 'REACT-01' ? 'REACT' : 'VUE', preferenceRevision: 0, currentFocusCode: node.code, states });
+      expect(route.next).toMatchObject({ code: node.code, kind: 'CONTINUE' });
+      expect(route.blockers).toContainEqual(expect.objectContaining({ code: node.prerequisites[0], state: 'DEFERRED' }));
       expect([...states]).toEqual(before);
     }
   });

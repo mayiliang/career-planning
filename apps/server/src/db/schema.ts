@@ -106,6 +106,13 @@ export const knowledgePoints = sqliteTable('knowledge_points', {
   domainStatusIdx: index('kp_domain_status_idx').on(table.domainId, table.status),
 }));
 
+export const learningPreferences = sqliteTable('learning_preferences', {
+  id: text('id').primaryKey().notNull(),
+  frameworkChoice: text('framework_choice', { enum: ['UNDECIDED', 'REACT', 'VUE', 'NONE'] }).notNull().default('UNDECIDED'),
+  revision: integer('revision').notNull().default(0),
+  updatedAt: text('updated_at').notNull(),
+});
+
 // ===== 知识关系表 =====
 // Phase 4: 知识图谱
 export const knowledgeEdges = sqliteTable('knowledge_edges', {
@@ -119,6 +126,9 @@ export const knowledgeEdges = sqliteTable('knowledge_edges', {
   type: text('type', {
     enum: ['PREREQUISITE', 'RELATED', 'COMPARES_WITH', 'APPLIED_WITH']
   }).notNull(),
+
+  origin: text('origin').notNull().default('UNKNOWN'),
+  contractVersion: text('contract_version'),
 
   // 描述和权重
   description: text('description'),
@@ -777,6 +787,7 @@ export const materialReadingProgress = sqliteTable('material_reading_progress', 
 
 // ===== 导出 schema 对象 =====
 export const schema = {
+  learningPreferences,
   knowledgeDomains,
   knowledgePoints,
   knowledgeEdges,

@@ -1,0 +1,579 @@
+{
+  "config": {
+    "argv": [
+      "/Users/bob/.nvm/versions/node/v22.14.0/bin/node",
+      "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "e2e/experience.spec.ts",
+      "--grep",
+      "B13～B16 十七份主讲义只为关键名词提供英文发音|B17 四份主讲义只为关键名词提供英文发音|B18～B19 八份主讲义只为关键名词提供英文发音|B20～B24 二十二份主讲义只为关键名词提供英文发音|B25～B27 十二份主讲义只为关键名词提供英文发音|B28 五份主讲义只为关键名词提供英文发音|B29～B32 十七份主讲义只为关键名词提供英文发音|B33～B35 十三份主讲义只为关键名词提供英文发音|B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态",
+      "--output=../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/materials",
+      "--reporter=list,json"
+    ],
+    "configFile": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/playwright.config.ts",
+    "rootDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/global-setup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/materials",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "desktop-chrome",
+        "name": "desktop-chrome",
+        "testDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "experience.spec.ts",
+      "file": "experience.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "核心使用体验",
+          "file": "experience.spec.ts",
+          "line": 17,
+          "column": 15,
+          "specs": [
+            {
+              "title": "B13～B16 十七份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 23640,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:09:44.584Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-d9605b6c403ed7a1694f",
+              "file": "experience.spec.ts",
+              "line": 344,
+              "column": 3
+            },
+            {
+              "title": "B17 四份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7297,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:10:09.287Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-1c478988a260a6bbb3e7",
+              "file": "experience.spec.ts",
+              "line": 373,
+              "column": 3
+            },
+            {
+              "title": "B18～B19 八份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12803,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:10:16.602Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-700556e24929008f0a52",
+              "file": "experience.spec.ts",
+              "line": 389,
+              "column": 3
+            },
+            {
+              "title": "B20～B24 二十二份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    },
+                    {
+                      "type": "slow",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 414,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 33852,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:10:29.422Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        },
+                        {
+                          "type": "slow",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 414,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-11d4aca18b71e5723c5c",
+              "file": "experience.spec.ts",
+              "line": 412,
+              "column": 3
+            },
+            {
+              "title": "B25～B27 十二份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 19307,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:11:03.290Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-c9a6afba90b949fd1ff1",
+              "file": "experience.spec.ts",
+              "line": 457,
+              "column": 3
+            },
+            {
+              "title": "B28 五份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7437,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:11:22.615Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-d870cfedff5853cfd119",
+              "file": "experience.spec.ts",
+              "line": 488,
+              "column": 3
+            },
+            {
+              "title": "B29～B32 十七份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25117,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:11:30.087Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-51ea27ccb25305701d83",
+              "file": "experience.spec.ts",
+              "line": 505,
+              "column": 3
+            },
+            {
+              "title": "B33～B35 十三份主讲义只为关键名词提供英文发音",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18251,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:11:55.223Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-04dd26d1de06024f0e0d",
+              "file": "experience.spec.ts",
+              "line": 542,
+              "column": 3
+            },
+            {
+              "title": "B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3408,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:12:13.494Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-2ec7389b1b1239e47459",
+              "file": "experience.spec.ts",
+              "line": 574,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-14T12:08:45.515Z",
+    "duration": 212270.669,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

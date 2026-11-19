@@ -1,0 +1,15 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/packages/content-parser
+
+ ✓ src/parser/parser.test.ts (4 tests) 14ms
+ ✓ src/parser/content.test.ts (14 tests) 4697ms
+   ✓ 知识库内容完整性 > 应解析 20 个领域和 223 个唯一知识点 923ms
+   ✓ 知识资源审计防线 > 要求每个知识点具备可学习的中文主源、覆盖说明和可验证考核 322ms
+   ✓ 知识资源审计防线 > 仅依赖本地中文讲义时只累计实际链接锚点的有效正文与显式语义信号 377ms
+   ✓ 知识资源审计防线 > 解析 docs/knowledge 中每一条本地 Markdown 资源与锚点 2495ms
+
+ Test Files  2 passed (2)
+      Tests  18 passed (18)
+   Start at  18:22:20
+   Duration  7.36s (transform 696ms, setup 326ms, collect 1.07s, tests 4.71s, environment 1ms, prepare 1.29s)
+

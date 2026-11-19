@@ -1,10 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { afterAll, describe, expect, it } from 'vitest';
 
-const tempDir = mkdtempSync(join(tmpdir(), 'career-atlas-note-migration-'));
+const migrationRoot = resolve(__dirname, '../../../../tmp/tests');
+mkdirSync(migrationRoot, { recursive: true });
+const tempDir = mkdtempSync(join(migrationRoot, 'career-atlas-note-migration-'));
 
 describe('旧版笔记安全迁移', () => {
   afterAll(() => rmSync(tempDir, { recursive: true, force: true }));

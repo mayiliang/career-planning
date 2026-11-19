@@ -1,0 +1,55 @@
+{
+  "batch": "interaction",
+  "startTime": "2026-11-14T07:23:46.172Z",
+  "browser": "Chrome 157.0.8103.51（相邻 answers-final 实测；相同 channel）",
+  "baseURL": "http://127.0.0.1:42731",
+  "pages": [
+    {
+      "image": "learning-1440.png",
+      "path": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "fullPage": true
+    },
+    {
+      "image": "learning-390.png",
+      "path": "/",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "fullPage": true
+    },
+    {
+      "image": "checkin-mobile.png",
+      "path": "/",
+      "viewport": {
+        "width": 390,
+        "height": 600
+      },
+      "fullPage": false
+    }
+  ],
+  "layoutChecks": {
+    "widths": [
+      1440,
+      1024,
+      390,
+      320
+    ],
+    "height": 900,
+    "paths": [
+      "/",
+      "/knowledge/map",
+      "/knowledge",
+      "/knowledge/graph",
+      "/notes",
+      "/plan",
+      "/jobs",
+      "/settings",
+      "/knowledge/WEB-01"
+    ]
+  }
+}

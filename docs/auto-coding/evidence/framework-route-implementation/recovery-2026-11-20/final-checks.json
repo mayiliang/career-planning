@@ -1,0 +1,14 @@
+{
+  "localReportLinksMissing": [],
+  "ports": [
+    {
+      "port": 42730,
+      "occupied": false
+    },
+    {
+      "port": 42731,
+      "occupied": false
+    }
+  ],
+  "diffCheckExitCode": 0
+}

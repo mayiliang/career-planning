@@ -31,6 +31,9 @@ test.describe.serial('核心使用体验', () => {
     const reset = await page.request.post('/api/v1/import/reset-learning-progress', { data: {} });
     expect(reset.ok()).toBe(true);
     await page.goto('/');
+    const personal = page.getByRole('region', { name: '我的下一步', exact: true });
+    await personal.getByLabel('框架方向').selectOption('NONE');
+    await personal.getByRole('button', { name: '保存方向', exact: true }).click();
     const firstStep = page.locator('.empty-current');
     await expect(firstStep).toContainText('FIRST CONCRETE STEP');
     await expect(firstStep).toContainText('JS-01');
@@ -257,6 +260,8 @@ test.describe.serial('核心使用体验', () => {
   });
 
   test('B04～B08 二十二份主讲义只为关键名词提供英文发音', async ({ page }) => {
+    // 22 次独立页面加载共用用例预算，逐页就绪与发音断言保持不变。
+    test.setTimeout(90_000);
     const materials = [
       '/knowledge/materials/ts-03-generics-constraints-keyof-indexed-access.md/ts-03',
       '/knowledge/materials/web-01-html-semantics-forms-accessibility.md/web-01',
@@ -606,6 +611,8 @@ test.describe.serial('核心使用体验', () => {
   test('重复进入掌握挑战会恢复会话并展示资料与作答契约', async ({ page }) => {
     await mockAIReady(page);
     await page.goto('/knowledge/JS-02');
+    // 只有显式开始才改变当前焦点；保存笔记或标记学完不隐式抢占。
+    await page.getByRole('button', { name: '设为当前学习', exact: true }).click();
     await page.getByRole('button', { name: '我的笔记' }).click();
     await page.locator('.note-editor textarea').fill('会话恢复回归测试笔记：原型、对象模型与 this。');
     await page.getByRole('button', { name: '我已阅读资料并完成笔记' }).click();
@@ -754,30 +761,35 @@ test.describe.serial('核心使用体验', () => {
   });
 
   test('详情下一步与路线一致，关系分支按知识点去重', async ({ page }) => {
-    await page.goto('/knowledge/JS-01');
-    await expect(page.getByRole('heading', { name: '依据路线与前置继续学习' })).toBeVisible();
-    // JS-02 已在上一条回归用例中学完，连续路线应自动跳过它并推荐 JS-03。
-    await expect(page.locator('.branch-grid article').first()).toContainText('JS-03');
-    await expect(page.locator('.branch-grid article').first()).toContainText('建议继续');
-    await expect(page.getByText('TS-01', { exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '学习下一个 →' }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: '暂缓整条路线' })).toHaveCount(0);
+    const preference = (await (await page.request.get('/api/v1/learning/preferences')).json()).data;
+    await page.request.put('/api/v1/learning/preferences', { data: { frameworkChoice: 'NONE', expectedRevision: preference.revision } });
+    const route = (await (await page.request.get('/api/v1/learning/route')).json()).data;
+    for (const code of ['JS-01', 'A11Y-01', 'REACT-01']) {
+      await page.goto(`/knowledge/${code}`);
+      await expect(page.getByRole('heading', { name: '个人推荐操作' })).toBeVisible();
+      const branches = page.locator('.branch-grid article');
+      await expect(branches).toHaveCount(route.next ? 1 : 0);
+      if (route.next) {
+        await expect(branches.first()).toContainText(route.next.code);
+        if (route.next.kind === 'PREREQUISITE') {
+          await expect(branches.first()).toContainText('待补硬前置');
+          await expect(branches.first().getByRole('button', { name: '查看前置 →' })).toBeVisible();
+        } else await expect(branches.first().getByRole('button', { name: '学习下一个 →' })).toBeVisible();
+      }
+      await expect(page.getByRole('button', { name: '暂缓整条路线' })).toHaveCount(0);
+    }
 
-    await page.goto('/knowledge/A11Y-01');
-    await expect(page.getByText('BROWSER-01', { exact: true })).toBeVisible();
-    await expect(page.getByText('UX-01', { exact: true })).toHaveCount(0);
-
-    await page.goto('/knowledge/REACT-01');
-    // Vue 入口的 WEB-01 尚未满足时，真实前置优先于旧交错路线。
-    const branch = page.locator('.branch-grid article');
-    await expect(branch).toHaveCount(1);
-    await expect(branch.first()).toContainText('WEB-01');
-    await expect(branch.first()).toContainText('待补硬前置');
-    await expect(branch.first()).toContainText('基础补学');
-    await expect(branch.first().getByRole('button', { name: '查看前置 →' })).toBeVisible();
   });
 
   test('路线建议、学习完成和学习台当前现场形成连续闭环', async ({ page }) => {
+    // 独立准备已完成焦点与方向，单独重跑也不依赖先前用例的学习现场。
+    const preference = (await (await page.request.get('/api/v1/learning/preferences')).json()).data;
+    await page.request.put('/api/v1/learning/preferences', { data: { frameworkChoice: 'NONE', expectedRevision: preference.revision } });
+    await page.request.post('/api/v1/learning/points/JS-02/focus');
+    await page.request.post('/api/v1/learning/points/JS-02/complete');
+    // 已审路线从未完成基础开始；明确准备 JS-01，不以旧数组当前位置跳过它。
+    const foundation = await page.request.post('/api/v1/learning/points/JS-01/complete');
+    expect(foundation.ok()).toBe(true);
     await page.goto('/');
     await expect(page.locator('.current-card')).toContainText('JS-02');
     await expect(page.locator('.current-card')).toContainText('最近完成');

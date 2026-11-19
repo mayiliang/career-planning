@@ -1,4 +1,4 @@
-import { practiceActivityId, assessmentContractVersion, frameworkEntry } from '@career-atlas/shared';
+import { practiceActivityId, ASSESSMENT_PENDING, assessmentContractVersion, frameworkEntry } from '@career-atlas/shared';
 import { legacyAsyncContract } from './async-pilot-contract.js';
 import { buildAsyncPilotContext } from './async-pilot-context.js';
 import { consumeSseData } from '../ai/sse.js';
@@ -97,16 +97,16 @@ export async function validatePracticeAttempt(
   const saved = savePracticeAttempt(code, activityId, input);
   const localChecks = buildLocalContractChecks(activity, input, point.challengeProfile as PracticeProfile);
   const locallyReady = localChecks.every((item) => item.passed);
-  onProgress(locallyReady ? '本地必备项已通过，正在依据学习资料进行 AI 核对' : '本地必备项尚未齐全，正在生成明确的补充要求');
-  let review: PracticeReview | null = locallyReady ? await requestAiPracticeReview(point, activity, input, onProgress, signal) : null;
+  onProgress(ASSESSMENT_PENDING[code] ? '练习合同待修订，仅进行结构检查与草稿保存' : locallyReady ? '本地必备项已通过，正在依据学习资料进行 AI 核对' : '本地必备项尚未齐全，正在生成明确的补充要求');
+  let review: PracticeReview | null = locallyReady && !ASSESSMENT_PENDING[code] ? await requestAiPracticeReview(point, activity, input, onProgress, signal) : null;
   if (!review) {
     review = {
       passed: locallyReady,
-      summary: coverage && !coverage.complete ? '必需机制正文缺失或超出预算，已降级为结构核验；未进行语义评分。' : locallyReady
+      summary: ASSESSMENT_PENDING[code] ? `练习合同待修订：${ASSESSMENT_PENDING[code]} 仅作结构检查，不进行语义评分。` : coverage && !coverage.complete ? '必需机制正文缺失或超出预算，已降级为结构核验；未进行语义评分。' : locallyReady
         ? '已完成站内练习合同的确定性结构核验；未配置 AI 时，本结论不表示语义或技术方案已被判定正确。'
         : '提交尚未满足可确定的练习合同；请逐项补齐未通过的固定栏目、输入/预期/实际或验证证据。',
       checks: localChecks,
-      nextAction: locallyReady ? '可保留为结构完整的练习证据；需要语义正确性判断时，请在可用 AI 下再次验证或参加严格考核。' : '根据红色检查项补充后再次验证。',
+      nextAction: ASSESSMENT_PENDING[code] ? '可保存结构草稿、继续阅读和查看历史证据；等待练习合同修订。' : locallyReady ? '可保留为结构完整的练习证据；需要语义正确性判断时，请在可用 AI 下再次验证或参加严格考核。' : '根据红色检查项补充后再次验证。',
       mode: 'RULE' as const,
       validationLevel: 'STRUCTURE_ONLY' as const,
     };
@@ -120,7 +120,7 @@ export async function validatePracticeAttempt(
   };
   const now = new Date().toISOString();
   rawDb.prepare(`UPDATE learning_practice_attempts SET validation_json = ?, status = ?, updated_at = ? WHERE id = ?`)
-    .run(JSON.stringify(merged), merged.passed ? 'COMPLETED' : 'DRAFT', now, saved.id);
+    .run(JSON.stringify(merged), merged.passed && !ASSESSMENT_PENDING[code] ? 'COMPLETED' : 'DRAFT', now, saved.id);
   onProgress('验证结论已完成并保存');
   return getPracticeAttempt(code, activityId);
 }
@@ -193,7 +193,7 @@ function serializeAttempt(row: PracticeAttemptRow) {
   const legacy = pilot && row.activityId === 'strict-practice';
   const contract = legacy ? legacyAsyncContract(row.knowledgePointCode) : null;
   return {
-    contractVersion: pilot ? legacy ? frameworkEntry(row.knowledgePointCode) ? 'framework-entry-v1' : 'async-v1' : version : null,
+    contractVersion: ASSESSMENT_PENDING[row.knowledgePointCode] ? row.activityId === 'strict-practice' ? 'framework-foundation-legacy' : 'framework-foundation-draft' : pilot ? legacy ? frameworkEntry(row.knowledgePointCode) ? 'framework-entry-v1' : 'async-v1' : version : null,
     contractSnapshot: contract,
     readOnly: row.activityId !== practiceActivityId(row.knowledgePointCode),
     ...row,

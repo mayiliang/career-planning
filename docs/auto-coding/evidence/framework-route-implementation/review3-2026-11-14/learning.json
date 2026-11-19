@@ -1,0 +1,1291 @@
+{
+  "config": {
+    "argv": [
+      "/Users/bob/.nvm/versions/node/v22.14.0/bin/node",
+      "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/node_modules/@playwright/test/cli.js",
+      "test",
+      "e2e/experience.spec.ts",
+      "--grep",
+      "首次进入直接给出可完成、可验收的具体学习任务|资料学习、笔记和掌握状态彼此独立|代码练习在站内执行、保存输出并提供明确任务契约|本地结构失败不能被未参与的 AI 复核伪装为完全通过|重复进入掌握挑战会恢复会话并展示资料与作答契约|取消挑战保留旧答卷，并允许按当前合同新建会话|AI 不可用时在答题前说明影响、数据边界和修复入口|M4 明示七天稳定性门槛，并以真实变式取代旧题附录|兼容批次保留真实知识点，路线明确按能力与基础编排|详情下一步与路线一致，关系分支按知识点去重|路线建议、学习完成和学习台当前现场形成连续闭环|知识清单支持全局命令导航，笔记中心按体系归档|笔记服务端保存失败后保留本地草稿，刷新仍可恢复|Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序|学习台不分配每日任务并支持回顾式打卡|关系图可浏览路径、搜索知识点并进入局部关系|系统页说明自主节奏、数据备份和重置保留笔记|岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约|恢复数据必须先展示当前值、恢复后值和差异|本地个人数据 JSON 必须完整校验并预览后才能导入|窄屏下主导航和脑图没有页面级横向溢出|未知地址提供可恢复入口，跨页面导航回到顶部|窄屏下新学习路径没有页面级横向溢出",
+      "--output=../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/learning",
+      "--reporter=list,json"
+    ],
+    "configFile": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/playwright.config.ts",
+    "rootDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/global-setup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/learning",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "desktop-chrome",
+        "name": "desktop-chrome",
+        "testDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "experience.spec.ts",
+      "file": "experience.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "核心使用体验",
+          "file": "experience.spec.ts",
+          "line": 17,
+          "column": 15,
+          "specs": [
+            {
+              "title": "首次进入直接给出可完成、可验收的具体学习任务",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1852,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:31.044Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-05432918cdbda6cf0cfe",
+              "file": "experience.spec.ts",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "资料学习、笔记和掌握状态彼此独立",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2065,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:33.786Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-dd9a28ef7ad34cfee525",
+              "file": "experience.spec.ts",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "代码练习在站内执行、保存输出并提供明确任务契约",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2853,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:35.867Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-5dea09ccf55efbd3f2b9",
+              "file": "experience.spec.ts",
+              "line": 85,
+              "column": 3
+            },
+            {
+              "title": "本地结构失败不能被未参与的 AI 复核伪装为完全通过",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2725,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:38.734Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-b4efa2b1a8a4e78058a1",
+              "file": "experience.spec.ts",
+              "line": 114,
+              "column": 3
+            },
+            {
+              "title": "重复进入掌握挑战会恢复会话并展示资料与作答契约",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6382,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:41.472Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-526a86859dca4b7998e9",
+              "file": "experience.spec.ts",
+              "line": 611,
+              "column": 3
+            },
+            {
+              "title": "取消挑战保留旧答卷，并允许按当前合同新建会话",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4689,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:47.877Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-7253c36f1ea6d83ffb76",
+              "file": "experience.spec.ts",
+              "line": 644,
+              "column": 3
+            },
+            {
+              "title": "AI 不可用时在答题前说明影响、数据边界和修复入口",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2174,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:52.582Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-cbd24e3350516ea3ffaf",
+              "file": "experience.spec.ts",
+              "line": 677,
+              "column": 3
+            },
+            {
+              "title": "M4 明示七天稳定性门槛，并以真实变式取代旧题附录",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2261,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:54.771Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-6d3f320f9deafa35669f",
+              "file": "experience.spec.ts",
+              "line": 689,
+              "column": 3
+            },
+            {
+              "title": "兼容批次保留真实知识点，路线明确按能力与基础编排",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2256,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:57.047Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-9624b98508ac7fb2aa49",
+              "file": "experience.spec.ts",
+              "line": 740,
+              "column": 3
+            },
+            {
+              "title": "详情下一步与路线一致，关系分支按知识点去重",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3818,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:13:59.317Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-254ee9f85b4a4f591fcf",
+              "file": "experience.spec.ts",
+              "line": 763,
+              "column": 3
+            },
+            {
+              "title": "路线建议、学习完成和学习台当前现场形成连续闭环",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5199,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:03.149Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-b5a30af727488cd6a3a0",
+              "file": "experience.spec.ts",
+              "line": 784,
+              "column": 3
+            },
+            {
+              "title": "知识清单支持全局命令导航，笔记中心按体系归档",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2921,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:08.362Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-66f6a90c3f55f1d33fe8",
+              "file": "experience.spec.ts",
+              "line": 816,
+              "column": 3
+            },
+            {
+              "title": "笔记服务端保存失败后保留本地草稿，刷新仍可恢复",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4688,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:11.296Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-680b176b284a799df248",
+              "file": "experience.spec.ts",
+              "line": 827,
+              "column": 3
+            },
+            {
+              "title": "Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4603,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:15.996Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-944393c9b556ee51e6df",
+              "file": "experience.spec.ts",
+              "line": 856,
+              "column": 3
+            },
+            {
+              "title": "学习台不分配每日任务并支持回顾式打卡",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1310,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:20.612Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-a33c8cebe7e5d816dc10",
+              "file": "experience.spec.ts",
+              "line": 903,
+              "column": 3
+            },
+            {
+              "title": "关系图可浏览路径、搜索知识点并进入局部关系",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1811,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:21.936Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-e1df20770399733de1a0",
+              "file": "experience.spec.ts",
+              "line": 916,
+              "column": 3
+            },
+            {
+              "title": "系统页说明自主节奏、数据备份和重置保留笔记",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1653,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:23.761Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-a63ca20eb137775b266c",
+              "file": "experience.spec.ts",
+              "line": 929,
+              "column": 3
+            },
+            {
+              "title": "岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4584,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:25.434Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-857b9a4bf02f4f521b48",
+              "file": "experience.spec.ts",
+              "line": 951,
+              "column": 3
+            },
+            {
+              "title": "恢复数据必须先展示当前值、恢复后值和差异",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2815,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:30.037Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-470d59b9d0c71311c979",
+              "file": "experience.spec.ts",
+              "line": 993,
+              "column": 3
+            },
+            {
+              "title": "本地个人数据 JSON 必须完整校验并预览后才能导入",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1803,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:32.870Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-b0180753287f51a636f9",
+              "file": "experience.spec.ts",
+              "line": 1013,
+              "column": 3
+            },
+            {
+              "title": "窄屏下主导航和脑图没有页面级横向溢出",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1349,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:34.695Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-a48b9948f7ce9f8f5942",
+              "file": "experience.spec.ts",
+              "line": 1042,
+              "column": 3
+            },
+            {
+              "title": "未知地址提供可恢复入口，跨页面导航回到顶部",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2970,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:36.056Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-eca8957eb9cf03f66f02",
+              "file": "experience.spec.ts",
+              "line": 1054,
+              "column": 3
+            },
+            {
+              "title": "窄屏下新学习路径没有页面级横向溢出",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                        "line": 17,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop-chrome",
+                  "projectName": "desktop-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6281,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-14T12:14:39.037Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts",
+                            "line": 17,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "116f6b4a9defd92cdbb9-e6db0d980671cc0aa515",
+              "file": "experience.spec.ts",
+              "line": 1070,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-14T12:12:34.269Z",
+    "duration": 131906.588,
+    "expected": 23,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

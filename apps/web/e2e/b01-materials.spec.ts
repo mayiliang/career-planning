@@ -35,7 +35,7 @@ test('B01 小节交叉引用保留完整正文，后退恢复原来的阅读位�
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(first);
   await expect(page.locator('[data-reader-ready]')).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'B01 阅读路线' }).getByRole('link')).toHaveCount(4);
+  await expect(page.getByRole('navigation', { name: 'B01 旧分组浏览' }).getByRole('link')).toHaveCount(4);
   const link = page.locator('.markdown-body a').filter({ hasText: 'JS-03：浅拷贝只复制一层' });
   await link.scrollIntoViewIfNeeded();
   const before = await page.evaluate(() => window.scrollY);

@@ -1,0 +1,76 @@
+
+Running 3 tests using 1 worker
+
+(node:86888) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86888) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战答案保存失败时保留新答案和明确错误 (3.3s)
+(node:86906) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86906) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战评分失败时保留新答案和明确错误 (4.7s)
+(node:86947) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86947) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [desktop-chrome] › e2e/ui-polish.spec.ts:116:1 › 开始学习失败有明确反馈并恢复可操作状态 (3.0s)
+
+
+  1) [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战答案保存失败时保留新答案和明确错误 ─────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 3
+
+      83 |     expect(lockCount).toBe(failure === 'save' ? 0 : 1);
+      84 |     expect(gradeCount).toBe(failure === 'save' ? 0 : 1);
+    > 85 |     expect(navigations).toBe(1);
+         |                         ^
+      86 |     expect(events.filter(event => event.event === 'save').every(event => event.content === (event.id === firstId ? '最新答案一' : '最新答案二'))).toBe(true);
+      87 |     if (failure === 'grade') expect(events.slice(-3).map(event => event.event)).toEqual(['submit', 'grade-error', 'load']);
+      88 |     await testInfo.attach('answer-events', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/assessment-save.spec.ts:85:25
+
+    Error Context: ../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/answers-approved-results/assessment-save-挑战答案保存失败时保留新答案和明确错误-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/answers-approved-results/assessment-save-挑战答案保存失败时保留新答案和明确错误-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/answers-approved-results/assessment-save-挑战答案保存失败时保留新答案和明确错误-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战评分失败时保留新答案和明确错误 ───────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 3
+
+      83 |     expect(lockCount).toBe(failure === 'save' ? 0 : 1);
+      84 |     expect(gradeCount).toBe(failure === 'save' ? 0 : 1);
+    > 85 |     expect(navigations).toBe(1);
+         |                         ^
+      86 |     expect(events.filter(event => event.event === 'save').every(event => event.content === (event.id === firstId ? '最新答案一' : '最新答案二'))).toBe(true);
+      87 |     if (failure === 'grade') expect(events.slice(-3).map(event => event.event)).toEqual(['submit', 'grade-error', 'load']);
+      88 |     await testInfo.attach('answer-events', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/assessment-save.spec.ts:85:25
+
+    Error Context: ../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/answers-approved-results/assessment-save-挑战评分失败时保留新答案和明确错误-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/answers-approved-results/assessment-save-挑战评分失败时保留新答案和明确错误-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../docs/auto-coding/evidence/framework-route-implementation/review3-2026-11-14/answers-approved-results/assessment-save-挑战评分失败时保留新答案和明确错误-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战答案保存失败时保留新答案和明确错误 ──────────────────────
+    [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战评分失败时保留新答案和明确错误 ────────────────────────
+  1 passed (1.3m)

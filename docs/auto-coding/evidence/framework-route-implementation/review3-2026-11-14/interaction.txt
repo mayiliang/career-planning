@@ -1,0 +1,17 @@
+
+Running 8 tests using 1 worker
+
+(node:87208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:87208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/assistant.spec.ts:52:3 › Atlas AI 可读交互 › 先打开助手再收到页面数据时更新当前页上下文 (2.7s)
+  ✓  2 [desktop-chrome] › e2e/async-navigation.spec.ts:72:1 › 知识点切换后，旧保存失败不能把新草稿写到旧知识点名下 (3.9s)
+  ✓  3 [desktop-chrome] › e2e/async-navigation.spec.ts:139:1 › 原始笔记保存失败时，不整理旧原文，也不标记学习完成 (2.7s)
+  ✓  4 [desktop-chrome] › e2e/navigation.spec.ts:14:1 › 主导航可访问且当前栏目高亮 (1.9s)
+  ✓  5 [desktop-chrome] › e2e/note-candidate.spec.ts:3:1 › 采用候选稿核对版本，切换知识点后旧响应不改写新笔记 (2.7s)
+  ✓  6 [desktop-chrome] › e2e/ui-polish.spec.ts:57:1 › 打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存 (3.7s)
+  ✓  7 [desktop-chrome] › e2e/ui-polish.spec.ts:99:1 › 矮屏弹窗固定操作区且不会被 AI 入口盖住 (2.5s)
+  ✓  8 [desktop-chrome] › e2e/ui-polish.spec.ts:133:1 › 主要页面适配桌面、平板和手机且无页面脚本错误 (37.1s)
+
+  8 passed (1.9m)

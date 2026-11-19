@@ -1,0 +1,377 @@
+$ pnpm --filter @career-atlas/web test:e2e
+$ playwright test
+
+Running 79 tests using 1 worker
+
+  ✓   1 [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战答案保存失败时保留新答案和明确错误 (4.1s)
+  ✓   2 [desktop-chrome] › e2e/assessment-save.spec.ts:11:3 › 挑战评分失败时保留新答案和明确错误 (3.9s)
+  ✓   3 [desktop-chrome] › e2e/assistant.spec.ts:4:3 › Atlas AI 可读交互 › 面板用清晰字号和可切换宽度突出核心能力 (1.9s)
+  ✓   4 [desktop-chrome] › e2e/assistant.spec.ts:52:3 › Atlas AI 可读交互 › 先打开助手再收到页面数据时更新当前页上下文 (2.4s)
+  ✓   5 [desktop-chrome] › e2e/assistant.spec.ts:70:3 › Atlas AI 可读交互 › 鼠标仍在调整选区时不提示，松开并稳定后才显示 AI 解释 (4.5s)
+  ✓   6 [desktop-chrome] › e2e/assistant.spec.ts:90:3 › Atlas AI 可读交互 › 流式错误显示阶段和请求编号，并提供可复制的错误报告 (2.0s)
+  ✓   7 [desktop-chrome] › e2e/assistant.spec.ts:116:3 › Atlas AI 可读交互 › 初次渲染后到达的流内容会立即更新界面 (2.3s)
+  ✓   8 [desktop-chrome] › e2e/assistant.spec.ts:155:3 › Atlas AI 可读交互 › 正文引用直接链接真实资料，并隐藏未用于回答的检索结果 (1.7s)
+  ✓   9 [desktop-chrome] › e2e/assistant.spec.ts:194:3 › Atlas AI 可读交互 › 窄屏改为全屏布局且正文和输入区仍保持可读 (2.0s)
+  ✓  10 [desktop-chrome] › e2e/assistant.spec.ts:213:3 › Atlas AI 可读交互 › 总结和解释建立独立会话，追问只继承当前会话并可从历史恢复 (4.0s)
+  ✓  11 [desktop-chrome] › e2e/async-navigation.spec.ts:20:1 › 笔记搜索忽略旧请求的迟到结果 (2.4s)
+  ✓  12 [desktop-chrome] › e2e/async-navigation.spec.ts:51:1 › 岗位详情在同一页面切换参数后读取新的岗位 (1.8s)
+  ✓  13 [desktop-chrome] › e2e/async-navigation.spec.ts:72:1 › 知识点切换后，旧保存失败不能把新草稿写到旧知识点名下 (3.9s)
+  ✓  14 [desktop-chrome] › e2e/async-navigation.spec.ts:114:1 › 知识点详情忽略切换前的迟到读取结果 (2.0s)
+  ✓  15 [desktop-chrome] › e2e/async-navigation.spec.ts:139:1 › 原始笔记保存失败时，不整理旧原文，也不标记学习完成 (2.3s)
+  ✓  16 [desktop-chrome] › e2e/async-pilot.spec.ts:25:1 › 三篇正文的实际代码在 Chrome 中产生标注结果 (774ms)
+  ✓  17 [desktop-chrome] › e2e/async-pilot.spec.ts:48:1 › 目录查阅与手机代码交互不会把跳转记成整篇读完 (7.3s)
+  ✓  18 [desktop-chrome] › e2e/async-pilot.spec.ts:95:1 › 小节直达不记录整篇完成，正常读到末尾只完成阅读 (3.8s)
+  ✓  19 [desktop-chrome] › e2e/async-pilot.spec.ts:120:1 › 路线、详情、补基础返回与跨批次练习形成连续路径 (7.5s)
+  ✓  20 [desktop-chrome] › e2e/async-pilot.spec.ts:152:1 › 前置暂缓只解释状态，浏览资料不改变用户当前点 (2.4s)
+  ✓  21 [desktop-chrome] › e2e/b01-materials.spec.ts:8:1 › B01 正文全部示例在浏览器中的实际输出与讲义一致 (755ms)
+  ✓  22 [desktop-chrome] › e2e/b01-materials.spec.ts:28:1 › B01 小节交叉引用保留完整正文，后退恢复原来的阅读位置 (3.5s)
+  ✓  23 [desktop-chrome] › e2e/b01-materials.spec.ts:61:1 › B01 旧小节入口和刷新都保留完整讲义与准确定位 (3.0s)
+  ✓  24 [desktop-chrome] › e2e/b01-materials.spec.ts:84:1 › B01 桌面与手机阅读、目录和代码复制可用 (4.2s)
+  ✓  25 [desktop-chrome] › e2e/experience.spec.ts:18:3 › 核心使用体验 › 知识脑图展示完整能力体系并可逐层展开 (1.3s)
+  ✓  26 [desktop-chrome] › e2e/experience.spec.ts:30:3 › 核心使用体验 › 首次进入直接给出可完成、可验收的具体学习任务 (1.4s)
+  ✓  27 [desktop-chrome] › e2e/experience.spec.ts:47:3 › 核心使用体验 › 资料学习、笔记和掌握状态彼此独立 (2.9s)
+  ✓  28 [desktop-chrome] › e2e/experience.spec.ts:85:3 › 核心使用体验 › 代码练习在站内执行、保存输出并提供明确任务契约 (2.7s)
+  ✓  29 [desktop-chrome] › e2e/experience.spec.ts:114:3 › 核心使用体验 › 本地结构失败不能被未参与的 AI 复核伪装为完全通过 (2.6s)
+  ✓  30 [desktop-chrome] › e2e/experience.spec.ts:134:3 › 核心使用体验 › 自建中文讲义能从知识点、练习与挑战共用的站内地址打开 (2.7s)
+  ✓  31 [desktop-chrome] › e2e/experience.spec.ts:147:3 › 核心使用体验 › B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义 (5.6s)
+  ✓  32 [desktop-chrome] › e2e/experience.spec.ts:206:3 › 核心使用体验 › B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮 (13.3s)
+  ✓  33 [desktop-chrome] › e2e/experience.spec.ts:227:3 › 核心使用体验 › B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音 (9.6s)
+  ✓  34 [desktop-chrome] › e2e/experience.spec.ts:246:3 › 核心使用体验 › B03 四份独立主讲义只为关键名词提供英文发音 (6.9s)
+  ✓  35 [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 (28.3s)
+  ✓  36 [desktop-chrome] › e2e/experience.spec.ts:315:3 › 核心使用体验 › B09～B12 十七份主讲义只为关键名词提供英文发音 (21.7s)
+  ✓  37 [desktop-chrome] › e2e/experience.spec.ts:344:3 › 核心使用体验 › B13～B16 十七份主讲义只为关键名词提供英文发音 (19.9s)
+  ✓  38 [desktop-chrome] › e2e/experience.spec.ts:373:3 › 核心使用体验 › B17 四份主讲义只为关键名词提供英文发音 (7.3s)
+  ✓  39 [desktop-chrome] › e2e/experience.spec.ts:389:3 › 核心使用体验 › B18～B19 八份主讲义只为关键名词提供英文发音 (12.8s)
+  ✓  40 [desktop-chrome] › e2e/experience.spec.ts:412:3 › 核心使用体验 › B20～B24 二十二份主讲义只为关键名词提供英文发音 (32.7s)
+  ✓  41 [desktop-chrome] › e2e/experience.spec.ts:457:3 › 核心使用体验 › B25～B27 十二份主讲义只为关键名词提供英文发音 (19.4s)
+  ✓  42 [desktop-chrome] › e2e/experience.spec.ts:488:3 › 核心使用体验 › B28 五份主讲义只为关键名词提供英文发音 (7.9s)
+  ✓  43 [desktop-chrome] › e2e/experience.spec.ts:505:3 › 核心使用体验 › B29～B32 十七份主讲义只为关键名词提供英文发音 (24.6s)
+  ✓  44 [desktop-chrome] › e2e/experience.spec.ts:542:3 › 核心使用体验 › B33～B35 十三份主讲义只为关键名词提供英文发音 (19.7s)
+  ✓  45 [desktop-chrome] › e2e/experience.spec.ts:574:3 › 核心使用体验 › B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态 (4.0s)
+  ✓  46 [desktop-chrome] › e2e/experience.spec.ts:611:3 › 核心使用体验 › 重复进入掌握挑战会恢复会话并展示资料与作答契约 (6.0s)
+  ✓  47 [desktop-chrome] › e2e/experience.spec.ts:644:3 › 核心使用体验 › 取消挑战保留旧答卷，并允许按当前合同新建会话 (5.4s)
+  ✓  48 [desktop-chrome] › e2e/experience.spec.ts:677:3 › 核心使用体验 › AI 不可用时在答题前说明影响、数据边界和修复入口 (2.4s)
+  ✓  49 [desktop-chrome] › e2e/experience.spec.ts:689:3 › 核心使用体验 › M4 明示七天稳定性门槛，并以真实变式取代旧题附录 (1.7s)
+  ✓  50 [desktop-chrome] › e2e/experience.spec.ts:740:3 › 核心使用体验 › 兼容批次保留真实知识点，路线明确按能力与基础编排 (1.6s)
+  ✓  51 [desktop-chrome] › e2e/experience.spec.ts:763:3 › 核心使用体验 › 详情下一步与路线一致，关系分支按知识点去重 (2.7s)
+  ✓  52 [desktop-chrome] › e2e/experience.spec.ts:784:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环 (4.5s)
+  ✓  53 [desktop-chrome] › e2e/experience.spec.ts:816:3 › 核心使用体验 › 知识清单支持全局命令导航，笔记中心按体系归档 (2.1s)
+  ✓  54 [desktop-chrome] › e2e/experience.spec.ts:827:3 › 核心使用体验 › 笔记服务端保存失败后保留本地草稿，刷新仍可恢复 (4.0s)
+  ✓  55 [desktop-chrome] › e2e/experience.spec.ts:856:3 › 核心使用体验 › Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序 (4.7s)
+  ✓  56 [desktop-chrome] › e2e/experience.spec.ts:903:3 › 核心使用体验 › 学习台不分配每日任务并支持回顾式打卡 (1.3s)
+  ✓  57 [desktop-chrome] › e2e/experience.spec.ts:916:3 › 核心使用体验 › 关系图可浏览路径、搜索知识点并进入局部关系 (1.9s)
+  ✓  58 [desktop-chrome] › e2e/experience.spec.ts:929:3 › 核心使用体验 › 系统页说明自主节奏、数据备份和重置保留笔记 (1.6s)
+  ✓  59 [desktop-chrome] › e2e/experience.spec.ts:951:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约 (3.9s)
+  ✓  60 [desktop-chrome] › e2e/experience.spec.ts:993:3 › 核心使用体验 › 恢复数据必须先展示当前值、恢复后值和差异 (3.3s)
+  ✓  61 [desktop-chrome] › e2e/experience.spec.ts:1013:3 › 核心使用体验 › 本地个人数据 JSON 必须完整校验并预览后才能导入 (1.7s)
+  ✓  62 [desktop-chrome] › e2e/experience.spec.ts:1042:3 › 核心使用体验 › 窄屏下主导航和脑图没有页面级横向溢出 (937ms)
+  ✓  63 [desktop-chrome] › e2e/experience.spec.ts:1054:3 › 核心使用体验 › 未知地址提供可恢复入口，跨页面导航回到顶部 (3.2s)
+  ✓  64 [desktop-chrome] › e2e/experience.spec.ts:1070:3 › 核心使用体验 › 窄屏下新学习路径没有页面级横向溢出 (6.7s)
+  ✓  65 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › REACT-01 路线到补学返回和练习，查看不改变学习状态 (7.5s)
+  ✘  66 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 (10.0m)
+  ✘  67 [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 (8.6m)
+  ✘  68 [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 (15.3m)
+  ✓  69 [desktop-chrome] › e2e/framework-entry.spec.ts:92:1 › 入口明确区分未学与已学基础，查阅后当前点保持不变 (5.9s)
+  ✘  70 [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 (16.7m)
+  ✘  71 [desktop-chrome] › e2e/framework-route.spec.ts:81:1 › 详情暂缓前置立即同步个人推荐并可恢复 (9.0m)
+  ✓  72 [desktop-chrome] › e2e/navigation.spec.ts:14:1 › 主导航可访问且当前栏目高亮 (2.2s)
+  ✓  73 [desktop-chrome] › e2e/note-candidate.spec.ts:3:1 › 采用候选稿核对版本，切换知识点后旧响应不改写新笔记 (1.8s)
+  ✘  74 [desktop-chrome] › e2e/ui-polish.spec.ts:3:1 › 侧栏可收起并记住偏好，手机仍保留全部主导航 (15.6m)
+  ✘  75 [desktop-chrome] › e2e/ui-polish.spec.ts:22:1 › 搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点 (15.2m)
+  ✘  76 [desktop-chrome] › e2e/ui-polish.spec.ts:57:1 › 打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存 (17.8m)
+  ✓  77 [desktop-chrome] › e2e/ui-polish.spec.ts:99:1 › 矮屏弹窗固定操作区且不会被 AI 入口盖住 (2.1s)
+  ✓  78 [desktop-chrome] › e2e/ui-polish.spec.ts:116:1 › 开始学习失败有明确反馈并恢复可操作状态 (1.9s)
+  ✘  79 [desktop-chrome] › e2e/ui-polish.spec.ts:133:1 › 主要页面适配桌面、平板和手机且无页面脚本错误 (10.9m)
+
+
+  1) [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 ────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: apiRequestContext.get: Test timeout of 30000ms exceeded.
+
+       9 | async function point(page: Page, code: string) { return (await (await page.request.get(`/api/v1/knowledge/points/${code}`)).json()).data; }
+      10 | async function progress(page: Page, guide: string) {
+    > 11 |   const records = (await (await page.request.get('/api/v1/knowledge/material-progress')).json()).data;
+         |                                              ^
+      12 |   return records.find((r: {guide:string}) => r.guide === guide)?.progressPercent ?? 0;
+      13 | }
+      14 | for (const entry of entries) {
+        at progress (/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:11:46)
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:62:18
+
+    Error Context: test-results/framework-entry-REACT-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-entry-REACT-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/framework-entry-REACT-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 ─────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-reader-ready="true"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-reader-ready="true"]') with timeout 5000ms
+      - waiting for locator('[data-reader-ready="true"]')
+
+
+      32 |     await expect(page.locator('.point-hero h1 code')).toHaveText(entry.code);
+      33 |     await panel.getByRole('link', { name: '阅读讲义', exact: true }).click();
+    > 34 |     await expect(page.locator('[data-reader-ready="true"]')).toBeVisible();
+         |                                                              ^
+      35 |     await page.locator('.markdown-body').getByRole('link', { name: 'WEB-01', exact: true }).click();
+      36 |     await expect(page.locator('.material-hero')).toContainText('WEB-01');
+      37 |     await page.getByRole('button', { name: '返回上一页 →' }).click();
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:34:62
+
+    Error Context: test-results/framework-entry-VUE-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-entry-VUE-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/framework-entry-VUE-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 ──────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-reader-ready="true"]')
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-reader-ready="true"]') with timeout 5000ms
+      - waiting for locator('[data-reader-ready="true"]')
+      - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.
+
+
+      82 |     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      83 |     await page.screenshot({ animations: 'disabled', path: fileURLToPath(new URL(`${entry.code}-mobile-code.png`, evidence)) });
+    > 84 |     await page.goto(href); await expect(page.locator('[data-reader-ready="true"]')).toBeVisible();
+         |                                                                                     ^
+      85 |     await page.locator('.material-sheet footer').scrollIntoViewIfNeeded();
+      86 |     await expect.poll(() => progress(page, entry.guide)).toBeGreaterThanOrEqual(80);
+      87 |     const after = await point(page, entry.code);
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-entry.spec.ts:84:85
+
+    Error Context: test-results/framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 ──────────────────
+
+    Test timeout of 120000ms exceeded.
+
+    Error: apiRequestContext.put: Test timeout of 120000ms exceeded.
+
+      10 |   await page.request.post('/api/v1/import/reset-learning-progress', {data:{}});
+      11 |   const pref = (await (await page.request.get('/api/v1/learning/preferences')).json()).data;
+    > 12 |   await page.request.put('/api/v1/learning/preferences', {data:{frameworkChoice:'UNDECIDED',expectedRevision:pref.revision}});
+         |                      ^
+      13 |   await page.setViewportSize({width:1440,height:1000});
+      14 |   await page.goto('/');
+      15 |   const panel = page.getByRole('region', {name:'我的下一步',exact:true});
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts:12:22
+
+    Error Context: test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [desktop-chrome] › e2e/framework-route.spec.ts:81:1 › 详情暂缓前置立即同步个人推荐并可恢复 ──────────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '我的下一步', exact: true })
+    Expected substring: "补齐基础 · JS-01"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '我的下一步', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '我的下一步', exact: true })
+
+
+      86 |   await page.goto('/knowledge/REACT-02');
+      87 |   const panel = page.getByRole('region', { name: '我的下一步', exact: true });
+    > 88 |   await expect(panel).toContainText('补齐基础 · JS-01');
+         |                       ^
+      89 |   await page.getByRole('button', { name: '暂缓此知识点', exact: true }).click();
+      90 |   await expect(panel).toContainText('所需基础已暂缓');
+      91 |   await expect(panel.locator('.next')).toHaveCount(0);
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/framework-route.spec.ts:88:23
+
+    Error Context: test-results/framework-route-详情暂缓前置立即同步个人推荐并可恢复-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/framework-route-详情暂缓前置立即同步个人推荐并可恢复-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/framework-route-详情暂缓前置立即同步个人推荐并可恢复-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [desktop-chrome] › e2e/ui-polish.spec.ts:3:1 › 侧栏可收起并记住偏好，手机仍保留全部主导航 ──────────────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: page.setViewportSize: Test timeout of 30000ms exceeded.
+
+       8 |   await page.reload();
+       9 |   await expect(page.getByRole('button', { name: '展开侧栏' })).toBeVisible();
+    > 10 |   await page.setViewportSize({ width: 390, height: 844 });
+         |              ^
+      11 |   for (const label of ['学习台', '知识体系', '笔记中心', '核心路线', '求职支线']) {
+      12 |     const link = page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: label });
+      13 |     await expect(link).toBeVisible();
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/ui-polish.spec.ts:10:14
+
+    Error Context: test-results/ui-polish-侧栏可收起并记住偏好，手机仍保留全部主导航-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/ui-polish-侧栏可收起并记住偏好，手机仍保留全部主导航-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/ui-polish-侧栏可收起并记住偏好，手机仍保留全部主导航-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [desktop-chrome] › e2e/ui-polish.spec.ts:22:1 › 搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点 ─────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).not.toBeVisible() failed
+
+    Locator:  getByRole('dialog', { name: '快速查找' })
+    Expected: not visible
+    Received: visible
+
+    Call log:
+      - Expect "not toBeVisible" getByRole('dialog', { name: '快速查找' }) with timeout 5000ms
+      - waiting for getByRole('dialog', { name: '快速查找' })
+        3 × locator resolved to <section role="dialog" tabindex="-1" aria-modal="true" aria-label="快速查找" data-v-0329b5ea="" class="command-panel">…</section>
+          - unexpected value "visible"
+      - Test timeout of 30000ms exceeded.
+
+
+      51 |   await expect(page.getByRole('button', { name: '关闭快速查找' })).toBeFocused();
+      52 |   await page.keyboard.press('Enter');
+    > 53 |   await expect(page.getByRole('dialog', { name: '快速查找' })).not.toBeVisible();
+         |                                                                ^
+      54 |   await expect(page).toHaveURL(/\/$/);
+      55 | });
+      56 |
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/ui-polish.spec.ts:53:64
+
+    Error Context: test-results/ui-polish-搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/ui-polish-搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/ui-polish-搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [desktop-chrome] › e2e/ui-polish.spec.ts:57:1 › 打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存 ────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '今天实际学了什么？' }).getByRole('button', { name: /只看已选/ })
+
+
+      80 |   await expect(point).toHaveAttribute('aria-pressed', 'true');
+      81 |   await dialog.getByRole('searchbox').fill('');
+    > 82 |   await dialog.getByRole('button', { name: /只看已选/ }).click();
+         |                                                      ^
+      83 |   await expect(dialog.getByRole('group', { name: '可选知识点' }).getByRole('button')).toContainText([target.code]);
+      84 |   await dialog.getByLabel('今日学习记录', { exact: true }).fill('这次学习的关键收获');
+      85 |   await dialog.getByLabel('实际投入（分钟）').fill('-1');
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/ui-polish.spec.ts:82:54
+
+    Error Context: test-results/ui-polish-打卡可搜索前-60-项以外的知识点，失败保留输入并可重试保存-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/ui-polish-打卡可搜索前-60-项以外的知识点，失败保留输入并可重试保存-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/ui-polish-打卡可搜索前-60-项以外的知识点，失败保留输入并可重试保存-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [desktop-chrome] › e2e/ui-polish.spec.ts:133:1 › 主要页面适配桌面、平板和手机且无页面脚本错误 ───────────────────────
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.evaluate: Test timeout of 60000ms exceeded.
+
+      141 |       await expect(page.locator('.route-shell h1').first()).toBeVisible();
+      142 |       await page.waitForLoadState('networkidle');
+    > 143 |       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width}px ${path} 横向溢出`).toBeLessThanOrEqual(1);
+          |                         ^
+      144 |       if (path === '/' && [1440, 390].includes(width)) await page.screenshot({ path: `../../tmp/ui-review/learning-${width}.png`, fullPage: true });
+      145 |     }
+      146 |   }
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/ui-polish.spec.ts:143:25
+
+    Error Context: test-results/ui-polish-主要页面适配桌面、平板和手机且无页面脚本错误-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/ui-polish-主要页面适配桌面、平板和手机且无页面脚本错误-desktop-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/ui-polish-主要页面适配桌面、平板和手机且无页面脚本错误-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  Slow test file: [desktop-chrome] › e2e/experience.spec.ts (5.1m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  9 failed
+    [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › REACT-01 小节查阅、复制、滚动和阅读阈值 ─────────────────
+    [desktop-chrome] › e2e/framework-entry.spec.ts:16:3 › VUE-01 路线到补学返回和练习，查看不改变学习状态 ──────────────
+    [desktop-chrome] › e2e/framework-entry.spec.ts:55:3 › VUE-01 小节查阅、复制、滚动和阅读阈值 ───────────────────
+    [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 ───────────────────
+    [desktop-chrome] › e2e/framework-route.spec.ts:81:1 › 详情暂缓前置立即同步个人推荐并可恢复 ───────────────────────
+    [desktop-chrome] › e2e/ui-polish.spec.ts:3:1 › 侧栏可收起并记住偏好，手机仍保留全部主导航 ───────────────────────────
+    [desktop-chrome] › e2e/ui-polish.spec.ts:22:1 › 搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点 ──────────────────
+    [desktop-chrome] › e2e/ui-polish.spec.ts:57:1 › 打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存 ─────────────────
+    [desktop-chrome] › e2e/ui-polish.spec.ts:133:1 › 主要页面适配桌面、平板和手机且无页面脚本错误 ────────────────────────
+  70 passed (2.1h)
+[ELIFECYCLE] Command failed with exit code 1.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /Users/bob/Library/Application Support/
+  │ CareerPlanningAutoCoding/repository/apps/web
+
+[ELIFECYCLE] Command failed with exit code 1.

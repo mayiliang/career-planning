@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-11-19T17:18:20.033Z",
+  "endedAt": "2026-11-19T17:18:33.357Z",
+  "dataDir": "/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/tmp/e2e/career-atlas-e2e-DYJ2eC",
+  "backendPort": 42730,
+  "frontendPort": 42731,
+  "nodeEnv": "test",
+  "autoBackup": false,
+  "realConfigLoaded": false
+}

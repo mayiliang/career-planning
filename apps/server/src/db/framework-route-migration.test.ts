@@ -1,0 +1,68 @@
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { describe, expect, it } from 'vitest';
+import { AUDITED_PREREQUISITES } from '@career-atlas/shared';
+import { projectRoot } from '../config/index.js';
+const migrations = resolve(projectRoot, 'apps/server/drizzle');
+describe('真实旧 SQLite 迁移', () => {
+  it('旧字段逐表不变、重复迁移不重置偏好，删边后失败连同schema一起回滚', () => {
+    const root = resolve(projectRoot, 'tmp/issue8-migrations'); mkdirSync(root, {recursive:true});
+    const dir = mkdtempSync(join(root, 'sample-'));
+    const oldMigrations = join(dir,'old'); mkdirSync(join(oldMigrations,'meta'), {recursive:true});
+    const journal = JSON.parse(readFileSync(join(migrations,'meta/_journal.json'),'utf8'));
+    const oldJournal = {...journal, entries:journal.entries.filter((e:{idx:number}) => e.idx < 16)};
+    writeFileSync(join(oldMigrations,'meta/_journal.json'),JSON.stringify(oldJournal));
+    for (const entry of oldJournal.entries) copyFileSync(join(migrations,entry.tag+'.sql'),join(oldMigrations,entry.tag+'.sql'));
+    const sqlite = new Database(join(dir,'sample.db')); sqlite.pragma('foreign_keys=ON'); migrate(drizzle(sqlite),{migrationsFolder:oldMigrations});
+    const insert = (table:string, values:Record<string,unknown>) => {
+      sqlite.prepare(`INSERT INTO ${table} (${Object.keys(values).join(',')}) VALUES (${Object.keys(values).map(()=>'?').join(',')})`).run(...Object.values(values));
+    };
+    const times = {created_at:'2026-11-01',updated_at:'2026-11-01'};
+    insert('knowledge_domains',{id:'d',code:'99',title:'隔离迁移样本',order_index:1,source_path:'sample',source_hash:'hash',...times});
+    for (const code of Object.keys(AUDITED_PREREQUISITES)) insert('knowledge_points',{id:code,code,domain_id:'d',title:code,study_material_md:'旧正文',assessment_spec_md:'旧题',pass_criteria_md:'旧标准',difficulty:'intermediate',status:'LEARNING',source_path:'sample',source_hash:'hash',...times});
+    sqlite.exec("UPDATE knowledge_points SET learning_state='LEARNED', mastery_level=3 WHERE code IN ('REACT-01','VUE-01'); UPDATE knowledge_points SET learning_state='DEFERRED',defer_reason='原用户原因' WHERE code IN ('VUE-02','VUE-03','VUE-04'); UPDATE knowledge_points SET learning_state='LEARNING',current_focus=1 WHERE code='REACT-03'");
+    insert('learning_route_choices',{id:'choice',source_code:'REACT-01',target_code:'VUE-02',state:'DEFERRED',scope:'BRANCH',reason:'原用户原因',...times});
+    insert('knowledge_notes',{id:'note',knowledge_point_code:'VUE-02',point_title_snapshot:'旧标题',original_md:'个人草稿',...times});
+    for (const [i, text] of ['旧版','个人草稿'].entries()) insert('knowledge_note_versions',{id:`version${i}`,note_id:'note',version_no:i+1,source:'USER',content_md:text,created_at:times.created_at});
+    insert('material_reading_progress',{id:'reading',guide:'vue-02-ref-reactive-computed-boundaries.md',anchor:'vue-02',progress_percent:37,...times});
+    insert('learning_practice_attempts',{id:'practice',knowledge_point_code:'VUE-02',activity_id:'strict-practice',submission_md:'旧夹具答卷',code:'旧代码',execution_output:'旧输出',status:'DRAFT',...times});
+    insert('assessment_sessions',{id:'session',knowledge_point_code:'VUE-02',assessment_type:'FIRST',status:'GRADED',duration_minutes:30,...times});
+    insert('assessment_questions',{id:'question',session_id:'session',question_type:'ESSAY',dimension:'practice',question_content:'{"question":"旧五题原文"}',max_score:20,order_index:0,created_at:times.created_at});
+    insert('assessment_answers',{id:'answer',session_id:'session',question_id:'question',answer_content:'旧答案',answered_at:times.created_at,...times});
+    insert('assessment_results',{id:'result',session_id:'session',verdict:'PASS',confidence:'0.9',feedback:'旧评分',created_at:times.created_at});
+    insert('assessment_hint_events',{id:'hint',session_id:'session',question_id:'question',level:1,hint_kind:'旧提示',created_at:times.created_at});
+    insert('mastery_events',{id:'event',knowledge_point_code:'VUE-02',action:'firstPass',from_status:'LEARNING',to_status:'MASTERED',assessment_session_id:'session',evidence_summary:'原始证据事件',created_at:times.created_at});
+    insert('learning_checkins',{id:'checkin',checkin_date:'2026-11-01',summary_md:'旧打卡',...times});
+    insert('learning_checkin_points',{id:'checkinpoint',checkin_id:'checkin',knowledge_point_code:'VUE-02',activity:'PROGRESSED',created_at:times.created_at});
+    insert('plan_events',{id:'plan',event_type:'STUDY',title:'旧个人计划',start_at:'2026',end_at:'2026',...times});
+    insert('checkins',{id:'oldcheckin',plan_event_id:'plan',result:'COMPLETED',note_md:'旧计划打卡',checked_at:'2026',created_at:times.created_at});
+    const setting = join(dir,'settings.json'); writeFileSync(setting,'{"personalSetting":"原值"}');
+    insert('knowledge_edges',{id:'manual',source_point_id:'JS-01',target_point_id:'VUE-02',type:'PREREQUISITE',description:'人工边',weight:1,created_at:'2026'});
+    const oldEdge = readFileSync(join(migrations,'0016_learning_preferences.sql'),'utf8').match(/description = '([^']+)' AND source_point_id IN \(SELECT id FROM knowledge_points WHERE code = '([^']+)'\) AND target_point_id IN \(SELECT id FROM knowledge_points WHERE code = '([^']+)'\)/)!;
+    insert('knowledge_edges',{id:'auto-old',source_point_id:oldEdge[2],target_point_id:oldEdge[3],type:'PREREQUISITE',description:oldEdge[1],weight:9,created_at:'2026'});
+    const tables = (sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%' AND name!='knowledge_edges' ORDER BY name").all() as {name:string}[]).map(r=>r.name);
+    const snapshot = () => Object.fromEntries(tables.map(name=>[name,sqlite.prepare(`SELECT * FROM ${name} ORDER BY rowid`).all()]));
+    const before = snapshot();
+    sqlite.exec("CREATE TRIGGER reject_new_edge BEFORE INSERT ON knowledge_edges BEGIN SELECT RAISE(ABORT,'migration fault'); END");
+    let failure: unknown;
+    try { migrate(drizzle(sqlite),{migrationsFolder:migrations}); } catch (error) { failure = error; }
+    expect((failure as {cause?:Error})?.cause?.message).toContain('migration fault');
+    expect(sqlite.prepare("SELECT id FROM knowledge_edges WHERE id='auto-old'").get()).toBeTruthy();
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='learning_preferences'").get()).toBeUndefined();
+    expect(snapshot()).toEqual(before); sqlite.exec('DROP TRIGGER reject_new_edge');
+    migrate(drizzle(sqlite),{migrationsFolder:migrations}); expect(snapshot()).toEqual(before);
+    expect(sqlite.prepare('SELECT framework_choice,revision FROM learning_preferences').get()).toEqual({framework_choice:'UNDECIDED',revision:0});
+    sqlite.exec("UPDATE learning_preferences SET framework_choice='VUE',revision=1");
+    migrate(drizzle(sqlite),{migrationsFolder:migrations}); expect(snapshot()).toEqual(before);
+    expect(sqlite.prepare('SELECT revision FROM learning_preferences').get()).toEqual({revision:1});
+    expect(sqlite.prepare("SELECT id, origin FROM knowledge_edges WHERE id='manual'").get()).toEqual({id:'manual',origin:'UNKNOWN'});
+    expect(readFileSync(setting,'utf8')).toBe('{"personalSetting":"原值"}');
+    // 常规验证只写隔离样本目录；选定结果由执行方显式归档。
+    const evidence = dir;
+    writeFileSync(join(evidence,'migration.json'),JSON.stringify({database:dir.replace(projectRoot+'/',''),tables:tables.map(name=>({name,rows:(before[name] as unknown[]).length,unchanged:true})),rollback:true,repeat:true,preferencesPreserved:true,settingsSampleUnchanged:true},null,2)+'\n');
+    sqlite.close();
+  });
+});

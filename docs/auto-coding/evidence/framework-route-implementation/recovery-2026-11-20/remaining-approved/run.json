@@ -1,0 +1,20 @@
+{
+  "command": [
+    "node",
+    "node_modules/@playwright/test/cli.js",
+    "test",
+    "e2e/framework-entry.spec.ts",
+    "e2e/framework-route.spec.ts",
+    "e2e/ui-polish.spec.ts",
+    "--project=desktop-chrome",
+    "--workers=1",
+    "--grep",
+    "侧栏可收起|搜索键盘选择|打卡可搜索前 60 项|主要页面适配",
+    "--trace=on",
+    "--reporter=list,json",
+    "--output=/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/tmp/issue8-recovery-20261120/remaining-approved"
+  ],
+  "startedAt": "2026-11-19T22:04:26.242421+00:00",
+  "endedAt": "2026-11-19T22:06:20.903016+00:00",
+  "exitCode": 0
+}

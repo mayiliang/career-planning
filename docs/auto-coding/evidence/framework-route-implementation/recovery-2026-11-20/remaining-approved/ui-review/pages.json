@@ -1,0 +1,53 @@
+{
+  "browser": "157.0.8103.79",
+  "baseURL": "http://127.0.0.1:42731",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 1024,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 900
+    },
+    {
+      "width": 320,
+      "height": 900
+    }
+  ],
+  "paths": [
+    "/",
+    "/knowledge/map",
+    "/knowledge",
+    "/knowledge/graph",
+    "/notes",
+    "/plan",
+    "/jobs",
+    "/settings",
+    "/knowledge/WEB-01"
+  ],
+  "screenshots": {
+    "learning-1440.png": {
+      "path": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "fullPage": true
+    },
+    "learning-390.png": {
+      "path": "/",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "fullPage": true
+    }
+  },
+  "evidence": "../results.json 与 ../browser-events；视口、页面与截图映射按实际通过的用例及 trace 核对",
+  "browserVersionSource": "../browser-version.json：补跑结束后使用相同 Chrome channel 新建临时浏览器实测；首批 pages.json 的 157.0.8103.51 不用于此批。"
+}

@@ -1,0 +1,291 @@
+[
+  {
+    "test": "framework-route-详情暂缓前置立即同步个人推荐并可恢复-desktop-chrome",
+    "maxEventGapMs": 0,
+    "events": []
+  },
+  {
+    "test": "note-candidate-采用候选稿核对版本，切换知识点后旧响应不改写新笔记-desktop-chrome",
+    "maxEventGapMs": 547.0590000003576,
+    "events": []
+  },
+  {
+    "test": "framework-entry-入口明确区分未学与已学基础，查阅后当前点保持不变-desktop-chrome",
+    "maxEventGapMs": 511.3089999994263,
+    "events": [
+      {
+        "time": 6331409.726,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 6331460.728,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "async-navigation-原始笔记保存失败时，不整理旧原文，也不标记学习完成-desktop-chrome",
+    "maxEventGapMs": 275.5989999999292,
+    "events": [
+      {
+        "time": 2501597.896,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 2501610.483,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "experience-核心使用体验-首次进入直接给出可完成、可验收的具体学习任务-desktop-chrome",
+    "maxEventGapMs": 1024191.46,
+    "events": [
+      {
+        "time": 3637769.112,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 3637824.965,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "ui-polish-矮屏弹窗固定操作区且不会被-AI-入口盖住-desktop-chrome",
+    "maxEventGapMs": 0,
+    "events": []
+  },
+  {
+    "test": "framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome",
+    "maxEventGapMs": 927041.2539999997,
+    "events": [
+      {
+        "time": 7281624.887,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 7281716.098,
+        "text": "[vite] connected."
+      },
+      {
+        "time": 7282785.046,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 7282843.142,
+        "text": "[vite] connected."
+      },
+      {
+        "time": 7283205.814,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 7283248.492,
+        "text": "[vite] connected."
+      },
+      {
+        "time": 7283878.613,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 7283938.586,
+        "text": "[vite] connected."
+      },
+      {
+        "time": 8211708.886,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 8211811.86,
+        "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "time": 8211816.958,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "async-navigation-知识点切换后，旧保存失败不能把新草稿写到旧知识点名下-desktop-chrome",
+    "maxEventGapMs": 0,
+    "events": []
+  },
+  {
+    "test": "assistant-Atlas-AI-可读交互-先打开助手再收到页面数据时更新当前页上下文-desktop-chrome",
+    "maxEventGapMs": 924410.263,
+    "events": [
+      {
+        "time": 624049.067,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 624076.41,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "async-pilot-目录查阅与手机代码交互不会把跳转记成整篇读完-desktop-chrome",
+    "maxEventGapMs": 234.60900000017136,
+    "events": [
+      {
+        "time": 3454402.84,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 3454438.4,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "navigation-主导航可访问且当前栏目高亮-desktop-chrome",
+    "maxEventGapMs": 1017849.148,
+    "events": [
+      {
+        "time": 9160400.037,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 9160422.688,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "ui-polish-打卡可搜索前-60-项以外的知识点，失败保留输入并可重试保存-desktop-chrome",
+    "maxEventGapMs": 1067288.6239999998,
+    "events": []
+  },
+  {
+    "test": "ui-polish-开始学习失败有明确反馈并恢复可操作状态-desktop-chrome",
+    "maxEventGapMs": 1009816.4820000008,
+    "events": [
+      {
+        "time": 13098450.205,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 13098504.275,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "framework-entry-REACT-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome",
+    "maxEventGapMs": 611051.9409999996,
+    "events": [
+      {
+        "time": 4667096.898,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 4667171.127,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "assessment-save-挑战评分失败时保留新答案和明确错误-desktop-chrome",
+    "maxEventGapMs": 594722.226,
+    "events": [
+      {
+        "time": 14357.953,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 14409.939,
+        "text": "[vite] connected."
+      },
+      {
+        "time": 16652.841,
+        "text": "[vite] server connection lost. Polling for restart..."
+      },
+      {
+        "time": 16825.316,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 16846.535,
+        "text": "[vite] connected."
+      },
+      {
+        "at": "2026-11-14T00:15:46.130Z",
+        "method": "GET",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011",
+        "body": null
+      },
+      {
+        "at": "2026-11-14T00:15:46.604Z",
+        "method": "PUT",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011/answers/00000000-0000-4000-8000-000000000012",
+        "body": "{\"answerContent\":\"最新答案一\"}"
+      },
+      {
+        "at": "2026-11-14T00:15:48.316Z",
+        "method": "GET",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011",
+        "body": null
+      },
+      {
+        "at": "2026-11-14T00:15:49.276Z",
+        "method": "PUT",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011/answers/00000000-0000-4000-8000-000000000012",
+        "body": "{\"answerContent\":\"旧答案一\"}"
+      },
+      {
+        "at": "2026-11-14T00:15:49.276Z",
+        "method": "PUT",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011/answers/00000000-0000-4000-8000-000000000013",
+        "body": "{\"answerContent\":\"旧答案二\"}"
+      },
+      {
+        "at": "2026-11-14T00:15:49.292Z",
+        "method": "POST",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011/submit",
+        "body": null
+      },
+      {
+        "at": "2026-11-14T00:15:49.302Z",
+        "method": "POST",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011/grade/stream",
+        "body": null
+      },
+      {
+        "at": "2026-11-14T00:15:49.317Z",
+        "method": "GET",
+        "path": "v1/assessments/00000000-0000-4000-8000-000000000011",
+        "body": null
+      }
+    ]
+  },
+  {
+    "test": "framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome",
+    "maxEventGapMs": 1023205.5789999999,
+    "events": [
+      {
+        "time": 5299687.084,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 5299735.362,
+        "text": "[vite] connected."
+      }
+    ]
+  },
+  {
+    "test": "ui-polish-主要页面适配桌面、平板和手机且无页面脚本错误-desktop-chrome",
+    "maxEventGapMs": 482983.76999999955,
+    "events": [
+      {
+        "time": 14113151.714,
+        "text": "[vite] connecting..."
+      },
+      {
+        "time": 14113197.693,
+        "text": "[vite] connected."
+      }
+    ]
+  }
+]

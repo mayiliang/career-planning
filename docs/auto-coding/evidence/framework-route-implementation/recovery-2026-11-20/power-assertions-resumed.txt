@@ -1,0 +1,21 @@
+2026-11-20 06:05:24 +0800 
+Assertion status system-wide:
+   BackgroundTask                 0
+   ApplePushServiceTask           0
+   UserIsActive                   0
+   PreventUserIdleDisplaySleep    1
+   SoftwareUpdateTask             0
+   PreventSystemSleep             0
+   PreventSystemSleepSecurityIndicator 0
+   ExternalMedia                  0
+   PreventUserIdleSystemSleep     1
+   NetworkClientActive            0
+Listed by owning process:
+   pid 12668(caffeinate): [0x0001a25400018967] 00:01:58 PreventUserIdleSystemSleep named: "caffeinate command-line tool"  
+	Details: caffeinate asserting on behalf of Process ID 6772
+	Created for PID: 6772. 
+	Localized=THE CAFFEINATE TOOL IS PREVENTING SLEEP.
+   pid 369(mds): [0x0001a2bf000b896d] 00:00:11 BackgroundTask named: "com.apple.metadata.mds.power"  
+   pid 94218(ChatGPT): [0x00015f93000586d8] 04:46:47 NoDisplaySleepAssertion named: "Capturing"  
+   pid 355(powerd): [0x00015bb500018672] 05:03:17 PreventUserIdleSystemSleep named: "Powerd - Prevent sleep while display is on"  
+No kernel assertions.

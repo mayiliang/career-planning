@@ -5,7 +5,7 @@ import { configureHttpContract } from '../../http/contract.js';
 import { learningRoutes } from '../../http/routes/learning.js';
 import { executeImport } from '../import.service.js';
 import { deferPoint, markPointLearned, restorePoint, saveRouteChoice, setCurrentLearningPoint } from './state.js';
-import { getNextBranches, planNextRoute } from './routes.js';
+import { getNextBranches, planLearningRoute } from './routes.js';
 
 function reset() {
   rawDb.prepare('DELETE FROM learning_route_choices').run();
@@ -52,6 +52,12 @@ describe('学习状态与路线一致性', () => {
     expect(() => restorePoint('JS-01')).toThrow('只有暂缓');
   });
 
+  it('标记浏览点学完不抢走现有焦点', () => {
+    setCurrentLearningPoint('JS-01'); markPointLearned('JS-03');
+    expect(point('JS-01')).toMatchObject({ focus: 1, state: 'LEARNING' });
+    expect(point('JS-03')).toMatchObject({ focus: 0, state: 'LEARNED' });
+  });
+
   it('完成学习清理暂缓信息，重复确认保留首次完成时间', () => {
     deferPoint('JS-01', '以后再学');
     markPointLearned('JS-01');
@@ -83,23 +89,19 @@ describe('学习状态与路线一致性', () => {
     expect(rawDb.prepare('SELECT * FROM learning_route_choices').all()).toHaveLength(1);
   });
 
-  it('一份状态快照决定唯一下一步和剩余数量，忽略缺失、已学完与暂缓项', () => {
-    const plan = planNextRoute('JS-01', new Map([
-      ['JS-01', 'LEARNED'], ['JS-02', 'DEFERRED'], ['JS-03', 'LEARNED'],
-      ['JS-07', 'LEARNING'], ['CS-01', 'NOT_STARTED'],
-    ]));
-    expect(plan).toEqual([{ code: 'JS-07', kind: 'CONTINUE', remaining: 2, mainline: true }]);
+  it('快照缺失与暂缓不会跳过，当前焦点优先继续', () => {
+    const states = new Map([['JS-01', 'LEARNED'], ['JS-03', 'DEFERRED']] as const);
+    const plan = planLearningRoute({ frameworkChoice: 'NONE', preferenceRevision: 0, states });
+    expect(plan.outcome).toBe('PAUSED_POINT');
+    expect(plan.next).toBeNull();
   });
 
-  it('路线状态变化立即生效，223 个知识点的分支规划保持有界查询次数', () => {
-    expect(getNextBranches('JS-01')[0]?.code).toBe('JS-02');
-    deferPoint('JS-02');
-    expect(getNextBranches('JS-01')[0]?.code).toBe('JS-03');
-    restorePoint('JS-02');
-    expect(getNextBranches('JS-01')[0]?.code).toBe('JS-02');
+  it('个人下一步与浏览点无关，查询次数有界', () => {
+    setCurrentLearningPoint('JS-01');
+    expect(getNextBranches('LEAD-01')[0]?.code).toBe('JS-01');
     const prepare = vi.spyOn(rawDb, 'prepare');
     try {
-      expect(getNextBranches('LEAD-01').length).toBeGreaterThan(1);
+      expect(getNextBranches('REACT-01')).toHaveLength(1);
       expect(prepare.mock.calls.length).toBeLessThanOrEqual(3);
     } finally { prepare.mockRestore(); }
   });

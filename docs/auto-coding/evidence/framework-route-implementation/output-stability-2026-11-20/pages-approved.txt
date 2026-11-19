@@ -1,0 +1,11 @@
+
+Running 2 tests using 1 worker
+
+(node:15720) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15720) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/framework-route.spec.ts:5:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 (16.5s)
+  ✓  2 [desktop-chrome] › e2e/framework-route.spec.ts:80:1 › 详情暂缓前置立即同步个人推荐并可恢复 (3.4s)
+
+  2 passed (1.3m)

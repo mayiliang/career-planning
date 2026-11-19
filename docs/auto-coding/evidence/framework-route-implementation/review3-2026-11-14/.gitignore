@@ -1,0 +1,4 @@
+# 本目录仅包含隔离测试证据，允许调度器纳入原始失败 trace。
+!original/test-results/
+!original/test-results/**
+!**/*.zip

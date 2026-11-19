@@ -1,0 +1,42 @@
+{"version":9,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1794678331335,"monotonicTime":1051814.961,"sdkLanguage":"javascript","title":"framework-entry.spec.ts:16 › VUE-01 路线到补学返回和练习，查看不改变学习状态"}
+{"type":"before","callId":"call@13","startTime":1052255.099,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/learning/points/VUE-01/focus","method":"POST"},"stepId":"pw:api@38"}
+{"type":"log","callId":"call@13","time":1052283.591,"message":"→ POST http://127.0.0.1:42731/api/v1/learning/points/VUE-01/focus"}
+{"type":"log","callId":"call@13","time":1052283.705,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@13","time":1052283.733,"message":"  accept: */*"}
+{"type":"log","callId":"call@13","time":1052283.754,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@13","time":1052298.457,"message":"← 200 OK"}
+{"type":"log","callId":"call@13","time":1052298.508,"message":"  vary: Origin"}
+{"type":"log","callId":"call@13","time":1052298.544,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@13","time":1052298.566,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@13","time":1052298.586,"message":"  content-length: 143"}
+{"type":"log","callId":"call@13","time":1052298.638,"message":"  date: Sat, 14 Nov 2026 17:45:31 GMT"}
+{"type":"log","callId":"call@13","time":1052298.673,"message":"  connection: close"}
+{"type":"after","callId":"call@13","endTime":1052299.164,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/learning/points/VUE-01/focus","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"143"},{"name":"date","value":"Sat, 14 Nov 2026 17:45:31 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794678331796,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":10.784999999916181,"requestStart":10.784999999916181,"responseStart":18.619999999878928},"responseEndTiming":20.61199999996461,"fetchUid":"c0ed85bcb900c07d351b4323d52ce3d1"}}}
+{"type":"before","callId":"call@15","startTime":1052305.684,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/learning/points/WEB-01/defer","method":"POST","jsonData":"{\"reason\":\"入口隔离测试\"}"},"stepId":"pw:api@39"}
+{"type":"log","callId":"call@15","time":1052309.746,"message":"→ POST http://127.0.0.1:42731/api/v1/learning/points/WEB-01/defer"}
+{"type":"log","callId":"call@15","time":1052309.779,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@15","time":1052309.786,"message":"  accept: */*"}
+{"type":"log","callId":"call@15","time":1052309.791,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@15","time":1052309.798,"message":"  content-type: application/json"}
+{"type":"log","callId":"call@15","time":1052309.804,"message":"  content-length: 31"}
+{"type":"log","callId":"call@15","time":1052315.442,"message":"← 200 OK"}
+{"type":"log","callId":"call@15","time":1052315.459,"message":"  vary: Origin"}
+{"type":"log","callId":"call@15","time":1052315.466,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@15","time":1052315.472,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@15","time":1052315.479,"message":"  content-length: 154"}
+{"type":"log","callId":"call@15","time":1052315.485,"message":"  date: Sat, 14 Nov 2026 17:45:31 GMT"}
+{"type":"log","callId":"call@15","time":1052315.495,"message":"  connection: close"}
+{"type":"after","callId":"call@15","endTime":1052315.667,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/learning/points/WEB-01/defer","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"154"},{"name":"date","value":"Sat, 14 Nov 2026 17:45:31 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794678331828,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":3.0189999998547137,"requestStart":3.0189999998547137,"responseStart":6.336999999824911},"responseEndTiming":7.047999999951571,"fetchUid":"36979c19f14242725b04ee0472ef1466"}}}
+{"type":"before","callId":"call@17","startTime":1052318.16,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/knowledge/points/VUE-01","method":"GET"},"stepId":"pw:api@40"}
+{"type":"log","callId":"call@17","time":1052319.754,"message":"→ GET http://127.0.0.1:42731/api/v1/knowledge/points/VUE-01"}
+{"type":"log","callId":"call@17","time":1052319.773,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@17","time":1052319.779,"message":"  accept: */*"}
+{"type":"log","callId":"call@17","time":1052319.784,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@17","time":1052325.8,"message":"← 200 OK"}
+{"type":"log","callId":"call@17","time":1052325.828,"message":"  vary: Origin"}
+{"type":"log","callId":"call@17","time":1052325.844,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@17","time":1052325.857,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@17","time":1052325.871,"message":"  content-length: 11263"}
+{"type":"log","callId":"call@17","time":1052325.886,"message":"  date: Sat, 14 Nov 2026 17:45:31 GMT"}
+{"type":"log","callId":"call@17","time":1052325.908,"message":"  connection: close"}
+{"type":"after","callId":"call@17","endTime":1052326.256,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/knowledge/points/VUE-01","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"11263"},{"name":"date","value":"Sat, 14 Nov 2026 17:45:31 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794678331839,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":1.0949999999720603,"requestStart":1.0949999999720603,"responseStart":5.5260000000707805},"responseEndTiming":6.016000000061467,"fetchUid":"c67a9171e6effaba0cf84f04ec09b37b"}}}

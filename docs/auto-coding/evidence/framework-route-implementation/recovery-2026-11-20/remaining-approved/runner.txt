@@ -1,0 +1,13 @@
+
+Running 4 tests using 1 worker
+
+(node:13155) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13155) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/ui-polish.spec.ts:3:1 › 侧栏可收起并记住偏好，手机仍保留全部主导航 (2.7s)
+  ✓  2 [desktop-chrome] › e2e/ui-polish.spec.ts:22:1 › 搜索键盘选择自动滚动，中文输入确认不会误导航，关闭恢复焦点 (3.5s)
+  ✓  3 [desktop-chrome] › e2e/ui-polish.spec.ts:57:1 › 打卡可搜索前 60 项以外的知识点，失败保留输入并可重试保存 (4.7s)
+  ✓  4 [desktop-chrome] › e2e/ui-polish.spec.ts:133:1 › 主要页面适配桌面、平板和手机且无页面脚本错误 (38.0s)
+
+  4 passed (1.9m)

@@ -1,0 +1,18 @@
+[
+  {
+    "test": "framework-route-独立方向、统一下一步、保留焦点、阅读辅助与空态-desktop-chrome",
+    "largestTraceEventGapMs": 925404.054
+  },
+  {
+    "test": "experience-核心使用体验-岗位创建与-CSV-导入先预览再写入，并符合键盘对话框契约-desktop-chrome",
+    "largestTraceEventGapMs": 594520.098
+  },
+  {
+    "test": "framework-entry-REACT-01-路线到补学返回和练习，查看不改变学习状态-desktop-chrome",
+    "largestTraceEventGapMs": 958525.34
+  },
+  {
+    "test": "framework-entry-VUE-01-小节查阅、复制、滚动和阅读阈值-desktop-chrome",
+    "largestTraceEventGapMs": 948946.709
+  }
+]

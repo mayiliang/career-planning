@@ -1,3 +1,5 @@
+import { getLearningRoute } from '../../services/learning/routes.js';
+import { getLearningPreferences, saveLearningPreferences } from '../../services/learning/preferences.js';
 import { openEventStream } from '../sse.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -26,6 +28,14 @@ import {
 const codeParams = z.object({ code: z.string().min(1) });
 
 export async function learningRoutes(app: FastifyInstance) {
+  app.get('/api/v1/learning/preferences', async (_request, reply) => reply.ok(getLearningPreferences()));
+  app.get('/api/v1/learning/route', async (_request, reply) => reply.ok(getLearningRoute()));
+  app.put('/api/v1/learning/preferences', async (request, reply) => {
+    const body = z.object({ frameworkChoice: z.enum(['UNDECIDED', 'REACT', 'VUE', 'NONE']), expectedRevision: z.number().int().min(0) }).parse(request.body);
+    const result = saveLearningPreferences(body.frameworkChoice, body.expectedRevision);
+    if (result.conflict) return reply.code(409).send({ error: { code: 'PREFERENCE_CONFLICT', message: '偏好已更新，请读取当前值后重试。', retryable: false, details: { current: result.current } }, meta: { requestId: request.id }, current: result.current });
+    return reply.ok(result.current);
+  });
   app.get('/api/v1/learning/workspace', async (_request, reply) => reply.ok(getLearningWorkspace()));
 
   app.post('/api/v1/learning/points/:code/focus', async (request, reply) => {

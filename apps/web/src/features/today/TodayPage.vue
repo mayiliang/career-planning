@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AsyncPilotRoute from '@/components/AsyncPilotRoute.vue';
+import PersonalLearningRoute from '@/components/PersonalLearningRoute.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -134,7 +134,7 @@ onMounted(load);
     <div v-else-if="error && !workspace" class="state-card error">{{ error }}<button @click="load">重试</button></div>
 
     <template v-else-if="workspace">
-      <AsyncPilotRoute :current-code="workspace.current?.code" :refresh-key="`${workspace.stats.learned}-${workspace.stats.deferred}`" />
+      <PersonalLearningRoute :refresh-key="JSON.stringify(workspace?.route)" @changed="load" />
       <p v-if="error" class="inline-error" role="alert">{{ error }}</p>
       <p v-if="feedback" class="inline-success" role="status"><AppIcon name="check" />{{ feedback }}<button aria-label="关闭提示" @click="feedback = ''"><AppIcon name="close" /></button></p>
       <section v-if="workspace.current" class="current-card">
@@ -170,7 +170,7 @@ onMounted(load);
       </section>
 
       <section class="principle-strip">
-        <strong>这里没有泛化每日任务</strong><span>{{ workspace.principle }}</span><button @click="router.push('/plan')">查看求职优先路线</button>
+        <strong>这里没有泛化每日任务</strong><span>{{ workspace.principle }}</span><button @click="router.push('/plan')">查看学习路线</button>
       </section>
 
       <div class="workspace-grid">

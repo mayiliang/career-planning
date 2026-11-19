@@ -26,9 +26,10 @@ test('搜索键盘选择自动滚动，中文输入确认不会误导航，关�
   await trigger.click();
   const input = page.getByRole('combobox', { name: '搜索页面或知识点' });
   await expect(input).toBeFocused();
-  await expect(page.getByRole('option')).toHaveCount(12);
+  const results = page.getByRole('listbox', { name: '页面与知识点' });
+  await expect(results.getByRole('option')).toHaveCount(12);
   for (let index = 0; index < 10; index++) await input.press('ArrowDown');
-  const selected = page.getByRole('option', { selected: true });
+  const selected = results.getByRole('option', { selected: true });
   await expect(selected).toBeInViewport();
   const fullyVisible = await selected.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
@@ -42,7 +43,7 @@ test('搜索键盘选择自动滚动，中文输入确认不会误导航，关�
   await input.fill('无匹配的知识点 xyz987');
   await expect(page.getByText('没有匹配结果')).toBeVisible();
   await input.fill('VUE-11');
-  await expect(page.getByRole('option', { name: /VUE-11/ })).toBeVisible();
+  await expect(results.getByRole('option', { name: /VUE-11/ })).toBeVisible();
   await input.press('Escape');
   await expect(trigger).toBeFocused();
   await trigger.click();
@@ -113,12 +114,14 @@ test('矮屏弹窗固定操作区且不会被 AI 入口盖住', async ({ page })
 });
 
 test('开始学习失败有明确反馈并恢复可操作状态', async ({ page }) => {
-  await page.route('**/api/v1/learning/workspace', async (route) => {
-    const response = await route.fetch();
-    const json = await response.json();
-    json.data.current = null;
-    await route.fulfill({ json });
-  });
+  expect((await page.request.post('/api/v1/import/reset-learning-progress', { data: {} })).ok()).toBe(true);
+  const preference = (await (await page.request.get('/api/v1/learning/preferences')).json()).data;
+  expect((await page.request.put('/api/v1/learning/preferences', {
+    data: { frameworkChoice: 'NONE', expectedRevision: preference.revision },
+  })).ok()).toBe(true);
+  const workspace = (await (await page.request.get('/api/v1/learning/workspace')).json()).data;
+  expect(workspace.current).toBeNull();
+  expect(workspace.suggested.code).toBe('JS-01');
   await page.route('**/api/v1/learning/points/*/focus', (route) => route.fulfill({ status: 503, json: { error: { code: 'UNAVAILABLE', message: '暂时无法开始，请重试', retryable: true }, meta: { requestId: 'ui-focus-failure' } } }));
   await page.goto('/');
   const start = page.getByRole('button', { name: '开始这项具体任务 →' });

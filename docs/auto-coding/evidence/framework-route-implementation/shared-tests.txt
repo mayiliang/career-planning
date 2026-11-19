@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/packages/shared
+
+ ✓ src/domain/async-pilot.test.ts (4 tests) 12ms
+ ✓ src/state-machines/knowledge-status.test.ts (6 tests) 20ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  18:17:55
+   Duration  1.68s (transform 273ms, setup 76ms, collect 409ms, tests 32ms, environment 1ms, prepare 667ms)
+

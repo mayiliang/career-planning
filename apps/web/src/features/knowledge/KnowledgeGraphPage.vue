@@ -171,6 +171,7 @@ function difficultyLabel(difficulty?: string) {
 
 <template>
   <div class="knowledge-graph-page">
+    <p class="browse-notice">此处为知识浏览视图，旧顺序与关系不代表已审必修路线；个人建议请查看 <RouterLink to="/plan">我的学习路线</RouterLink>。</p>
     <header class="graph-header">
       <div>
         <p class="eyebrow">RELATION LENS · 关系透镜</p>

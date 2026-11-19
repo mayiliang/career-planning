@@ -26,8 +26,7 @@ export function markPointLearned(code: string) {
   return rawDb.transaction(() => {
     const point = requirePoint(code);
     const learnedAt = point.learningState === 'LEARNED' && point.learnedAt ? point.learnedAt : now;
-    rawDb.prepare('UPDATE knowledge_points SET current_focus = 0 WHERE current_focus = 1 AND code <> ?').run(code);
-    rawDb.prepare(`UPDATE knowledge_points SET learning_state = 'LEARNED', learned_at = ?, current_focus = 1,
+    rawDb.prepare(`UPDATE knowledge_points SET learning_state = 'LEARNED', learned_at = ?,
       deferred_at = NULL, defer_reason = NULL,
       status = CASE WHEN status IN ('NOT_STARTED', 'LEARNING') THEN 'SELF_MASTERED' ELSE status END,
       self_mastered_at = COALESCE(self_mastered_at, ?), updated_at = ? WHERE code = ?`).run(learnedAt, now, now, code);

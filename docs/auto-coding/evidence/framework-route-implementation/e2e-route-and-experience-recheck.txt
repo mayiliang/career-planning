@@ -1,0 +1,91 @@
+
+Running 41 tests using 1 worker
+
+(node:75044) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:75044) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop-chrome] › e2e/experience.spec.ts:18:3 › 核心使用体验 › 知识脑图展示完整能力体系并可逐层展开 (1.7s)
+  ✓   2 [desktop-chrome] › e2e/experience.spec.ts:30:3 › 核心使用体验 › 首次进入直接给出可完成、可验收的具体学习任务 (1.8s)
+  ✓   3 [desktop-chrome] › e2e/experience.spec.ts:47:3 › 核心使用体验 › 资料学习、笔记和掌握状态彼此独立 (2.9s)
+  ✓   4 [desktop-chrome] › e2e/experience.spec.ts:85:3 › 核心使用体验 › 代码练习在站内执行、保存输出并提供明确任务契约 (3.0s)
+  ✓   5 [desktop-chrome] › e2e/experience.spec.ts:114:3 › 核心使用体验 › 本地结构失败不能被未参与的 AI 复核伪装为完全通过 (2.4s)
+  ✓   6 [desktop-chrome] › e2e/experience.spec.ts:134:3 › 核心使用体验 › 自建中文讲义能从知识点、练习与挑战共用的站内地址打开 (3.0s)
+  ✓   7 [desktop-chrome] › e2e/experience.spec.ts:147:3 › 核心使用体验 › B01 主讲义从头部按需打开独立前置短文，不再跳转总术语讲义 (5.5s)
+  ✓   8 [desktop-chrome] › e2e/experience.spec.ts:206:3 › 核心使用体验 › B01 四份主讲义及其全部站内前置资料都覆盖英文发音按钮 (11.8s)
+  ✓   9 [desktop-chrome] › e2e/experience.spec.ts:227:3 › 核心使用体验 › B02 四份主讲义及其新增站内前置资料只为关键名词提供英文发音 (9.5s)
+  ✓  10 [desktop-chrome] › e2e/experience.spec.ts:246:3 › 核心使用体验 › B03 四份独立主讲义只为关键名词提供英文发音 (8.0s)
+  ✓  11 [desktop-chrome] › e2e/experience.spec.ts:262:3 › 核心使用体验 › B04～B08 二十二份主讲义只为关键名词提供英文发音 (26.7s)
+  ✓  12 [desktop-chrome] › e2e/experience.spec.ts:315:3 › 核心使用体验 › B09～B12 十七份主讲义只为关键名词提供英文发音 (20.3s)
+  ✓  13 [desktop-chrome] › e2e/experience.spec.ts:344:3 › 核心使用体验 › B13～B16 十七份主讲义只为关键名词提供英文发音 (20.3s)
+  ✓  14 [desktop-chrome] › e2e/experience.spec.ts:373:3 › 核心使用体验 › B17 四份主讲义只为关键名词提供英文发音 (7.9s)
+  ✓  15 [desktop-chrome] › e2e/experience.spec.ts:389:3 › 核心使用体验 › B18～B19 八份主讲义只为关键名词提供英文发音 (14.1s)
+  ✓  16 [desktop-chrome] › e2e/experience.spec.ts:412:3 › 核心使用体验 › B20～B24 二十二份主讲义只为关键名词提供英文发音 (40.2s)
+  ✓  17 [desktop-chrome] › e2e/experience.spec.ts:457:3 › 核心使用体验 › B25～B27 十二份主讲义只为关键名词提供英文发音 (22.7s)
+  ✓  18 [desktop-chrome] › e2e/experience.spec.ts:488:3 › 核心使用体验 › B28 五份主讲义只为关键名词提供英文发音 (8.4s)
+  ✓  19 [desktop-chrome] › e2e/experience.spec.ts:505:3 › 核心使用体验 › B29～B32 十七份主讲义只为关键名词提供英文发音 (25.4s)
+  ✓  20 [desktop-chrome] › e2e/experience.spec.ts:542:3 › 核心使用体验 › B33～B35 十三份主讲义只为关键名词提供英文发音 (17.9s)
+  ✓  21 [desktop-chrome] › e2e/experience.spec.ts:574:3 › 核心使用体验 › B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态 (3.8s)
+  ✓  22 [desktop-chrome] › e2e/experience.spec.ts:611:3 › 核心使用体验 › 重复进入掌握挑战会恢复会话并展示资料与作答契约 (6.3s)
+  ✓  23 [desktop-chrome] › e2e/experience.spec.ts:642:3 › 核心使用体验 › 取消挑战保留旧答卷，并允许按当前合同新建会话 (5.4s)
+  ✓  24 [desktop-chrome] › e2e/experience.spec.ts:675:3 › 核心使用体验 › AI 不可用时在答题前说明影响、数据边界和修复入口 (2.7s)
+  ✓  25 [desktop-chrome] › e2e/experience.spec.ts:687:3 › 核心使用体验 › M4 明示七天稳定性门槛，并以真实变式取代旧题附录 (3.0s)
+  ✓  26 [desktop-chrome] › e2e/experience.spec.ts:738:3 › 核心使用体验 › 兼容批次保留真实知识点，路线明确按能力与基础编排 (2.2s)
+  ✓  27 [desktop-chrome] › e2e/experience.spec.ts:761:3 › 核心使用体验 › 详情下一步与路线一致，关系分支按知识点去重 (3.7s)
+  ✘  28 [desktop-chrome] › e2e/experience.spec.ts:776:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环 (5.8s)
+  -  29 [desktop-chrome] › e2e/experience.spec.ts:800:3 › 核心使用体验 › 知识清单支持全局命令导航，笔记中心按体系归档
+  -  30 [desktop-chrome] › e2e/experience.spec.ts:811:3 › 核心使用体验 › 笔记服务端保存失败后保留本地草稿，刷新仍可恢复
+  -  31 [desktop-chrome] › e2e/experience.spec.ts:840:3 › 核心使用体验 › Markdown 笔记可在只编辑与只预览间切换，AI 流式整理并可切换排序
+  -  32 [desktop-chrome] › e2e/experience.spec.ts:887:3 › 核心使用体验 › 学习台不分配每日任务并支持回顾式打卡
+  -  33 [desktop-chrome] › e2e/experience.spec.ts:900:3 › 核心使用体验 › 关系图可浏览路径、搜索知识点并进入局部关系
+  -  34 [desktop-chrome] › e2e/experience.spec.ts:913:3 › 核心使用体验 › 系统页说明自主节奏、数据备份和重置保留笔记
+  -  35 [desktop-chrome] › e2e/experience.spec.ts:935:3 › 核心使用体验 › 岗位创建与 CSV 导入先预览再写入，并符合键盘对话框契约
+  -  36 [desktop-chrome] › e2e/experience.spec.ts:977:3 › 核心使用体验 › 恢复数据必须先展示当前值、恢复后值和差异
+  -  37 [desktop-chrome] › e2e/experience.spec.ts:997:3 › 核心使用体验 › 本地个人数据 JSON 必须完整校验并预览后才能导入
+  -  38 [desktop-chrome] › e2e/experience.spec.ts:1026:3 › 核心使用体验 › 窄屏下主导航和脑图没有页面级横向溢出
+  -  39 [desktop-chrome] › e2e/experience.spec.ts:1038:3 › 核心使用体验 › 未知地址提供可恢复入口，跨页面导航回到顶部
+  -  40 [desktop-chrome] › e2e/experience.spec.ts:1054:3 › 核心使用体验 › 窄屏下新学习路径没有页面级横向溢出
+(node:75314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:75314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  41 [desktop-chrome] › e2e/framework-route.spec.ts:7:1 › 独立方向、统一下一步、保留焦点、阅读辅助与空态 (15.4s)
+
+
+  1) [desktop-chrome] › e2e/experience.spec.ts:776:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环 ────────────
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.current-card')
+    Expected substring: "JS-02"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" locator('.current-card') with timeout 5000ms
+      - waiting for locator('.current-card')
+
+
+      776 |       }
+      777 |       await expect(page.getByRole('button', { name: '暂缓整条路线' })).toHaveCount(0);
+    > 778 |     }
+          |      ^
+      779 |
+      780 |   });
+      781 |
+        at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/experience.spec.ts:778:49
+
+    Error Context: test-results/experience-核心使用体验-路线建议、学习完成和学习台当前现场形成连续闭环-desktop-chrome/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/experience-核心使用体验-路线建议、学习完成和学习台当前现场形成连续闭环-desktop-chrome/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/experience-核心使用体验-路线建议、学习完成和学习台当前现场形成连续闭环-desktop-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop-chrome] › e2e/experience.spec.ts:776:3 › 核心使用体验 › 路线建议、学习完成和学习台当前现场形成连续闭环 ─────────────
+  12 did not run
+  28 passed (5.2m)

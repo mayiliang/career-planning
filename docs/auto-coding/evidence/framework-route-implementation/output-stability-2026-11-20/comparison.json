@@ -1,0 +1,10 @@
+{
+  "scope": "git ls-files --cached --others --exclude-standard；包括尚未跟踪的交付文件",
+  "algorithm": "SHA-256",
+  "beforeCount": 3844,
+  "afterCount": 3844,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "equal": true
+}

@@ -1,0 +1,40 @@
+{"version":9,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1794678849505,"monotonicTime":1569985.512,"sdkLanguage":"javascript","title":"framework-entry.spec.ts:55 › VUE-01 小节查阅、复制、滚动和阅读阈值"}
+{"type":"before","callId":"call@11","startTime":1570434.751,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/knowledge/points/VUE-01","method":"GET"},"stepId":"pw:api@37"}
+{"type":"log","callId":"call@11","time":1570452.489,"message":"→ GET http://127.0.0.1:42731/api/v1/knowledge/points/VUE-01"}
+{"type":"log","callId":"call@11","time":1570452.6,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@11","time":1570452.644,"message":"  accept: */*"}
+{"type":"log","callId":"call@11","time":1570452.67,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@11","time":1570469.938,"message":"← 200 OK"}
+{"type":"log","callId":"call@11","time":1570469.984,"message":"  vary: Origin"}
+{"type":"log","callId":"call@11","time":1570470.016,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@11","time":1570470.038,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@11","time":1570470.059,"message":"  content-length: 11263"}
+{"type":"log","callId":"call@11","time":1570470.1,"message":"  date: Sat, 14 Nov 2026 17:54:09 GMT"}
+{"type":"log","callId":"call@11","time":1570470.129,"message":"  connection: close"}
+{"type":"after","callId":"call@11","endTime":1570470.517,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/knowledge/points/VUE-01","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"11263"},{"name":"date","value":"Sat, 14 Nov 2026 17:54:09 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794678849964,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":11.08600000012666,"requestStart":11.08600000012666,"responseStart":20.023000000044703},"responseEndTiming":23.51300000003539,"fetchUid":"1fbf1dc1cec1cab9e7575d9c1ce5f0fc"}}}
+{"type":"before","callId":"call@14","startTime":1570479.147,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/knowledge/material-progress","method":"GET"},"stepId":"pw:api@38"}
+{"type":"log","callId":"call@14","time":1570482.685,"message":"→ GET http://127.0.0.1:42731/api/v1/knowledge/material-progress"}
+{"type":"log","callId":"call@14","time":1570482.75,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@14","time":1570482.765,"message":"  accept: */*"}
+{"type":"log","callId":"call@14","time":1570482.779,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@14","time":1570489.761,"message":"← 200 OK"}
+{"type":"log","callId":"call@14","time":1570489.791,"message":"  vary: Origin"}
+{"type":"log","callId":"call@14","time":1570489.806,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@14","time":1570489.821,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@14","time":1570489.836,"message":"  content-length: 1699"}
+{"type":"log","callId":"call@14","time":1570489.85,"message":"  date: Sat, 14 Nov 2026 17:54:10 GMT"}
+{"type":"log","callId":"call@14","time":1570489.871,"message":"  connection: close"}
+{"type":"after","callId":"call@14","endTime":1570490.209,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/knowledge/material-progress","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"1699"},{"name":"date","value":"Sat, 14 Nov 2026 17:54:10 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794678850001,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":3.202999999979511,"requestStart":3.202999999979511,"responseStart":6.817999999970198},"responseEndTiming":7.869999999878928,"fetchUid":"40424f0be0b93a12b749cfb3177fc9c9"}}}
+{"type":"before","callId":"call@25","startTime":1572774.245,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/v1/knowledge/material-progress","method":"GET"},"stepId":"pw:api@43"}
+{"type":"log","callId":"call@25","time":1572776.48,"message":"→ GET http://127.0.0.1:42731/api/v1/knowledge/material-progress"}
+{"type":"log","callId":"call@25","time":1572776.491,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36"}
+{"type":"log","callId":"call@25","time":1572776.494,"message":"  accept: */*"}
+{"type":"log","callId":"call@25","time":1572776.496,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@25","time":1572780.247,"message":"← 200 OK"}
+{"type":"log","callId":"call@25","time":1572780.264,"message":"  vary: Origin"}
+{"type":"log","callId":"call@25","time":1572780.272,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@25","time":1572780.279,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@25","time":1572780.286,"message":"  content-length: 1699"}
+{"type":"log","callId":"call@25","time":1572780.293,"message":"  date: Sat, 14 Nov 2026 17:54:12 GMT"}
+{"type":"log","callId":"call@25","time":1572780.3,"message":"  connection: close"}
+{"type":"after","callId":"call@25","endTime":1572780.472,"result":{"response":{"url":"http://127.0.0.1:42731/api/v1/knowledge/material-progress","status":200,"statusText":"OK","headers":[{"name":"vary","value":"Origin"},{"name":"access-control-allow-credentials","value":"true"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"content-length","value":"1699"},{"name":"date","value":"Sat, 14 Nov 2026 17:54:12 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":42731},"timing":{"startTime":1794678852295,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":1.296000000089407,"requestStart":1.296000000089407,"responseStart":3.8160000001080334},"responseEndTiming":4.236000000033528,"fetchUid":"d888bdeb2ba9dfefc37cf028b2117f39"}}}

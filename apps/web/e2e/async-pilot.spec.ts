@@ -120,12 +120,11 @@ test('小节直达不记录整篇完成，正常读到末尾只完成阅读', as
 test('路线、详情、补基础返回与跨批次练习形成连续路径', async ({ page, browser }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/plan');
-  const chain = page.getByRole('region', { name: '异步学习链试点' });
+  const chain = page.getByRole('region', { name: '我的下一步', exact: true });
   await expect(chain).toBeVisible();
-  await expect(chain).toContainText('PREJS-07');
-  await expect(chain).toContainText('建议补齐');
+  await expect(chain).toContainText('共同基础');
   await page.screenshot({ path: fileURLToPath(new URL('plan-desktop.png', evidence)) });
-  await chain.getByRole('link', { name: '查看详情与练习' }).first().click();
+  await chain.getByRole('link', { name: 'JS-04', exact: true }).click();
   await expect(page).toHaveURL('/knowledge/JS-04');
   await expect(page.getByRole('region', { name: '异步学习链试点' })).toBeVisible();
   await page.locator(`.material-reader a[href="${js04}"]`).click();
@@ -154,8 +153,8 @@ test('前置暂缓只解释状态，浏览资料不改变用户当前点', async
   await page.request.post(`${api}/learning/points/JS-05/focus`);
   await page.request.post(`${api}/learning/points/JS-04/defer`, { data: { reason: '隔离样本：先补回调基础' } });
   await page.goto('/');
-  await expect(page.getByRole('region', { name: '异步学习链试点' })).toContainText('JS-04 已暂缓');
-  await page.getByRole('region', { name: '异步学习链试点' }).getByRole('link', { name: '查看暂缓状态' }).click();
+  await expect(page.getByRole('region', { name: '我的下一步', exact: true })).toContainText('已暂缓，需主动恢复');
+  await page.getByRole('region', { name: '我的下一步', exact: true }).locator('ul a[href="/knowledge/JS-04"]').click();
   await expect(page).toHaveURL('/knowledge/JS-04');
   const before = await point(page, 'JS-04');
   await page.getByRole('region', { name: '异步学习链试点' }).getByRole('link', { name: '阅读讲义' }).nth(1).click();

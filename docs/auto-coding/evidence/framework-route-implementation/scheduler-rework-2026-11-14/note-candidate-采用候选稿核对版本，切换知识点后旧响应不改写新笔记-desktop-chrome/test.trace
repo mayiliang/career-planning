@@ -1,0 +1,49 @@
+{"version":9,"type":"context-options","origin":"testRunner","browserName":"","playwrightVersion":"1.63.0","options":{},"platform":"darwin","wallTime":1794592941677,"monotonicTime":2967886.157,"sdkLanguage":"javascript","testTimeout":30000,"annotations":[]}
+{"type":"before","callId":"hook@1","stepId":"hook@1","startTime":2967887.012,"class":"Test","method":"hook","title":"Before Hooks","params":{},"stack":[]}
+{"type":"before","callId":"fixture@25","stepId":"fixture@25","parentId":"hook@1","startTime":2967895.78,"class":"Test","method":"fixture","title":"Fixture \"context\"","params":{},"stack":[]}
+{"type":"before","callId":"pw:api@26","stepId":"pw:api@26","parentId":"fixture@25","startTime":2967896.804,"class":"Test","method":"pw:api","title":"Create context","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@26","endTime":2967921.513,"annotations":[]}
+{"type":"after","callId":"fixture@25","endTime":2967925.929,"annotations":[]}
+{"type":"before","callId":"fixture@27","stepId":"fixture@27","parentId":"hook@1","startTime":2967926.272,"class":"Test","method":"fixture","title":"Fixture \"page\"","params":{},"stack":[]}
+{"type":"before","callId":"pw:api@28","stepId":"pw:api@28","parentId":"fixture@27","startTime":2967927.121,"class":"Test","method":"pw:api","title":"Create page","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@28","endTime":2968227.742,"annotations":[]}
+{"type":"after","callId":"fixture@27","endTime":2968227.819,"annotations":[]}
+{"type":"after","callId":"hook@1","endTime":2968227.859,"annotations":[]}
+{"type":"before","callId":"pw:api@29","stepId":"pw:api@29","startTime":2968229.203,"class":"Test","method":"pw:api","title":"Route requests","params":{},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/note-candidate.spec.ts","line":19,"column":14}],"group":"route"}
+{"type":"after","callId":"pw:api@29","endTime":2968241.315,"annotations":[]}
+{"type":"before","callId":"pw:api@30","stepId":"pw:api@30","startTime":2968242.833,"class":"Test","method":"pw:api","title":"Navigate","subtitle":"/knowledge/PERF-04?tab=notes","params":{"url":"/knowledge/PERF-04?tab=notes"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/note-candidate.spec.ts","line":35,"column":14}]}
+{"type":"error","message":"\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m","stack":[]}
+{"type":"before","callId":"hook@31","stepId":"hook@31","startTime":3922682.329,"class":"Test","method":"hook","title":"After Hooks","params":{},"stack":[]}
+{"type":"before","callId":"fixture@32","stepId":"fixture@32","parentId":"hook@31","startTime":3922683.57,"class":"Test","method":"fixture","title":"Fixture \"page\"","params":{},"stack":[]}
+{"type":"after","callId":"fixture@32","endTime":3922683.716,"annotations":[]}
+{"type":"before","callId":"fixture@33","stepId":"fixture@33","parentId":"hook@31","startTime":3922684.125,"class":"Test","method":"fixture","title":"Fixture \"context\"","params":{},"stack":[]}
+{"type":"after","callId":"pw:api@30","endTime":3922838.787,"annotations":[]}
+{"type":"before","callId":"expect@34","stepId":"expect@34","parentId":"fixture@33","startTime":3922841.845,"class":"Test","method":"expect","title":"Expect \"toHaveValue\"","subtitle":"getByLabel('Markdown 原始笔记')","params":{"locator":"getByLabel('Markdown 原始笔记')","expected":"旧原文"},"stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/note-candidate.spec.ts","line":36,"column":50}]}
+{"type":"before","callId":"pw:api@35","stepId":"pw:api@35","parentId":"fixture@33","startTime":3923364.669,"class":"Test","method":"pw:api","title":"Close context","params":{},"stack":[]}
+{"type":"after","callId":"expect@34","endTime":3923419.456,"annotations":[],"error":{"name":"","message":"Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByLabel('Markdown 原始笔记')\nExpected: \u001b[32m\"旧原文\"\u001b[39m\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" getByLabel('Markdown 原始笔记') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByLabel('Markdown 原始笔记')\u001b[22m\n\u001b[2m  - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.\u001b[22m\n","stack":"Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByLabel('Markdown 原始笔记')\nExpected: \u001b[32m\"旧原文\"\u001b[39m\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" getByLabel('Markdown 原始笔记') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByLabel('Markdown 原始笔记')\u001b[22m\n\u001b[2m  - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.\u001b[22m\n\n    at /Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/note-candidate.spec.ts:36:50"}}
+{"type":"error","message":"Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByLabel('Markdown 原始笔记')\nExpected: \u001b[32m\"旧原文\"\u001b[39m\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" getByLabel('Markdown 原始笔记') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByLabel('Markdown 原始笔记')\u001b[22m\n\u001b[2m  - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.\u001b[22m\n","stack":[{"file":"/Users/bob/Library/Application Support/CareerPlanningAutoCoding/repository/apps/web/e2e/note-candidate.spec.ts","line":36,"column":50}]}
+{"type":"after","callId":"pw:api@35","endTime":3923424.891,"annotations":[]}
+{"type":"after","callId":"fixture@33","endTime":3923425.006,"annotations":[]}
+{"type":"before","callId":"attach@e4f6434bdc88da0868af629c46ab4e7e","stepId":"attach@e4f6434bdc88da0868af629c46ab4e7e","startTime":3923431.137,"class":"Test","method":"test.attach","title":"Attach \"error-context\"","params":{},"stack":[]}
+{"type":"after","callId":"attach@e4f6434bdc88da0868af629c46ab4e7e","endTime":3923431.162,"attachments":[{"name":"error-context","contentType":"text/markdown","file":"attachments/28037ee6266bd1173b4ff74b05c9c7a73acdd249"}]}
+{"type":"before","callId":"fixture@44","stepId":"fixture@44","parentId":"hook@31","startTime":3923432.773,"class":"Test","method":"fixture","title":"Fixture \"baseURL\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@44","endTime":3923432.8,"annotations":[]}
+{"type":"before","callId":"fixture@45","stepId":"fixture@45","parentId":"hook@31","startTime":3923432.813,"class":"Test","method":"fixture","title":"Fixture \"userAgent\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@45","endTime":3923432.826,"annotations":[]}
+{"type":"before","callId":"fixture@47","stepId":"fixture@47","parentId":"hook@31","startTime":3923433.014,"class":"Test","method":"fixture","title":"Fixture \"viewport\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@47","endTime":3923433.025,"annotations":[]}
+{"type":"before","callId":"fixture@55","stepId":"fixture@55","parentId":"hook@31","startTime":3923434.735,"class":"Test","method":"fixture","title":"Fixture \"isMobile\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@55","endTime":3923434.747,"annotations":[]}
+{"type":"before","callId":"fixture@59","stepId":"fixture@59","parentId":"hook@31","startTime":3923435.226,"class":"Test","method":"fixture","title":"Fixture \"hasTouch\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@59","endTime":3923435.237,"annotations":[]}
+{"type":"before","callId":"fixture@62","stepId":"fixture@62","parentId":"hook@31","startTime":3923435.793,"class":"Test","method":"fixture","title":"Fixture \"deviceScaleFactor\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@62","endTime":3923435.817,"annotations":[]}
+{"type":"after","callId":"hook@31","endTime":3923439.661,"annotations":[]}
+{"type":"before","callId":"hook@69","stepId":"hook@69","startTime":3923439.988,"class":"Test","method":"hook","title":"Worker Cleanup","params":{},"stack":[]}
+{"type":"before","callId":"fixture@74","stepId":"fixture@74","parentId":"hook@69","startTime":3923442.429,"class":"Test","method":"fixture","title":"Fixture \"browser\"","params":{},"stack":[]}
+{"type":"after","callId":"fixture@74","endTime":3924885.491,"annotations":[]}
+{"type":"before","callId":"fixture@78","stepId":"fixture@78","parentId":"hook@69","startTime":3924887.47,"class":"Test","method":"fixture","title":"Fixture \"defaultBrowserType\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@78","endTime":3924887.514,"annotations":[]}
+{"type":"before","callId":"fixture@81","stepId":"fixture@81","parentId":"hook@69","startTime":3924888.173,"class":"Test","method":"fixture","title":"Fixture \"channel\"","params":{},"stack":[{"file":"project#desktop-chrome","line":1,"column":1}],"group":"configuration"}
+{"type":"after","callId":"fixture@81","endTime":3924888.199,"annotations":[]}
+{"type":"after","callId":"hook@69","endTime":3924889.154,"annotations":[]}

@@ -1,0 +1,18 @@
+
+Running 9 tests using 1 worker
+
+(node:88429) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:88429) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop-chrome] › e2e/experience.spec.ts:344:3 › 核心使用体验 › B13～B16 十七份主讲义只为关键名词提供英文发音 (23.6s)
+  ✓  2 [desktop-chrome] › e2e/experience.spec.ts:373:3 › 核心使用体验 › B17 四份主讲义只为关键名词提供英文发音 (7.3s)
+  ✓  3 [desktop-chrome] › e2e/experience.spec.ts:389:3 › 核心使用体验 › B18～B19 八份主讲义只为关键名词提供英文发音 (12.8s)
+  ✓  4 [desktop-chrome] › e2e/experience.spec.ts:412:3 › 核心使用体验 › B20～B24 二十二份主讲义只为关键名词提供英文发音 (33.9s)
+  ✓  5 [desktop-chrome] › e2e/experience.spec.ts:457:3 › 核心使用体验 › B25～B27 十二份主讲义只为关键名词提供英文发音 (19.3s)
+  ✓  6 [desktop-chrome] › e2e/experience.spec.ts:488:3 › 核心使用体验 › B28 五份主讲义只为关键名词提供英文发音 (7.4s)
+  ✓  7 [desktop-chrome] › e2e/experience.spec.ts:505:3 › 核心使用体验 › B29～B32 十七份主讲义只为关键名词提供英文发音 (25.1s)
+  ✓  8 [desktop-chrome] › e2e/experience.spec.ts:542:3 › 核心使用体验 › B33～B35 十三份主讲义只为关键名词提供英文发音 (18.3s)
+  ✓  9 [desktop-chrome] › e2e/experience.spec.ts:574:3 › 核心使用体验 › B01～B35 资料超过正文 80% 后自动标记看完，并在返回后保持状态 (3.4s)
+
+  9 passed (3.5m)

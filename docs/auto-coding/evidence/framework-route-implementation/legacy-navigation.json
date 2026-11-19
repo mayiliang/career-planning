@@ -1,0 +1,1646 @@
+{
+  "note": "运行时旧分组与材料分组分别冻结；同号不表示同一集合。",
+  "runtime": [
+    {
+      "code": "JS-01",
+      "week": 1,
+      "order": 0
+    },
+    {
+      "code": "JS-02",
+      "week": 1,
+      "order": 1
+    },
+    {
+      "code": "JS-03",
+      "week": 1,
+      "order": 2
+    },
+    {
+      "code": "JS-07",
+      "week": 1,
+      "order": 3
+    },
+    {
+      "code": "CS-01",
+      "week": 2,
+      "order": 4
+    },
+    {
+      "code": "CS-02",
+      "week": 2,
+      "order": 5
+    },
+    {
+      "code": "CS-03",
+      "week": 2,
+      "order": 6
+    },
+    {
+      "code": "JS-04",
+      "week": 2,
+      "order": 7
+    },
+    {
+      "code": "JS-05",
+      "week": 3,
+      "order": 8
+    },
+    {
+      "code": "JS-06",
+      "week": 3,
+      "order": 9
+    },
+    {
+      "code": "TS-01",
+      "week": 3,
+      "order": 10
+    },
+    {
+      "code": "TS-02",
+      "week": 3,
+      "order": 11
+    },
+    {
+      "code": "TS-03",
+      "week": 4,
+      "order": 12
+    },
+    {
+      "code": "WEB-01",
+      "week": 4,
+      "order": 13
+    },
+    {
+      "code": "REACT-01",
+      "week": 4,
+      "order": 14
+    },
+    {
+      "code": "VUE-01",
+      "week": 4,
+      "order": 15
+    },
+    {
+      "code": "VUE-02",
+      "week": 4,
+      "order": 16
+    },
+    {
+      "code": "REACT-02",
+      "week": 5,
+      "order": 17
+    },
+    {
+      "code": "VUE-03",
+      "week": 5,
+      "order": 18
+    },
+    {
+      "code": "VUE-04",
+      "week": 5,
+      "order": 19
+    },
+    {
+      "code": "REACT-03",
+      "week": 5,
+      "order": 20
+    },
+    {
+      "code": "REACT-04",
+      "week": 6,
+      "order": 21
+    },
+    {
+      "code": "VUE-05",
+      "week": 6,
+      "order": 22
+    },
+    {
+      "code": "REACT-05",
+      "week": 6,
+      "order": 23
+    },
+    {
+      "code": "VUE-06",
+      "week": 6,
+      "order": 24
+    },
+    {
+      "code": "REACT-06",
+      "week": 7,
+      "order": 25
+    },
+    {
+      "code": "VUE-08",
+      "week": 7,
+      "order": 26
+    },
+    {
+      "code": "REACT-08",
+      "week": 7,
+      "order": 27
+    },
+    {
+      "code": "REACT-10",
+      "week": 7,
+      "order": 28
+    },
+    {
+      "code": "VUE-07",
+      "week": 8,
+      "order": 29
+    },
+    {
+      "code": "REACT-07",
+      "week": 8,
+      "order": 30
+    },
+    {
+      "code": "VUE-10",
+      "week": 8,
+      "order": 31
+    },
+    {
+      "code": "REACT-09",
+      "week": 8,
+      "order": 32
+    },
+    {
+      "code": "VUE-11",
+      "week": 8,
+      "order": 33
+    },
+    {
+      "code": "GIT-01",
+      "week": 9,
+      "order": 34
+    },
+    {
+      "code": "GIT-02",
+      "week": 9,
+      "order": 35
+    },
+    {
+      "code": "GIT-03",
+      "week": 9,
+      "order": 36
+    },
+    {
+      "code": "DEBUG-01",
+      "week": 9,
+      "order": 37
+    },
+    {
+      "code": "ENG-01",
+      "week": 10,
+      "order": 38
+    },
+    {
+      "code": "ENG-02",
+      "week": 10,
+      "order": 39
+    },
+    {
+      "code": "ENG-03",
+      "week": 10,
+      "order": 40
+    },
+    {
+      "code": "ENG-05",
+      "week": 10,
+      "order": 41
+    },
+    {
+      "code": "TEST-01",
+      "week": 11,
+      "order": 42
+    },
+    {
+      "code": "TEST-02",
+      "week": 11,
+      "order": 43
+    },
+    {
+      "code": "TEST-03",
+      "week": 11,
+      "order": 44
+    },
+    {
+      "code": "CAREER-01",
+      "week": 11,
+      "order": 45
+    },
+    {
+      "code": "CAREER-02",
+      "week": 12,
+      "order": 46
+    },
+    {
+      "code": "CAREER-04",
+      "week": 12,
+      "order": 47
+    },
+    {
+      "code": "CAREER-05",
+      "week": 12,
+      "order": 48
+    },
+    {
+      "code": "WEB-02",
+      "week": 12,
+      "order": 49
+    },
+    {
+      "code": "WEB-03",
+      "week": 12,
+      "order": 50
+    },
+    {
+      "code": "A11Y-01",
+      "week": 13,
+      "order": 51
+    },
+    {
+      "code": "BROWSER-01",
+      "week": 13,
+      "order": 52
+    },
+    {
+      "code": "BROWSER-02",
+      "week": 13,
+      "order": 53
+    },
+    {
+      "code": "WEB-04",
+      "week": 13,
+      "order": 54
+    },
+    {
+      "code": "WEB-05",
+      "week": 14,
+      "order": 55
+    },
+    {
+      "code": "NET-01",
+      "week": 14,
+      "order": 56
+    },
+    {
+      "code": "SEC-01",
+      "week": 14,
+      "order": 57
+    },
+    {
+      "code": "SEC-02",
+      "week": 14,
+      "order": 58
+    },
+    {
+      "code": "SEC-04",
+      "week": 15,
+      "order": 59
+    },
+    {
+      "code": "SEC-03",
+      "week": 15,
+      "order": 60
+    },
+    {
+      "code": "SEC-05",
+      "week": 15,
+      "order": 61
+    },
+    {
+      "code": "TS-04",
+      "week": 15,
+      "order": 62
+    },
+    {
+      "code": "TS-05",
+      "week": 16,
+      "order": 63
+    },
+    {
+      "code": "TS-06",
+      "week": 16,
+      "order": 64
+    },
+    {
+      "code": "TS-07",
+      "week": 16,
+      "order": 65
+    },
+    {
+      "code": "TS-08",
+      "week": 16,
+      "order": 66
+    },
+    {
+      "code": "TS-09",
+      "week": 16,
+      "order": 67
+    },
+    {
+      "code": "IDENTITY-01",
+      "week": 17,
+      "order": 68
+    },
+    {
+      "code": "IDENTITY-02",
+      "week": 17,
+      "order": 69
+    },
+    {
+      "code": "PRIVACY-01",
+      "week": 17,
+      "order": 70
+    },
+    {
+      "code": "PRIVACY-02",
+      "week": 17,
+      "order": 71
+    },
+    {
+      "code": "NODE-01",
+      "week": 18,
+      "order": 72
+    },
+    {
+      "code": "NODE-02",
+      "week": 18,
+      "order": 73
+    },
+    {
+      "code": "NODE-04",
+      "week": 18,
+      "order": 74
+    },
+    {
+      "code": "AIDEV-01",
+      "week": 18,
+      "order": 75
+    },
+    {
+      "code": "AIDEV-02",
+      "week": 19,
+      "order": 76
+    },
+    {
+      "code": "AIDEV-03",
+      "week": 19,
+      "order": 77
+    },
+    {
+      "code": "BIZ-01",
+      "week": 19,
+      "order": 78
+    },
+    {
+      "code": "BIZ-02",
+      "week": 19,
+      "order": 79
+    },
+    {
+      "code": "BIZ-03",
+      "week": 20,
+      "order": 80
+    },
+    {
+      "code": "BIZ-04",
+      "week": 20,
+      "order": 81
+    },
+    {
+      "code": "BIZ-05",
+      "week": 20,
+      "order": 82
+    },
+    {
+      "code": "BIZ-06",
+      "week": 20,
+      "order": 83
+    },
+    {
+      "code": "BIZ-07",
+      "week": 20,
+      "order": 84
+    },
+    {
+      "code": "BIZ-08",
+      "week": 21,
+      "order": 85
+    },
+    {
+      "code": "TEST-04",
+      "week": 21,
+      "order": 86
+    },
+    {
+      "code": "RENDER-01",
+      "week": 21,
+      "order": 87
+    },
+    {
+      "code": "RENDER-02",
+      "week": 21,
+      "order": 88
+    },
+    {
+      "code": "DATA-01",
+      "week": 22,
+      "order": 89
+    },
+    {
+      "code": "DATA-02",
+      "week": 22,
+      "order": 90
+    },
+    {
+      "code": "REALTIME-01",
+      "week": 22,
+      "order": 91
+    },
+    {
+      "code": "COMP-01",
+      "week": 22,
+      "order": 92
+    },
+    {
+      "code": "COMP-02",
+      "week": 23,
+      "order": 93
+    },
+    {
+      "code": "UX-01",
+      "week": 23,
+      "order": 94
+    },
+    {
+      "code": "ENG-08",
+      "week": 23,
+      "order": 95
+    },
+    {
+      "code": "LINUX-01",
+      "week": 23,
+      "order": 96
+    },
+    {
+      "code": "LINUX-02",
+      "week": 24,
+      "order": 97
+    },
+    {
+      "code": "LINUX-03",
+      "week": 24,
+      "order": 98
+    },
+    {
+      "code": "LINUX-04",
+      "week": 24,
+      "order": 99
+    },
+    {
+      "code": "DOCKER-01",
+      "week": 24,
+      "order": 100
+    },
+    {
+      "code": "DOCKER-02",
+      "week": 24,
+      "order": 101
+    },
+    {
+      "code": "ENG-06",
+      "week": 25,
+      "order": 102
+    },
+    {
+      "code": "DEPLOY-01",
+      "week": 25,
+      "order": 103
+    },
+    {
+      "code": "OBS-01",
+      "week": 25,
+      "order": 104
+    },
+    {
+      "code": "PERF-01",
+      "week": 25,
+      "order": 105
+    },
+    {
+      "code": "PERF-02",
+      "week": 26,
+      "order": 106
+    },
+    {
+      "code": "PERF-03",
+      "week": 26,
+      "order": 107
+    },
+    {
+      "code": "PERF-04",
+      "week": 26,
+      "order": 108
+    },
+    {
+      "code": "H5-01",
+      "week": 26,
+      "order": 109
+    },
+    {
+      "code": "H5-02",
+      "week": 27,
+      "order": 110
+    },
+    {
+      "code": "MCP-01",
+      "week": 27,
+      "order": 111
+    },
+    {
+      "code": "AIPROD-01",
+      "week": 27,
+      "order": 112
+    },
+    {
+      "code": "AIPROD-02",
+      "week": 27,
+      "order": 113
+    },
+    {
+      "code": "AISAFE-01",
+      "week": 28,
+      "order": 114
+    },
+    {
+      "code": "AISAFE-02",
+      "week": 28,
+      "order": 115
+    },
+    {
+      "code": "AIGOV-01",
+      "week": 28,
+      "order": 116
+    },
+    {
+      "code": "AIAPP-01",
+      "week": 28,
+      "order": 117
+    },
+    {
+      "code": "AIAPP-02",
+      "week": 28,
+      "order": 118
+    },
+    {
+      "code": "AIAPP-03",
+      "week": 29,
+      "order": 119
+    },
+    {
+      "code": "AIAPP-04",
+      "week": 29,
+      "order": 120
+    },
+    {
+      "code": "AIAPP-05",
+      "week": 29,
+      "order": 121
+    },
+    {
+      "code": "AIUI-01",
+      "week": 29,
+      "order": 122
+    },
+    {
+      "code": "AIAPP-06",
+      "week": 30,
+      "order": 123
+    },
+    {
+      "code": "AIAPP-07",
+      "week": 30,
+      "order": 124
+    },
+    {
+      "code": "AIAPP-08",
+      "week": 30,
+      "order": 125
+    },
+    {
+      "code": "AIAPP-09",
+      "week": 30,
+      "order": 126
+    },
+    {
+      "code": "AIAPP-10",
+      "week": 31,
+      "order": 127
+    },
+    {
+      "code": "AIAPP-12",
+      "week": 31,
+      "order": 128
+    },
+    {
+      "code": "AIAPP-13",
+      "week": 31,
+      "order": 129
+    },
+    {
+      "code": "AGENT-01",
+      "week": 31,
+      "order": 130
+    },
+    {
+      "code": "AGENT-03",
+      "week": 32,
+      "order": 131
+    },
+    {
+      "code": "AGENT-04",
+      "week": 32,
+      "order": 132
+    },
+    {
+      "code": "AGENT-05",
+      "week": 32,
+      "order": 133
+    },
+    {
+      "code": "AGENT-06",
+      "week": 32,
+      "order": 134
+    },
+    {
+      "code": "AGENT-07",
+      "week": 32,
+      "order": 135
+    },
+    {
+      "code": "AGENT-08",
+      "week": 33,
+      "order": 136
+    },
+    {
+      "code": "AGENT-09",
+      "week": 33,
+      "order": 137
+    },
+    {
+      "code": "AGENT-10",
+      "week": 33,
+      "order": 138
+    },
+    {
+      "code": "AIDEV-04",
+      "week": 33,
+      "order": 139
+    },
+    {
+      "code": "AIDEV-07",
+      "week": 34,
+      "order": 140
+    },
+    {
+      "code": "AIDEV-10",
+      "week": 34,
+      "order": 141
+    },
+    {
+      "code": "COMPAT-01",
+      "week": 34,
+      "order": 142
+    },
+    {
+      "code": "ARCH-01",
+      "week": 34,
+      "order": 143
+    },
+    {
+      "code": "ARCH-02",
+      "week": 35,
+      "order": 144
+    },
+    {
+      "code": "ARCH-03",
+      "week": 35,
+      "order": 145
+    },
+    {
+      "code": "ARCH-04",
+      "week": 35,
+      "order": 146
+    },
+    {
+      "code": "ARCH-05",
+      "week": 35,
+      "order": 147
+    },
+    {
+      "code": "LEAD-01",
+      "week": 35,
+      "order": 148
+    }
+  ],
+  "materials": [
+    {
+      "id": "JS-01",
+      "guide": "js-01-execution-context-scope-closure.md",
+      "anchor": "js-01",
+      "batch": "B01"
+    },
+    {
+      "id": "JS-02",
+      "guide": "js-02-prototype-object-model-this.md",
+      "anchor": "js-02",
+      "batch": "B01"
+    },
+    {
+      "id": "JS-03",
+      "guide": "js-03-types-equality-copy-immutability.md",
+      "anchor": "js-03",
+      "batch": "B01"
+    },
+    {
+      "id": "JS-07",
+      "guide": "js-07-iteration-metaprogramming-resources.md",
+      "anchor": "js-07",
+      "batch": "B01"
+    },
+    {
+      "id": "CS-01",
+      "guide": "cs-01-complexity-scale-engineering-cost.md",
+      "anchor": "cs-01",
+      "batch": "B02"
+    },
+    {
+      "id": "CS-02",
+      "guide": "cs-02-data-structures-algorithms-correctness.md",
+      "anchor": "cs-02",
+      "batch": "B02"
+    },
+    {
+      "id": "CS-03",
+      "guide": "cs-03-large-data-workers-incremental-memory.md",
+      "anchor": "cs-03",
+      "batch": "B02"
+    },
+    {
+      "id": "JS-04",
+      "guide": "js-04-async-promise-browser-event-loop.md",
+      "anchor": "js-04",
+      "batch": "B02"
+    },
+    {
+      "id": "JS-05",
+      "guide": "js-05-promise-errors-async-control-flow.md",
+      "anchor": "js-05",
+      "batch": "B03"
+    },
+    {
+      "id": "JS-06",
+      "guide": "js-06-es-modules-module-boundaries.md",
+      "anchor": "js-06",
+      "batch": "B03"
+    },
+    {
+      "id": "TS-01",
+      "guide": "ts-01-type-system-structural-strict-mode.md",
+      "anchor": "ts-01",
+      "batch": "B03"
+    },
+    {
+      "id": "TS-02",
+      "guide": "ts-02-unions-narrowing-never-exhaustiveness.md",
+      "anchor": "ts-02",
+      "batch": "B03"
+    },
+    {
+      "id": "TS-03",
+      "guide": "ts-03-generics-constraints-keyof-indexed-access.md",
+      "anchor": "ts-03",
+      "batch": "B04"
+    },
+    {
+      "id": "WEB-01",
+      "guide": "web-01-html-semantics-forms-accessibility.md",
+      "anchor": "web-01",
+      "batch": "B04"
+    },
+    {
+      "id": "REACT-01",
+      "guide": "react-01-render-purity-state-snapshot.md",
+      "anchor": "react-01",
+      "batch": "B04"
+    },
+    {
+      "id": "VUE-01",
+      "guide": "vue-01-vite-sfc-project-structure.md",
+      "anchor": "vue-01",
+      "batch": "B04"
+    },
+    {
+      "id": "VUE-02",
+      "guide": "vue-02-ref-reactive-computed-boundaries.md",
+      "anchor": "vue-02",
+      "batch": "B04"
+    },
+    {
+      "id": "REACT-02",
+      "guide": "react-02-component-boundaries-data-flow-composition.md",
+      "anchor": "react-02",
+      "batch": "B05"
+    },
+    {
+      "id": "VUE-03",
+      "guide": "vue-03-template-directives-events-forms.md",
+      "anchor": "vue-03",
+      "batch": "B05"
+    },
+    {
+      "id": "VUE-04",
+      "guide": "vue-04-typed-components-slots-model-teleport.md",
+      "anchor": "vue-04",
+      "batch": "B05"
+    },
+    {
+      "id": "REACT-03",
+      "guide": "react-03-state-model-derived-controlled.md",
+      "anchor": "react-03",
+      "batch": "B05"
+    },
+    {
+      "id": "REACT-04",
+      "guide": "react-04-effects-external-sync-cleanup.md",
+      "anchor": "react-04",
+      "batch": "B06"
+    },
+    {
+      "id": "VUE-05",
+      "guide": "vue-05-lifecycle-effects-async-recovery.md",
+      "anchor": "vue-05",
+      "batch": "B06"
+    },
+    {
+      "id": "REACT-05",
+      "guide": "react-05-hooks-rules-custom-hooks.md",
+      "anchor": "react-05",
+      "batch": "B06"
+    },
+    {
+      "id": "VUE-06",
+      "guide": "vue-06-composables-injection-reuse.md",
+      "anchor": "vue-06",
+      "batch": "B06"
+    },
+    {
+      "id": "REACT-06",
+      "guide": "react-06-reducer-context-state-domains.md",
+      "anchor": "react-06",
+      "batch": "B07"
+    },
+    {
+      "id": "VUE-08",
+      "guide": "vue-08-pinia-state-layers.md",
+      "anchor": "vue-08",
+      "batch": "B07"
+    },
+    {
+      "id": "REACT-08",
+      "guide": "react-08-error-boundaries-suspense-recovery.md",
+      "anchor": "react-08",
+      "batch": "B07"
+    },
+    {
+      "id": "REACT-10",
+      "guide": "react-10-router-data-framework-modes.md",
+      "anchor": "react-10",
+      "batch": "B07"
+    },
+    {
+      "id": "VUE-07",
+      "guide": "vue-07-router-navigation-boundaries.md",
+      "anchor": "vue-07",
+      "batch": "B08"
+    },
+    {
+      "id": "REACT-07",
+      "guide": "react-07-performance-memo-large-lists.md",
+      "anchor": "react-07",
+      "batch": "B08"
+    },
+    {
+      "id": "VUE-10",
+      "guide": "vue-10-testing-performance-production-build.md",
+      "anchor": "vue-10",
+      "batch": "B08"
+    },
+    {
+      "id": "REACT-09",
+      "guide": "react-09-compiler-rsc-security-upgrades.md",
+      "anchor": "react-09",
+      "batch": "B08"
+    },
+    {
+      "id": "VUE-11",
+      "guide": "vue-11-nuxt-rendering-data-performance.md",
+      "anchor": "vue-11",
+      "batch": "B08"
+    },
+    {
+      "id": "GIT-01",
+      "guide": "git-01-object-index-references-recovery.md",
+      "anchor": "git-01",
+      "batch": "B09"
+    },
+    {
+      "id": "GIT-02",
+      "guide": "git-02-branches-merge-rebase-conflicts.md",
+      "anchor": "git-02",
+      "batch": "B09"
+    },
+    {
+      "id": "GIT-03",
+      "guide": "git-03-commits-remotes-pr-worktrees-collaboration.md",
+      "anchor": "git-03",
+      "batch": "B09"
+    },
+    {
+      "id": "DEBUG-01",
+      "guide": "debug-01-systematic-debugging-evidence-causality.md",
+      "anchor": "debug-01",
+      "batch": "B09"
+    },
+    {
+      "id": "ENG-01",
+      "guide": "eng-01-module-graph-build-output-source-maps.md",
+      "anchor": "eng-01",
+      "batch": "B10"
+    },
+    {
+      "id": "ENG-02",
+      "guide": "eng-02-dev-production-environments-assets-cache.md",
+      "anchor": "eng-02",
+      "batch": "B10"
+    },
+    {
+      "id": "ENG-03",
+      "guide": "eng-03-dependencies-lockfile-workspaces-peer.md",
+      "anchor": "eng-03",
+      "batch": "B10"
+    },
+    {
+      "id": "ENG-05",
+      "guide": "eng-05-quality-gates-lint-types-tests-ci.md",
+      "anchor": "eng-05",
+      "batch": "B10"
+    },
+    {
+      "id": "TEST-01",
+      "guide": "test-01-test-design-oracles-properties-mutation.md",
+      "anchor": "test-01",
+      "batch": "B11"
+    },
+    {
+      "id": "TEST-02",
+      "guide": "test-02-component-testing-user-behavior-accessibility.md",
+      "anchor": "test-02",
+      "batch": "B11"
+    },
+    {
+      "id": "TEST-03",
+      "guide": "test-03-e2e-visual-regression-isolation-flakiness.md",
+      "anchor": "test-03",
+      "batch": "B11"
+    },
+    {
+      "id": "CAREER-01",
+      "guide": "career-01-project-evidence-causal-storytelling.md",
+      "anchor": "career-01",
+      "batch": "B11"
+    },
+    {
+      "id": "CAREER-02",
+      "guide": "career-02-architecture-diagrams-boundaries-adrs.md",
+      "anchor": "career-02",
+      "batch": "B12"
+    },
+    {
+      "id": "CAREER-04",
+      "guide": "career-04-incident-response-postmortem-learning.md",
+      "anchor": "career-04",
+      "batch": "B12"
+    },
+    {
+      "id": "CAREER-05",
+      "guide": "career-05-code-review-risk-communication.md",
+      "anchor": "career-05",
+      "batch": "B12"
+    },
+    {
+      "id": "WEB-02",
+      "guide": "web-02-layout-cascade-responsive-logical-properties.md",
+      "anchor": "web-02",
+      "batch": "B12"
+    },
+    {
+      "id": "WEB-03",
+      "guide": "web-03-modern-css-architecture-container-progressive.md",
+      "anchor": "web-03",
+      "batch": "B12"
+    },
+    {
+      "id": "A11Y-01",
+      "guide": "a11y-01-wcag-testing-governance.md",
+      "anchor": "a11y-01",
+      "batch": "B13"
+    },
+    {
+      "id": "BROWSER-01",
+      "guide": "browser-01-render-events-storage.md",
+      "anchor": "browser-01",
+      "batch": "B13"
+    },
+    {
+      "id": "BROWSER-02",
+      "guide": "browser-02-observers-scheduling-lifecycle-coordination.md",
+      "anchor": "browser-02",
+      "batch": "B13"
+    },
+    {
+      "id": "WEB-04",
+      "guide": "web-04-native-layered-ui-view-transitions.md",
+      "anchor": "web-04",
+      "batch": "B13"
+    },
+    {
+      "id": "WEB-05",
+      "guide": "web-05-web-components-shadow-dom-interoperability.md",
+      "anchor": "web-05",
+      "batch": "B14"
+    },
+    {
+      "id": "NET-01",
+      "guide": "net-01-browser-network-fetch-reliability.md",
+      "anchor": "net-01",
+      "batch": "B14"
+    },
+    {
+      "id": "SEC-01",
+      "guide": "sec-01-xss-csrf-trust-boundaries.md",
+      "anchor": "sec-01",
+      "batch": "B14"
+    },
+    {
+      "id": "SEC-02",
+      "guide": "sec-02-csp-trusted-types-reporting.md",
+      "anchor": "sec-02",
+      "batch": "B14"
+    },
+    {
+      "id": "SEC-04",
+      "guide": "sec-04-cross-origin-isolation-embedding-permissions.md",
+      "anchor": "sec-04",
+      "batch": "B15"
+    },
+    {
+      "id": "SEC-03",
+      "guide": "sec-03-webauthn-passkeys-authentication.md",
+      "anchor": "sec-03",
+      "batch": "B15"
+    },
+    {
+      "id": "SEC-05",
+      "guide": "sec-05-web-crypto-key-lifecycle.md",
+      "anchor": "sec-05",
+      "batch": "B15"
+    },
+    {
+      "id": "TS-04",
+      "guide": "ts-04-mapped-utility-template-literal-types.md",
+      "anchor": "ts-04",
+      "batch": "B15"
+    },
+    {
+      "id": "TS-05",
+      "guide": "ts-05-conditional-infer-distribution.md",
+      "anchor": "ts-05",
+      "batch": "B16"
+    },
+    {
+      "id": "TS-06",
+      "guide": "ts-06-functions-overloads-variance-component-apis.md",
+      "anchor": "ts-06",
+      "batch": "B16"
+    },
+    {
+      "id": "TS-07",
+      "guide": "ts-07-runtime-contracts-validation-error-models.md",
+      "anchor": "ts-07",
+      "batch": "B16"
+    },
+    {
+      "id": "TS-08",
+      "guide": "ts-08-domain-state-permission-modeling.md",
+      "anchor": "ts-08",
+      "batch": "B16"
+    },
+    {
+      "id": "TS-09",
+      "guide": "ts-09-version-migration-module-governance.md",
+      "anchor": "ts-09",
+      "batch": "B16"
+    },
+    {
+      "id": "IDENTITY-01",
+      "guide": "identity-01-session-cookie-token-browser-boundaries.md",
+      "anchor": "identity-01",
+      "batch": "B17"
+    },
+    {
+      "id": "IDENTITY-02",
+      "guide": "identity-02-oauth-oidc-pkce-security.md",
+      "anchor": "identity-02",
+      "batch": "B17"
+    },
+    {
+      "id": "PRIVACY-01",
+      "guide": "privacy-01-data-minimization-consent-retention-rights.md",
+      "anchor": "privacy-01",
+      "batch": "B17"
+    },
+    {
+      "id": "PRIVACY-02",
+      "guide": "privacy-02-cross-region-classification-engineering-controls.md",
+      "anchor": "privacy-02",
+      "batch": "B17"
+    },
+    {
+      "id": "NODE-01",
+      "guide": "node-01-runtime-event-loop-nonblocking-io.md",
+      "anchor": "node-01",
+      "batch": "B18"
+    },
+    {
+      "id": "NODE-02",
+      "guide": "node-02-files-streams-buffers-errors.md",
+      "anchor": "node-02",
+      "batch": "B18"
+    },
+    {
+      "id": "NODE-04",
+      "guide": "node-04-http-bff-production-engineering.md",
+      "anchor": "node-04",
+      "batch": "B18"
+    },
+    {
+      "id": "AIDEV-01",
+      "guide": "aidev-01-specification-controlled-agent-loop.md",
+      "anchor": "aidev-01",
+      "batch": "B18"
+    },
+    {
+      "id": "AIDEV-02",
+      "guide": "aidev-02-context-engineering-repository-instructions.md",
+      "anchor": "aidev-02",
+      "batch": "B19"
+    },
+    {
+      "id": "AIDEV-03",
+      "guide": "aidev-03-ai-generated-code-verification.md",
+      "anchor": "aidev-03",
+      "batch": "B19"
+    },
+    {
+      "id": "BIZ-01",
+      "guide": "biz-01-domain-objects-relations-ubiquitous-language.md",
+      "anchor": "biz-01",
+      "batch": "B19"
+    },
+    {
+      "id": "BIZ-02",
+      "guide": "biz-02-state-machines-business-invariants.md",
+      "anchor": "biz-02",
+      "batch": "B19"
+    },
+    {
+      "id": "BIZ-03",
+      "guide": "biz-03-rbac-abac-data-permissions.md",
+      "anchor": "biz-03",
+      "batch": "B20"
+    },
+    {
+      "id": "BIZ-04",
+      "guide": "biz-04-api-contract-dto-frontend-model.md",
+      "anchor": "biz-04",
+      "batch": "B20"
+    },
+    {
+      "id": "BIZ-05",
+      "guide": "biz-05-form-table-detail-state-consistency.md",
+      "anchor": "biz-05",
+      "batch": "B20"
+    },
+    {
+      "id": "BIZ-06",
+      "guide": "biz-06-async-jobs-import-export-progress.md",
+      "anchor": "biz-06",
+      "batch": "B20"
+    },
+    {
+      "id": "BIZ-07",
+      "guide": "biz-07-errors-idempotency-eventual-consistency.md",
+      "anchor": "biz-07",
+      "batch": "B20"
+    },
+    {
+      "id": "BIZ-08",
+      "guide": "biz-08-requirement-acceptance-traceability.md",
+      "anchor": "biz-08",
+      "batch": "B21"
+    },
+    {
+      "id": "TEST-04",
+      "guide": "test-04-api-contract-consumer-driven-testing.md",
+      "anchor": "test-04",
+      "batch": "B21"
+    },
+    {
+      "id": "RENDER-01",
+      "guide": "render-01-spa-ssr-ssg-isr-hybrid-decisions.md",
+      "anchor": "render-01",
+      "batch": "B21"
+    },
+    {
+      "id": "RENDER-02",
+      "guide": "render-02-streaming-ssr-hydration-islands.md",
+      "anchor": "render-02",
+      "batch": "B21"
+    },
+    {
+      "id": "DATA-01",
+      "guide": "data-01-server-state-cache-keys-invalidation-deduplication.md",
+      "anchor": "data-01",
+      "batch": "B22"
+    },
+    {
+      "id": "DATA-02",
+      "guide": "data-02-optimistic-updates-conflicts-offline-mutations.md",
+      "anchor": "data-02",
+      "batch": "B22"
+    },
+    {
+      "id": "REALTIME-01",
+      "guide": "realtime-01-sse-websocket-webtransport-reliability.md",
+      "anchor": "realtime-01",
+      "batch": "B22"
+    },
+    {
+      "id": "COMP-01",
+      "guide": "comp-01-component-responsibility-api-composition.md",
+      "anchor": "comp-01",
+      "batch": "B22"
+    },
+    {
+      "id": "COMP-02",
+      "guide": "comp-02-controlled-uncontrolled-state-imperative.md",
+      "anchor": "comp-02",
+      "batch": "B23"
+    },
+    {
+      "id": "UX-01",
+      "guide": "ux-01-interaction-states-usability-validation.md",
+      "anchor": "ux-01",
+      "batch": "B23"
+    },
+    {
+      "id": "ENG-08",
+      "guide": "eng-08-software-supply-chain-sbom-provenance.md",
+      "anchor": "eng-08",
+      "batch": "B23"
+    },
+    {
+      "id": "LINUX-01",
+      "guide": "linux-01-filesystem-permissions-safe-commands.md",
+      "anchor": "linux-01",
+      "batch": "B23"
+    },
+    {
+      "id": "LINUX-02",
+      "guide": "linux-02-process-port-log-network-diagnostics.md",
+      "anchor": "linux-02",
+      "batch": "B24"
+    },
+    {
+      "id": "LINUX-03",
+      "guide": "linux-03-shell-environment-automation.md",
+      "anchor": "linux-03",
+      "batch": "B24"
+    },
+    {
+      "id": "LINUX-04",
+      "guide": "linux-04-server-security-ssh-users-firewall.md",
+      "anchor": "linux-04",
+      "batch": "B24"
+    },
+    {
+      "id": "DOCKER-01",
+      "guide": "docker-01-images-containers-dockerfile-cache.md",
+      "anchor": "docker-01",
+      "batch": "B24"
+    },
+    {
+      "id": "DOCKER-02",
+      "guide": "docker-02-compose-network-volumes-environments.md",
+      "anchor": "docker-02",
+      "batch": "B24"
+    },
+    {
+      "id": "ENG-06",
+      "guide": "eng-06-ci-cd-artifact-promotion-release-rollback.md",
+      "anchor": "eng-06",
+      "batch": "B25"
+    },
+    {
+      "id": "DEPLOY-01",
+      "guide": "deploy-01-nginx-static-assets-reverse-proxy-https-cdn.md",
+      "anchor": "deploy-01",
+      "batch": "B25"
+    },
+    {
+      "id": "OBS-01",
+      "guide": "obs-01-frontend-observability-slo-alerting-privacy.md",
+      "anchor": "obs-01",
+      "batch": "B25"
+    },
+    {
+      "id": "PERF-01",
+      "guide": "perf-01-core-web-vitals-performance-budgets.md",
+      "anchor": "perf-01",
+      "batch": "B25"
+    },
+    {
+      "id": "PERF-02",
+      "guide": "perf-02-network-resource-loading-cache-optimization.md",
+      "anchor": "perf-02",
+      "batch": "B26"
+    },
+    {
+      "id": "PERF-03",
+      "guide": "perf-03-main-thread-rendering-long-tasks-inp.md",
+      "anchor": "perf-03",
+      "batch": "B26"
+    },
+    {
+      "id": "PERF-04",
+      "guide": "perf-04-memory-listeners-resource-leaks.md",
+      "anchor": "perf-04",
+      "batch": "B26"
+    },
+    {
+      "id": "H5-01",
+      "guide": "h5-01-viewport-responsive-safe-area-orientation.md",
+      "anchor": "h5-01",
+      "batch": "B26"
+    },
+    {
+      "id": "H5-02",
+      "guide": "h5-02-scroll-soft-keyboard-pointer-gestures.md",
+      "anchor": "h5-02",
+      "batch": "B27"
+    },
+    {
+      "id": "MCP-01",
+      "guide": "mcp-01-server-tools-resources-prompts-schema.md",
+      "anchor": "mcp-01",
+      "batch": "B27"
+    },
+    {
+      "id": "AIPROD-01",
+      "guide": "aiprod-01-ai-task-model-selection-value-validation.md",
+      "anchor": "aiprod-01",
+      "batch": "B27"
+    },
+    {
+      "id": "AIPROD-02",
+      "guide": "aiprod-02-high-risk-automation-human-in-the-loop.md",
+      "anchor": "aiprod-02",
+      "batch": "B27"
+    },
+    {
+      "id": "AISAFE-01",
+      "guide": "aisafe-01-output-validation-content-safety-guardrails.md",
+      "anchor": "aisafe-01",
+      "batch": "B28"
+    },
+    {
+      "id": "AISAFE-02",
+      "guide": "aisafe-02-threat-modeling-red-teaming-abuse-defense.md",
+      "anchor": "aisafe-02",
+      "batch": "B28"
+    },
+    {
+      "id": "AIGOV-01",
+      "guide": "aigov-01-data-model-change-audit-accountability.md",
+      "anchor": "aigov-01",
+      "batch": "B28"
+    },
+    {
+      "id": "AIAPP-01",
+      "guide": "aiapp-01-model-interface-instructions-context-boundaries.md",
+      "anchor": "aiapp-01",
+      "batch": "B28"
+    },
+    {
+      "id": "AIAPP-02",
+      "guide": "aiapp-02-streaming-sse-incremental-rendering.md",
+      "anchor": "aiapp-02",
+      "batch": "B28"
+    },
+    {
+      "id": "AIAPP-03",
+      "guide": "aiapp-03-structured-output-schema-validation.md",
+      "anchor": "aiapp-03",
+      "batch": "B29"
+    },
+    {
+      "id": "AIAPP-04",
+      "guide": "aiapp-04-tool-calling-execution-result-ui.md",
+      "anchor": "aiapp-04",
+      "batch": "B29"
+    },
+    {
+      "id": "AIAPP-05",
+      "guide": "aiapp-05-generative-ui-view-model-host-safety.md",
+      "anchor": "aiapp-05",
+      "batch": "B29"
+    },
+    {
+      "id": "AIUI-01",
+      "guide": "aiui-01-agent-ui-protocol-interoperability.md",
+      "anchor": "aiui-01",
+      "batch": "B29"
+    },
+    {
+      "id": "AIAPP-06",
+      "guide": "aiapp-06-rag-citations-source-trust.md",
+      "anchor": "aiapp-06",
+      "batch": "B30"
+    },
+    {
+      "id": "AIAPP-07",
+      "guide": "aiapp-07-prompt-injection-untrusted-content.md",
+      "anchor": "aiapp-07",
+      "batch": "B30"
+    },
+    {
+      "id": "AIAPP-08",
+      "guide": "aiapp-08-evaluation-observability-release-gates.md",
+      "anchor": "aiapp-08",
+      "batch": "B30"
+    },
+    {
+      "id": "AIAPP-09",
+      "guide": "aiapp-09-cost-quota-cache-reliability.md",
+      "anchor": "aiapp-09",
+      "batch": "B30"
+    },
+    {
+      "id": "AIAPP-10",
+      "guide": "aiapp-10-ai-interaction-trust-recovery.md",
+      "anchor": "aiapp-10",
+      "batch": "B31"
+    },
+    {
+      "id": "AIAPP-12",
+      "guide": "aiapp-12-conversation-state-context-compression-privacy.md",
+      "anchor": "aiapp-12",
+      "batch": "B31"
+    },
+    {
+      "id": "AIAPP-13",
+      "guide": "aiapp-13-long-term-memory-personalization-forgetting.md",
+      "anchor": "aiapp-13",
+      "batch": "B31"
+    },
+    {
+      "id": "AGENT-01",
+      "guide": "agent-01-loop-planning-stopping-recovery.md",
+      "anchor": "agent-01",
+      "batch": "B31"
+    },
+    {
+      "id": "AGENT-03",
+      "guide": "agent-03-mcp-transport-stateless-state-versioning.md",
+      "anchor": "agent-03",
+      "batch": "B32"
+    },
+    {
+      "id": "AGENT-04",
+      "guide": "agent-04-mcp-client-discovery-compatibility.md",
+      "anchor": "agent-04",
+      "batch": "B32"
+    },
+    {
+      "id": "AGENT-05",
+      "guide": "agent-05-human-in-the-loop-risk-approval.md",
+      "anchor": "agent-05",
+      "batch": "B32"
+    },
+    {
+      "id": "AGENT-06",
+      "guide": "agent-06-tasks-long-running-recovery-idempotency.md",
+      "anchor": "agent-06",
+      "batch": "B32"
+    },
+    {
+      "id": "AGENT-07",
+      "guide": "agent-07-multi-agent-coordination-context-isolation.md",
+      "anchor": "agent-07",
+      "batch": "B32"
+    },
+    {
+      "id": "AGENT-08",
+      "guide": "agent-08-tool-contract-schema-discoverability.md",
+      "anchor": "agent-08",
+      "batch": "B33"
+    },
+    {
+      "id": "AGENT-09",
+      "guide": "agent-09-observability-read-only-replay.md",
+      "anchor": "agent-09",
+      "batch": "B33"
+    },
+    {
+      "id": "AGENT-10",
+      "guide": "agent-10-identity-authorization-runtime-isolation.md",
+      "anchor": "agent-10",
+      "batch": "B33"
+    },
+    {
+      "id": "AIDEV-04",
+      "guide": "aidev-04-ai-code-review-risk-evidence.md",
+      "anchor": "aidev-04",
+      "batch": "B33"
+    },
+    {
+      "id": "AIDEV-07",
+      "guide": "aidev-07-dependency-source-security.md",
+      "anchor": "aidev-07",
+      "batch": "B34"
+    },
+    {
+      "id": "AIDEV-10",
+      "guide": "aidev-10-ai-tool-data-team-governance.md",
+      "anchor": "aidev-10",
+      "batch": "B34"
+    },
+    {
+      "id": "COMPAT-01",
+      "guide": "compat-01-baseline-progressive-enhancement-device-testing.md",
+      "anchor": "compat-01",
+      "batch": "B34"
+    },
+    {
+      "id": "ARCH-01",
+      "guide": "arch-01-quality-attributes-constraints-tradeoffs.md",
+      "anchor": "arch-01",
+      "batch": "B34"
+    },
+    {
+      "id": "ARCH-02",
+      "guide": "arch-02-technical-proposal-adr-review.md",
+      "anchor": "arch-02",
+      "batch": "B35"
+    },
+    {
+      "id": "ARCH-03",
+      "guide": "arch-03-progressive-migration-strangler-compatibility.md",
+      "anchor": "arch-03",
+      "batch": "B35"
+    },
+    {
+      "id": "ARCH-04",
+      "guide": "arch-04-technical-debt-prioritization-governance.md",
+      "anchor": "arch-04",
+      "batch": "B35"
+    },
+    {
+      "id": "ARCH-05",
+      "guide": "arch-05-framework-selection-lifecycle-migration.md",
+      "anchor": "arch-05",
+      "batch": "B35"
+    },
+    {
+      "id": "LEAD-01",
+      "guide": "lead-01-technical-roadmap-delegation-influence.md",
+      "anchor": "lead-01",
+      "batch": "B35"
+    }
+  ]
+}
