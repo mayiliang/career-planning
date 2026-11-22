@@ -160,6 +160,46 @@ def is_quota_error(error):
                                         'ratelimitexceeded', 'rate_limit', 'quota exceeded'))
 
 
+def protocol_idle_timeout(config):
+    value = config.get('protocol_idle_timeout_seconds', 1800)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 < value < float('inf'):
+        return 1800
+    return value
+
+
+class ProtocolWatchdog:
+    """Wall time includes sleep; monotonic time protects against wall-clock rollback."""
+    def __init__(self, timeout):
+        self.timeout = timeout
+        self.wall = self.last_wall = time.time()
+        self.monotonic = time.monotonic()
+
+    def check(self):
+        wall = time.time()
+        if wall < self.last_wall:
+            # Preserve accrued idle duration when the machine clock moves backwards.
+            self.wall += wall - self.last_wall
+        self.last_wall = wall
+        elapsed = max(wall - self.wall, time.monotonic() - self.monotonic, 0)
+        if elapsed >= self.timeout:
+            raise TurnFailure(f'Codex 协议连续 {self.timeout:g} 秒没有有效进展，已保存检查点并重建连接后重试')
+
+    def progress(self):
+        self.wall = self.last_wall = time.time()
+        self.monotonic = time.monotonic()
+        return self.wall
+
+
+def transport_error_summary(error):
+    message = str(error.get('message', '') if isinstance(error, dict) else error)
+    message = re.sub(r'(?i)(bearer\s+)[\w.\-]+', r'\1[已隐藏]', message)
+    message = re.sub(r'\b(?:gh[pousr]_[\w]+|github_pat_[\w]+|sk-[\w-]{12,})\b', '[已隐藏]', message)
+    message = re.sub(r'(https?://)[^\s/@]+:[^\s/@]+@', r'\1[已隐藏]@', message)
+    # Query strings can contain signed URLs or access credentials.
+    message = re.sub(r'(https?://[^\s?]+)\?[^\s]+', r'\1?[已隐藏]', message)
+    return message[:500]
+
+
 def marker(key):
     return f'<!-- career-auto-coding:{key} -->'
 
@@ -486,20 +526,53 @@ class Runner:
         active['reasoning_effort'] = TEAM['commander']['reasoning_effort']
         active.setdefault('children', [])
         active['started_at'] = now()
+        active['last_event_at'] = active['last_progress_at'] = time.time()
+        active['protocol_idle_timeout_seconds'] = protocol_idle_timeout(self.config)
+        active.pop('last_transport_error', None)
         self.state['status'] = f'running:{phase}'
         self.save()
         self.log('turn_started', phase=phase, thread=active['thread_id'], turn=turn['id'])
         deadline = time.monotonic() + self.config.get('turn_timeout_seconds', 7200)
+        watchdog = ProtocolWatchdog(active['protocol_idle_timeout_seconds'])
         final_text = ''
         last_checkpoint = time.monotonic()
         with open(run_dir / 'events.jsonl', 'a') as events:
             try:
                 while time.monotonic() < deadline:
+                    if STOP.is_set() or (self.runtime / 'paused').exists():
+                        raise Paused()
+                    watchdog.check()
                     event = rpc.events.pop(0) if rpc.events else rpc.receive()
                     if event is not None:
                         events.write(json.dumps(event, ensure_ascii=False) + '\n')
                         events.flush()
                         method, data = event.get('method'), event.get('params', {})
+                        related_ids = {active['thread_id'], *(c['id'] for c in active.get('children', []))}
+                        related = data.get('threadId') in related_ids
+                        if data.get('threadId') == active['thread_id']:
+                            related = related and data.get('turnId') in (None, turn['id'])
+                            if method in ('turn/started', 'turn/completed'):
+                                related = related and (data.get('turn') or {}).get('id') == turn['id']
+                        if related and method == 'error':
+                            error = data.get('error') or {}
+                            retrying = data.get('willRetry')
+                            error_at = time.time()
+                            active['last_event_at'] = error_at
+                            active['last_transport_error'] = {'at': error_at,
+                                'message': transport_error_summary(error),
+                                'will_retry': retrying if isinstance(retrying, bool) else None}
+                            self.save()
+                            if retrying is False:
+                                if is_quota_error(error):
+                                    snapshot = rpc.request('account/rateLimits/read')
+                                    self.state['quota'] = {k: snapshot.get(k) for k in ('ordinaryUsageAllowed', 'rateLimits', 'rateLimitsByLimitId')}
+                                    self.state['quota_checked_at'] = time.time()
+                                    raise QuotaWait(quota_deadline(snapshot, forced=True), 'Codex 额度耗尽')
+                                raise TurnFailure('Codex 终止性错误：' + active['last_transport_error']['message'])
+                        elif related and (method.startswith('item/') or method in
+                                          ('turn/started', 'turn/completed', 'turn/plan/updated', 'turn/diff/updated')):
+                            active['last_event_at'] = active['last_progress_at'] = watchdog.progress()
+                            active.pop('last_transport_error', None)
                         previous_children = {c['id']: c.get('status') for c in active.get('children', [])}
                         if track_children(active, event, now()):
                             self.save()
@@ -1080,7 +1153,8 @@ def install(args):
     (bin_dir / 'pnpm').symlink_to(pnpm)
     (bin_dir / 'codex').symlink_to(codex)
     config = {'workspace': str(workspace), 'repository': args.repository, 'codex': codex, 'pnpm': pnpm,
-              'installed_at': now(), 'idle_seconds': 21600, 'turn_timeout_seconds': 7200}
+              'installed_at': now(), 'idle_seconds': 21600, 'turn_timeout_seconds': 7200,
+              'protocol_idle_timeout_seconds': 1800}
     atomic_json(config_path, config)
     (runtime / 'paused').write_text('安装完成，等待首次启动\n')
     env = {'PATH': str(bin_dir) + os.pathsep + os.environ.get('PATH', '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'),

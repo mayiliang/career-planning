@@ -254,12 +254,18 @@ def progress_snapshot(runtime, active, current_time):
         started = float(started) if isinstance(started, (int, float)) else datetime.fromisoformat(started).timestamp()
     except (TypeError, ValueError, OverflowError):
         started = None
-    signal = started
+    signal = None
+    for key in ('last_progress_at', 'last_event_at'):
+        reported = active.get(key)
+        if isinstance(reported, (int, float)) and not isinstance(reported, bool) and 0 < reported <= current_time:
+            signal = float(reported)
+            break
     run_id = active.get('run_id', '')
-    if isinstance(run_id, str) and re.fullmatch(r'[a-f0-9]{32}', run_id):
+    if signal is None and isinstance(run_id, str) and re.fullmatch(r'[a-f0-9]{32}', run_id):
         path = runtime / 'runs' / run_id / 'events.jsonl'
         with contextlib.suppress(OSError):
-            signal = max(signal or 0, path.stat().st_mtime)
+            signal = max(started or 0, path.stat().st_mtime)
+    signal = signal if signal is not None else started
     result['last_activity_at'] = signal
     if started is not None:
         result['elapsed_seconds'] = max(0, current_time - started)
@@ -282,12 +288,26 @@ def team_snapshot(state):
 
     workers = team.get('workers')
     children = active.get('children')
+    timeout = active.get('protocol_idle_timeout_seconds')
+    timeout = timeout if isinstance(timeout, (int, float)) and not isinstance(timeout, bool) and timeout > 0 else None
+    error = active.get('last_transport_error')
+    error = error if isinstance(error, dict) else {}
+    error_at = error.get('at')
+    last_event = active.get('last_event_at')
+    last_progress = active.get('last_progress_at')
+    if not isinstance(error_at, (int, float)) or isinstance(error_at, bool) or (isinstance(last_event, (int, float)) and last_event > error_at):
+        error = {}
+    transport = {'at': error_at, 'message': redact(error.get('message'))[:500],
+                 'will_retry': error.get('will_retry') if isinstance(error.get('will_retry'), bool) else None} if error else None
     return {
         'team': {'commander': fields(team.get('commander'), ('model', 'reasoning_effort')),
                  'workers': [fields(x, ('role', 'model', 'reasoning_effort')) for x in workers if isinstance(x, dict)]
                             if isinstance(workers, list) else None,
                  'max_workers': team.get('max_workers') if isinstance(team.get('max_workers'), int) else None},
         'active': {'phase': active.get('phase'), 'started_at': active.get('started_at'),
+                   'last_event_at': last_event if isinstance(last_event, (int, float)) and not isinstance(last_event, bool) else None,
+                   'last_progress_at': last_progress if isinstance(last_progress, (int, float)) and not isinstance(last_progress, bool) else None,
+                   'protocol_idle_timeout_seconds': timeout, 'last_transport_error': transport,
                    'thread_id': redact(active.get('thread_id')) if active.get('thread_id') else None,
                    'model': redact(active.get('model')) if active.get('model') else None,
                    'reasoning_effort': redact(active.get('reasoning_effort')) if active.get('reasoning_effort') else None,

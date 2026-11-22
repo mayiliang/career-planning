@@ -168,11 +168,24 @@ function renderResearch(s) {
 }
 function duration(seconds) { if (seconds == null) return null; seconds = Math.max(0, Math.floor(seconds)); return seconds >= 3600 ? `${Math.floor(seconds/3600)} 小时 ${Math.floor(seconds%3600/60)} 分钟` : seconds >= 60 ? `${Math.floor(seconds/60)} 分钟` : `${seconds} 秒`; }
 function renderProgress(s) {
-  const p=s.progress; if (!p) return text('progress-summary','等待调度器报告进展');
+  const p=s.progress; if (!p) { visible('progress-warning', false); return text('progress-summary','等待调度器报告进展'); }
   const parts=[]; if (p.last_activity_at) parts.push(`最近活动 ${date(p.last_activity_at)}`);
   if (p.elapsed_seconds != null) parts.push(`本轮已持续 ${duration(p.elapsed_seconds)}`);
   if (p.quiet_seconds != null) parts.push(`${p.quiet ? '暂无新活动' : '距上次活动'} ${duration(p.quiet_seconds)}`);
   text('progress-summary',parts.join(' · ') || '调度器尚未报告活动时间');
+  const active = s.active || {}, error = active.last_transport_error;
+  const running = s.runner_online && !s.paused && s.status.startsWith('running:');
+  const timeout = active.protocol_idle_timeout_seconds;
+  const quiet = p.quiet_seconds != null && p.quiet;
+  let warning = '';
+  if (running && error && error.will_retry === true) warning = `模型连接中断，正在尝试重连。${error.message || ''}`;
+  else if (running && error) warning = `模型连接出现问题${error.will_retry === false ? '，未报告将重连' : '，重连状态未知'}。${error.message || ''}`;
+  else if (running && quiet) warning = timeout
+    ? `本轮已有 ${duration(p.quiet_seconds)} 未收到活动；达到 ${duration(timeout)} 无响应阈值后，调度器会保留进度并安排重试。`
+    : `本轮已有 ${duration(p.quiet_seconds)} 未收到活动，等待调度器报告后续状态。`;
+  else if (!running && quiet) warning = `上次记录后已有 ${duration(p.quiet_seconds)} 未收到活动。当前流程未处于运行状态。`;
+  if (running && error && timeout) warning += `${quiet ? ` 已有 ${duration(p.quiet_seconds)} 无活动。` : ''} 连续 ${duration(timeout)} 无响应后将保留进度并重试。`;
+  text('progress-warning',warning); visible('progress-warning',!!warning);
 }
 
 function renderQuota(s) {

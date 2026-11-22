@@ -57,6 +57,17 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual((current['issue_number'], current['wait_count'], current['at']), (9, 12, 'current'))
         self.assertNotIn('current123', json.dumps(current))
 
+    def test_reconnecting_events_do_not_hide_actual_progress_stall(self):
+        now = time.time()
+        self.state['active'] = {'started_at': now-4000, 'last_progress_at': now-2000,
+                               'last_event_at': now-2, 'protocol_idle_timeout_seconds': 1800,
+                               'last_transport_error': {'at': now-2, 'message': 'Reconnecting', 'will_retry': True}}
+        result = self.snapshot()
+        self.assertTrue(result['progress']['quiet'])
+        self.assertAlmostEqual(result['progress']['quiet_seconds'], 2000, delta=2)
+        self.assertEqual(result['active']['last_progress_at'], now-2000)
+        self.assertEqual(result['active']['last_transport_error']['message'], 'Reconnecting')
+
     def test_no_active_has_no_elapsed_or_quiet_claim(self):
         result = self.snapshot()
         self.assertIsNone(result['research'])
@@ -73,6 +84,40 @@ class SnapshotTests(unittest.TestCase):
         self.assertAlmostEqual(result['quiet_seconds'], 700, delta=2)
         os.utime(path, None)
         self.assertFalse(self.snapshot()['progress']['quiet'])
+
+    def test_legacy_event_mtime_cannot_predate_current_start(self):
+        now = time.time(); run_id = 'b'*32
+        self.state['active'] = {'run_id': run_id, 'started_at': now-30}
+        path = self.root/'runs'/run_id/'events.jsonl'
+        path.parent.mkdir(parents=True); path.write_text('')
+        os.utime(path, (now-2000, now-2000))
+        progress = self.snapshot()['progress']
+        self.assertAlmostEqual(progress['quiet_seconds'], 30, delta=2)
+        self.assertFalse(progress['quiet'])
+
+    def test_reported_event_time_takes_precedence_over_file_mtime(self):
+        now = time.time(); run_id = 'a'*32
+        self.state['active'] = {'run_id': run_id, 'started_at': now-4000, 'last_event_at': now-1200,
+                                'protocol_idle_timeout_seconds': 1800}
+        path = self.root/'runs'/run_id/'events.jsonl'
+        path.parent.mkdir(parents=True); path.write_text('')
+        result = self.snapshot()
+        self.assertAlmostEqual(result['progress']['quiet_seconds'], 1200, delta=2)
+        self.assertEqual(result['active']['protocol_idle_timeout_seconds'], 1800)
+
+    def test_transport_error_is_redacted_and_cleared_after_new_activity(self):
+        now = time.time()
+        self.state['active'] = {'started_at': now-200, 'last_event_at': now-100,
+                                'last_transport_error': {'at': now-90, 'message': 'Bearer secret123 ghp_secret456',
+                                                         'will_retry': True, 'private': 'do not expose'}}
+        result = self.snapshot()['active']['last_transport_error']
+        self.assertTrue(result['will_retry'])
+        self.assertNotIn('secret123', json.dumps(result)); self.assertNotIn('ghp_secret456', json.dumps(result))
+        self.assertNotIn('private', result)
+        self.state['active']['last_event_at'] = now-80
+        self.assertIsNone(self.snapshot()['active']['last_transport_error'])
+        self.state['active'].pop('last_transport_error')
+        self.assertIsNone(self.snapshot()['active']['last_transport_error'])
 
     def test_filters_current_and_later_accepted_history_and_counts_real_acceptance(self):
         self.archive('a'*32, issue=8, at=100)
