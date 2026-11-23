@@ -22,7 +22,7 @@ function describeStatus(s) {
   if (s.paused) return {title: s.status.startsWith('running:') ? '正在暂停' : '流程已暂停', meta: '当前任务保留', tone: 'paused'};
   if (s.status === 'waiting:research' && s.blockers?.length) return {title:'存在暂缓任务', meta:'等待恢复或下次复查', tone:'warning'};
   const waiting = {
-    'waiting:quota': ['等待额度恢复', '重置后自动复查'],
+    'waiting:quota': s.quota_wait_scope === 'github' ? ['等待 GitHub 限流恢复', '按计划复查'] : ['等待额度恢复', '定期同步额度'],
     'waiting:retry': ['等待重试', `第 ${s.failures || 1} 次重试`],
     'waiting:startup': ['正在恢复连接', '启动检查未完成'],
     'waiting:research': ['定期研究待命', '下一轮会自动开始'],
@@ -78,7 +78,7 @@ function render(s) {
   if (task?.body !== lastBody) { renderMarkdown($('task-body'), task?.body || ''); lastBody = task?.body; }
   text('task-attempt', task?.recovery?.status ? `恢复状态：${{pending:'等待恢复', applying:'正在恢复', applied:'成果已恢复', completed:'恢复完成'}[task.recovery.status] || '等待调度器报告'}` : task?.attempt ? `已完成 ${task.attempt} 轮实现检查` : s.phase === 'develop' ? '当前为第 1 轮开发' : '尚未开始开发');
   text('state-updated', s.updated_at ? `进度记录于 ${date(s.updated_at)}` : '尚无进度记录');
-  renderControls(s); renderBlockers(s); renderResearch(s); renderProgress(s); renderQuota(s); renderRoles(s); renderActivity(s); renderHistory(s); renderDiagnostics(s.diagnostics);
+  renderControls(s); renderBlockers(s); renderResearch(s); renderProgress(s); acceptQuota(s.quota); renderQuota(); renderRoles(s); renderActivity(s); renderHistory(s); renderDiagnostics(s.diagnostics);
   text('history-count', s.history.length); text('completed-count', s.counts ? `已验收 ${s.counts.accepted} · 已暂缓 ${s.counts.deferred}` : `已归档 ${s.cycle} 项任务`);
   text('service-state', s.runner_online ? '调度器在线' : '调度器离线'); $('service-led').classList.toggle('online', s.runner_online);
   if (pendingId) {
@@ -87,6 +87,14 @@ function render(s) {
   }
 }
 
+function quotaWaitNext(s, quota) {
+  if (s.quota_wait_scope === 'github') return s.next_run_at
+    ? `${countdown(s.next_run_at)}后复查 GitHub 限流，计划时间 ${date(s.next_run_at)}。`.replace('即将检查后', '即将')
+    : '等待调度器报告 GitHub 限流复查时间。';
+  if (quota?.checking || quotaRequesting) return '正在同步额度，等待查询结果。';
+  if (quota?.allowed === true && !quota.stale && !quota.error) return '额度已允许使用，等待调度器确认。';
+  return quota?.next_check_at ? `下次额度同步计划于 ${date(quota.next_check_at)}。` : '定期同步额度，等待下次检查时间。';
+}
 function updateCountdown() {
   $('clock').textContent = date(Date.now()/1000);
   if (!state) return;
@@ -94,6 +102,7 @@ function updateCountdown() {
   let next;
   if (!s.runner_online) next = `启动调度服务后，从“${phaseName(s.phase)}”阶段继续。`;
   else if (s.paused) next = `恢复后从“${phaseName(s.phase)}”阶段继续，已有任务和工作文件会保留。`;
+  else if (s.status === 'waiting:quota') next = quotaWaitNext(s, quotaData);
   else if (s.next_run_at) next = `${countdown(s.next_run_at)}后${s.status === 'waiting:quota' ? '复查可用额度' : '继续检查执行条件'}，计划时间 ${date(s.next_run_at)}。`;
   else if (s.status === 'waiting:research') next = s.blockers?.length ? '查看暂缓任务的恢复条件，或等待下一次复查。' : '等待下一轮定期研究。';
   else next = {recover:'恢复保存的工作并诊断阻塞原因。', plan: '形成明确的任务范围与验收标准，随后发布 GitHub Issue。', publish: '任务发布成功后，交给开发者开始实现。', develop: '完成实现后，运行检查并提交到 auto_coding。', validate: '验证通过并推送代码后，交给产品经理独立验收。', review: '逐项核对验收标准，通过后关闭 Issue；需要改进时返回开发。', accept: '保存本轮结果，开始下一轮产品研究。'}[s.phase] || '继续处理当前任务。';
@@ -188,19 +197,70 @@ function renderProgress(s) {
   text('progress-warning',warning); visible('progress-warning',!!warning);
 }
 
-function renderQuota(s) {
-  $('quota').replaceChildren();
-  for (const [key, fallback] of [['primary', '短期额度'], ['secondary', '周期额度']]) {
-    const window = s.quota[key]; const value = window?.usedPercent;
-    const title = window?.windowDurationMins === 300 ? '5 小时额度' : window?.windowDurationMins === 10080 ? '每周额度' : fallback;
-    const expired = !!window?.resetsAt && window.resetsAt * 1000 <= Date.now();
-    const box = element('div', 'quota-item' + (value >= 100 && !expired ? ' exhausted' : '') + (expired ? ' stale' : ''));
-    const row = element('div', 'quota-row'); row.append(element('span', '', title), element('strong', '', value == null ? '—' : `上次已用 ${value}%`));
-    const progress = element('progress'); progress.max = 100; progress.value = value == null ? 0 : Math.min(100, Math.max(0, value)); progress.setAttribute('aria-label', `${title}：${value == null ? '暂无数据' : `已用 ${value}%`}`);
-    box.append(row, progress, element('p', 'quota-reset', window?.resetsAt ? (expired ? `${date(window.resetsAt)} 已过重置时间，待复查` : `预计 ${date(window.resetsAt)} 重置`) : '等待下一次用量检查'));
-    $('quota').append(box);
+let quotaData = null, quotaController = null, quotaTimer = null, quotaGeneration = 0, quotaRequesting = false;
+function quotaTime(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed / 1000 : 0;
+}
+function acceptQuota(incoming, forcedStart=false) {
+  if (!incoming || typeof incoming !== 'object') return;
+  if (!quotaData) { quotaData = incoming; return; }
+  const oldChecked = quotaTime(quotaData.checked_at), newChecked = quotaTime(incoming.checked_at);
+  const oldAttempt = quotaTime(quotaData.last_attempt_at), newAttempt = quotaTime(incoming.last_attempt_at);
+  if (newChecked > oldChecked || newAttempt > oldAttempt) {
+    quotaData = newChecked < oldChecked
+      ? {...incoming, primary:quotaData.primary, secondary:quotaData.secondary, allowed:quotaData.allowed, checked_at:quotaData.checked_at}
+      : incoming;
+  } else if (newChecked === oldChecked && newAttempt === oldAttempt) {
+    // Once an attempt reaches a terminal state, a late checking response cannot restart it.
+    if (quotaData.checking === false && incoming.checking === true && !forcedStart) return;
+    quotaData = {...quotaData, ...incoming};
   }
-  text('quota-time', `账户共享额度，上次快照。${s.quota.checked_at ? `检查于 ${date(s.quota.checked_at)}。` : '检查时间未报告。'}`);
+}
+function renderQuota() {
+  const q = quotaData || {}, container = $('quota'); container.replaceChildren();
+  const sync = $('quota-sync'); sync.disabled = quotaRequesting || !!q.checking;
+  sync.textContent = quotaRequesting || q.checking ? '同步中…' : '同步额度';
+  for (const [key, fallback] of [['primary', '短期额度'], ['secondary', '周期额度']]) {
+    const window = q[key], value = typeof window?.usedPercent === 'number' && Number.isFinite(window.usedPercent) ? window.usedPercent : null;
+    const expired = !!window?.resetsAt && window.resetsAt * 1000 <= Date.now();
+    const stale = !!q.stale || !!q.error || expired;
+    const title = window?.windowDurationMins === 300 ? '5 小时额度' : window?.windowDurationMins === 10080 ? '每周额度' : fallback;
+    const box = element('div', 'quota-item' + (value >= 100 && !stale ? ' exhausted' : '') + (stale ? ' stale' : ''));
+    const row = element('div', 'quota-row'); row.append(element('span', '', title), element('strong', '', value == null ? '暂无数据' : `已用 ${value}%`));
+    const progress = element('progress'); progress.max = 100; if (value != null) progress.value = Math.min(100, Math.max(0, value));
+    progress.setAttribute('aria-label', `${title}：${value == null ? '暂无数据' : `已用 ${value}%`}`);
+    const remaining = value == null ? '剩余额度未知' : `剩余 ${Math.max(0, Math.min(100, 100-value))}%`;
+    const reset = window?.resetsAt ? (expired ? `${date(window.resetsAt)} 已过重置时间，待复查` : `预计 ${date(window.resetsAt)} 重置`) : '重置时间未报告';
+    box.append(row); if (value != null) box.append(progress); box.append(element('p', 'quota-reset', `${remaining} · ${reset}`)); container.append(box);
+  }
+  const status = q.checking || quotaRequesting ? '正在同步' : q.error ? `同步失败：${q.error}` : q.stale ? '数据过期，待同步' : q.checked_at ? '最近快照' : '暂无成功快照';
+  text('quota-time', `${status}。来源：${q.source || 'Codex app-server'}。${q.checked_at ? `上次成功 ${date(q.checked_at)}。` : '尚无成功时间。'}${q.error && q.checked_at ? '显示上次数据，已标为过期。' : ''}`);
+  if (state) updateCountdown();
+}
+function stopQuotaPolling() {
+  quotaGeneration++; clearTimeout(quotaTimer); quotaTimer = null;
+  if (quotaController) quotaController.abort(); quotaController = null; quotaRequesting = false;
+}
+function refreshQuota(force=false) {
+  stopQuotaPolling(); const generation = quotaGeneration, deadline = Date.now() + 60000;
+  async function read(refresh) {
+    if (generation !== quotaGeneration) return;
+    const controller = new AbortController(); quotaController = controller; quotaRequesting = true; renderQuota();
+    const timeout = setTimeout(() => controller.abort(), Math.max(0, deadline-Date.now()));
+    try {
+      const response = await fetch('/api/quota' + (refresh ? '?refresh=1' : ''), {cache:'no-store', signal:controller.signal});
+      if (!response.ok) throw new Error('无法读取额度');
+      const data = await response.json(); if (generation !== quotaGeneration) return;
+      acceptQuota(data, refresh && data.checking === true); quotaRequesting = false; renderQuota();
+      if (quotaData?.checking && Date.now() < deadline) quotaTimer = setTimeout(() => read(false), 2000);
+      else if (quotaData?.checking) { quotaData = {...quotaData, checking:false, stale:true, error:'同步超时，请重试'}; renderQuota(); }
+    } catch (error) {
+      if (generation !== quotaGeneration) return;
+      quotaRequesting = false; quotaData = {...quotaData, checking:false, stale:true, error: error.name === 'AbortError' ? '同步超时，请重试' : '无法读取额度，请重试'}; renderQuota();
+    } finally { clearTimeout(timeout); if (quotaController === controller) quotaController = null; }
+  }
+  read(force);
 }
 
 function renderRoles(s) {
@@ -388,8 +448,11 @@ async function refreshLogs() {
 }
 
 document.addEventListener('click',event=>{const nav=event.target.closest('[data-view]');if(nav)showView(nav.dataset.view);const action=event.target.closest('[data-action]');if(action&&!action.disabled)control(action.dataset.action, action.dataset.taskId);const source=event.target.closest('[data-source]');if(source){logSource=source.dataset.source;document.querySelectorAll('[data-source]').forEach(b=>{b.classList.toggle('active',b===source);b.setAttribute('aria-pressed',String(b===source));});refreshLogs();}});
-$('refresh').addEventListener('click',refreshStatus);
+$('refresh').addEventListener('click',()=>{refreshStatus();refreshQuota(true);});
+$('quota-sync').addEventListener('click',()=>refreshQuota(true));
+window.addEventListener('pagehide',stopQuotaPolling);
+window.addEventListener('pageshow',event=>{if(event.persisted)refreshQuota(false);});
 document.querySelectorAll('.github-refresh').forEach(button => button.addEventListener('click', () => refreshGithub(true)));
 $('log-search').addEventListener('input',renderLogs);
 $('copy-logs').addEventListener('click',async()=>{if(!visibleLogText)return toast('当前没有可复制的日志。');try{await navigator.clipboard.writeText(visibleLogText);toast('日志已复制。');}catch(_){toast('浏览器未允许复制，可选中日志手动复制。');}});
-refreshStatus();updateCountdown();setInterval(refreshStatus,5000);setInterval(updateCountdown,1000);
+refreshStatus();refreshQuota(false);updateCountdown();setInterval(refreshStatus,5000);setInterval(updateCountdown,1000);

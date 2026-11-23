@@ -20,3 +20,5 @@
 .blocker-details{margin-top:12px}.blocker-details summary{color:var(--blue);font-size:13px;font-weight:600;cursor:pointer}.blocker-details p{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:10px}.failed-check{margin-top:10px;padding:11px 13px;background:#f3f7f5;border-radius:6px;overflow-wrap:anywhere}.failed-check strong{font-size:12px}.failed-check pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:150px;overflow:auto;font:12px/1.7 ui-monospace,monospace;margin:6px 0 0;color:#536a6f}
 
 .progress-warning{margin-top:9px;padding:10px 13px;background:#fff5e4;border-left:3px solid #a56c20;color:#714c1c;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+
+.quota-sync{min-height:34px;padding:5px 10px;font-size:12px}.quota-item.stale progress{opacity:.42}.quota-row{gap:8px}.quota-row strong{white-space:nowrap}.quota-reset{overflow-wrap:anywhere}

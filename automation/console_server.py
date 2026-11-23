@@ -23,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 import uuid
 
+from quota_sync import QuotaCache
 from auto_coding import DEFAULT_HOME, LABEL, GitHub, atomic_json, now, read_json
 
 CONSOLE_LABEL = LABEL + '.console'
@@ -321,12 +322,19 @@ class ControlStore:
         self.runtime = Path(runtime)
         self.lock = threading.RLock()
         self.github = GitHubDiagnostic(self.runtime)
+        self.quota = QuotaCache(self.runtime)
 
     def snapshot(self):
         state = read_json(self.runtime / 'state.json', {})
         config = read_json(self.runtime / 'config.json', {})
         repo = config.get('repository', '')
         quota = state.get('quota') or {}
+        waiting_quota = state.get('status') == 'waiting:quota' or (state.get('status') == 'paused' and state.get('resume_status') == 'waiting:quota')
+        quota_scope = None
+        if waiting_quota:
+            quota_scope = state.get('quota_wait_scope')
+            if quota_scope not in ('codex', 'github'):
+                quota_scope = 'github' if 'github' in str(state.get('last_error', '')).lower() else 'codex'
         bucket = (quota.get('rateLimitsByLimitId') or {}).get('codex') or quota.get('rateLimits') or {}
         active = state.get('active') or {}
         processed = self.runtime / 'controls' / 'processed'
@@ -383,8 +391,8 @@ class ControlStore:
             'progress': progress_snapshot(self.runtime, state.get('active'), current_time),
             'counts': {'accepted': sum(task['review']['verdict'] == 'accept' for _, task, _ in archives),
                        'deferred': len(blockers)},
-            'quota': {'primary': bucket.get('primary'), 'secondary': bucket.get('secondary'),
-                       'allowed': quota.get('ordinaryUsageAllowed'), 'checked_at': state.get('quota_checked_at')},
+            'quota': self.quota.get(fallback=quota, fallback_at=state.get('quota_checked_at')),
+            'quota_wait_scope': quota_scope,
             'team': team_data['team'], 'active': team_data['active'],
             'activity': self.agent_activity(state)[-12:],
             'events': grouped_events([self.event(x) for x in events])[-20:],
@@ -546,6 +554,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, {'token': self.server.token})
             if url.path == '/api/status':
                 return self.reply(200, self.server.store.snapshot())
+            if url.path == '/api/quota':
+                return self.reply(200, self.server.store.quota.get(refresh=parse_qs(url.query).get('refresh') == ['1']))
             if url.path == '/api/github':
                 return self.reply(200, self.server.store.github.get(parse_qs(url.query).get('refresh') == ['1']))
             if url.path == '/api/logs':
@@ -585,6 +595,7 @@ def install(runtime, port):
     if not (runtime / 'config.json').exists():
         raise SystemExit('请先安装自动化调度器')
     shutil.copy2(Path(__file__), runtime / 'console_server.py')
+    shutil.copy2(Path(__file__).with_name('quota_sync.py'), runtime / 'quota_sync.py')
     shutil.copytree(ASSETS, runtime / 'console', dirs_exist_ok=True)
     plist = {'Label': CONSOLE_LABEL,
              'ProgramArguments': [sys.executable, str(runtime / 'console_server.py'), '--runtime', str(runtime), '--port', str(port)],

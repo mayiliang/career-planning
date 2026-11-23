@@ -24,6 +24,7 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from quota_sync import QuotaCache, available as quota_available, valid_full as valid_quota, merge_event as merge_quota_event, read as read_quota_cache
 from team import TEAM, LIVE_STATES, WORKER_MODELS, codex_config, track_children
 
 APP_NAME = 'CareerPlanningAutoCoding'
@@ -42,9 +43,10 @@ class Attention(Exception):
 
 
 class QuotaWait(Exception):
-    def __init__(self, until, detail='额度等待'):
+    def __init__(self, until, detail='额度等待', scope='codex'):
         super().__init__(detail)
         self.until = until
+        self.scope = scope
 
 
 class TurnFailure(Exception):
@@ -252,7 +254,7 @@ class GitHub:
             if error.code in (403, 429):
                 reset = error.headers.get('X-RateLimit-Reset')
                 until = float(reset) + 60 if reset and reset.isdigit() else time.time() + 900
-                raise QuotaWait(until, f'GitHub 请求受限 HTTP {error.code}') from None
+                raise QuotaWait(until, f'GitHub 请求受限 HTTP {error.code}', scope='github') from None
             raise RuntimeError(f'GitHub {method} {path}: HTTP {error.code}') from None
 
     def pages(self, path):
@@ -441,16 +443,52 @@ class Runner:
                     child['updated_at'] = now()
             self.save()
 
+    def quota_cache(self):
+        return QuotaCache(self.runtime)
+
+    def sync_quota_cache(self):
+        """Only the runner imports complete query results into its own state."""
+        status = self.state.get('status')
+        effective = self.state.get('resume_status') if status == 'paused' else status
+        scope = self.state.get('quota_wait_scope')
+        codex_wait = effective == 'waiting:quota' and scope != 'github' and 'github' not in str(self.state.get('last_error', '')).lower()
+        cache = self.quota_cache()
+        if codex_wait:
+            cache.get(max_age=300)  # async, cross-process single-flight; independent of reset
+        sample = read_quota_cache(cache.path)
+        snapshot, checked = sample.get('snapshot'), sample.get('checked_at')
+        if not valid_quota(snapshot) or not isinstance(checked, (int, float)):
+            return
+        if checked > self.state.get('quota_checked_at', 0):
+            self.state['quota'] = snapshot
+            self.state['quota_checked_at'] = checked
+            self.save()
+        paused = (self.runtime / 'paused').exists() or status == 'paused'
+        if (codex_wait and not paused and not sample.get('error') and 0 <= time.time()-checked <= 300
+                and checked >= self.state.get('quota_wait_since', 0) and quota_available(snapshot)):
+            self.state.pop('next_run_at', None)
+            self.state.pop('last_error', None)
+            self.state.pop('quota_wait_scope', None)
+            self.state.pop('quota_wait_since', None)
+            self.state['status'] = 'ready:' + self.state['phase']
+            self.save()
+            self.log('quota_recovered', detail='完整查询确认 Codex 额度已恢复，沿原检查点继续。')
+
     def check_quota(self):
-        response = self.server().request('account/rateLimits/read')
-        # Retain only operational fields, not account identifiers or reset-credit IDs.
-        snapshot = {k: response.get(k) for k in ('ordinaryUsageAllowed', 'rateLimits', 'rateLimitsByLimitId')}
+        cache = self.quota_cache()
+        cache.refresh(max_age=60, fetch=lambda: self.server().request('account/rateLimits/read'))
+        sample = read_quota_cache(cache.path)
+        snapshot, checked = sample.get('snapshot'), sample.get('checked_at')
+        if (sample.get('error') or not valid_quota(snapshot) or not isinstance(checked, (int, float))
+                or not 0 <= time.time()-checked <= 60):
+            raise RuntimeError('额度尚未得到有效完整查询确认，请稍后重试')
         self.state['quota'] = snapshot
-        self.state['quota_checked_at'] = time.time()
+        self.state['quota_checked_at'] = checked
         self.save()
         until = quota_deadline(snapshot)
         if until:
             raise QuotaWait(until)
+
 
     def agent(self, phase, payload):
         with active_work_awake():
@@ -547,6 +585,11 @@ class Runner:
                         events.write(json.dumps(event, ensure_ascii=False) + '\n')
                         events.flush()
                         method, data = event.get('method'), event.get('params', {})
+                        if method == 'account/rateLimits/updated':
+                            self.state['quota'] = merge_quota_event(self.state.get('quota'), data)
+                            self.state['quota_event_at'] = time.time()
+                            self.quota_cache().record_event(data)
+                            self.save()
                         related_ids = {active['thread_id'], *(c['id'] for c in active.get('children', []))}
                         related = data.get('threadId') in related_ids
                         if data.get('threadId') == active['thread_id']:
@@ -1069,6 +1112,7 @@ class Runner:
             self.process_controls()
             if (self.runtime / 'paused').exists():
                 break
+            self.sync_quota_cache()
             delay = self.state.get('next_run_at', 0) - time.time()
             if delay > 0:
                 if once:
@@ -1091,7 +1135,8 @@ class Runner:
             except Paused:
                 break
             except QuotaWait as error:
-                self.state.update(status='waiting:quota', next_run_at=error.until, last_error=str(error))
+                self.state.update(status='waiting:quota', next_run_at=error.until, last_error=str(error),
+                                  quota_wait_scope=error.scope, quota_wait_since=time.time())
                 self.checkpoint()
                 self.log('quota_wait', until=error.until, detail=str(error))
                 self.close_server()
@@ -1144,6 +1189,7 @@ def install(args):
     command([codex, '--version'])
     shutil.copy2(Path(__file__), runtime / 'auto_coding.py')
     shutil.copy2(Path(__file__).with_name('team.py'), runtime / 'team.py')
+    shutil.copy2(Path(__file__).with_name('quota_sync.py'), runtime / 'quota_sync.py')
     shutil.copytree(Path(__file__).parent / 'roles', runtime / 'roles')
     shutil.copytree(Path(__file__).parent / 'agents', runtime / 'agents')
     pnpm = str(Path(args.pnpm).resolve())
@@ -1220,6 +1266,7 @@ def main():
         while not STOP.is_set():
             runner = Runner(args.runtime)
             runner.process_controls()
+            runner.sync_quota_cache()
             if (args.runtime / 'paused').exists():
                 if args.action == 'once':
                     return
