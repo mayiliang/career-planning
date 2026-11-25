@@ -58,6 +58,7 @@ class CacheTests(unittest.TestCase):
         view=self.cache.get(start_refresh=False)
         self.assertEqual(view['secondary']['usedPercent'],4)
         self.assertIsNone(view['allowed'])
+        self.assertFalse(view['stale'])
         self.assertEqual(q.read(self.cache.path)['snapshot']['ordinaryUsageAllowed'],True)
         self.assertEqual(q.read(self.cache.path)['snapshot']['rateLimits']['primary']['usedPercent'],5)
 

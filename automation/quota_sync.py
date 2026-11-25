@@ -236,12 +236,16 @@ class QuotaCache:
         scheduled=bool(start_refresh and configured and due and not self.checking())
         if scheduled:
             threading.Thread(target=self.refresh,kwargs={'max_age':max_age,'force':refresh},daemon=True).start()
-        snapshot=current.get('snapshot') or sanitize(fallback or {})
+        complete_snapshot=current.get('snapshot') or sanitize(fallback or {})
+        snapshot=complete_snapshot
         if current.get('event_at',0) > current.get('checked_at',0):
             snapshot=current.get('event_snapshot') or snapshot
         checked=current.get('checked_at') or fallback_at
         selected=bucket(snapshot)
-        stale=not finite(checked) or not 0 <= time.time()-checked <= max_age or bool(current.get('error')) or not valid_full(snapshot)
+        # A partial live event can update percentages without an allowance flag.
+        # It does not invalidate the successful full query's freshness; only
+        # the separate complete snapshot can ever authorize scheduler recovery.
+        stale=not finite(checked) or not 0 <= time.time()-checked <= max_age or bool(current.get('error')) or not valid_full(complete_snapshot)
         attempt=current.get('last_attempt_at')
         return {'primary':selected.get('primary'),'secondary':selected.get('secondary'),
                 'allowed':snapshot.get('ordinaryUsageAllowed'),'checked_at':checked,'checking':scheduled or self.checking(),
